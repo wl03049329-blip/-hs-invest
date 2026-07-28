@@ -6,6 +6,7 @@ const root = path.resolve(__dirname, "..");
 const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const ui = fs.readFileSync(path.join(root, "portfolio-v6.js"), "utf8");
 const css = fs.readFileSync(path.join(root, "portfolio-v6.css"), "utf8");
+const marketUi = fs.readFileSync(path.join(root, "market-ui-core.js"), "utf8");
 const workflow = fs.readFileSync(path.join(root, ".github", "workflows", "update-market-quotes.yml"), "utf8");
 const quoteJson = JSON.parse(fs.readFileSync(path.join(root, "market-quotes.json"), "utf8"));
 const quoteMeta = JSON.parse(fs.readFileSync(path.join(root, "market-quotes-meta.json"), "utf8"));
@@ -57,6 +58,42 @@ check("首頁 CNN 與 FOMO 精簡卡片可切換籌碼頁", () => {
   assert.match(html, /id="homeCnnCard"/);
   assert.match(html, /id="homeFomoCard"/);
   assert.match(ui, /switchTab\("sentiment"\)/);
+});
+
+check("首頁情緒摘要位於市場摘要上方", () => {
+  const sentimentIndex = html.indexOf('id="homeSentiment"');
+  const marketIndex = html.indexOf('class="panel marketPanel"');
+  const bestIndex = html.indexOf("<h2>今日最佳買點</h2>", marketIndex);
+  const snapshotIndex = html.indexOf("<h2>快速判斷</h2>", bestIndex);
+  assert.ok(sentimentIndex > 0 && sentimentIndex < marketIndex);
+  assert.ok(marketIndex < bestIndex && bestIndex < snapshotIndex);
+});
+
+check("市場摘要預設精簡且完整內容可展開", () => {
+  assert.match(html, /<summary>展開完整摘要<\/summary>/);
+  assert.match(html, /id="marketFullSummary"/);
+  assert.match(html, /id="newsList"/);
+  assert.match(html, /id="marketPulse"/);
+  assert.match(html, /上漲檔數/);
+  assert.match(html, /下跌檔數/);
+});
+
+check("買點外框同時提供文字標籤與說明", () => {
+  for (const text of ["等待", "加碼觀察", "更佳買點", "強力超賣", "極度超賣"]) {
+    assert.match(html + marketUi, new RegExp(text));
+  }
+  assert.match(html, /外框顏色代表什麼？/);
+  assert.match(html, /不等於直接買進訊號/);
+  assert.match(html, /data-signal-level/);
+  assert.match(html, /aria-label="外框分類/);
+});
+
+check("下探與回升文字正確且卡片不顯示必買", () => {
+  assert.match(marketUi, /超賣但尚未止跌/);
+  assert.match(marketUi, /超賣後回升/);
+  const renderCards = html.slice(html.indexOf("function renderCards"), html.indexOf("function formatYi"));
+  assert.doesNotMatch(renderCards, /必買/);
+  assert.match(renderCards, /data-kdj-turn/);
 });
 
 check("原有主要功能仍在", () => {

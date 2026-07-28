@@ -315,15 +315,33 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
   <p class="tabIntro" data-tab-intro="trump">只整理可能影響市場的川普言論與政策。</p>
   <p class="tabIntro" data-tab-intro="more">ETF 比較、提醒與資料設定集中在這裡。</p>
 
+  <section id="homeSentiment" class="panel homeSentiment" data-tab-section="today" aria-labelledby="homeSentimentTitle">
+    <div class="panelTitle compactTitle">
+      <div><p class="eyebrow">MARKET SENTIMENT</p><h2 id="homeSentimentTitle">市場情緒快覽</h2></div>
+      <small>點卡片看完整籌碼</small>
+    </div>
+    <div class="homeSentimentCards">
+      <button id="homeCnnCard" class="homeSentimentCard" type="button" aria-label="查看 CNN 恐懼貪婪完整資料">
+        <span>CNN Fear &amp; Greed</span><b>—</b><em>資料載入中</em><small>正在更新</small>
+      </button>
+      <button id="homeFomoCard" class="homeSentimentCard" type="button" aria-label="查看台股融資 FOMO 完整資料">
+        <span>台股融資 FOMO</span><b>—</b><em>資料載入中</em><small>正在更新</small>
+      </button>
+    </div>
+    <p id="homeSentimentConclusion" class="homeSentimentConclusion">情緒資料彙整中…</p>
+  </section>
+
   <section class="dashboard" data-tab-section="today">
     <article class="panel marketPanel">
       <div class="panelTitle">
-        <div><p class="eyebrow">TODAY'S MARKET</p><h2>今天市場怎麼了？</h2></div>
+        <div><p class="eyebrow">TODAY'S MARKET</p><h2>今天市場摘要</h2></div>
         <small id="marketDate">—</small>
       </div>
       <div id="marketPulse"><div class="skeleton">載入市場摘要中…</div></div>
-      <details class="newsDetails">
-        <summary>查看今日新聞依據</summary>
+      <details class="marketDetails">
+        <summary>展開完整摘要</summary>
+        <div id="marketFullSummary"><div class="skeleton">整理完整市場原因中…</div></div>
+        <div class="marketNewsHeading">新聞明細</div>
         <div id="newsList" class="newsList"><div class="newsEmpty">新聞載入中…</div></div>
       </details>
     </article>
@@ -342,22 +360,6 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       </div>
       <div id="snapshotGrid" class="snapshotGrid"><div class="skeleton">載入中…</div></div>
     </article>
-  </section>
-
-  <section id="homeSentiment" class="panel homeSentiment" data-tab-section="today" aria-labelledby="homeSentimentTitle">
-    <div class="panelTitle compactTitle">
-      <div><p class="eyebrow">MARKET SENTIMENT</p><h2 id="homeSentimentTitle">市場情緒快覽</h2></div>
-      <small>點卡片看完整籌碼</small>
-    </div>
-    <div class="homeSentimentCards">
-      <button id="homeCnnCard" class="homeSentimentCard" type="button" aria-label="查看 CNN 恐懼貪婪完整資料">
-        <span>CNN Fear &amp; Greed</span><b>—</b><em>資料載入中</em><small>正在更新</small>
-      </button>
-      <button id="homeFomoCard" class="homeSentimentCard" type="button" aria-label="查看台股融資 FOMO 完整資料">
-        <span>台股融資 FOMO</span><b>—</b><em>資料載入中</em><small>正在更新</small>
-      </button>
-    </div>
-    <p id="homeSentimentConclusion" class="homeSentimentConclusion">情緒資料彙整中…</p>
   </section>
 
   <section id="portfolio" class="section portfolioPage tabHidden" data-tab-section="portfolio" aria-labelledby="portfolioTitle">
@@ -483,6 +485,19 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       <p class="watchHint">預設是弘昇關注的 5 檔。每位使用者新增、刪除與排序的清單只存在自己的手機，不會影響其他人。最多 15 檔。</p>
       <div id="watchList" class="watchList"><div class="skeleton">載入清單中…</div></div>
     </article>
+    <details class="panel signalLegend">
+      <summary>外框顏色代表什麼？</summary>
+      <div class="signalLegendBody">
+        <div class="signalLegendGrid" aria-label="買點卡片外框顏色說明">
+          <span><i class="neutral" aria-hidden="true"></i><b>灰色</b>：J 值 20 以上，等待</span>
+          <span><i class="yellow" aria-hidden="true"></i><b>黃色</b>：J 值 10～20，加碼觀察</span>
+          <span><i class="orange" aria-hidden="true"></i><b>橘色</b>：J 值 0～10，更佳買點區</span>
+          <span><i class="red" aria-hidden="true"></i><b>紅色</b>：J 值 -10～0，強力超賣</span>
+          <span><i class="purple" aria-hidden="true"></i><b>紫色</b>：J 值低於 -10，極度超賣</span>
+        </div>
+        <p>外框顏色代表週 KD 的 J 值超賣程度，不等於直接買進訊號。仍需搭配買點分數、J 值是否回升、長期趨勢、事件風險與建議投入比例。</p>
+      </div>
+    </details>
     <div class="sectionHead">
       <div><p class="eyebrow">ALL SIGNALS</p><h2>全部買點</h2></div>
       <small>綜合 J 值、回檔、轉折與歷史勝率排序</small>
@@ -594,6 +609,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
   </div>
 </div>
 
+<script src="market-ui-core.js"></script>
 <script>
 const DEFAULT_WATCHLIST=[
   {id:"00830",name:"國泰費城半導體",type:"海外股票",risk:"高",market:"美國半導體",strategyType:"equity"},
@@ -738,11 +754,7 @@ function weekState(date){
   return{label:"最近完成週",short:"正式"};
 }
 function sig(j){
-  if(j<-10)return{label:"極度超賣",className:"purple"};
-  if(j<0)return{label:"強力加碼點",className:"red"};
-  if(j<10)return{label:"更棒買點",className:"orange"};
-  if(j<20)return{label:"加碼點",className:"yellow"};
-  return{label:"等待",className:"neutral"};
+  return HSMarketUiCore.classifyJ(j);
 }
 function annualVol(rows){
   const r=[];for(let i=1;i<rows.length;i++)r.push(Math.log(+rows[i].close/+rows[i-1].close));
@@ -1039,7 +1051,8 @@ function marketReasons(){
 function renderMarket(){
   const m=marketMetrics(),reasons=marketReasons();
   const lead=m.label==="震盪"?`市場沒有明顯單邊方向，${m.ups} 檔偏多、${m.downs} 檔偏弱。`:`追蹤 ETF 平均 ${signed(m.avg)}，今天整體呈現「${m.label}」。`;
-  $("#marketPulse").innerHTML=`<div class="marketHero"><div class="marketMood ${m.cls}">${m.label}</div><div class="marketChange ${m.cls}">${signed(m.avg)}<small>非槓桿 ETF 平均漲跌</small></div></div><p class="marketLead">${lead}</p><div class="reasonList">${reasons.map((r,i)=>`<div class="reasonItem"><span class="reasonNo">${i+1}</span><span>${esc(r)}</span></div>`).join("")}</div>`;
+  $("#marketPulse").innerHTML=`<div class="marketHero"><div class="marketMood ${m.cls}">${m.label}</div><div class="marketChange ${m.cls}">${signed(m.avg)}<small>市場平均漲跌幅</small></div></div><div class="marketBreadth" aria-label="市場上漲與下跌檔數"><span>上漲檔數 <b class="moodUp">${m.ups}</b></span><span>下跌檔數 <b class="moodDown">${m.downs}</b></span></div><div class="reasonList marketQuickReasons">${reasons.slice(0,3).map((r,i)=>`<div class="reasonItem"><span class="reasonNo">${i+1}</span><span>${esc(r)}</span></div>`).join("")}</div>`;
+  $("#marketFullSummary").innerHTML=`<p class="marketLead">${lead}</p><div class="reasonList">${reasons.map((r,i)=>`<div class="reasonItem"><span class="reasonNo">${i+1}</span><span>${esc(r)}</span></div>`).join("")}</div>`;
   $("#marketDate").textContent="資料至 "+all[0].date+" 收盤";
   $("#newsList").innerHTML=latestNews.length?latestNews.slice(0,5).map(n=>`<a class="newsItem" href="${esc(n.link)}" target="_blank" rel="noopener"><b>${esc(n.title)}</b><small>${esc(n.source||n.stockId)} · ${esc(String(n.date).slice(0,16))}</small></a>`).join(""):'<div class="newsEmpty">目前沒有取得同日新聞；市場原因暫以 ETF、融資與法人資料判讀。</div>';
 }
@@ -1053,7 +1066,7 @@ function renderTop(){
 }
 function renderCards(){
   all.sort((a,b)=>b.score-a.score||a.j-b.j);
-  $("#cards").innerHTML=all.map((x,i)=>`<article class="card compactCard ${x.signal.className}"><div class="cardIdentity"><div class="cardTopline"><div class="ticker">${x.id}</div><span class="rank">買點 #${i+1}</span></div><div class="name">${x.name}</div><span class="typeBadge">${strategyLabel(x.strategyType)}</span><div class="actionLine">${x.action}</div></div><div class="cardMetrics"><div><div class="price">$${fmt(x.price)}</div><div class="change ${x.changePct>=0?"up":"down"}">${signed(x.changePct)}</div></div><div class="scoreBlock"><div class="scoreHeadline"><b>${x.score}</b><span>買點分數</span></div><div class="scoreBar"><i style="width:${x.score}%"></i></div><div class="kdjInline"><span>J ${fmt(x.j)}</span><span>${x.direction}</span></div></div></div><div class="cardContext"><span class="trendBadge ${x.trend.className}">${x.trend.label}</span><span class="allocationBadge">本次建議 ${x.allocation||0}%</span></div><div class="strategyNote">200日線 ${x.trend.above200?"之上":"之下"} · 50日線 ${x.trend.ma50Rising?"走升":"未走升"}</div><div class="cardActions"><button class="miniBtn" data-detail="${x.id}">走勢／驗證</button><button class="miniBtn" data-compare="${x.id}">比較</button></div></article>`).join("");
+  $("#cards").innerHTML=all.map((x,i)=>`<article class="card compactCard ${x.signal.className}" data-signal-level="${esc(x.signal.label)}"><div class="cardIdentity"><div class="cardTopline"><div class="ticker">${x.id}</div><span class="rank">買點 #${i+1}</span><span class="signalLevel ${x.signal.className}" aria-label="外框分類：${esc(x.signal.label)}">${esc(x.signal.label)}</span></div><div class="name">${x.name}</div><span class="typeBadge">${strategyLabel(x.strategyType)}</span><div class="actionLine">${x.action}</div></div><div class="cardMetrics"><div><div class="price">$${fmt(x.price)}</div><div class="change ${x.changePct>=0?"up":"down"}">${signed(x.changePct)}</div></div><div class="scoreBlock"><div class="scoreHeadline"><b>${x.score}</b><span>買點分數</span></div><div class="scoreBar"><i style="width:${x.score}%"></i></div><div class="kdjInline"><span>J ${fmt(x.j)}</span><span class="kdjTurn" data-kdj-turn="${x.direction}">${HSMarketUiCore.turnText(x.direction)}</span></div></div></div><div class="cardContext"><span class="trendBadge ${x.trend.className}">${x.trend.label}</span><span class="allocationBadge">本次建議 ${x.allocation||0}%</span></div><div class="strategyNote">200日線 ${x.trend.above200?"之上":"之下"} · 50日線 ${x.trend.ma50Rising?"走升":"未走升"}</div><div class="cardActions"><button class="miniBtn" data-detail="${x.id}">走勢／驗證</button><button class="miniBtn" data-compare="${x.id}">比較</button></div></article>`).join("");
   document.querySelectorAll("[data-detail]").forEach(btn=>btn.addEventListener("click",()=>openDetail(btn.dataset.detail)));
   document.querySelectorAll("[data-compare]").forEach(btn=>btn.addEventListener("click",()=>scrollToCompare(btn.dataset.compare)));
 }
