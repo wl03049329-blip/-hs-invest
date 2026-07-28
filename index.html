@@ -278,13 +278,17 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
   .cardActions{display:grid}
   .miniBtn{padding:8px 9px}
 }
+
+.topTabs{position:sticky;top:0;z-index:30;display:flex;gap:8px;overflow-x:auto;padding:10px 0 12px;margin:0 0 14px;background:linear-gradient(180deg,#06100c 72%,#06100c00);scrollbar-width:none}.topTabs::-webkit-scrollbar{display:none}.topTab{flex:0 0 auto;border:1px solid var(--line);background:#0b1811;color:var(--muted);border-radius:999px;padding:10px 15px;font-weight:900;white-space:nowrap}.topTab.active{background:#173f2a;color:#effff5;border-color:#3f7b58}.tabHidden{display:none!important}.tabIntro{display:none;margin:2px 0 12px;color:var(--muted);font-size:13px;line-height:1.5}.tabIntro.active{display:block}.bottomNav{display:none!important}@media(max-width:760px){.app{padding-top:14px}.hero{gap:10px}.hero h1{font-size:30px}.subtitle{font-size:14px;line-height:1.5}.topTabs{margin-left:-2px;margin-right:-2px}.topTab{padding:9px 14px}.dashboard,.sentimentGrid{grid-template-columns:1fr}.section{margin-top:12px}}
+
+.watchPanel{margin-bottom:14px}.watchHead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.watchHead h2{margin:3px 0 0}.watchActions{display:flex;gap:8px;flex-wrap:wrap}.watchActions .miniBtn{white-space:nowrap}.watchHint{margin:10px 0 0;color:var(--muted);font-size:13px;line-height:1.55}.watchList{display:grid;gap:8px;margin-top:13px}.watchRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;background:#07130e;border:1px solid var(--line);border-radius:16px;padding:11px 12px}.watchIdentity{min-width:0}.watchIdentity b{font-size:18px}.watchIdentity small{display:block;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.watchControls{display:flex;gap:5px}.watchIcon{border:1px solid #2a5039;background:#10271a;color:#dffff0;border-radius:10px;padding:7px 9px;font-weight:900;line-height:1}.watchIcon.danger{color:#ff9ba4;border-color:#67313a}.watchCount{display:inline-flex;align-items:center;border-radius:999px;background:#173f2a;color:#effff5;padding:6px 10px;font-size:12px;font-weight:900}.searchBox{width:100%;background:#07130e;border:1px solid var(--line);color:#fff;border-radius:14px;padding:13px 14px;margin-top:13px}.searchResults{display:grid;gap:8px;margin-top:12px}.searchResult{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#07130e;border:1px solid var(--line);border-radius:15px;padding:11px 12px}.searchResult div{min-width:0}.searchResult b{font-size:17px}.searchResult small{display:block;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.searchAdd{border:1px solid #3f7b58;background:#173f2a;color:#effff5;border-radius:11px;padding:9px 11px;font-weight:900;white-space:nowrap}.typeBadge{display:inline-flex;margin-top:6px;border-radius:999px;padding:4px 8px;font-size:11px;font-weight:900;background:#26322c;color:#d9e7df}.watchEmpty{color:var(--muted);padding:20px;text-align:center}.watchSheet{padding-bottom:calc(20px + env(safe-area-inset-bottom))}@media(max-width:520px){.watchHead{display:block}.watchActions{margin-top:10px}.watchActions .miniBtn{flex:1}.watchControls{gap:4px}.watchIcon{padding:7px 8px}}
 </style>
 </head>
 <body>
 <div class="app">
   <section id="home" class="hero">
     <div>
-      <div class="brandLine"><p class="eyebrow">HS INVEST</p><span class="version">VERSION 5.0</span></div>
+      <div class="brandLine"><p class="eyebrow">HS INVEST</p><span class="version">VERSION 5.2</span></div>
       <h1>ETF 買點雷達</h1>
       <p class="subtitle">打開先看懂今天市場，再決定要不要加碼。週 KD 每日試算；0050、00631L 歷史價格已還原分割。</p>
     </div>
@@ -293,7 +297,20 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 
   <div id="message" class="message info">正在取得最新資料…</div>
 
-  <section class="dashboard">
+  <nav class="topTabs" aria-label="主要分頁">
+    <button class="topTab active" type="button" data-tab="today">今日</button>
+    <button class="topTab" type="button" data-tab="signals">我的ETF</button>
+    <button class="topTab" type="button" data-tab="sentiment">籌碼</button>
+    <button class="topTab" type="button" data-tab="trump">川普</button>
+    <button class="topTab" type="button" data-tab="more">更多</button>
+  </nav>
+  <p class="tabIntro active" data-tab-intro="today">先看市場摘要、最佳買點與快速判斷。</p>
+  <p class="tabIntro" data-tab-intro="signals">建立自己的 ETF 清單，再查看分數、趨勢與建議比例。</p>
+  <p class="tabIntro" data-tab-intro="sentiment">查看融資 FOMO、三大法人與重大事件。</p>
+  <p class="tabIntro" data-tab-intro="trump">只整理可能影響市場的川普言論與政策。</p>
+  <p class="tabIntro" data-tab-intro="more">ETF 比較、提醒與資料設定集中在這裡。</p>
+
+  <section class="dashboard" data-tab-section="today">
     <article class="panel marketPanel">
       <div class="panelTitle">
         <div><p class="eyebrow">TODAY'S MARKET</p><h2>今天市場怎麼了？</h2></div>
@@ -322,7 +339,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
     </article>
   </section>
 
-  <section id="trump-watch" class="section">
+  <section id="trump-watch" class="section tabHidden" data-tab-section="trump">
     <article class="panel trumpPanel">
       <div class="panelTitle"><div><p class="eyebrow">TRUMP MARKET WATCH</p><h2>川普最近又做了什麼？</h2></div><small id="trumpUpdated">每日更新</small></div>
       <div class="trumpHero"><b>只整理可能影響股市的言論與政策</b><span class="trumpStatus">政策轉向雷達</span></div>
@@ -331,7 +348,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
     </article>
   </section>
 
-  <section id="sentiment" class="sentimentGrid">
+  <section id="sentiment" class="sentimentGrid tabHidden" data-tab-section="sentiment">
     <article class="panel">
       <div class="panelTitle"><div><p class="eyebrow">MARGIN FOMO</p><h2>融資情緒</h2></div><small>每日市場散戶溫度</small></div>
       <div id="fomoContent"><div class="skeleton">載入融資資料中…</div></div>
@@ -346,7 +363,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
     </article>
   </section>
 
-  <details class="settings panel">
+  <details class="settings panel tabHidden" data-tab-section="more">
     <summary>資料與提醒設定</summary>
     <div class="settingsBody">
       <div class="toolbar">
@@ -361,7 +378,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
         <span class="redTag">-10–0 強力</span>
         <span class="purpleTag">J ＜ -10 極度超賣</span>
       </div>
-      <div class="methodology"><b>買點分數 0–100：</b>週 J 超賣 35%、距 52 週高點回檔 20%、週 J 轉折 15%、歷史勝率 15%、200 日均線與 50 日趨勢 15%。空頭趨勢會扣分；00631L 必須同時通過趨勢與止跌條件，否則只列觀察。建議比例指「本次預定投入資金」，不是全部資產。</div>
+      <div class="methodology"><b>買點分數 0–100：</b>週 J 超賣 35%、距 52 週高點回檔 20%、週 J 轉折 15%、歷史勝率 15%、200 日均線與 50 日趨勢 15%。空頭趨勢會扣分；槓桿 ETF 必須同時通過趨勢與止跌條件，反向、債券、主動式與特殊型 ETF 只提供技術面觀察。建議比例指「本次預定投入資金」，不是全部資產。</div>
       <div class="eventSettings">
         <b>新增自己的重大事件</b>
         <div class="eventForm"><input id="customEventDate" type="date"><input id="customEventName" placeholder="例如：NVIDIA 財報、台積電法說"><button class="btn secondary" id="addEvent" type="button">新增</button></div>
@@ -370,7 +387,15 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
     </div>
   </details>
 
-  <section id="signals" class="section">
+  <section id="signals" class="section tabHidden" data-tab-section="signals">
+    <article class="panel watchPanel">
+      <div class="watchHead">
+        <div><p class="eyebrow">MY WATCHLIST</p><h2>我的 ETF 清單</h2></div>
+        <div class="watchActions"><button class="miniBtn" id="addEtfBtn" type="button">＋ 新增 ETF</button><button class="miniBtn" id="resetEtfBtn" type="button">恢復弘昇精選</button></div>
+      </div>
+      <p class="watchHint">預設是弘昇關注的 5 檔。每位使用者新增、刪除與排序的清單只存在自己的手機，不會影響其他人。最多 15 檔。</p>
+      <div id="watchList" class="watchList"><div class="skeleton">載入清單中…</div></div>
+    </article>
     <div class="sectionHead">
       <div><p class="eyebrow">ALL SIGNALS</p><h2>全部買點</h2></div>
       <small>綜合 J 值、回檔、轉折與歷史勝率排序</small>
@@ -378,7 +403,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
     <div id="cards" class="cards"><div class="skeleton">資料載入中…</div></div>
   </section>
 
-  <details id="compare" class="fold panel">
+  <details id="compare" class="fold panel tabHidden" data-tab-section="more">
     <summary>
       <span class="foldTitle"><span>ETF 比較器</span><span class="foldHint">點擊展開</span></span>
     </summary>
@@ -393,7 +418,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
     <div class="riskBox"><b>00631L 風險提醒：</b>正向 2 倍槓桿 ETF 每日重設，長期報酬不等於指數漲跌的固定兩倍，震盪市場可能產生波動耗損。請勿只依 J 值做決策。</div>
   </details>
 
-  <details id="alerts" class="fold panel">
+  <details id="alerts" class="fold panel tabHidden" data-tab-section="more">
     <summary>
       <span class="foldTitle"><span>買點提醒設定</span><span class="foldHint">點擊展開</span></span>
     </summary>
@@ -410,7 +435,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
     <p class="footnote">GitHub Pages 無法在網站關閉時持續運作，因此此版會在開啟網站並更新資料時提醒。真正背景推播需另加後端排程服務。</p>
   </details>
 
-  <footer>Version 5.0 · Developed by 弘昇<br><span class="footnote">新聞、籌碼、買點分數與歷史驗證僅供資訊參考，不構成投資建議；FOMO 為本站自製情緒代理指標。</span></footer>
+  <footer>Version 5.2 · Developed by 弘昇<br><span class="footnote">新聞、籌碼、買點分數與歷史驗證僅供資訊參考，不構成投資建議；FOMO 為本站自製情緒代理指標。</span></footer>
 </div>
 
 <nav class="bottomNav">
@@ -420,6 +445,20 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
   <a href="#compare">比較</a>
   <a href="#alerts">提醒</a>
 </nav>
+
+
+<div id="watchModal" class="modal">
+  <div class="sheet watchSheet">
+    <div class="sheetHead">
+      <div><p class="eyebrow">ADD ETF</p><h3>新增台灣掛牌 ETF</h3></div>
+      <button id="closeWatchModal" class="close">關閉</button>
+    </div>
+    <input id="etfSearch" class="searchBox" inputmode="search" autocomplete="off" placeholder="輸入代號或名稱，例如 00878、台灣高股息">
+    <div id="searchStatus" class="footnote">正在準備 ETF 清單…</div>
+    <div id="searchResults" class="searchResults"></div>
+    <p class="footnote">目前開放台灣掛牌 ETF。槓桿、反向、債券與主動式 ETF 會改用較保守的技術面提示，不直接套用一般股票 ETF 的投入比例。</p>
+  </div>
+</div>
 
 <div id="modal" class="modal">
   <div class="sheet">
@@ -434,13 +473,28 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 </div>
 
 <script>
-const META={
-  "00830":{name:"國泰費城半導體",type:"海外股票",risk:"高",market:"美國半導體"},
-  "00662":{name:"富邦NASDAQ",type:"海外股票",risk:"高",market:"美國科技"},
-  "009815":{name:"大華美國科技50",type:"海外股票",risk:"高",market:"美國科技"},
-  "0050":{name:"元大台灣50",type:"台灣股票",risk:"中高",market:"台灣大型股"},
-  "00631L":{name:"元大台灣50正2",type:"槓桿ETF",risk:"極高",market:"台灣大型股2倍"}
-};
+const DEFAULT_WATCHLIST=[
+  {id:"00830",name:"國泰費城半導體",type:"海外股票",risk:"高",market:"美國半導體",strategyType:"equity"},
+  {id:"00662",name:"富邦NASDAQ",type:"海外股票",risk:"高",market:"美國科技",strategyType:"equity"},
+  {id:"009815",name:"大華美國科技50",type:"海外股票",risk:"高",market:"美國科技",strategyType:"equity"},
+  {id:"0050",name:"元大台灣50",type:"台灣股票",risk:"中高",market:"台灣大型股",strategyType:"equity"},
+  {id:"00631L",name:"元大台灣50正2",type:"槓桿ETF",risk:"極高",market:"台灣大型股2倍",strategyType:"leveraged"}
+];
+let watchlist=loadWatchlist();
+let META={};
+let ids=[];
+let selected=new Set();
+let stockCatalog=[];
+function syncWatchlistState(){META=Object.fromEntries(watchlist.map(x=>[x.id,x]));ids=watchlist.map(x=>x.id);selected=new Set(ids)}
+function loadWatchlist(){
+  try{
+    const saved=JSON.parse(localStorage.getItem("hs_etf_watchlist_v1")||"null");
+    if(Array.isArray(saved)&&saved.length)return saved.filter(x=>x&&x.id&&x.name).slice(0,15);
+  }catch{}
+  return DEFAULT_WATCHLIST.map(x=>({...x}));
+}
+function saveWatchlist(){localStorage.setItem("hs_etf_watchlist_v1",JSON.stringify(watchlist));syncWatchlistState()}
+syncWatchlistState();
 const SPLITS={
   "0050":[{date:"2025-06-18",ratio:4}],
   "00631L":[{date:"2026-03-31",ratio:22}]
@@ -463,8 +517,6 @@ const MARKET_EVENTS=[
   {date:"2026-12-10",name:"美國 CPI",type:"通膨",risk:"高"},
   {date:"2026-12-23",name:"美國 PCE＋GDP 終值",type:"通膨／景氣",risk:"中"}
 ];
-const ids=Object.keys(META);
-const selected=new Set(ids);
 let all=[];
 let latestNews=[];
 let marketChip={margin:null,institutional:null};
@@ -599,29 +651,35 @@ function scoreParts(x){
   const hit=x.backtest?.four?.hit;
   const history=Number.isFinite(hit)?clamp((hit-40)/60,0,1)*15:7;
   const trend=x.trend?.score??0;
-  const leveragePenalty=x.id==="00631L"?12:0;
+  const leveragePenalty=x.strategyType==="leveraged"?12:0;
   return{oversold,drawdown,reversal,history,trend,leveragePenalty};
 }
 function calcBuyScore(x){
   const p=scoreParts(x);return Math.round(clamp(p.oversold+p.drawdown+p.reversal+p.history+p.trend-p.leveragePenalty,0,100));
 }
 function allocationFor(x){
-  if(x.id==="00631L"&&(!x.trend.above200||x.direction!=="回升"))return 0;
+  if(["inverse","bond","active","other"].includes(x.strategyType))return 0;
+  if(x.strategyType==="leveraged"&&(!x.trend.above200||x.direction!=="回升"))return 0;
   if(!x.trend.above200&&x.direction!=="回升")return 0;
-  if(x.score>=82&&x.direction==="回升")return 20;
-  if(x.score>=70&&x.direction==="回升")return 15;
-  if(x.score>=58&&x.direction==="回升")return 10;
+  if(x.score>=82&&x.direction==="回升")return x.strategyType==="leveraged"?10:20;
+  if(x.score>=70&&x.direction==="回升")return x.strategyType==="leveraged"?5:15;
+  if(x.score>=58&&x.direction==="回升")return x.strategyType==="leveraged"?0:10;
   return 0;
 }
 function actionFor(x){
   const riskSoon=nearestEventDays()<=1;
   const pct=allocationFor(x);
   let text="暫不動作";
-  if(x.id==="00631L"&&(!x.trend.above200||x.direction!=="回升"))text="戰術部位：趨勢或止跌未通過";
+  if(x.strategyType==="inverse")text="反向 ETF：僅供戰術觀察";
+  else if(x.strategyType==="bond")text="債券 ETF：僅供技術面觀察";
+  else if(x.strategyType==="active")text="主動式 ETF：僅供技術面觀察";
+  else if(x.strategyType==="other")text="特殊型 ETF：僅供技術面觀察";
+  else if(x.strategyType==="leveraged"&&(!x.trend.above200||x.direction!=="回升"))text="槓桿部位：趨勢或止跌未通過";
   else if(x.trend.label==="空頭超賣"&&x.score>=60)text="空頭超賣，只觀察反彈";
   else if(pct===20)text="可分批布局第二階段";
   else if(pct===15)text="可小額第一批";
-  else if(pct===10)text="試單觀察";
+  else if(pct===10)text=x.strategyType==="leveraged"?"槓桿戰術部位，小額為限":"試單觀察";
+  else if(pct===5)text="槓桿戰術部位，極小額";
   else if(x.score>=58)text="等止跌確認";
   else if(x.score>=45)text="開始觀察";
   if(riskSoon&&pct>0)text+="；事件前減半";
@@ -643,7 +701,7 @@ async function one(id){
   const low52=Math.min(...last252.map(r=>+(r.min??r.close)));
   const series=kdjSeries(weekly(rows)),x=series.at(-1);
   const item={
-    id,...META[id],price,date:latest.date,weekState:weekState(latest.date),
+    id,...(META[id]||{name:id,type:"ETF",risk:"高",market:"台灣ETF",strategyType:"equity"}),price,date:latest.date,weekState:weekState(latest.date),
     changePct:rows.length>1?(price/+rows.at(-2).close-1)*100:0,
     ytd:(price/+firstY.close-1)*100,r1y:returnFrom(rows,252),r3y:returnFrom(rows,756),
     high52,low52,fromHigh:(price/high52-1)*100,fromLow:(price/low52-1)*100,
@@ -726,7 +784,8 @@ async function loadChipData(){
   marketChip.institutional=i.status==="fulfilled"?institutionalFlow(i.value):null;
 }
 function marketMetrics(){
-  const base=all.filter(x=>x.id!=="00631L"),avg=sum(base.map(x=>x.changePct))/(base.length||1);
+  const clean=all.filter(x=>!["leveraged","inverse"].includes(x.strategyType));
+  const base=clean.length?clean:all,avg=sum(base.map(x=>x.changePct))/(base.length||1);
   const ups=base.filter(x=>x.changePct>.15).length,downs=base.filter(x=>x.changePct<-.15).length;
   let label="震盪",cls="moodFlat";
   if(avg>=2){label="大漲";cls="moodUp"}else if(avg>=.7){label="偏多";cls="moodUp"}
@@ -746,8 +805,11 @@ function newsTheme(){
   return groups.find(x=>x.re.test(text))?.label||"大型科技股與整體風險情緒";
 }
 function marketReasons(){
-  const m=marketMetrics(),tech=all.filter(x=>["00830","00662","009815"].includes(x.id)),tw=all.find(x=>x.id==="0050");
-  const techAvg=sum(tech.map(x=>x.changePct))/(tech.length||1),direction=m.avg>=0?"上漲":"下跌",reasons=[];
+  const m=marketMetrics();
+  const tech=all.filter(x=>/科技|半導體|NASDAQ|費城/.test(`${x.name} ${x.market}`));
+  const techBase=tech.length?tech:all.filter(x=>x.strategyType==="equity");
+  const tw=all.find(x=>x.id==="0050")||all.find(x=>/台灣/.test(x.market));
+  const techAvg=techBase.length?sum(techBase.map(x=>x.changePct))/techBase.length:m.avg,direction=m.avg>=0?"上漲":"下跌",reasons=[];
   if(Math.abs(techAvg)>=.5)reasons.push(`科技／半導體 ETF 平均${techAvg>=0?"上漲":"下跌"} ${fmt(Math.abs(techAvg))}%，是今天盤勢的主要推力。`);
   else reasons.push("科技、半導體與台股大型股漲跌分歧，今天偏向震盪整理。 ");
   if(tw)reasons.push(`0050 今日 ${signed(tw.changePct)}；台股大型權值股與海外科技股${Math.sign(tw.changePct)===Math.sign(techAvg)?"方向一致":"走勢分歧"}。`);
@@ -775,7 +837,7 @@ function renderTop(){
 }
 function renderCards(){
   all.sort((a,b)=>b.score-a.score||a.j-b.j);
-  $("#cards").innerHTML=all.map((x,i)=>`<article class="card compactCard ${x.signal.className}"><div class="cardIdentity"><div class="cardTopline"><div class="ticker">${x.id}</div><span class="rank">買點 #${i+1}</span></div><div class="name">${x.name}</div><div class="actionLine">${x.action}</div></div><div class="cardMetrics"><div><div class="price">$${fmt(x.price)}</div><div class="change ${x.changePct>=0?"up":"down"}">${signed(x.changePct)}</div></div><div class="scoreBlock"><div class="scoreHeadline"><b>${x.score}</b><span>買點分數</span></div><div class="scoreBar"><i style="width:${x.score}%"></i></div><div class="kdjInline"><span>J ${fmt(x.j)}</span><span>${x.direction}</span></div></div></div><div class="cardContext"><span class="trendBadge ${x.trend.className}">${x.trend.label}</span><span class="allocationBadge">本次建議 ${x.allocation||0}%</span></div><div class="strategyNote">200日線 ${x.trend.above200?"之上":"之下"} · 50日線 ${x.trend.ma50Rising?"走升":"未走升"}</div><div class="cardActions"><button class="miniBtn" data-detail="${x.id}">走勢／驗證</button><button class="miniBtn" data-compare="${x.id}">比較</button></div></article>`).join("");
+  $("#cards").innerHTML=all.map((x,i)=>`<article class="card compactCard ${x.signal.className}"><div class="cardIdentity"><div class="cardTopline"><div class="ticker">${x.id}</div><span class="rank">買點 #${i+1}</span></div><div class="name">${x.name}</div><span class="typeBadge">${strategyLabel(x.strategyType)}</span><div class="actionLine">${x.action}</div></div><div class="cardMetrics"><div><div class="price">$${fmt(x.price)}</div><div class="change ${x.changePct>=0?"up":"down"}">${signed(x.changePct)}</div></div><div class="scoreBlock"><div class="scoreHeadline"><b>${x.score}</b><span>買點分數</span></div><div class="scoreBar"><i style="width:${x.score}%"></i></div><div class="kdjInline"><span>J ${fmt(x.j)}</span><span>${x.direction}</span></div></div></div><div class="cardContext"><span class="trendBadge ${x.trend.className}">${x.trend.label}</span><span class="allocationBadge">本次建議 ${x.allocation||0}%</span></div><div class="strategyNote">200日線 ${x.trend.above200?"之上":"之下"} · 50日線 ${x.trend.ma50Rising?"走升":"未走升"}</div><div class="cardActions"><button class="miniBtn" data-detail="${x.id}">走勢／驗證</button><button class="miniBtn" data-compare="${x.id}">比較</button></div></article>`).join("");
   document.querySelectorAll("[data-detail]").forEach(btn=>btn.addEventListener("click",()=>openDetail(btn.dataset.detail)));
   document.querySelectorAll("[data-compare]").forEach(btn=>btn.addEventListener("click",()=>scrollToCompare(btn.dataset.compare)));
 }
@@ -807,6 +869,51 @@ function renderEvents(){
   $("#customEventList").innerHTML=customEvents().map((e,i)=>`<div class="customEventRow"><span>${esc(e.date)} · ${esc(e.name)}</span><button type="button" data-remove-event="${i}">刪除</button></div>`).join("")||'<span class="footnote">尚未新增自訂事件。</span>';
   document.querySelectorAll("[data-remove-event]").forEach(b=>b.addEventListener("click",()=>{const a=customEvents();a.splice(+b.dataset.removeEvent,1);localStorage.setItem("hs_custom_events",JSON.stringify(a));renderEvents();all.forEach(x=>{x.action=actionFor(x)});renderTop();renderCards()}));
 }
+function strategyLabel(type){return({equity:"股票型",leveraged:"槓桿型",inverse:"反向型",bond:"債券型",active:"主動式",other:"特殊型"})[type]||"ETF"}
+function classifyEtf(info){
+  const name=String(info.stock_name||info.name||info.stock_id||"");
+  let strategyType="equity",type="股票ETF",risk="中高",market=/美|NASDAQ|費城|全球|日本|中國|印度|越南|歐洲|韓國/.test(name)?"海外市場":"台灣市場";
+  if(/反1|反向|Short|Bear/i.test(name)){strategyType="inverse";type="反向ETF";risk="極高";market="反向策略"}
+  else if(/正2|正向2|2X|兩倍|槓桿/i.test(name)){strategyType="leveraged";type="槓桿ETF";risk="極高";market+="槓桿"}
+  else if(/債|Bond|公債|公司債|金融債/i.test(name)){strategyType="bond";type="債券ETF";risk="中";market="債券市場"}
+  else if(/主動/i.test(name)){strategyType="active";type="主動式ETF";risk="高";market="主動式策略"}
+  else if(/期貨|原油|黃金|白銀|銅|商品|VIX/i.test(name)){strategyType="other";type="特殊型ETF";risk="極高";market="商品／期貨"}
+  return{id:String(info.stock_id||info.id),name,type,risk,market,strategyType};
+}
+async function ensureStockCatalog(){
+  if(stockCatalog.length)return stockCatalog;
+  const rows=await apiGet({dataset:"TaiwanStockInfo"},{soft:true});
+  stockCatalog=rows.filter(x=>String(x.industry_category||"").toUpperCase()==="ETF").map(classifyEtf);
+  return stockCatalog;
+}
+function renderWatchlist(){
+  $("#watchList").innerHTML=`<div class="watchCount">目前 ${watchlist.length} / 15 檔</div>`+watchlist.map((x,i)=>`<div class="watchRow"><div class="watchIdentity"><b>${esc(x.id)} · ${esc(x.name)}</b><small>${strategyLabel(x.strategyType)} · ${esc(x.market||"台灣ETF")}</small></div><div class="watchControls"><button class="watchIcon" type="button" data-watch-up="${i}" aria-label="上移">↑</button><button class="watchIcon" type="button" data-watch-down="${i}" aria-label="下移">↓</button><button class="watchIcon danger" type="button" data-watch-remove="${i}" aria-label="刪除">×</button></div></div>`).join("");
+  document.querySelectorAll("[data-watch-up]").forEach(b=>b.addEventListener("click",()=>moveWatch(+b.dataset.watchUp,-1)));
+  document.querySelectorAll("[data-watch-down]").forEach(b=>b.addEventListener("click",()=>moveWatch(+b.dataset.watchDown,1)));
+  document.querySelectorAll("[data-watch-remove]").forEach(b=>b.addEventListener("click",()=>removeWatch(+b.dataset.watchRemove)));
+}
+function moveWatch(index,delta){const to=index+delta;if(to<0||to>=watchlist.length)return;[watchlist[index],watchlist[to]]=[watchlist[to],watchlist[index]];saveWatchlist();renderWatchlist()}
+async function removeWatch(index){
+  if(watchlist.length<=1){alert("清單至少要保留 1 檔 ETF。");return}
+  const item=watchlist[index];if(!confirm(`移除 ${item.id} ${item.name}？`))return;watchlist.splice(index,1);saveWatchlist();renderWatchlist();await load();
+}
+function openWatchModal(){
+  $("#watchModal").classList.add("show");$("#etfSearch").value="";$("#searchResults").innerHTML="";$("#searchStatus").textContent="正在取得台灣 ETF 清單…";
+  ensureStockCatalog().then(rows=>{$("#searchStatus").textContent=rows.length?`可搜尋 ${rows.length} 檔台灣掛牌 ETF。輸入代號或名稱。`:"目前無法取得 ETF 清單，請稍後再試或填入 FinMind Token。";$("#etfSearch").focus()});
+}
+function closeWatchModal(){$("#watchModal").classList.remove("show")}
+function renderSearchResults(){
+  const q=$("#etfSearch").value.trim().toLowerCase();
+  if(!q){$("#searchResults").innerHTML="";return}
+  const existing=new Set(watchlist.map(x=>x.id));
+  const rows=stockCatalog.filter(x=>!existing.has(x.id)&&(x.id.toLowerCase().includes(q)||x.name.toLowerCase().includes(q))).slice(0,8);
+  $("#searchResults").innerHTML=rows.length?rows.map(x=>`<div class="searchResult"><div><b>${esc(x.id)} · ${esc(x.name)}</b><small>${strategyLabel(x.strategyType)} · ${esc(x.market)}</small></div><button class="searchAdd" type="button" data-add-etf="${esc(x.id)}">加入</button></div>`).join(""):'<div class="watchEmpty">找不到尚未加入的 ETF。</div>';
+  document.querySelectorAll("[data-add-etf]").forEach(b=>b.addEventListener("click",()=>addWatch(b.dataset.addEtf)));
+}
+async function addWatch(id){
+  if(watchlist.length>=15){alert("為避免手機載入過慢，每台裝置最多加入 15 檔。");return}
+  const item=stockCatalog.find(x=>x.id===id);if(!item)return;watchlist.push({...item});saveWatchlist();renderWatchlist();closeWatchModal();switchTab("signals",{scroll:false});await load();
+}
 function bestClass(values,v,mode="max"){
   const valid=values.filter(Number.isFinite);const best=mode==="max"?Math.max(...valid):Math.min(...valid);return Math.abs(v-best)<1e-9?"best":"";
 }
@@ -822,7 +929,7 @@ function renderTable(){
   $("#mobileCompare").innerHTML=c.map(x=>`<article class="mobileEtf ${x.signal.className}"><div class="mobileEtfHead"><div><b>${x.id}</b><small>${x.name}</small></div><span class="pill ${scoreTone(x.score)}">${x.score} 分</span></div><div class="splitNote"><b>${x.action}</b></div><div class="mobileMetrics"><div class="mobileMetric"><span>最新價</span><strong>$${fmt(x.price)}</strong></div><div class="mobileMetric"><span>週 J 值</span><strong>${fmt(x.j)} · ${x.weekState.short}</strong></div><div class="mobileMetric"><span>4 週歷史勝率</span><strong>${fmt(x.backtest.four.hit)}%</strong></div><div class="mobileMetric"><span>4 週平均報酬</span><strong>${fmt(x.backtest.four.avg)}%</strong></div><div class="mobileMetric"><span>今年報酬</span><strong class="${x.ytd>=0?"up":"down"}">${fmt(x.ytd)}%</strong></div><div class="mobileMetric"><span>距 52 週高點</span><strong>${fmt(x.fromHigh)}%</strong></div><div class="mobileMetric"><span>最大回檔</span><strong>${fmt(x.mdd)}%</strong></div><div class="mobileMetric"><span>年化波動</span><strong>${fmt(x.vol)}%</strong></div></div>${x.splitAdjusted?`<div class="splitNote">歷史價格已還原分割：${x.splitText}</div>`:""}</article>`).join("")||'<div class="skeleton">請至少勾選一檔 ETF</div>';
 }
 function scrollToCompare(id){
-  selected.add(id);$("#compare").open=true;document.querySelectorAll("#checks input").forEach(x=>{if(x.dataset.id===id)x.checked=true});renderTable();location.hash="compare";
+  selected.add(id);switchTab("more");$("#compare").open=true;document.querySelectorAll("#checks input").forEach(x=>{if(x.dataset.id===id)x.checked=true});renderTable();setTimeout(()=>$("#compare").scrollIntoView({behavior:"smooth",block:"start"}),120);
 }
 function drawChart(x){
   const canvas=$("#chart"),ctx=canvas.getContext("2d"),dpr=window.devicePixelRatio||1,w=canvas.clientWidth||720,h=canvas.clientHeight||260;
@@ -841,6 +948,15 @@ function openDetail(id){
 }
 $("#closeModal").addEventListener("click",()=>$("#modal").classList.remove("show"));
 $("#modal").addEventListener("click",e=>{if(e.target===$("#modal"))$("#modal").classList.remove("show")});
+
+function switchTab(name,{scroll=true}={}){
+  document.querySelectorAll("[data-tab-section]").forEach(el=>el.classList.toggle("tabHidden",el.dataset.tabSection!==name));
+  document.querySelectorAll(".topTab").forEach(btn=>btn.classList.toggle("active",btn.dataset.tab===name));
+  document.querySelectorAll("[data-tab-intro]").forEach(el=>el.classList.toggle("active",el.dataset.tabIntro===name));
+  sessionStorage.setItem("hs_active_tab",name);
+  if(scroll)document.querySelector(".topTabs")?.scrollIntoView({behavior:"smooth",block:"start"});
+}
+document.querySelectorAll(".topTab").forEach(btn=>btn.addEventListener("click",()=>switchTab(btn.dataset.tab)));
 function loadAlerts(){const a=JSON.parse(localStorage.getItem("hs_alerts")||"[20,10,0,-10]");["#alert1","#alert2","#alert3","#alert4"].forEach((s,i)=>$(s).value=a[i])}
 function getAlerts(){return["#alert1","#alert2","#alert3","#alert4"].map(s=>+$(s).value)}
 function maybeNotify(){
@@ -856,14 +972,23 @@ $("#addEvent").addEventListener("click",()=>{
   if(!date||!name){alert("請填寫事件日期與名稱。");return}
   const a=customEvents();a.push({date,name,type:"自訂",risk:"自訂"});localStorage.setItem("hs_custom_events",JSON.stringify(a));$("#customEventName").value="";renderEvents();all.forEach(x=>{x.action=actionFor(x)});renderTop();renderCards();
 });
+$("#addEtfBtn").addEventListener("click",openWatchModal);
+$("#resetEtfBtn").addEventListener("click",async()=>{if(!confirm("恢復弘昇精選 5 檔？目前自選清單會被取代。"))return;watchlist=DEFAULT_WATCHLIST.map(x=>({...x}));saveWatchlist();renderWatchlist();await load()});
+$("#closeWatchModal").addEventListener("click",closeWatchModal);
+$("#watchModal").addEventListener("click",e=>{if(e.target===$("#watchModal"))closeWatchModal()});
+$("#etfSearch").addEventListener("input",renderSearchResults);
 async function load(){
-  const m=$("#message"),b=$("#reload");m.className="message info";m.textContent="正在更新價格、趨勢、川普動態、融資與三大法人…";b.disabled=true;b.textContent="更新中…";
+  const m=$("#message"),b=$("#reload");syncWatchlistState();renderWatchlist();m.className="message info";m.textContent=`正在更新 ${ids.length} 檔 ETF、川普動態、融資與三大法人…`;b.disabled=true;b.textContent="更新中…";
   try{
-    all=await Promise.all(ids.map(one));all.forEach(x=>{x.action=actionFor(x)});applyCrossRules();renderTop();renderCards();renderChecks();renderTable();renderEvents();
+    const settled=await Promise.allSettled(ids.map(one));
+    all=settled.filter(x=>x.status==="fulfilled").map(x=>x.value);
+    const failed=settled.map((x,i)=>x.status==="rejected"?ids[i]:null).filter(Boolean);
+    if(!all.length)throw new Error("目前清單內的 ETF 都無法取得價格資料");
+    all.forEach(x=>{x.action=actionFor(x)});applyCrossRules();renderTop();renderCards();renderChecks();renderTable();renderEvents();
     await Promise.allSettled([loadNews(all[0].date),loadChipData(),loadTrumpNews()]);
     all.forEach(x=>{x.action=actionFor(x)});applyCrossRules();renderMarket();renderTrump();renderSentiment();renderEvents();renderTop();renderCards();renderTable();
     const chipStatus=marketChip.margin&&marketChip.institutional?"融資與法人已更新":"部分籌碼資料尚未更新";
-    m.textContent=`更新成功：價格至 ${all[0].date} 收盤；${chipStatus}。`;
+    m.textContent=`更新成功：${all.length} 檔價格至 ${all[0].date} 收盤；${chipStatus}${failed.length?`；${failed.join("、")} 暫時讀取失敗`:""}。`;
     $("#updated").textContent="資料至 "+all[0].date+" 收盤｜"+all[0].weekState.label;maybeNotify();
   }catch(e){m.className="message error";m.innerHTML="更新失敗："+esc(e.message)+"<br>若 API 額度不足，請填入 FinMind Token 後重新更新。"}
   finally{b.disabled=false;b.textContent="更新"}
@@ -871,7 +996,7 @@ async function load(){
 $("#token").value=localStorage.getItem("finmind_token")||"";
 $("#saveToken").addEventListener("click",()=>{localStorage.setItem("finmind_token",$("#token").value.trim());load()});
 $("#reload").addEventListener("click",load);
-loadAlerts();renderEvents();renderTrump();load();
+loadAlerts();renderWatchlist();renderEvents();renderTrump();switchTab(sessionStorage.getItem("hs_active_tab")||"today",{scroll:false});load();
 
 </script>
 </body>
