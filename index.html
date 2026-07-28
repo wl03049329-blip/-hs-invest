@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#07110d" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<title>HS Invest 4.0｜ETF 買點雷達</title>
+<title>HS Invest 5.0｜ETF 買點雷達</title>
 <style>
 :root{
   --bg:#06100c;--panel:#0c1a14;--panel2:#12271d;--panel3:#08150f;
@@ -239,7 +239,9 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
   .card:first-child{grid-column:1/-1}
 }
 @media(max-width:900px){.sentimentGrid{grid-template-columns:1fr 1fr}.sentimentGrid article:first-child{grid-column:1/-1}}
-@media(max-width:760px){
+
+.trumpPanel{grid-column:1/-1}.trumpHero{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-top:10px}.trumpHero b{font-size:18px}.trumpStatus{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border-radius:999px;background:#3a2a0e;color:#ffe2a1;font-size:12px;font-weight:900}.trumpList{display:grid;gap:9px;margin-top:12px}.trumpItem{display:grid;grid-template-columns:72px 1fr;gap:10px;padding:11px;border-radius:14px;background:#07130e;border:1px solid #193425;text-decoration:none}.trumpDate{font-size:12px;color:var(--muted);border-right:1px solid var(--line);padding-right:9px}.trumpBody b{display:block;font-size:14px;line-height:1.45}.trumpBody small{display:block;margin-top:5px;line-height:1.45}.impactTags{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}.impactTag{font-size:11px;font-weight:850;padding:4px 7px;border-radius:999px;background:#172a20;color:#cdebd8}.impactTag.high{background:#481a21;color:#ffadb5}.impactTag.mid{background:#453c10;color:#ffe46f}.trendBadge,.allocationBadge{display:inline-flex;align-items:center;padding:5px 8px;border-radius:999px;font-size:11px;font-weight:900}.trendBull{background:#173d28;color:#d8ffe7}.trendBear{background:#481a21;color:#ffadb5}.trendNeutral{background:#26322c;color:#d6e0da}.allocationBadge{background:#10281b;color:#c5f1d5}.cardContext{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}.strategyNote{margin-top:8px;font-size:12px;color:var(--muted);line-height:1.5}.trumpFoot{margin-top:10px;color:var(--muted);font-size:12px;line-height:1.55}
+@media(max-width:760px){.trumpItem{grid-template-columns:62px 1fr}.trumpHero{align-items:flex-start}.trumpHero b{font-size:16px}
   .app{padding-top:14px}
   .hero{align-items:flex-start}
   .hero .btn{padding:10px 12px}
@@ -282,7 +284,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 <div class="app">
   <section id="home" class="hero">
     <div>
-      <div class="brandLine"><p class="eyebrow">HS INVEST</p><span class="version">VERSION 4.0</span></div>
+      <div class="brandLine"><p class="eyebrow">HS INVEST</p><span class="version">VERSION 5.0</span></div>
       <h1>ETF 買點雷達</h1>
       <p class="subtitle">打開先看懂今天市場，再決定要不要加碼。週 KD 每日試算；0050、00631L 歷史價格已還原分割。</p>
     </div>
@@ -320,6 +322,15 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
     </article>
   </section>
 
+  <section id="trump-watch" class="section">
+    <article class="panel trumpPanel">
+      <div class="panelTitle"><div><p class="eyebrow">TRUMP MARKET WATCH</p><h2>川普最近又做了什麼？</h2></div><small id="trumpUpdated">每日更新</small></div>
+      <div class="trumpHero"><b>只整理可能影響股市的言論與政策</b><span class="trumpStatus">政策轉向雷達</span></div>
+      <div id="trumpContent"><div class="skeleton">載入川普動態中…</div></div>
+      <p class="trumpFoot">標題與來源用來快速掌握風險，影響方向只是情境判讀，不代表市場一定照該方向反應。</p>
+    </article>
+  </section>
+
   <section id="sentiment" class="sentimentGrid">
     <article class="panel">
       <div class="panelTitle"><div><p class="eyebrow">MARGIN FOMO</p><h2>融資情緒</h2></div><small>每日市場散戶溫度</small></div>
@@ -350,7 +361,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
         <span class="redTag">-10–0 強力</span>
         <span class="purpleTag">J ＜ -10 極度超賣</span>
       </div>
-      <div class="methodology"><b>買點分數 0–100：</b>週 J 超賣 45%、距 52 週高點的回檔 25%、週 J 是否回升 15%、過去 J＜10 後 4 週勝率 15%；00631L 另扣除槓桿風險分。分數代表「技術買點吸引力」，不代表商品安全性。</div>
+      <div class="methodology"><b>買點分數 0–100：</b>週 J 超賣 35%、距 52 週高點回檔 20%、週 J 轉折 15%、歷史勝率 15%、200 日均線與 50 日趨勢 15%。空頭趨勢會扣分；00631L 必須同時通過趨勢與止跌條件，否則只列觀察。建議比例指「本次預定投入資金」，不是全部資產。</div>
       <div class="eventSettings">
         <b>新增自己的重大事件</b>
         <div class="eventForm"><input id="customEventDate" type="date"><input id="customEventName" placeholder="例如：NVIDIA 財報、台積電法說"><button class="btn secondary" id="addEvent" type="button">新增</button></div>
@@ -399,12 +410,12 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
     <p class="footnote">GitHub Pages 無法在網站關閉時持續運作，因此此版會在開啟網站並更新資料時提醒。真正背景推播需另加後端排程服務。</p>
   </details>
 
-  <footer>Version 4.0 · Developed by 弘昇<br><span class="footnote">新聞、籌碼、買點分數與歷史驗證僅供資訊參考，不構成投資建議；FOMO 為本站自製情緒代理指標。</span></footer>
+  <footer>Version 5.0 · Developed by 弘昇<br><span class="footnote">新聞、籌碼、買點分數與歷史驗證僅供資訊參考，不構成投資建議；FOMO 為本站自製情緒代理指標。</span></footer>
 </div>
 
 <nav class="bottomNav">
   <a href="#home">今日</a>
-  <a href="#sentiment">情緒</a>
+  <a href="#trump-watch">川普</a>
   <a href="#signals">買點</a>
   <a href="#compare">比較</a>
   <a href="#alerts">提醒</a>
@@ -457,6 +468,7 @@ const selected=new Set(ids);
 let all=[];
 let latestNews=[];
 let marketChip={margin:null,institutional:null};
+let trumpNews=[];
 
 const $=s=>document.querySelector(s);
 const fmt=n=>Number.isFinite(+n)?new Intl.NumberFormat("zh-TW",{maximumFractionDigits:2}).format(+n):"—";
@@ -464,6 +476,7 @@ const signed=n=>`${+n>=0?"+":""}${fmt(n)}%`;
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 const clamp=(n,min,max)=>Math.min(max,Math.max(min,n));
 const sum=a=>a.reduce((s,n)=>s+(Number.isFinite(+n)?+n:0),0);
+const avg=a=>a.length?sum(a)/a.length:NaN;
 
 function taipeiToday(){
   return new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Taipei",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
@@ -568,29 +581,56 @@ function backtestStats(series,threshold=10){
   };
   return{threshold,signals:e.length,four:calc("r4"),twelve:calc("r12")};
 }
+function trendState(rows,price){
+  const closes=rows.map(r=>+r.close).filter(Number.isFinite);
+  const ma50=avg(closes.slice(-50)),ma200=avg(closes.slice(-200));
+  const prev50=avg(closes.slice(-60,-10));
+  const ma50Rising=Number.isFinite(prev50)&&ma50>prev50;
+  let label="趨勢整理",className="trendNeutral",score=7;
+  if(price>=ma200&&ma50Rising){label="多頭回檔";className="trendBull";score=15}
+  else if(price<ma200){label="空頭超賣";className="trendBear";score=-8}
+  else if(price>=ma200){label="多頭整理";className="trendNeutral";score=10}
+  return{ma50,ma200,ma50Rising,label,className,score,above200:price>=ma200};
+}
 function scoreParts(x){
-  const oversold=clamp((20-x.j)/30,0,1)*45;
-  const drawdown=clamp((-x.fromHigh)/30,0,1)*25;
-  const reversal=x.direction==="回升"?15:(x.j<0?6:0);
+  const oversold=clamp((20-x.j)/30,0,1)*35;
+  const drawdown=clamp((-x.fromHigh)/30,0,1)*20;
+  const reversal=x.direction==="回升"?15:(x.j<0?5:0);
   const hit=x.backtest?.four?.hit;
   const history=Number.isFinite(hit)?clamp((hit-40)/60,0,1)*15:7;
-  const leveragePenalty=x.id==="00631L"?8:0;
-  return{oversold,drawdown,reversal,history,leveragePenalty};
+  const trend=x.trend?.score??0;
+  const leveragePenalty=x.id==="00631L"?12:0;
+  return{oversold,drawdown,reversal,history,trend,leveragePenalty};
 }
 function calcBuyScore(x){
-  const p=scoreParts(x);return Math.round(clamp(p.oversold+p.drawdown+p.reversal+p.history-p.leveragePenalty,0,100));
+  const p=scoreParts(x);return Math.round(clamp(p.oversold+p.drawdown+p.reversal+p.history+p.trend-p.leveragePenalty,0,100));
+}
+function allocationFor(x){
+  if(x.id==="00631L"&&(!x.trend.above200||x.direction!=="回升"))return 0;
+  if(!x.trend.above200&&x.direction!=="回升")return 0;
+  if(x.score>=82&&x.direction==="回升")return 20;
+  if(x.score>=70&&x.direction==="回升")return 15;
+  if(x.score>=58&&x.direction==="回升")return 10;
+  return 0;
 }
 function actionFor(x){
   const riskSoon=nearestEventDays()<=1;
+  const pct=allocationFor(x);
   let text="暫不動作";
-  if(x.score>=80&&x.direction==="回升")text="適合分批布局";
-  else if(x.score>=68&&x.direction==="回升")text="可小額第一批";
-  else if(x.score>=68)text="超賣中，等止跌";
-  else if(x.score>=55)text="開始觀察";
-  else if(x.score>=40)text="等止跌確認";
-  if(x.id==="00631L"&&x.score>=55)text+="（僅限小額）";
-  if(riskSoon&&x.score>=55)text+="；事件前保守";
+  if(x.id==="00631L"&&(!x.trend.above200||x.direction!=="回升"))text="戰術部位：趨勢或止跌未通過";
+  else if(x.trend.label==="空頭超賣"&&x.score>=60)text="空頭超賣，只觀察反彈";
+  else if(pct===20)text="可分批布局第二階段";
+  else if(pct===15)text="可小額第一批";
+  else if(pct===10)text="試單觀察";
+  else if(x.score>=58)text="等止跌確認";
+  else if(x.score>=45)text="開始觀察";
+  if(riskSoon&&pct>0)text+="；事件前減半";
+  x.allocation=riskSoon?Math.round(pct/2):pct;
   return text;
+}
+function applyCrossRules(){
+  const base=all.find(x=>x.id==="0050"),lev=all.find(x=>x.id==="00631L");
+  if(lev&&base&&(!base.trend.above200||base.direction!=="回升")){lev.score=Math.min(lev.score,54);lev.action="戰術部位：0050 趨勢未通過";lev.allocation=0}
 }
 async function one(id){
   const data=await apiGet({dataset:"TaiwanStockPrice",data_id:id,start_date:startDate()});
@@ -609,7 +649,7 @@ async function one(id){
     high52,low52,fromHigh:(price/high52-1)*100,fromLow:(price/low52-1)*100,
     vol:annualVol(last252),mdd:maxDrawdown(last252),k:x.k,d:x.d,j:x.j,
     previousJ:x.previousJ,direction:x.j>x.previousJ?"回升":"下探",signal:sig(x.j),series,
-    backtest:backtestStats(series),splitAdjusted:!!SPLITS[id],
+    backtest:backtestStats(series),trend:trendState(rows,price),splitAdjusted:!!SPLITS[id],
     splitText:id==="0050"?"4：1（2025/6/18）":id==="00631L"?"22：1（2026/3/31）":""
   };
   item.score=calcBuyScore(item);item.action=actionFor(item);item.scoreParts=scoreParts(item);
@@ -623,6 +663,21 @@ async function loadNews(date){
   const settled=await Promise.allSettled(NEWS_IDS.map(id=>fetchNews(id,date)));
   const merged=settled.flatMap(x=>x.status==="fulfilled"?x.value:[]),seen=new Set();
   latestNews=merged.sort((a,b)=>String(b.date).localeCompare(String(a.date))).filter(x=>{const k=x.title.trim();if(seen.has(k))return false;seen.add(k);return true}).slice(0,8);
+}
+async function loadTrumpNews(){
+  try{
+    const res=await fetch("trump-news.json?ts="+Date.now(),{cache:"no-store"});
+    if(!res.ok)throw new Error("not found");
+    const json=await res.json();
+    trumpNews=Array.isArray(json.items)?json.items:[];
+    $("#trumpUpdated").textContent=json.updated_at?"更新 "+String(json.updated_at).slice(0,16).replace("T"," "):"每日更新";
+  }catch{trumpNews=[]}
+}
+function renderTrump(){
+  if(!trumpNews.length){
+    $("#trumpContent").innerHTML='<div class="newsEmpty">尚未啟用每日川普動態檔。上傳完整 V5 升級包中的 <b>trump-news.json</b>、<b>scripts</b> 與 <b>.github</b> 後，系統會每天自動整理。政策原文可先查看白宮 Presidential Actions。</div>';return;
+  }
+  $("#trumpContent").innerHTML=`<div class="trumpList">${trumpNews.slice(0,4).map(n=>`<a class="trumpItem" href="${esc(n.url)}" target="_blank" rel="noopener"><div class="trumpDate">${esc(n.date||"近期")}<br>${esc(n.source||"")}</div><div class="trumpBody"><b>${esc(n.title)}</b><small>${esc(n.market_view||"可能提高市場不確定性，需觀察政策細節與資產實際反應。")}</small><div class="impactTags"><span class="impactTag ${n.risk==="高"?"high":"mid"}">${esc(n.category||"政策")}</span><span class="impactTag">${esc(n.risk||"中")}影響</span></div></div></a>`).join("")}</div>`;
 }
 function marginFomo(rows){
   const a=rows.filter(x=>x.name==="MarginPurchaseMoney").sort((x,y)=>x.date.localeCompare(y.date));
@@ -713,14 +768,14 @@ function renderMarket(){
 function scoreTone(score){return score>=80?"red":score>=68?"orange":score>=55?"yellow":"neutral"}
 function renderTop(){
   const ranked=[...all].sort((a,b)=>b.score-a.score||a.j-b.j),medals=["🥇","🥈","🥉"];
-  $("#rankList").innerHTML=ranked.slice(0,3).map((x,i)=>`<div class="rankItem"><div class="rankNo">${medals[i]}</div><div><div class="rankTicker">${x.id}</div><div class="rankName">${x.name}</div><div class="rankAction">${x.action}</div></div><div class="rankRight"><div class="rankScore ${scoreTone(x.score)}">${x.score}<small>分</small></div><div class="rankSignal">J ${fmt(x.j)} · ${x.direction}</div></div></div>`).join("");
+  $("#rankList").innerHTML=ranked.slice(0,3).map((x,i)=>`<div class="rankItem"><div class="rankNo">${medals[i]}</div><div><div class="rankTicker">${x.id}</div><div class="rankName">${x.name}</div><div class="rankAction">${x.action} · 建議 ${x.allocation||0}%</div></div><div class="rankRight"><div class="rankScore ${scoreTone(x.score)}">${x.score}<small>分</small></div><div class="rankSignal">J ${fmt(x.j)} · ${x.direction}</div></div></div>`).join("");
   const low=[...all].sort((a,b)=>a.j-b.j)[0],best=ranked[0],strong=all.filter(x=>x.j<20).length,bounce=all.filter(x=>x.direction==="回升").length,deep=all.filter(x=>x.j<0).length;
   $("#snapshotGrid").innerHTML=`<div class="snapshot"><span>最佳綜合買點</span><b>${best.id} · ${best.score} 分</b></div><div class="snapshot"><span>最低 J 值</span><b>${low.id} · ${fmt(low.j)}</b></div><div class="snapshot"><span>進入加碼區</span><b>${strong} / ${all.length}</b></div><div class="snapshot"><span>J 值回升</span><b>${bounce} 檔</b></div><div class="snapshot"><span>J 值低於 0</span><b>${deep} 檔</b></div><div class="snapshot"><span>融資 FOMO</span><b>${marketChip.margin?marketChip.margin.score+" 分":"載入中"}</b></div>`;
   $("#updatedTop").textContent=all[0].weekState.label;
 }
 function renderCards(){
   all.sort((a,b)=>b.score-a.score||a.j-b.j);
-  $("#cards").innerHTML=all.map((x,i)=>`<article class="card compactCard ${x.signal.className}"><div class="cardIdentity"><div class="cardTopline"><div class="ticker">${x.id}</div><span class="rank">買點 #${i+1}</span></div><div class="name">${x.name}</div><div class="actionLine">${x.action}</div></div><div class="cardMetrics"><div><div class="price">$${fmt(x.price)}</div><div class="change ${x.changePct>=0?"up":"down"}">${signed(x.changePct)}</div></div><div class="scoreBlock"><div class="scoreHeadline"><b>${x.score}</b><span>買點分數</span></div><div class="scoreBar"><i style="width:${x.score}%"></i></div><div class="kdjInline"><span>J ${fmt(x.j)}</span><span>${x.direction}</span></div></div></div><div class="cardActions"><button class="miniBtn" data-detail="${x.id}">走勢／驗證</button><button class="miniBtn" data-compare="${x.id}">比較</button></div></article>`).join("");
+  $("#cards").innerHTML=all.map((x,i)=>`<article class="card compactCard ${x.signal.className}"><div class="cardIdentity"><div class="cardTopline"><div class="ticker">${x.id}</div><span class="rank">買點 #${i+1}</span></div><div class="name">${x.name}</div><div class="actionLine">${x.action}</div></div><div class="cardMetrics"><div><div class="price">$${fmt(x.price)}</div><div class="change ${x.changePct>=0?"up":"down"}">${signed(x.changePct)}</div></div><div class="scoreBlock"><div class="scoreHeadline"><b>${x.score}</b><span>買點分數</span></div><div class="scoreBar"><i style="width:${x.score}%"></i></div><div class="kdjInline"><span>J ${fmt(x.j)}</span><span>${x.direction}</span></div></div></div><div class="cardContext"><span class="trendBadge ${x.trend.className}">${x.trend.label}</span><span class="allocationBadge">本次建議 ${x.allocation||0}%</span></div><div class="strategyNote">200日線 ${x.trend.above200?"之上":"之下"} · 50日線 ${x.trend.ma50Rising?"走升":"未走升"}</div><div class="cardActions"><button class="miniBtn" data-detail="${x.id}">走勢／驗證</button><button class="miniBtn" data-compare="${x.id}">比較</button></div></article>`).join("");
   document.querySelectorAll("[data-detail]").forEach(btn=>btn.addEventListener("click",()=>openDetail(btn.dataset.detail)));
   document.querySelectorAll("[data-compare]").forEach(btn=>btn.addEventListener("click",()=>scrollToCompare(btn.dataset.compare)));
 }
@@ -781,7 +836,7 @@ function openDetail(id){
   const x=all.find(v=>v.id===id);if(!x)return;
   const p=x.scoreParts,b=x.backtest;
   $("#modalTitle").textContent=`${x.id}｜${x.name}`;
-  $("#trendList").innerHTML=`<div class="scoreDetail"><div><span>買點分數</span><b>${x.score}</b></div><p>${x.action}</p><div class="scoreBar"><i style="width:${x.score}%"></i></div></div><div class="trendItem"><span>分數組成</span><b>超賣 ${fmt(p.oversold)}＋回檔 ${fmt(p.drawdown)}＋轉折 ${fmt(p.reversal)}＋歷史 ${fmt(p.history)}${p.leveragePenalty?`－槓桿 ${p.leveragePenalty}`:""}</b></div><div class="trendItem"><span>週 K / D / J</span><b>${fmt(x.k)} / ${fmt(x.d)} / ${fmt(x.j)}</b></div><div class="trendItem"><span>歷史訊號次數</span><b>J＜10 共 ${b.signals} 次</b></div><div class="trendItem"><span>訊號後 4 週</span><b>勝率 ${fmt(b.four.hit)}%｜平均 ${fmt(b.four.avg)}%｜最差 ${fmt(b.four.worst)}%</b></div><div class="trendItem"><span>訊號後 12 週</span><b>勝率 ${fmt(b.twelve.hit)}%｜平均 ${fmt(b.twelve.avg)}%｜最差 ${fmt(b.twelve.worst)}%</b></div><div class="trendItem"><span>距 52 週高點</span><b>${fmt(x.fromHigh)}%</b></div><div class="trendItem"><span>一年最大回檔／波動</span><b>${fmt(x.mdd)}% / ${fmt(x.vol)}%</b></div>${x.splitAdjusted?`<div class="trendItem"><span>分割還原</span><b>${x.splitText}</b></div>`:""}<p class="footnote">歷史驗證採「週 J 值首次跌破 10」為一次訊號，觀察之後 4 週與 12 週報酬；歷史結果不代表未來。</p>`;
+  $("#trendList").innerHTML=`<div class="scoreDetail"><div><span>買點分數</span><b>${x.score}</b></div><p>${x.action}</p><div class="scoreBar"><i style="width:${x.score}%"></i></div></div><div class="trendItem"><span>分數組成</span><b>超賣 ${fmt(p.oversold)}＋回檔 ${fmt(p.drawdown)}＋轉折 ${fmt(p.reversal)}＋歷史 ${fmt(p.history)}＋趨勢 ${fmt(p.trend)}${p.leveragePenalty?`－槓桿 ${p.leveragePenalty}`:""}</b></div><div class="trendItem"><span>趨勢過濾／本次比例</span><b>${x.trend.label}｜${x.allocation||0}%</b></div><div class="trendItem"><span>50 日／200 日均線</span><b>${fmt(x.trend.ma50)} / ${fmt(x.trend.ma200)}</b></div><div class="trendItem"><span>週 K / D / J</span><b>${fmt(x.k)} / ${fmt(x.d)} / ${fmt(x.j)}</b></div><div class="trendItem"><span>歷史訊號次數</span><b>J＜10 共 ${b.signals} 次</b></div><div class="trendItem"><span>訊號後 4 週</span><b>勝率 ${fmt(b.four.hit)}%｜平均 ${fmt(b.four.avg)}%｜最差 ${fmt(b.four.worst)}%</b></div><div class="trendItem"><span>訊號後 12 週</span><b>勝率 ${fmt(b.twelve.hit)}%｜平均 ${fmt(b.twelve.avg)}%｜最差 ${fmt(b.twelve.worst)}%</b></div><div class="trendItem"><span>距 52 週高點</span><b>${fmt(x.fromHigh)}%</b></div><div class="trendItem"><span>一年最大回檔／波動</span><b>${fmt(x.mdd)}% / ${fmt(x.vol)}%</b></div>${x.splitAdjusted?`<div class="trendItem"><span>分割還原</span><b>${x.splitText}</b></div>`:""}<p class="footnote">歷史驗證採「週 J 值首次跌破 10」為一次訊號，觀察之後 4 週與 12 週報酬；歷史結果不代表未來。</p>`;
   $("#modal").classList.add("show");requestAnimationFrame(()=>drawChart(x));
 }
 $("#closeModal").addEventListener("click",()=>$("#modal").classList.remove("show"));
@@ -802,11 +857,11 @@ $("#addEvent").addEventListener("click",()=>{
   const a=customEvents();a.push({date,name,type:"自訂",risk:"自訂"});localStorage.setItem("hs_custom_events",JSON.stringify(a));$("#customEventName").value="";renderEvents();all.forEach(x=>{x.action=actionFor(x)});renderTop();renderCards();
 });
 async function load(){
-  const m=$("#message"),b=$("#reload");m.className="message info";m.textContent="正在更新價格、買點分數、融資與三大法人…";b.disabled=true;b.textContent="更新中…";
+  const m=$("#message"),b=$("#reload");m.className="message info";m.textContent="正在更新價格、趨勢、川普動態、融資與三大法人…";b.disabled=true;b.textContent="更新中…";
   try{
-    all=await Promise.all(ids.map(one));renderTop();renderCards();renderChecks();renderTable();renderEvents();
-    await Promise.allSettled([loadNews(all[0].date),loadChipData()]);
-    all.forEach(x=>{x.action=actionFor(x)});renderMarket();renderSentiment();renderEvents();renderTop();renderCards();renderTable();
+    all=await Promise.all(ids.map(one));all.forEach(x=>{x.action=actionFor(x)});applyCrossRules();renderTop();renderCards();renderChecks();renderTable();renderEvents();
+    await Promise.allSettled([loadNews(all[0].date),loadChipData(),loadTrumpNews()]);
+    all.forEach(x=>{x.action=actionFor(x)});applyCrossRules();renderMarket();renderTrump();renderSentiment();renderEvents();renderTop();renderCards();renderTable();
     const chipStatus=marketChip.margin&&marketChip.institutional?"融資與法人已更新":"部分籌碼資料尚未更新";
     m.textContent=`更新成功：價格至 ${all[0].date} 收盤；${chipStatus}。`;
     $("#updated").textContent="資料至 "+all[0].date+" 收盤｜"+all[0].weekState.label;maybeNotify();
@@ -816,7 +871,7 @@ async function load(){
 $("#token").value=localStorage.getItem("finmind_token")||"";
 $("#saveToken").addEventListener("click",()=>{localStorage.setItem("finmind_token",$("#token").value.trim());load()});
 $("#reload").addEventListener("click",load);
-loadAlerts();renderEvents();load();
+loadAlerts();renderEvents();renderTrump();load();
 
 </script>
 </body>
