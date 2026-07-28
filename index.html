@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#07110d" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<title>HS Invest 5.0｜ETF 買點雷達</title>
+<title>HS Invest 6.0｜ETF 買點雷達</title>
 <style>
 :root{
   --bg:#06100c;--panel:#0c1a14;--panel2:#12271d;--panel3:#08150f;
@@ -285,12 +285,13 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 
 .watchPanel{margin-bottom:14px}.watchHead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.watchHead h2{margin:3px 0 0}.watchActions{display:flex;gap:8px;flex-wrap:wrap}.watchActions .miniBtn{white-space:nowrap}.watchHint{margin:10px 0 0;color:var(--muted);font-size:13px;line-height:1.55}.watchList{display:grid;gap:8px;margin-top:13px}.watchRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;background:#07130e;border:1px solid var(--line);border-radius:16px;padding:11px 12px}.watchIdentity{min-width:0}.watchIdentity b{font-size:18px}.watchIdentity small{display:block;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.watchControls{display:flex;gap:5px}.watchIcon{border:1px solid #2a5039;background:#10271a;color:#dffff0;border-radius:10px;padding:7px 9px;font-weight:900;line-height:1}.watchIcon.danger{color:#ff9ba4;border-color:#67313a}.watchCount{display:inline-flex;align-items:center;border-radius:999px;background:#173f2a;color:#effff5;padding:6px 10px;font-size:12px;font-weight:900}.searchBox{width:100%;background:#07130e;border:1px solid var(--line);color:#fff;border-radius:14px;padding:13px 14px;margin-top:13px}.searchResults{display:grid;gap:8px;margin-top:12px}.searchResult{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#07130e;border:1px solid var(--line);border-radius:15px;padding:11px 12px}.searchResult div{min-width:0}.searchResult b{font-size:17px}.searchResult small{display:block;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.searchAdd{border:1px solid #3f7b58;background:#173f2a;color:#effff5;border-radius:11px;padding:9px 11px;font-weight:900;white-space:nowrap}.typeBadge{display:inline-flex;margin-top:6px;border-radius:999px;padding:4px 8px;font-size:11px;font-weight:900;background:#26322c;color:#d9e7df}.watchEmpty{color:var(--muted);padding:20px;text-align:center}.watchSheet{padding-bottom:calc(20px + env(safe-area-inset-bottom))}@media(max-width:520px){.watchHead{display:block}.watchActions{margin-top:10px}.watchActions .miniBtn{flex:1}.watchControls{gap:4px}.watchIcon{padding:7px 8px}}
 </style>
+<link rel="stylesheet" href="portfolio-v6.css" />
 </head>
 <body>
 <div class="app">
   <section id="home" class="hero">
     <div>
-      <div class="brandLine"><p class="eyebrow">HS INVEST</p><span class="version">VERSION 5.2</span></div>
+      <div class="brandLine"><p class="eyebrow">HS INVEST</p><span class="version">VERSION 6.0</span></div>
       <h1>ETF 買點雷達</h1>
       <p class="subtitle">打開先看懂今天市場，再決定要不要加碼。週 KD 每日試算；0050、00631L 歷史價格已還原分割。</p>
     </div>
@@ -302,12 +303,14 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
   <nav class="topTabs" aria-label="主要分頁">
     <button class="topTab active" type="button" data-tab="today">今日</button>
     <button class="topTab" type="button" data-tab="signals">我的ETF</button>
+    <button class="topTab" type="button" data-tab="portfolio">我的持股</button>
     <button class="topTab" type="button" data-tab="sentiment">籌碼</button>
     <button class="topTab" type="button" data-tab="trump">川普</button>
     <button class="topTab" type="button" data-tab="more">更多</button>
   </nav>
   <p class="tabIntro active" data-tab-intro="today">先看市場摘要、最佳買點與快速判斷。</p>
   <p class="tabIntro" data-tab-intro="signals">建立自己的 ETF 清單，再查看分數、趨勢與建議比例。</p>
+  <p class="tabIntro" data-tab-intro="portfolio">只在此裝置管理個人持股，使用免費延遲行情估算損益與配置。</p>
   <p class="tabIntro" data-tab-intro="sentiment">查看融資 FOMO、CNN 恐懼貪婪、三大法人與重大事件。</p>
   <p class="tabIntro" data-tab-intro="trump">只整理可能影響市場的川普言論與政策。</p>
   <p class="tabIntro" data-tab-intro="more">ETF 比較、提醒與資料設定集中在這裡。</p>
@@ -339,6 +342,80 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       </div>
       <div id="snapshotGrid" class="snapshotGrid"><div class="skeleton">載入中…</div></div>
     </article>
+  </section>
+
+  <section id="homeSentiment" class="panel homeSentiment" data-tab-section="today" aria-labelledby="homeSentimentTitle">
+    <div class="panelTitle compactTitle">
+      <div><p class="eyebrow">MARKET SENTIMENT</p><h2 id="homeSentimentTitle">市場情緒快覽</h2></div>
+      <small>點卡片看完整籌碼</small>
+    </div>
+    <div class="homeSentimentCards">
+      <button id="homeCnnCard" class="homeSentimentCard" type="button" aria-label="查看 CNN 恐懼貪婪完整資料">
+        <span>CNN Fear &amp; Greed</span><b>—</b><em>資料載入中</em><small>正在更新</small>
+      </button>
+      <button id="homeFomoCard" class="homeSentimentCard" type="button" aria-label="查看台股融資 FOMO 完整資料">
+        <span>台股融資 FOMO</span><b>—</b><em>資料載入中</em><small>正在更新</small>
+      </button>
+    </div>
+    <p id="homeSentimentConclusion" class="homeSentimentConclusion">情緒資料彙整中…</p>
+  </section>
+
+  <section id="portfolio" class="section portfolioPage tabHidden" data-tab-section="portfolio" aria-labelledby="portfolioTitle">
+    <div class="portfolioTopline">
+      <div><p class="eyebrow">MY PORTFOLIO</p><h2 id="portfolioTitle">我的持股</h2></div>
+      <button id="portfolioAddBtn" class="btn" type="button" aria-label="新增持股">＋ 新增持股</button>
+    </div>
+    <div class="portfolioPrivacy" role="note">
+      <b>持股資料只儲存在此裝置，不會上傳或公開。</b>
+      <span>換手機、清除瀏覽器資料或使用無痕模式時，持股資料可能消失，請定期匯出備份。</span>
+    </div>
+    <article class="panel quoteStatusPanel">
+      <div class="quoteStatusMain">
+        <div><b>延遲行情</b><span>資料可能非即時，僅供參考。</span></div>
+        <span id="portfolioMarketMode" class="modeBadge">判斷交易時段中</span>
+      </div>
+      <div class="quoteControls">
+        <span id="portfolioQuoteStatus" role="status" aria-live="polite">尚未更新行情</span>
+        <label class="autoToggle"><input id="portfolioAutoRefresh" type="checkbox" checked /> 自動更新</label>
+        <button id="portfolioRefreshBtn" class="miniBtn" type="button" aria-label="手動重新整理持股行情">重新整理</button>
+      </div>
+      <small id="portfolioQuoteNote">股價依最新可取得的延遲行情或收盤資料計算，實際成交價格與券商數字可能不同。</small>
+    </article>
+
+    <div id="portfolioSummary" class="portfolioSummary" aria-live="polite"></div>
+
+    <article class="panel allocationPanel">
+      <div class="panelTitle compactTitle">
+        <div><p class="eyebrow">ALLOCATION</p><h2>資產配置</h2></div>
+        <small>依目前市值</small>
+      </div>
+      <div class="allocationLayout">
+        <div class="allocationCanvasWrap">
+          <canvas id="portfolioChart" width="560" height="560" tabindex="0" aria-label="持股資產配置圓餅圖，可用方向鍵選擇區塊"></canvas>
+          <div id="portfolioChartCenter" class="chartCenter" aria-hidden="true"><b>資料更新中</b><span>0 檔持股</span></div>
+        </div>
+        <div id="portfolioChartDetail" class="chartDetail" aria-live="polite">點擊或觸碰圖表區塊查看明細。</div>
+      </div>
+    </article>
+
+    <div class="portfolioToolbar">
+      <label>排序
+        <select id="portfolioSort" aria-label="持股排序方式">
+          <option value="weight">市值占比</option>
+          <option value="todayPnl">今日損益</option>
+          <option value="totalPnl">累積損益</option>
+          <option value="returnRate">報酬率</option>
+          <option value="code">股票代號</option>
+        </select>
+      </label>
+      <div>
+        <button id="portfolioExportBtn" class="miniBtn" type="button">匯出 JSON 備份</button>
+        <button id="portfolioImportBtn" class="miniBtn" type="button">匯入 JSON</button>
+        <button id="portfolioClearBtn" class="miniBtn dangerBtn" type="button">清除全部持股</button>
+        <input id="portfolioImportFile" type="file" accept="application/json,.json" hidden aria-label="選擇持股 JSON 備份檔" />
+      </div>
+    </div>
+    <div id="portfolioList" class="portfolioList"></div>
   </section>
 
   <section id="trump-watch" class="section tabHidden" data-tab-section="trump">
@@ -445,7 +522,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
     <p class="footnote">GitHub Pages 無法在網站關閉時持續運作，因此此版會在開啟網站並更新資料時提醒。真正背景推播需另加後端排程服務。</p>
   </details>
 
-  <footer>Version 5.2 · Developed by 弘昇<br><span class="footnote">新聞、籌碼、買點分數與歷史驗證僅供資訊參考，不構成投資建議；FOMO 為本站自製情緒代理指標。</span></footer>
+  <footer>Version 6.0 · Developed by 弘昇<br><span class="footnote">新聞、籌碼、買點分數、持股估算與歷史驗證僅供資訊參考，不構成投資建議；FOMO 為本站自製情緒代理指標。</span></footer>
 </div>
 
 <nav class="bottomNav">
@@ -479,6 +556,41 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
     <div class="chartBox"><canvas id="chart" width="720" height="300"></canvas></div>
     <div class="chartLegend"><span>白線：週收盤價</span><span>綠線：J 值</span><span>虛線：J=20 / 10 / 0 / -10</span></div>
     <div id="trendList" class="trendList"></div>
+  </div>
+</div>
+
+<div id="portfolioModal" class="modal portfolioModal" role="dialog" aria-modal="true" aria-labelledby="portfolioModalTitle">
+  <div class="sheet portfolioSheet">
+    <div class="sheetHead">
+      <div><p class="eyebrow">LOCAL PORTFOLIO</p><h3 id="portfolioModalTitle">新增持股</h3></div>
+      <button id="portfolioModalClose" class="close" type="button" aria-label="關閉持股編輯視窗">關閉</button>
+    </div>
+    <form id="portfolioForm" novalidate>
+      <label class="portfolioField">股票或 ETF 代號
+        <input id="portfolioCode" name="code" inputmode="text" autocomplete="off" maxlength="10" required aria-describedby="portfolioCodeHelp" placeholder="例如 0050、2330" />
+      </label>
+      <div id="portfolioCodeHelp" class="fieldHelp">可搜尋目前 ETF 清單與 FinMind TaiwanStockInfo；搜尋文字只在此頁面比對。</div>
+      <div id="portfolioSearchResults" class="portfolioSearchResults" role="listbox" aria-label="股票搜尋結果"></div>
+      <div class="portfolioFieldGrid">
+        <label class="portfolioField">股數
+          <input id="portfolioShares" name="shares" type="number" inputmode="decimal" min="0" step="any" required placeholder="必須大於 0" />
+        </label>
+        <label class="portfolioField">平均成本
+          <input id="portfolioAverageCost" name="averageCost" type="number" inputmode="decimal" min="0" step="any" required placeholder="必須大於 0" />
+        </label>
+      </div>
+      <label class="portfolioField">自訂名稱（選填）
+        <input id="portfolioCustomName" name="customName" maxlength="40" autocomplete="off" placeholder="例如 長期核心部位" />
+      </label>
+      <div id="portfolioFormError" class="formError" role="alert"></div>
+      <div id="portfolioDuplicateActions" class="duplicateActions" hidden>
+        <p>此代號已存在，請選擇處理方式：</p>
+        <button type="button" data-duplicate-action="merge">合併持股</button>
+        <button type="button" data-duplicate-action="overwrite">覆蓋原資料</button>
+        <button type="button" data-duplicate-action="cancel">取消</button>
+      </div>
+      <button id="portfolioSaveBtn" class="btn portfolioSaveBtn" type="submit">儲存持股</button>
+    </form>
   </div>
 </div>
 
@@ -1119,5 +1231,7 @@ $("#reload").addEventListener("click",load);
 loadAlerts();renderWatchlist();renderEvents();renderTrump();switchTab(sessionStorage.getItem("hs_active_tab")||"today",{scroll:false});load();
 
 </script>
+<script src="portfolio-core.js"></script>
+<script src="portfolio-v6.js"></script>
 </body>
 </html>

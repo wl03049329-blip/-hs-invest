@@ -1,0 +1,33 @@
+name: Update delayed market quotes
+
+on:
+  schedule:
+    # 台北週一至週五 09:00～14:55，每 5 分鐘嘗試更新同源快取。
+    # GitHub Actions 排程的最小間隔為 5 分鐘；頁面本身仍每 60 秒讀取一次。
+    - cron: "*/5 1-6 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-delayed-market-quotes
+  cancel-in-progress: true
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Fetch official TWSE and TPEx bulk quotes
+        run: python scripts/update_market_quotes.py
+      - name: Commit changed quote cache
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add market-quotes.json market-quotes-meta.json
+          git diff --cached --quiet || git commit -m "Update delayed Taiwan market quotes"
+          git push
