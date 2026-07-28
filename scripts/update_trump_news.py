@@ -10,11 +10,34 @@ import re
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
+from html.parser import HTMLParser
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "trump-news.json"
 UA = {"User-Agent": "Mozilla/5.0 HS-Invest-Market-Watch/1.0"}
+MAX_TITLE_LENGTH = 180
+WHITEHOUSE_ACTION_PREFIX = "https://www.whitehouse.gov/presidential-actions/"
+
+BAD_TITLE_MARKERS = (
+    "<!doctype",
+    "<html",
+    "<script",
+    "<style",
+    "</",
+    "@context",
+    "@graph",
+    "@font-face",
+    "@media",
+    "application/ld+json",
+    "schema.org",
+    "wp-block-",
+    "sourceurl=",
+    "googletagmanager",
+    "document.",
+    "window.",
+    "var(--",
+)
 
 KEYWORDS = {
     "關稅／貿易": ["tariff", "trade", "duty", "section 301", "import"],
@@ -24,6 +47,59 @@ KEYWORDS = {
     "能源／原物料": ["oil", "energy", "aluminum", "steel", "copper"],
     "地緣政治": ["sanction", "war", "iran", "russia", "ukraine", "israel"],
 }
+
+def clean_title(value: object) -> str:
+    if not isinstance(value, str):
+        return ""
+    title = html.unescape(re.sub(r"\s+", " ", value)).strip()
+    lower = title.lower()
+    if not title or len(title) > MAX_TITLE_LENGTH:
+        return ""
+    if "<" in title or ">" in title:
+        return ""
+    if any(marker in lower for marker in BAD_TITLE_MARKERS):
+        return ""
+    if re.search(r"\{[^{}]{0,160}(?:[a-z-]+\s*:|--[a-z0-9-]+\s*:)", lower):
+        return ""
+    if lower.count("http://") + lower.count("https://") > 1:
+        return ""
+    return title
+
+class WhiteHouseActionParser(HTMLParser):
+    """Collect only the visible text inside Presidential Actions links."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.links: list[tuple[str, str]] = []
+        self.current_url = ""
+        self.current_text: list[str] = []
+        self.ignored_depth = 0
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        tag = tag.lower()
+        if tag in {"script", "style", "noscript", "template"}:
+            self.ignored_depth += 1
+            return
+        if tag != "a" or self.current_url or self.ignored_depth:
+            return
+        href = dict(attrs).get("href") or ""
+        if href.startswith(WHITEHOUSE_ACTION_PREFIX):
+            self.current_url = href
+            self.current_text = []
+
+    def handle_data(self, data: str) -> None:
+        if self.current_url and not self.ignored_depth:
+            self.current_text.append(data)
+
+    def handle_endtag(self, tag: str) -> None:
+        tag = tag.lower()
+        if tag in {"script", "style", "noscript", "template"}:
+            self.ignored_depth = max(0, self.ignored_depth - 1)
+            return
+        if tag == "a" and self.current_url:
+            self.links.append((self.current_url, " ".join(self.current_text)))
+            self.current_url = ""
+            self.current_text = []
 
 def get(url: str) -> bytes:
     req = urllib.request.Request(url, headers=UA)
@@ -56,12 +132,12 @@ def google_rss() -> list[dict]:
     root = ET.fromstring(get(url))
     out = []
     for item in root.findall("./channel/item")[:10]:
-        title = html.unescape(item.findtext("title") or "").strip()
+        title = clean_title(item.findtext("title") or "")
         link = item.findtext("link") or ""
         pub = item.findtext("pubDate") or ""
         source_node = item.find("source")
         source = source_node.text.strip() if source_node is not None and source_node.text else "Google News"
-        if not title or "Trump" not in title:
+        if not title or "trump" not in title.lower():
             continue
         category, risk, view = classify(title)
         try:
@@ -74,12 +150,11 @@ def google_rss() -> list[dict]:
 def whitehouse_actions() -> list[dict]:
     url = "https://www.whitehouse.gov/presidential-actions/"
     text = get(url).decode("utf-8", "ignore")
-    # Keep only market-sensitive official action titles from the listing page.
-    links = re.findall(r'href="(https://www\.whitehouse\.gov/presidential-actions/[^"]+)"[^>]*>(.*?)</a>', text, re.S | re.I)
+    parser = WhiteHouseActionParser()
+    parser.feed(text)
     out, seen = [], set()
-    for link, raw in links:
-        title = re.sub(r"<[^>]+>", " ", raw)
-        title = html.unescape(re.sub(r"\s+", " ", title)).strip()
+    for link, raw in parser.links:
+        title = clean_title(raw)
         if len(title) < 20 or title in seen:
             continue
         seen.add(title)
@@ -103,7 +178,11 @@ def main() -> None:
     items.sort(key=lambda x: (x["source"] == "White House", x["date"]), reverse=True)
     unique, seen = [], set()
     for item in items:
-        key = re.sub(r"[^a-z0-9]+", "", item["title"].lower())[:80]
+        title = clean_title(item.get("title"))
+        if not title:
+            continue
+        item["title"] = title
+        key = re.sub(r"[^a-z0-9]+", "", title.lower())[:80]
         if key in seen:
             continue
         seen.add(key)

@@ -526,9 +526,26 @@ const $=s=>document.querySelector(s);
 const fmt=n=>Number.isFinite(+n)?new Intl.NumberFormat("zh-TW",{maximumFractionDigits:2}).format(+n):"—";
 const signed=n=>`${+n>=0?"+":""}${fmt(n)}%`;
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+const TRUMP_BAD_TEXT=/(?:<!doctype|<\s*\/?\s*[a-z][^>]*>|@context|@graph|@font-face|@media\b|application\/ld\+json|schema\.org|wp-block-|sourceurl=|googletagmanager|document\.|window\.|var\(--)/i;
 const clamp=(n,min,max)=>Math.min(max,Math.max(min,n));
 const sum=a=>a.reduce((s,n)=>s+(Number.isFinite(+n)?+n:0),0);
 const avg=a=>a.length?sum(a)/a.length:NaN;
+
+function isSafeTrumpText(value,maxLength){
+  if(typeof value!=="string")return false;
+  const text=value.replace(/\s+/g," ").trim();
+  if(!text||text.length>maxLength||TRUMP_BAD_TEXT.test(text))return false;
+  return !/\{[^{}]{0,160}(?:[a-z-]+\s*:|--[a-z0-9-]+\s*:)/i.test(text);
+}
+function safeTrumpUrl(value){
+  try{
+    const url=new URL(String(value));
+    return ["http:","https:"].includes(url.protocol)?url.href:"";
+  }catch{return ""}
+}
+function isSafeTrumpItem(item){
+  return !!item&&typeof item==="object"&&isSafeTrumpText(item.title,180)&&safeTrumpUrl(item.url);
+}
 
 function taipeiToday(){
   return new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Taipei",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
@@ -727,15 +744,20 @@ async function loadTrumpNews(){
     const res=await fetch("trump-news.json?ts="+Date.now(),{cache:"no-store"});
     if(!res.ok)throw new Error("not found");
     const json=await res.json();
-    trumpNews=Array.isArray(json.items)?json.items:[];
+    trumpNews=(Array.isArray(json.items)?json.items:[]).filter(isSafeTrumpItem).map(item=>({
+      ...item,
+      title:item.title.replace(/\s+/g," ").trim(),
+      market_view:isSafeTrumpText(item.market_view,300)?item.market_view.replace(/\s+/g," ").trim():"可能提高市場不確定性，需觀察政策細節與資產實際反應。"
+    }));
     $("#trumpUpdated").textContent=json.updated_at?"更新 "+String(json.updated_at).slice(0,16).replace("T"," "):"每日更新";
   }catch{trumpNews=[]}
 }
 function renderTrump(){
-  if(!trumpNews.length){
+  const safeNews=trumpNews.filter(isSafeTrumpItem);
+  if(!safeNews.length){
     $("#trumpContent").innerHTML='<div class="newsEmpty">尚未啟用每日川普動態檔。上傳完整 V5 升級包中的 <b>trump-news.json</b>、<b>scripts</b> 與 <b>.github</b> 後，系統會每天自動整理。政策原文可先查看白宮 Presidential Actions。</div>';return;
   }
-  $("#trumpContent").innerHTML=`<div class="trumpList">${trumpNews.slice(0,4).map(n=>`<a class="trumpItem" href="${esc(n.url)}" target="_blank" rel="noopener"><div class="trumpDate">${esc(n.date||"近期")}<br>${esc(n.source||"")}</div><div class="trumpBody"><b>${esc(n.title)}</b><small>${esc(n.market_view||"可能提高市場不確定性，需觀察政策細節與資產實際反應。")}</small><div class="impactTags"><span class="impactTag ${n.risk==="高"?"high":"mid"}">${esc(n.category||"政策")}</span><span class="impactTag">${esc(n.risk||"中")}影響</span></div></div></a>`).join("")}</div>`;
+  $("#trumpContent").innerHTML=`<div class="trumpList">${safeNews.slice(0,4).map(n=>`<a class="trumpItem" href="${esc(safeTrumpUrl(n.url))}" target="_blank" rel="noopener"><div class="trumpDate">${esc(n.date||"近期")}<br>${esc(n.source||"")}</div><div class="trumpBody"><b>${esc(n.title)}</b><small>${esc(n.market_view||"可能提高市場不確定性，需觀察政策細節與資產實際反應。")}</small><div class="impactTags"><span class="impactTag ${n.risk==="高"?"high":"mid"}">${esc(n.category||"政策")}</span><span class="impactTag">${esc(n.risk||"中")}影響</span></div></div></a>`).join("")}</div>`;
 }
 function marginFomo(rows){
   const a=rows.filter(x=>x.name==="MarginPurchaseMoney").sort((x,y)=>x.date.localeCompare(y.date));
