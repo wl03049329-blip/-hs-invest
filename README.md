@@ -1,2 +1,2 @@
 # -hs-invest
-HS Invest ETF 週KD加碼雷達
+HS | ETF股市雷達 Version 6.1

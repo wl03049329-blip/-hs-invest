@@ -86,7 +86,9 @@
       previousClose: Number.isFinite(previousClose) && previousClose > 0 ? previousClose : null,
       name: sanitizeName(quote?.name),
       date: String(quote?.date ?? ""),
-      fetchedAt: String(quote?.fetchedAt ?? "")
+      fetchedAt: String(quote?.fetchedAt ?? ""),
+      quoteMode: quote?.quoteMode === "delayed" ? "delayed" : "close",
+      quoteTime: String(quote?.quoteTime ?? "")
     };
   }
 
@@ -233,7 +235,9 @@
         name: sanitizeName(row.name),
         date,
         fetchedAt: updatedAt,
-        market: row.market === "TPEx" ? "TPEx" : "TWSE"
+        market: row.market === "TPEx" ? "TPEx" : "TWSE",
+        quoteMode: row.quote_mode === "delayed" ? "delayed" : "close",
+        quoteTime: String(row.quote_time || "")
       });
     }
     if (!result.size) throw new Error("行情快取沒有有效資料。");

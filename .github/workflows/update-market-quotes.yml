@@ -22,12 +22,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Fetch official TWSE and TPEx bulk quotes
+      - name: Fetch structured Taiwan market caches
         run: python scripts/update_market_quotes.py
       - name: Commit changed quote cache
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add market-quotes.json market-quotes-meta.json
+          git add market-quotes.json market-quotes-meta.json market-overview.json
           git diff --cached --quiet || git commit -m "Update delayed Taiwan market quotes"
           git push

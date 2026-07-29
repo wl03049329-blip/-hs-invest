@@ -22,8 +22,8 @@ check("台北盤中時段邊界", () => {
 });
 
 check("首頁延遲行情標示完整", () => {
-  assert.match(html, /延遲行情｜資料可能非即時｜更新中/);
-  assert.match(html, /更新於 \$\{formatHomeQuoteTime\(checkedAt\)\}/);
+  assert.match(html, /盤中延遲行情｜約每 5 分鐘更新｜僅供參考/);
+  assert.match(html, /快取更新 \$\{formatHomeQuoteTime\(detail\.sourceUpdatedAt\|\|checkedAt\)\}/);
   assert.doesNotMatch(production, /即時行情/);
 });
 
@@ -46,7 +46,7 @@ check("首頁、買點與持股共用同一批行情", () => {
 });
 
 check("失敗保留最後資料", () => {
-  assert.match(html, /更新失敗，已保留最後資料/);
+  assert.match(html, /目前顯示最後成功行情/);
   assert.match(quotes, /更新失敗，已保留最後資料/);
   assert.match(quotes, /hs:delayed-quotes-error/);
 });

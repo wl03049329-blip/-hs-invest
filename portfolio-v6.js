@@ -123,7 +123,7 @@
   }
 
   function marketModeText() {
-    return core.isTaipeiMarketOpen() ? "盤中延遲更新模式" : "收盤資料模式";
+    return core.isTaipeiMarketOpen() ? "盤中延遲｜快取約 5 分鐘" : "收盤資料模式";
   }
 
   function renderQuoteStatus(message) {
@@ -197,7 +197,7 @@
       const name = holdingName(row);
       const radarHtml = radar
         ? `<span class="radarPill">買點 ${radar.score === null ? "—" : radar.score} 分</span><b>${escapeHtml(radar.trend)}</b><span>${escapeHtml(radar.action)}</span>`
-        : '<span class="radarPill">買點 —</span><span>尚未加入「我的ETF」，無買點資料</span>';
+        : '<span class="radarPill">買點 —</span><span>尚未加入「ETF雷達」，無買點資料</span>';
       return `<article class="holdingCard" data-holding-code="${escapeHtml(row.code)}">
         <div class="holdingMain">
           <div class="holdingIdentity"><b>${escapeHtml(row.code)}</b><span>${escapeHtml(name)}</span></div>
@@ -536,7 +536,9 @@
       metadata = await fetchJson(`${MARKET_META_URL}?ts=${Date.now()}`);
       const metadataTime = Date.parse(metadata?.updated_at);
       if (!Number.isFinite(metadataTime)) throw new Error("行情版本資訊無效");
-      if (marketCacheVersion === metadata.updated_at && publicQuoteMap.size) return {quotes: new Map(publicQuoteMap), fetchedAt: metadata.updated_at, partial: false};
+      if (marketCacheVersion === metadata.updated_at && publicQuoteMap.size) {
+        return {quotes: new Map(publicQuoteMap), fetchedAt: metadata.updated_at, partial: false, changed: false};
+      }
     } catch {
       metadata = null;
     }
@@ -545,7 +547,7 @@
       const quotes = core.parseCachedQuotes(cached);
       marketCacheVersion = String(cached.updated_at);
       localStorage.setItem(MARKET_VERSION_KEY, marketCacheVersion);
-      return {quotes, fetchedAt: marketCacheVersion, partial: false};
+      return {quotes, fetchedAt: marketCacheVersion, partial: false, changed: true};
     } catch {
       // Development and first-deploy fallback: try the two official bulk endpoints directly.
     }
@@ -554,7 +556,7 @@
     if (results[0].status === "fulfilled") maps.push(core.parseTwseRows(results[0].value, fetchedAt));
     if (results[1].status === "fulfilled") maps.push(core.parseTpexRows(results[1].value, fetchedAt));
     if (!maps.length) throw new Error("兩個公開行情來源皆無法取得");
-    return {quotes: mergeQuoteMaps(maps), fetchedAt, partial: maps.length < 2};
+    return {quotes: mergeQuoteMaps(maps), fetchedAt, partial: maps.length < 2, changed: true};
   }
 
   function scheduleNext(delayOverride) {
@@ -574,7 +576,7 @@
       return;
     }
     lastAttemptAt = now;
-    renderQuoteStatus(holdings.length ? "延遲行情更新中…" : "首頁延遲行情更新中…");
+    renderQuoteStatus(holdings.length ? "行情快取檢查中…" : "首頁行情快取檢查中…");
     $v6("#portfolioRefreshBtn").disabled = true;
     refreshInFlight = (async () => {
       try {
@@ -582,12 +584,21 @@
         publicQuoteMap = new Map(result.quotes);
         lastSuccessAt = Date.parse(result.fetchedAt);
         failureCount = 0;
-        window.dispatchEvent(new CustomEvent("hs:delayed-quotes", {detail: {
-          quotes: new Map(publicQuoteMap),
-          sourceUpdatedAt: result.fetchedAt,
-          checkedAt: new Date().toISOString()
-        }}));
-        if (applyPortfolio && holdings.length) {
+        const checkedAt = new Date().toISOString();
+        if (result.changed) {
+          window.dispatchEvent(new CustomEvent("hs:delayed-quotes", {detail: {
+            quotes: new Map(publicQuoteMap),
+            sourceUpdatedAt: result.fetchedAt,
+            checkedAt
+          }}));
+        } else {
+          window.dispatchEvent(new CustomEvent("hs:quote-cache-checked", {detail: {
+            sourceUpdatedAt: result.fetchedAt,
+            checkedAt
+          }}));
+        }
+        const needsPortfolioUpdate = result.changed || holdings.some(item => !quoteMap.has(item.code));
+        if (needsPortfolioUpdate && applyPortfolio && holdings.length) {
           const heldCodes = new Set(holdings.map(item => item.code));
           for (const [code, quote] of publicQuoteMap) {
             if (heldCodes.has(code)) quoteMap.set(code, quote);
@@ -597,7 +608,7 @@
         }
         const missing = holdings.filter(item => !quoteMap.has(item.code)).length;
         const suffix = result.partial ? "；部分市場來源暫時無法取得" : "";
-        if (!holdings.length) renderQuoteStatus("首頁延遲行情已更新；尚未新增持股");
+        if (!holdings.length) renderQuoteStatus("首頁行情快取已檢查；尚未新增持股");
         else if (!applyPortfolio) renderQuoteStatus(`${quoteTimeLabel()}；持股自動更新已關閉`);
         else renderQuoteStatus(`${quoteTimeLabel()}${missing ? `；${missing} 檔行情暫缺` : ""}${suffix}`);
         scheduleNext(60000);
@@ -627,12 +638,13 @@
     const fomoCard = $v6("#homeFomoCard");
     const cnnCard = $v6("#homeCnnCard");
     if (margin && Number.isFinite(margin.score)) {
-      fomoCard.innerHTML = `<span>台股融資 FOMO</span><b class="${margin.score >= 65 ? "twUp" : margin.score < 40 ? "twDown" : "twFlat"}">${margin.score}</b><em>${escapeHtml(margin.label)}</em><small>${escapeHtml(margin.summary)}</small>`;
+      fomoCard.innerHTML = `<span>台股融資 FOMO</span><b class="${margin.score >= 65 ? "twUp" : margin.score < 40 ? "twDown" : "twFlat"}">${margin.score}</b><em>${escapeHtml(margin.label)}</em><small>${escapeHtml(margin.summary)}<i class="sentimentFreshness">盤後資料 ${escapeHtml(margin.date || "—")}</i></small>`;
     } else {
       fomoCard.innerHTML = "<span>台股融資 FOMO</span><b>—</b><em>資料尚未更新</em><small>不會以 0 分代替缺失資料</small>";
     }
     if (cnn && Number.isFinite(cnn.score)) {
-      cnnCard.innerHTML = `<span>CNN Fear &amp; Greed</span><b class="${cnn.score >= 56 ? "twUp" : cnn.score <= 44 ? "twDown" : "twFlat"}">${number(cnn.score, 0)}</b><em>${escapeHtml(cnn.label)}</em><small>${escapeHtml(cnn.summary)}</small>`;
+      const cnnTime = Number.isFinite(Date.parse(cnn.sourceUpdatedAt)) ? new Intl.DateTimeFormat("zh-TW", {timeZone: "Asia/Taipei", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false}).format(new Date(cnn.sourceUpdatedAt)) : "—";
+      cnnCard.innerHTML = `<span>CNN Fear &amp; Greed</span><b class="${cnn.score >= 56 ? "twUp" : cnn.score <= 44 ? "twDown" : "twFlat"}">${number(cnn.score, 0)}</b><em>${escapeHtml(cnn.label)}</em><small>${escapeHtml(cnn.summary)}<i class="sentimentFreshness">更新 ${escapeHtml(cnnTime)}</i></small>`;
     } else {
       cnnCard.innerHTML = "<span>CNN Fear &amp; Greed</span><b>—</b><em>資料暫時無法取得</em><small>不會以 0 分代替失敗資料</small>";
     }

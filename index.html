@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#07110d" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<title>HS Invest 6.0｜ETF 買點雷達</title>
+<title>HS | ETF股市雷達｜Version 6.1</title>
 <style>
 :root{
   --bg:#06100c;--panel:#0c1a14;--panel2:#12271d;--panel3:#08150f;
@@ -291,8 +291,8 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 <div class="app">
   <section id="home" class="hero">
     <div>
-      <div class="brandLine"><p class="eyebrow">HS INVEST</p><span class="version">VERSION 6.0</span></div>
-      <h1>ETF 買點雷達</h1>
+      <div class="brandLine"><p class="eyebrow">HS ETF STOCK RADAR</p><span class="version">VERSION 6.1</span></div>
+      <h1>HS | ETF股市雷達</h1>
       <p class="subtitle">打開先看懂今天市場，再決定要不要加碼。週 KD 每日試算；0050、00631L 歷史價格已還原分割。</p>
     </div>
     <button class="btn" id="reload">更新</button>
@@ -302,22 +302,36 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 
   <nav class="topTabs" aria-label="主要分頁">
     <button class="topTab active" type="button" data-tab="today">今日</button>
-    <button class="topTab" type="button" data-tab="signals">我的ETF</button>
+    <button class="topTab" type="button" data-tab="signals">ETF雷達</button>
     <button class="topTab" type="button" data-tab="portfolio">我的持股</button>
     <button class="topTab" type="button" data-tab="sentiment">籌碼</button>
     <button class="topTab" type="button" data-tab="trump">川普</button>
     <button class="topTab" type="button" data-tab="more">更多</button>
   </nav>
-  <p class="tabIntro active" data-tab-intro="today">先看市場摘要、最佳買點與快速判斷。</p>
-  <p class="tabIntro" data-tab-intro="signals">建立自己的 ETF 清單，再查看分數、趨勢與建議比例。</p>
+  <p class="tabIntro active" data-tab-intro="today">先看四大行情、市場情緒與 ETF 買點快報。</p>
+  <p class="tabIntro" data-tab-intro="signals">切換自己的自選清單與弘昇精選，再查看買點細節。</p>
   <p class="tabIntro" data-tab-intro="portfolio">只在此裝置管理個人持股，使用免費延遲行情估算損益與配置。</p>
   <p class="tabIntro" data-tab-intro="sentiment">查看融資 FOMO、CNN 恐懼貪婪、三大法人與重大事件。</p>
   <p class="tabIntro" data-tab-intro="trump">只整理可能影響市場的川普言論與政策。</p>
   <p class="tabIntro" data-tab-intro="more">ETF 比較、提醒與資料設定集中在這裡。</p>
 
-  <div id="homeQuoteStatus" class="homeQuoteStatus" data-tab-section="today" role="status" aria-live="polite">
-    延遲行情｜資料可能非即時｜更新中
-  </div>
+  <section id="homeMarketOverview" class="panel homeMarketOverview" data-tab-section="today" aria-labelledby="homeMarketOverviewTitle">
+    <div class="panelTitle compactTitle">
+      <div><p class="eyebrow">TAIWAN MARKET</p><h2 id="homeMarketOverviewTitle">四大市場行情</h2></div>
+      <small id="marketOverviewFreshness">資料載入中</small>
+    </div>
+    <p class="marketOverviewLabel">盤中延遲行情｜約每 5 分鐘更新｜僅供參考</p>
+    <div id="marketOverviewCards" class="marketOverviewCards" aria-live="polite">
+      <div class="marketOverviewSkeleton">載入四大行情中…</div>
+    </div>
+    <p id="marketOneLine" class="marketOneLine">市場解讀整理中…</p>
+    <div id="marketQuickSignals" class="marketQuickSignals">
+      <span>市場廣度：更新中</span><span>大型／中小型：更新中</span><span>台積電同步：更新中</span>
+    </div>
+    <div id="homeQuoteStatus" class="homeQuoteStatus" role="status" aria-live="polite">
+      盤中延遲行情｜約每 5 分鐘更新｜僅供參考
+    </div>
+  </section>
 
   <section id="homeSentiment" class="panel homeSentiment" data-tab-section="today" aria-labelledby="homeSentimentTitle">
     <div class="panelTitle compactTitle">
@@ -334,6 +348,15 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
     </div>
     <p id="homeSentimentConclusion" class="homeSentimentConclusion">情緒資料彙整中…</p>
   </section>
+
+  <button id="homeEtfBrief" class="panel homeEtfBrief" data-tab-section="today" type="button" aria-label="前往 ETF雷達查看完整買點">
+    <div class="panelTitle compactTitle">
+      <div><p class="eyebrow">ETF ENTRY RADAR</p><h2>ETF 買點快報</h2></div>
+      <small id="updatedTop">週 KD 以最近完成資料計算</small>
+    </div>
+    <div id="homeEtfBriefSummary" class="homeEtfBriefSummary">買點資料載入中…</div>
+    <div id="rankList" class="rankList"><div class="skeleton">載入排名中…</div></div>
+  </button>
 
   <section class="dashboard" data-tab-section="today">
     <article class="panel marketPanel">
@@ -352,15 +375,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 
     <article class="panel">
       <div class="panelTitle">
-        <div><p class="eyebrow">BEST ENTRY</p><h2>今日最佳買點</h2></div>
-        <small id="updatedTop">—</small>
-      </div>
-      <div id="rankList" class="rankList"><div class="skeleton">載入排名中…</div></div>
-    </article>
-
-    <article class="panel">
-      <div class="panelTitle">
-        <div><p class="eyebrow">AT A GLANCE</p><h2>快速判斷</h2></div>
+        <div><p class="eyebrow">AT A GLANCE</p><h2>其他快速資訊</h2></div>
       </div>
       <div id="snapshotGrid" class="snapshotGrid"><div class="skeleton">載入中…</div></div>
     </article>
@@ -377,7 +392,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
     </div>
     <article class="panel quoteStatusPanel">
       <div class="quoteStatusMain">
-        <div><b>延遲行情</b><span>資料可能非即時，僅供參考。</span></div>
+        <div><b>盤中延遲行情</b><span>約每 5 分鐘更新｜僅供參考</span></div>
         <span id="portfolioMarketMode" class="modeBadge">判斷交易時段中</span>
       </div>
       <div class="quoteControls">
@@ -385,7 +400,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
         <label class="autoToggle"><input id="portfolioAutoRefresh" type="checkbox" checked /> 自動更新</label>
         <button id="portfolioRefreshBtn" class="miniBtn" type="button" aria-label="手動重新整理持股行情">重新整理</button>
       </div>
-      <small id="portfolioQuoteNote">股價依最新可取得的延遲行情或收盤資料計算，實際成交價格與券商數字可能不同。</small>
+      <small id="portfolioQuoteNote">股價依同源快取中最新可取得的盤中延遲或收盤資料計算；個別代號若無盤中來源會清楚沿用最新收盤，實際成交價格與券商數字可能不同。</small>
     </article>
 
     <div id="portfolioSummary" class="portfolioSummary" aria-live="polite"></div>
@@ -450,6 +465,10 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       <div class="panelTitle"><div><p class="eyebrow">SMART MONEY</p><h2>三大法人</h2></div><small>今日盤後更新</small></div>
       <div id="institutionContent"><div class="skeleton">載入法人資料中…</div></div>
     </article>
+    <article class="panel futuresPositionPanel sentimentSummary">
+      <div class="panelTitle"><div><p class="eyebrow">FUTURES POSITIONING</p><h2>期貨籌碼</h2></div><small>平日盤後更新</small></div>
+      <div id="futuresPositionContent"><div class="skeleton">載入期貨籌碼中…</div></div>
+    </article>
     <article class="panel">
       <div class="panelTitle"><div><p class="eyebrow">EVENT RISK</p><h2>重大事件</h2></div><small>事件前降低追價</small></div>
       <div id="eventContent"><div class="skeleton">載入事件中…</div></div>
@@ -482,11 +501,15 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 
   <section id="signals" class="section tabHidden" data-tab-section="signals">
     <article class="panel watchPanel">
-      <div class="watchHead">
-        <div><p class="eyebrow">MY WATCHLIST</p><h2>我的 ETF 清單</h2></div>
-        <div class="watchActions"><button class="miniBtn" id="addEtfBtn" type="button">＋ 新增 ETF</button><button class="miniBtn" id="resetEtfBtn" type="button">恢復弘昇精選</button></div>
+      <div class="radarSegments" role="group" aria-label="ETF 雷達清單切換">
+        <button class="radarSegment" type="button" data-radar-mode="my" aria-pressed="false">我的自選</button>
+        <button class="radarSegment active" type="button" data-radar-mode="featured" aria-pressed="true">弘昇精選</button>
       </div>
-      <p class="watchHint">預設是弘昇關注的 5 檔。每位使用者新增、刪除與排序的清單只存在自己的手機，不會影響其他人。最多 15 檔。</p>
+      <div class="watchHead">
+        <div><p class="eyebrow">MY WATCHLIST</p><h2 id="radarListTitle">弘昇精選</h2></div>
+        <div class="watchActions"><button class="miniBtn" id="addEtfBtn" type="button">＋ 新增 ETF</button><button class="miniBtn" id="resetEtfBtn" type="button">清除我的自選</button></div>
+      </div>
+      <p id="radarListHint" class="watchHint">弘昇精選固定追蹤 5 檔 ETF，不受任何使用者的自選清單影響，也不包含持股股數、均價或成本。</p>
       <div id="watchList" class="watchList"><div class="skeleton">載入清單中…</div></div>
     </article>
     <details class="panel signalLegend">
@@ -504,7 +527,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
     </details>
     <div class="sectionHead">
       <div><p class="eyebrow">ALL SIGNALS</p><h2>全部買點</h2></div>
-      <small>綜合 J 值、回檔、轉折與歷史勝率排序</small>
+      <small>週 KD 以最近完成資料計算</small>
     </div>
     <div id="cards" class="cards"><div class="skeleton">資料載入中…</div></div>
   </section>
@@ -541,7 +564,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
     <p class="footnote">GitHub Pages 無法在網站關閉時持續運作，因此此版會在開啟網站並更新資料時提醒。真正背景推播需另加後端排程服務。</p>
   </details>
 
-  <footer>Version 6.0 · Developed by 弘昇<br><span class="footnote">新聞、籌碼、買點分數、持股估算與歷史驗證僅供資訊參考，不構成投資建議；FOMO 為本站自製情緒代理指標。</span></footer>
+  <footer>Version 6.1 · HS | ETF股市雷達 · Developed by 弘昇<br><span class="footnote">新聞、籌碼、買點分數、持股估算與歷史驗證僅供資訊參考，不構成投資建議；FOMO 為本站自製情緒代理指標。</span></footer>
 </div>
 
 <nav class="bottomNav">
@@ -614,6 +637,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 </div>
 
 <script src="market-ui-core.js"></script>
+<script src="market-v61-core.js"></script>
 <script>
 const DEFAULT_WATCHLIST=[
   {id:"00830",name:"國泰費城半導體",type:"海外股票",risk:"高",market:"美國半導體",strategyType:"equity"},
@@ -623,17 +647,24 @@ const DEFAULT_WATCHLIST=[
   {id:"00631L",name:"元大台灣50正2",type:"槓桿ETF",risk:"極高",market:"台灣大型股2倍",strategyType:"leveraged"}
 ];
 let watchlist=loadWatchlist();
+let radarMode=localStorage.getItem("hs_etf_radar_mode_v1")==="my"?"my":"featured";
 let META={};
 let ids=[];
 let selected=new Set();
 let stockCatalog=[];
-function syncWatchlistState(){META=Object.fromEntries(watchlist.map(x=>[x.id,x]));ids=watchlist.map(x=>x.id);selected=new Set(ids)}
+function radarList(){return radarMode==="my"?watchlist:DEFAULT_WATCHLIST}
+function syncWatchlistState(){
+  const universe=[...DEFAULT_WATCHLIST,...watchlist].filter((item,index,rows)=>rows.findIndex(x=>x.id===item.id)===index);
+  META=Object.fromEntries(universe.map(x=>[x.id,x]));
+  ids=universe.map(x=>x.id);
+  selected=new Set(ids);
+}
 function loadWatchlist(){
   try{
     const saved=JSON.parse(localStorage.getItem("hs_etf_watchlist_v1")||"null");
     if(Array.isArray(saved)&&saved.length)return saved.filter(x=>x&&x.id&&x.name).slice(0,15);
   }catch{}
-  return DEFAULT_WATCHLIST.map(x=>({...x}));
+  return [];
 }
 function saveWatchlist(){localStorage.setItem("hs_etf_watchlist_v1",JSON.stringify(watchlist));syncWatchlistState()}
 syncWatchlistState();
@@ -664,11 +695,17 @@ let latestNews=[];
 let marketChip={margin:null,institutional:null};
 let trumpNews=[];
 let cnnFearGreed=null;
+let marketOverview=null;
+let marketOverviewUpdatedAt="";
+let marketOverviewPollTimer=null;
+let marketOverviewPollInFlight=null;
+let futuresPosition=null;
 let pendingDelayedQuotes=null;
 let cnnPollTimer=null;
 let cnnPollInFlight=null;
 let cnnLastAttemptAt=0;
 const CNN_POLL_INTERVAL=20*60*1000;
+const MARKET_OVERVIEW_POLL_INTERVAL=60*1000;
 
 const $=s=>document.querySelector(s);
 const fmt=n=>Number.isFinite(+n)?new Intl.NumberFormat("zh-TW",{maximumFractionDigits:2}).format(+n):"—";
@@ -1094,11 +1131,108 @@ function renderMarket(){
   $("#marketFullSummary").innerHTML=`<p class="marketLead">${lead}</p><div class="reasonList">${reasons.map((r,i)=>`<div class="reasonItem"><span class="reasonNo">${i+1}</span><span>${esc(r)}</span></div>`).join("")}</div>`;
   $("#marketDate").textContent="資料至 "+all[0].date+" 收盤";
   $("#newsList").innerHTML=latestNews.length?latestNews.slice(0,5).map(n=>`<a class="newsItem" href="${esc(n.link)}" target="_blank" rel="noopener"><b>${esc(n.title)}</b><small>${esc(n.source||n.stockId)} · ${esc(String(n.date).slice(0,16))}</small></a>`).join(""):'<div class="newsEmpty">目前沒有取得同日新聞；市場原因暫以 ETF、融資與法人資料判讀。</div>';
+  if(marketOverview)renderMarketOverview();
 }
 function formatHomeQuoteTime(value){
   const time=new Date(value);
   if(!Number.isFinite(time.getTime()))return"—";
   return new Intl.DateTimeFormat("zh-TW",{timeZone:"Asia/Taipei",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}).format(time);
+}
+function marketValueText(item){
+  if(!item||!Number.isFinite(item.value))return"—";
+  return new Intl.NumberFormat("zh-TW",{minimumFractionDigits:item.key==="tsmc"?0:2,maximumFractionDigits:2}).format(item.value);
+}
+function marketChangeText(value){
+  if(!Number.isFinite(value))return"—";
+  return `${value>0?"+":""}${new Intl.NumberFormat("zh-TW",{maximumFractionDigits:2}).format(value)}`;
+}
+function marketCardState(item){
+  if(!item)return"資料暫缺";
+  if(item.key==="tx_front"){
+    const session=HSMarketV61Core.futuresSession();
+    return session.key==="closed"?"休市／最新收盤":`${session.label}｜最後成功行情`;
+  }
+  const session=HSMarketV61Core.spotSession(new Date(),item.dataDate);
+  return item.quoteMode==="delayed"&&session.key==="intraday"?"盤中延遲":session.label;
+}
+function renderMarketOverview(){
+  if(!marketOverview){
+    $("#marketOverviewCards").innerHTML='<div class="marketOverviewSkeleton">四大行情暫時無法取得，未以 0 代替。</div>';
+    $("#marketOneLine").textContent="行情資料尚未完整，暫不做方向判斷。";
+    $("#marketOverviewFreshness").textContent="資料暫缺";
+    return;
+  }
+  const items=marketOverview.instruments,order=["taiex","otc","tx_front","tsmc"];
+  $("#marketOverviewCards").innerHTML=order.map(key=>{
+    const item=items[key],tone=HSMarketV61Core.tone(item.change),contract=item.contractMonth?` · ${item.contractMonth.slice(0,4)}/${item.contractMonth.slice(4)}`:"";
+    return `<article class="marketQuoteCard" data-market-key="${key}"><div class="marketQuoteHead"><b>${esc(item.name)}${contract}</b><span class="marketQuoteState">${esc(marketCardState(item))}</span></div><div class="marketQuoteValue"><strong class="${tone}">${marketValueText(item)}</strong><span class="${tone}">${marketChangeText(item.change)}<br>${signed(item.changePct)}</span></div><div class="marketQuoteMeta"><span>${esc(item.dataDate)}</span><span>${esc(item.dataTime)}</span></div></article>`;
+  }).join("");
+  const futuresSession=HSMarketV61Core.futuresSession().key;
+  $("#marketOneLine").textContent=HSMarketV61Core.marketInterpretation(items,futuresSession);
+  const breadth=all.length?marketMetrics():{ups:"—",downs:"—"};
+  const ratio=Number.isFinite(breadth.ups)&&Number.isFinite(breadth.downs)&&breadth.downs>0?fmt(breadth.ups/breadth.downs):breadth.ups>0?"僅上漲":"—";
+  $("#marketQuickSignals").innerHTML=`<span>市場廣度：${breadth.ups} 漲／${breadth.downs} 跌｜比 ${ratio}</span><span>大型／中小型：${HSMarketV61Core.relativeStrength(items)}</span><span>台積電同步：${HSMarketV61Core.tsmcSync(items,breadth)}</span>`;
+  $("#marketOverviewFreshness").textContent=marketOverview.stale?`目前顯示最後成功行情｜${formatHomeQuoteTime(marketOverview.updatedAt)}`:`快取更新 ${formatHomeQuoteTime(marketOverview.updatedAt)}`;
+}
+function scheduleMarketOverviewPoll(){
+  clearTimeout(marketOverviewPollTimer);
+  marketOverviewPollTimer=null;
+  if(document.hidden)return;
+  const spot=HSMarketV61Core.spotSession(),futures=HSMarketV61Core.futuresSession();
+  const active=spot.key==="intraday"||futures.key==="day"||futures.key==="night";
+  marketOverviewPollTimer=setTimeout(()=>loadMarketOverview(),active?MARKET_OVERVIEW_POLL_INTERVAL:15*60*1000);
+}
+async function loadMarketOverview({force=false}={}){
+  if(document.hidden&&!force)return false;
+  if(marketOverviewPollInFlight)return marketOverviewPollInFlight;
+  marketOverviewPollInFlight=(async()=>{
+    try{
+      const response=await fetch("market-overview.json?ts="+Date.now(),{cache:"no-store"});
+      if(!response.ok)throw new Error("market overview unavailable");
+      const next=HSMarketV61Core.validateOverview(await response.json());
+      if(next.updatedAt!==marketOverviewUpdatedAt){
+        marketOverview=next;
+        marketOverviewUpdatedAt=next.updatedAt;
+        renderMarketOverview();
+      }
+      setHomeQuoteStatus(next.stale?"盤中延遲行情｜約每 5 分鐘更新｜目前顯示最後成功行情":`盤中延遲行情｜約每 5 分鐘更新｜僅供參考｜快取檢查 ${formatHomeQuoteTime(new Date())}`);
+      return true;
+    }catch{
+      if(!marketOverview)renderMarketOverview();
+      setHomeQuoteStatus("盤中延遲行情｜約每 5 分鐘更新｜目前顯示最後成功行情",true);
+      return false;
+    }finally{
+      scheduleMarketOverviewPoll();
+    }
+  })().finally(()=>{marketOverviewPollInFlight=null});
+  return marketOverviewPollInFlight;
+}
+async function loadFuturesPosition(){
+  const previous=futuresPosition;
+  try{
+    const response=await fetch("futures-position.json?ts="+Date.now(),{cache:"no-store"});
+    if(!response.ok)throw new Error("futures positioning unavailable");
+    futuresPosition=HSMarketV61Core.validateFuturesPosition(await response.json());
+  }catch{futuresPosition=previous}
+  renderFuturesPosition();
+}
+function positionCard(title,subtitle,item,changeAvailable){
+  const netTone=item.net>0?"up":item.net<0?"down":"moodFlat",changeTone=item.net_change>0?"up":item.net_change<0?"down":"moodFlat";
+  const comparison=changeAvailable?`較前日 ${item.net_change>=0?"+":""}${fmt(item.net_change)}`:"較前日：建立比較基準";
+  return `<article class="futuresPositionCard"><h3>${esc(title)}</h3><small>${esc(subtitle)}</small><div class="futuresPositionNumbers"><div><span>多方未平倉</span><b>${fmt(item.long)} 口</b></div><div><span>空方未平倉</span><b>${fmt(item.short)} 口</b></div></div><div class="futuresNet"><b class="${netTone}">淨 ${item.net>=0?"+":""}${fmt(item.net)} 口</b><span class="${changeTone}">${comparison}</span></div></article>`;
+}
+function renderFuturesPosition(){
+  if(!futuresPosition){
+    $("#futuresPositionContent").innerHTML='<div class="newsEmpty sentimentUnavailable">期貨籌碼暫時無法取得，未以 0 代替。</div>';
+    return;
+  }
+  const f=futuresPosition,aligned=f.sourceStatus?.aligned===true;
+  if(!aligned){
+    $("#futuresPositionContent").innerHTML='<div class="newsEmpty sentimentUnavailable">資料口徑無法對齊</div>';
+    return;
+  }
+  const changeAvailable=f.sourceStatus?.net_change_available===true;
+  $("#futuresPositionContent").innerHTML=`<p class="dataSourceNote">盤後資料｜資料日期 ${esc(f.dataDate)}｜更新 ${esc(formatHomeQuoteTime(f.updatedAt))}</p><div class="futuresPositionGrid">${positionCard("外資臺股期貨部位","期交所外資及陸資未平倉",f.foreign_tx,changeAvailable)}${positionCard("小型臺指期貨 MTX","非三大法人部位推估",f.estimated_non_institutional_mtx,changeAvailable)}${positionCard("微型臺指期貨 TMF","非三大法人部位推估",f.estimated_non_institutional_tmf,changeAvailable)}</div><p class="futuresMethod">市場常稱為散戶部位，但此數值為全市場扣除三大法人後的推估，不等同官方公布的純自然人持倉。${esc(f.methodology)}</p>`;
 }
 function setHomeQuoteStatus(text,isError=false){
   const status=$("#homeQuoteStatus");
@@ -1108,13 +1242,13 @@ function setHomeQuoteStatus(text,isError=false){
 function applyHomeDelayedQuotes(detail){
   const quotes=detail?.quotes;
   if(!(quotes instanceof Map)){
-    setHomeQuoteStatus("延遲行情｜資料可能非即時｜更新失敗，已保留最後資料",true);
+    setHomeQuoteStatus("盤中延遲行情｜約每 5 分鐘更新｜目前顯示最後成功行情",true);
     return false;
   }
   pendingDelayedQuotes=detail;
   const checkedAt=detail.checkedAt||new Date().toISOString();
   if(!all.length){
-    setHomeQuoteStatus(`延遲行情｜資料可能非即時｜更新於 ${formatHomeQuoteTime(checkedAt)}`);
+    setHomeQuoteStatus(`盤中延遲行情｜約每 5 分鐘更新｜僅供參考｜快取更新 ${formatHomeQuoteTime(detail.sourceUpdatedAt||checkedAt)}`);
     return false;
   }
   let updated=0;
@@ -1128,13 +1262,15 @@ function applyHomeDelayedQuotes(detail){
     if(Number.isFinite(x.high52)&&x.high52>0)x.fromHigh=(price/x.high52-1)*100;
     if(Number.isFinite(x.low52)&&x.low52>0)x.fromLow=(price/x.low52-1)*100;
     if(/^\d{4}-\d{2}-\d{2}$/.test(String(quote.date||"")))x.date=quote.date;
+    x.quoteMode=quote.quoteMode==="delayed"?"delayed":"close";
+    x.quoteTime=String(quote.quoteTime||"");
     x.score=calcBuyScore(x);
     x.action=actionFor(x);
     x.scoreParts=scoreParts(x);
     updated++;
   }
   if(!updated){
-    setHomeQuoteStatus("延遲行情｜資料可能非即時｜更新失敗，已保留最後資料",true);
+    setHomeQuoteStatus("盤中延遲行情｜約每 5 分鐘更新｜目前顯示最後成功行情",true);
     return false;
   }
   applyCrossRules();
@@ -1142,22 +1278,30 @@ function applyHomeDelayedQuotes(detail){
   renderTop();
   renderCards();
   renderTable();
-  setHomeQuoteStatus(`延遲行情｜資料可能非即時｜更新於 ${formatHomeQuoteTime(checkedAt)}`);
+  setHomeQuoteStatus(`盤中延遲行情｜約每 5 分鐘更新｜僅供參考｜快取更新 ${formatHomeQuoteTime(detail.sourceUpdatedAt||checkedAt)}`);
   return true;
 }
 window.addEventListener("hs:delayed-quotes",event=>applyHomeDelayedQuotes(event.detail));
-window.addEventListener("hs:delayed-quotes-error",()=>setHomeQuoteStatus("延遲行情｜資料可能非即時｜更新失敗，已保留最後資料",true));
+window.addEventListener("hs:quote-cache-checked",event=>setHomeQuoteStatus(`盤中延遲行情｜約每 5 分鐘更新｜僅供參考｜快取檢查 ${formatHomeQuoteTime(event.detail?.checkedAt)}`));
+window.addEventListener("hs:delayed-quotes-error",()=>setHomeQuoteStatus("盤中延遲行情｜約每 5 分鐘更新｜目前顯示最後成功行情",true));
 function scoreTone(score){return score>=80?"red":score>=68?"orange":score>=55?"yellow":"neutral"}
+function itemsForList(list){
+  const wanted=new Set(list.map(item=>item.id));
+  return all.filter(item=>wanted.has(item.id));
+}
+function activeRadarItems(){return itemsForList(radarList())}
 function renderTop(){
-  const ranked=[...all].sort((a,b)=>b.score-a.score||a.j-b.j),medals=["🥇","🥈","🥉"];
-  $("#rankList").innerHTML=ranked.slice(0,3).map((x,i)=>`<div class="rankItem"><div class="rankNo">${medals[i]}</div><div><div class="rankTicker">${x.id}</div><div class="rankName">${x.name}</div><div class="rankAction">${x.action} · 建議 ${x.allocation||0}%</div></div><div class="rankRight"><div class="rankScore ${scoreTone(x.score)}">${x.score}<small>分</small></div><div class="rankSignal">J ${fmt(x.j)} · ${x.direction}</div></div></div>`).join("");
-  const low=[...all].sort((a,b)=>a.j-b.j)[0],best=ranked[0],strong=all.filter(x=>x.j<20).length,bounce=all.filter(x=>x.direction==="回升").length,deep=all.filter(x=>x.j<0).length;
-  $("#snapshotGrid").innerHTML=`<div class="snapshot"><span>最佳綜合買點</span><b>${best.id} · ${best.score} 分</b></div><div class="snapshot"><span>最低 J 值</span><b>${low.id} · ${fmt(low.j)}</b></div><div class="snapshot"><span>進入加碼區</span><b>${strong} / ${all.length}</b></div><div class="snapshot"><span>J 值回升</span><b>${bounce} 檔</b></div><div class="snapshot"><span>J 值低於 0</span><b>${deep} 檔</b></div><div class="snapshot"><span>融資 FOMO</span><b>${marketChip.margin?marketChip.margin.score+" 分":"尚未更新"}</b></div>`;
-  $("#updatedTop").textContent=all[0].weekState.label;
+  const homeItems=itemsForList(watchlist.length?watchlist:DEFAULT_WATCHLIST),ranked=[...homeItems].sort((a,b)=>b.score-a.score||a.j-b.j),medals=["1.","2.","3."];
+  const sourceLabel=watchlist.length?"我的自選":"弘昇精選",strong=homeItems.filter(x=>x.j<20).length,bounce=homeItems.filter(x=>x.direction==="回升").length;
+  $("#homeEtfBriefSummary").textContent=homeItems.length?`${sourceLabel}：${strong}／${homeItems.length} 檔進入觀察區，${bounce} 檔 J 值回升。`:`我的自選尚未加入 ETF，點此進入 ETF雷達。`;
+  $("#rankList").innerHTML=ranked.length?ranked.slice(0,3).map((x,i)=>`<div class="rankItem"><div class="rankNo">${medals[i]}</div><div><div class="rankTicker">${x.id}</div><div class="rankName">${x.name}</div><div class="rankAction">${x.direction==="回升"?HSMarketUiCore.turnText(x.direction):x.signal.label}</div></div><div class="rankRight"><div class="rankScore ${scoreTone(x.score)}">${x.score}<small>分</small></div><div class="rankSignal">J ${fmt(x.j)} · ${x.direction}</div></div></div>`).join(""):'<div class="newsEmpty">尚無自選 ETF。</div>';
+  const radar=activeRadarItems(),sorted=[...radar].sort((a,b)=>b.score-a.score||a.j-b.j),low=[...radar].sort((a,b)=>a.j-b.j)[0],best=sorted[0],radarStrong=radar.filter(x=>x.j<20).length,radarBounce=radar.filter(x=>x.direction==="回升").length,deep=radar.filter(x=>x.j<0).length;
+  $("#snapshotGrid").innerHTML=best&&low?`<div class="snapshot"><span>最佳綜合買點</span><b>${best.id} · ${best.score} 分</b></div><div class="snapshot"><span>最低 J 值</span><b>${low.id} · ${fmt(low.j)}</b></div><div class="snapshot"><span>進入觀察區</span><b>${radarStrong} / ${radar.length}</b></div><div class="snapshot"><span>J 值回升</span><b>${radarBounce} 檔</b></div><div class="snapshot"><span>J 值低於 0</span><b>${deep} 檔</b></div><div class="snapshot"><span>融資 FOMO</span><b>${marketChip.margin?marketChip.margin.score+" 分":"尚未更新"}</b></div>`:'<div class="newsEmpty">此清單尚無可分析 ETF。</div>';
+  $("#updatedTop").textContent="週 KD 以最近完成資料計算";
 }
 function renderCards(){
-  all.sort((a,b)=>b.score-a.score||a.j-b.j);
-  $("#cards").innerHTML=all.map((x,i)=>`<article class="card compactCard ${x.signal.className}" data-signal-level="${esc(x.signal.label)}"><div class="cardIdentity"><div class="cardTopline"><div class="ticker">${x.id}</div><span class="rank">買點 #${i+1}</span><span class="signalLevel ${x.signal.className}" aria-label="外框分類：${esc(x.signal.label)}">${esc(x.signal.label)}</span></div><div class="name">${x.name}</div><span class="typeBadge">${strategyLabel(x.strategyType)}</span><div class="actionLine">${x.action}</div></div><div class="cardMetrics"><div><div class="price">$${fmt(x.price)}</div><div class="change ${x.changePct>=0?"up":"down"}">${signed(x.changePct)}</div></div><div class="scoreBlock"><div class="scoreHeadline"><b>${x.score}</b><span>買點分數</span></div><div class="scoreBar"><i style="width:${x.score}%"></i></div><div class="kdjInline"><span>J ${fmt(x.j)}</span><span class="kdjTurn" data-kdj-turn="${x.direction}">${HSMarketUiCore.turnText(x.direction)}</span></div></div></div><div class="cardContext"><span class="trendBadge ${x.trend.className}">${x.trend.label}</span><span class="allocationBadge">本次建議 ${x.allocation||0}%</span></div><div class="strategyNote">200日線 ${x.trend.above200?"之上":"之下"} · 50日線 ${x.trend.ma50Rising?"走升":"未走升"}</div><div class="cardActions"><button class="miniBtn" data-detail="${x.id}">走勢／驗證</button><button class="miniBtn" data-compare="${x.id}">比較</button></div></article>`).join("");
+  const radar=[...activeRadarItems()].sort((a,b)=>b.score-a.score||a.j-b.j);
+  $("#cards").innerHTML=radar.length?radar.map((x,i)=>`<details class="card signalCard ${x.signal.className}" data-signal-level="${esc(x.signal.label)}"><summary class="signalCardSummary" aria-label="${esc(x.id)} ${esc(x.name)}，${esc(x.signal.label)}，點擊展開詳細資料"><div class="signalCompactIdentity"><div class="signalTickerLine"><b>${x.id}</b><span>${esc(x.name)}</span></div><div class="signalPriceLine">$${fmt(x.price)} <small class="${x.changePct>=0?"up":"down"}">${signed(x.changePct)}</small></div></div><div class="signalCompactMetrics"><b>買點 ${x.score}｜J ${fmt(x.j)} ${x.direction}</b><span>${HSMarketUiCore.turnText(x.direction)}</span></div><div class="signalCompactAction"><span class="signalLevel ${x.signal.className}" aria-label="外框分類：${esc(x.signal.label)}">${esc(x.signal.label)}</span><p>${esc(x.trend.label)}｜${esc(x.action)}</p><span class="signalExpandMark" aria-hidden="true"></span></div></summary><div class="signalCardDetails"><div class="signalDetailGrid"><div><span>週 K／D／J</span><b>${fmt(x.k)}／${fmt(x.d)}／${fmt(x.j)}</b></div><div><span>52 週高／低</span><b>${fmt(x.high52)}／${fmt(x.low52)}</b></div><div><span>距高點／低點</span><b>${fmt(x.fromHigh)}%／+${fmt(x.fromLow)}%</b></div><div><span>歷史 4 週勝率</span><b>${fmt(x.backtest.four.hit)}%</b></div><div><span>建議投入比例</span><b>${x.allocation||0}%</b></div><div><span>長期趨勢</span><b>${esc(x.trend.label)}</b></div><div><span>分數組成</span><b>超賣 ${fmt(x.scoreParts.oversold)}／回檔 ${fmt(x.scoreParts.drawdown)}</b></div><div><span>行情口徑</span><b>${x.quoteMode==="delayed"?"盤中延遲":"最新收盤"}</b></div></div><div class="signalDetailActions"><button class="miniBtn" type="button" data-detail="${x.id}">走勢／回測</button><button class="miniBtn" type="button" data-compare="${x.id}">加入比較</button></div></div></details>`).join(""):'<div class="watchEmpty">我的自選尚未加入 ETF。自選資料只儲存在此瀏覽器。</div>';
   document.querySelectorAll("[data-detail]").forEach(btn=>btn.addEventListener("click",()=>openDetail(btn.dataset.detail)));
   document.querySelectorAll("[data-compare]").forEach(btn=>btn.addEventListener("click",()=>scrollToCompare(btn.dataset.compare)));
 }
@@ -1223,7 +1367,17 @@ async function ensureStockCatalog(){
   return stockCatalog;
 }
 function renderWatchlist(){
-  $("#watchList").innerHTML=`<div class="watchCount">目前 ${watchlist.length} / 15 檔</div>`+watchlist.map((x,i)=>`<div class="watchRow"><div class="watchIdentity"><b>${esc(x.id)} · ${esc(x.name)}</b><small>${strategyLabel(x.strategyType)} · ${esc(x.market||"台灣ETF")}</small></div><div class="watchControls"><button class="watchIcon" type="button" data-watch-up="${i}" aria-label="上移">↑</button><button class="watchIcon" type="button" data-watch-down="${i}" aria-label="下移">↓</button><button class="watchIcon danger" type="button" data-watch-remove="${i}" aria-label="刪除">×</button></div></div>`).join("");
+  const list=radarList(),isMy=radarMode==="my";
+  $("#radarListTitle").textContent=isMy?"我的自選":"弘昇精選";
+  $("#radarListHint").textContent=isMy?"新增、刪除與排序只會寫入此瀏覽器的 localStorage，不會影響其他使用者；最多 15 檔。":"弘昇精選固定追蹤 5 檔 ETF，不受任何使用者的自選清單影響，也不包含持股股數、均價或成本。";
+  $("#addEtfBtn").classList.toggle("hidden",!isMy);
+  $("#resetEtfBtn").classList.toggle("hidden",!isMy||!watchlist.length);
+  document.querySelectorAll("[data-radar-mode]").forEach(button=>{
+    const active=button.dataset.radarMode===radarMode;
+    button.classList.toggle("active",active);
+    button.setAttribute("aria-pressed",String(active));
+  });
+  $("#watchList").innerHTML=`<div class="watchCount">${isMy?"我的自選":"固定精選"} ${list.length}${isMy?" / 15":""} 檔</div>`+(list.length?list.map((x,i)=>`<div class="watchRow"><div class="watchIdentity"><b>${esc(x.id)} · ${esc(x.name)}</b><small>${strategyLabel(x.strategyType)} · ${esc(x.market||"台灣ETF")}</small></div>${isMy?`<div class="watchControls"><button class="watchIcon" type="button" data-watch-up="${i}" aria-label="上移 ${esc(x.id)}">↑</button><button class="watchIcon" type="button" data-watch-down="${i}" aria-label="下移 ${esc(x.id)}">↓</button><button class="watchIcon danger" type="button" data-watch-remove="${i}" aria-label="刪除 ${esc(x.id)}">×</button></div>`:""}</div>`).join(""):'<div class="watchEmpty">尚未加入自選 ETF。資料只會儲存在此瀏覽器。</div>');
   document.querySelectorAll("[data-watch-up]").forEach(b=>b.addEventListener("click",()=>moveWatch(+b.dataset.watchUp,-1)));
   document.querySelectorAll("[data-watch-down]").forEach(b=>b.addEventListener("click",()=>moveWatch(+b.dataset.watchDown,1)));
   document.querySelectorAll("[data-watch-remove]").forEach(b=>b.addEventListener("click",()=>removeWatch(+b.dataset.watchRemove)));
@@ -1248,7 +1402,7 @@ function renderSearchResults(){
 }
 async function addWatch(id){
   if(watchlist.length>=15){alert("為避免手機載入過慢，每台裝置最多加入 15 檔。");return}
-  const item=stockCatalog.find(x=>x.id===id);if(!item)return;watchlist.push({...item});saveWatchlist();renderWatchlist();closeWatchModal();switchTab("signals",{scroll:false});await load();
+  const item=stockCatalog.find(x=>x.id===id);if(!item||watchlist.some(x=>x.id===id))return;watchlist.push({...item});radarMode="my";localStorage.setItem("hs_etf_radar_mode_v1","my");saveWatchlist();renderWatchlist();closeWatchModal();switchTab("signals",{scroll:false});await load();
 }
 function bestClass(values,v,mode="max"){
   const valid=values.filter(Number.isFinite);const best=mode==="max"?Math.max(...valid):Math.min(...valid);return Math.abs(v-best)<1e-9?"best":"";
@@ -1298,10 +1452,10 @@ function getAlerts(){return["#alert1","#alert2","#alert3","#alert4"].map(s=>+$(s
 function maybeNotify(){
   if(!("Notification" in window)||Notification.permission!=="granted")return;
   const [a1,,,a4]=getAlerts(),hits=all.filter(x=>x.j<a1);if(!hits.length)return;
-  const text=hits.map(x=>`${x.id} ${x.score}分／J=${fmt(x.j)}`).join("、");new Notification("HS Invest 買點提醒",{body:text+(hits.some(x=>x.j<a4)?"｜出現極度超賣":"")});
+  const text=hits.map(x=>`${x.id} ${x.score}分／J=${fmt(x.j)}`).join("、");new Notification("HS | ETF股市雷達 買點提醒",{body:text+(hits.some(x=>x.j<a4)?"｜出現極度超賣":"")});
 }
 $("#saveAlerts").addEventListener("click",()=>{localStorage.setItem("hs_alerts",JSON.stringify(getAlerts()));$("#message").className="message info";$("#message").textContent="提醒門檻已儲存在這台裝置。"});
-$("#testAlert").addEventListener("click",()=>{if("Notification" in window&&Notification.permission==="granted")new Notification("HS Invest 測試提醒",{body:"提醒功能已啟用。"});else alert("請先按『開啟提醒』並允許通知。")});
+$("#testAlert").addEventListener("click",()=>{if("Notification" in window&&Notification.permission==="granted")new Notification("HS | ETF股市雷達 測試提醒",{body:"提醒功能已啟用。"});else alert("請先按『開啟提醒』並允許通知。")});
 $("#notifyBtn").addEventListener("click",async()=>{if(!("Notification" in window)){alert("此瀏覽器不支援網頁通知。");return}const p=await Notification.requestPermission();$("#notifyBtn").textContent=p==="granted"?"提醒已開啟":"提醒未開啟"});
 $("#addEvent").addEventListener("click",()=>{
   const date=$("#customEventDate").value,name=$("#customEventName").value.trim();
@@ -1309,7 +1463,13 @@ $("#addEvent").addEventListener("click",()=>{
   const a=customEvents();a.push({date,name,type:"自訂",risk:"自訂"});localStorage.setItem("hs_custom_events",JSON.stringify(a));$("#customEventName").value="";renderEvents();all.forEach(x=>{x.action=actionFor(x)});renderTop();renderCards();
 });
 $("#addEtfBtn").addEventListener("click",openWatchModal);
-$("#resetEtfBtn").addEventListener("click",async()=>{if(!confirm("恢復弘昇精選 5 檔？目前自選清單會被取代。"))return;watchlist=DEFAULT_WATCHLIST.map(x=>({...x}));saveWatchlist();renderWatchlist();await load()});
+$("#resetEtfBtn").addEventListener("click",async()=>{if(!confirm("清除這台裝置上的全部 ETF 自選？"))return;watchlist=[];saveWatchlist();renderWatchlist();renderTop();renderCards()});
+document.querySelectorAll("[data-radar-mode]").forEach(button=>button.addEventListener("click",()=>{
+  radarMode=button.dataset.radarMode==="my"?"my":"featured";
+  localStorage.setItem("hs_etf_radar_mode_v1",radarMode);
+  renderWatchlist();renderTop();renderCards();
+}));
+$("#homeEtfBrief").addEventListener("click",()=>switchTab("signals"));
 $("#closeWatchModal").addEventListener("click",closeWatchModal);
 $("#watchModal").addEventListener("click",e=>{if(e.target===$("#watchModal"))closeWatchModal()});
 $("#etfSearch").addEventListener("input",renderSearchResults);
@@ -1321,7 +1481,7 @@ async function load(){
     const failed=settled.map((x,i)=>x.status==="rejected"?ids[i]:null).filter(Boolean);
     if(!all.length)throw new Error("目前清單內的 ETF 都無法取得價格資料");
     all.forEach(x=>{x.action=actionFor(x)});applyCrossRules();renderTop();renderCards();renderChecks();renderTable();renderEvents();
-    await Promise.allSettled([loadNews(all[0].date),loadChipData(),loadTrumpNews(),refreshCnnFearGreed()]);
+    await Promise.allSettled([loadNews(all[0].date),loadChipData(),loadTrumpNews(),refreshCnnFearGreed(),loadFuturesPosition()]);
     all.forEach(x=>{x.action=actionFor(x)});applyCrossRules();renderMarket();renderTrump();renderSentiment();renderEvents();renderTop();renderCards();renderTable();
     if(pendingDelayedQuotes)applyHomeDelayedQuotes(pendingDelayedQuotes);
     const chipStatus=marketChip.margin&&marketChip.institutional&&cnnFearGreed?"融資、法人與 CNN 情緒已更新":"部分籌碼或情緒資料尚未更新";
@@ -1337,9 +1497,14 @@ document.addEventListener("visibilitychange",()=>{
   if(document.hidden){
     clearTimeout(cnnPollTimer);
     cnnPollTimer=null;
-  }else refreshCnnFearGreed({force:true});
+    clearTimeout(marketOverviewPollTimer);
+    marketOverviewPollTimer=null;
+  }else{
+    refreshCnnFearGreed({force:true});
+    loadMarketOverview({force:true});
+  }
 });
-loadAlerts();renderWatchlist();renderEvents();renderTrump();switchTab(sessionStorage.getItem("hs_active_tab")||"today",{scroll:false});scheduleCnnPoll();load();
+loadAlerts();renderWatchlist();renderEvents();renderTrump();renderMarketOverview();switchTab(sessionStorage.getItem("hs_active_tab")||"today",{scroll:false});scheduleCnnPoll();loadMarketOverview();load();
 
 </script>
 <script src="portfolio-core.js"></script>

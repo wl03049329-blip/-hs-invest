@@ -18,8 +18,10 @@ function check(name, fn) {
   process.stdout.write(`PASS ${name}\n`);
 }
 
-check("Version 6.0 與六個頂部分頁", () => {
-  assert.match(html, /VERSION 6\.0/);
+check("Version 6.1 品牌與六個頂部分頁", () => {
+  assert.match(html, /HS \| ETF股市雷達/);
+  assert.match(html, /VERSION 6\.1/);
+  assert.match(html, />ETF雷達<\/button>/);
   for (const tab of ["today", "signals", "portfolio", "sentiment", "trump", "more"]) {
     assert.match(html, new RegExp(`data-tab="${tab}"`));
   }
@@ -61,12 +63,14 @@ check("首頁 CNN 與 FOMO 精簡卡片可切換籌碼頁", () => {
 });
 
 check("首頁情緒摘要位於市場摘要上方", () => {
+  const overviewIndex = html.indexOf('id="homeMarketOverview"');
   const sentimentIndex = html.indexOf('id="homeSentiment"');
+  const briefIndex = html.indexOf('id="homeEtfBrief"');
   const marketIndex = html.indexOf('class="panel marketPanel"');
-  const bestIndex = html.indexOf("<h2>今日最佳買點</h2>", marketIndex);
-  const snapshotIndex = html.indexOf("<h2>快速判斷</h2>", bestIndex);
-  assert.ok(sentimentIndex > 0 && sentimentIndex < marketIndex);
-  assert.ok(marketIndex < bestIndex && bestIndex < snapshotIndex);
+  const snapshotIndex = html.indexOf("<h2>其他快速資訊</h2>", marketIndex);
+  assert.ok(overviewIndex > 0 && overviewIndex < sentimentIndex);
+  assert.ok(sentimentIndex < briefIndex && briefIndex < marketIndex);
+  assert.ok(marketIndex < snapshotIndex);
 });
 
 check("市場摘要預設精簡且完整內容可展開", () => {
@@ -93,7 +97,7 @@ check("下探與回升文字正確且卡片不顯示必買", () => {
   assert.match(marketUi, /超賣後回升/);
   const renderCards = html.slice(html.indexOf("function renderCards"), html.indexOf("function formatYi"));
   assert.doesNotMatch(renderCards, /必買/);
-  assert.match(renderCards, /data-kdj-turn/);
+  assert.match(renderCards, /HSMarketUiCore\.turnText/);
 });
 
 check("原有主要功能仍在", () => {
@@ -110,7 +114,7 @@ check("可及性與手機斷點", () => {
 });
 
 check("行情 JSON 結構與價格有效", () => {
-  assert.equal(quoteJson.version, 1);
+  assert.equal(quoteJson.version, 2);
   assert.ok(Number.isFinite(Date.parse(quoteJson.updated_at)));
   assert.ok(quoteJson.items.length > 1000);
   assert.equal(quoteMeta.updated_at, quoteJson.updated_at);
@@ -119,13 +123,14 @@ check("行情 JSON 結構與價格有效", () => {
     assert.match(item.code, /^[0-9A-Z]{4,10}$/);
     assert.ok(Number.isFinite(item.price) && item.price > 0);
     assert.match(item.date, /^\d{4}-\d{2}-\d{2}$/);
+    assert.ok(["delayed", "close"].includes(item.quote_mode));
   }
 });
 
 check("Actions 以固定排程更新同源行情", () => {
   assert.match(workflow, /cron: "\*\/5 1-6 \* \* 1-5"/);
   assert.match(workflow, /scripts\/update_market_quotes\.py/);
-  assert.match(workflow, /git add market-quotes\.json market-quotes-meta\.json/);
+  assert.match(workflow, /git add market-quotes\.json market-quotes-meta\.json market-overview\.json/);
 });
 
 process.stdout.write(`\n${checks.length} V6 integration tests passed.\n`);

@@ -1,0 +1,33 @@
+name: Update futures positioning
+
+on:
+  schedule:
+    # 台北平日 18:20、19:00（UTC 10:20、11:00）盤後抓取；第二次補抓可能延後公布的資料。
+    - cron: "20 10 * * 1-5"
+    - cron: "0 11 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-futures-position
+  cancel-in-progress: true
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Fetch and validate official TAIFEX positioning
+        run: python scripts/update_futures_position.py
+      - name: Commit changed futures cache
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add futures-position.json
+          git diff --cached --quiet || git commit -m "Update futures positioning"
+          git push
