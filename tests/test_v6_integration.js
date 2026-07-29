@@ -27,6 +27,14 @@ check("Version 6.1 品牌與六個頂部分頁", () => {
   }
 });
 
+check("首頁內嵌程式可通過語法解析", () => {
+  const scripts = [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)]
+    .map(match => match[1])
+    .filter(source => source.trim());
+  assert.ok(scripts.length > 0);
+  for (const source of scripts) assert.doesNotThrow(() => new Function(source));
+});
+
 check("持股隱私與裝置遺失提示", () => {
   assert.match(html, /持股資料只儲存在此裝置，不會上傳或公開/);
   assert.match(html, /換手機、清除瀏覽器資料或使用無痕模式時/);
@@ -69,7 +77,7 @@ check("首頁情緒摘要位於市場摘要上方", () => {
   const marketIndex = html.indexOf('class="panel marketPanel"');
   const snapshotIndex = html.indexOf("<h2>其他快速資訊</h2>", marketIndex);
   assert.ok(overviewIndex > 0 && overviewIndex < sentimentIndex);
-  assert.ok(sentimentIndex < briefIndex && briefIndex < marketIndex);
+  assert.ok(briefIndex < sentimentIndex && sentimentIndex < marketIndex);
   assert.ok(marketIndex < snapshotIndex);
 });
 
@@ -97,7 +105,7 @@ check("下探與回升文字正確且卡片不顯示必買", () => {
   assert.match(marketUi, /超賣後回升/);
   const renderCards = html.slice(html.indexOf("function renderCards"), html.indexOf("function formatYi"));
   assert.doesNotMatch(renderCards, /必買/);
-  assert.match(renderCards, /HSMarketUiCore\.turnText/);
+  assert.match(renderCards, /buyStage\.conclusion/);
 });
 
 check("原有主要功能仍在", () => {

@@ -79,7 +79,16 @@ class MarketQuoteTests(unittest.TestCase):
 
     def test_overview_rejects_missing_required_instrument(self):
         with self.assertRaises(ValueError):
-            quotes.build_overview([], {"value": 1}, quotes.datetime.now(quotes.TAIPEI))
+            quotes.build_overview([], quotes.datetime.now(quotes.TAIPEI))
+
+    def test_overview_contains_spot_only(self):
+        rows = [
+            {"code": "T00", "price": 25000, "previous_close": 24900, "date": "2026-07-29", "quote_time": "13:30:00"},
+            {"code": "O00", "price": 300, "previous_close": 301, "date": "2026-07-29", "quote_time": "13:30:00"},
+            {"code": "2330", "price": 1500, "previous_close": 1480, "date": "2026-07-29", "quote_time": "13:30:00"},
+        ]
+        overview = quotes.build_overview(rows, quotes.datetime.now(quotes.TAIPEI))
+        self.assertEqual(set(overview["instruments"]), {"taiex", "otc", "tsmc"})
 
 
 class FuturesPositionTests(unittest.TestCase):

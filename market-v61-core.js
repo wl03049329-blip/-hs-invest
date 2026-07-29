@@ -5,7 +5,7 @@
 })(typeof window !== "undefined" ? window : globalThis, function () {
   "use strict";
 
-  const REQUIRED_MARKETS = ["taiex", "otc", "tx_front", "tsmc"];
+  const REQUIRED_MARKETS = ["taiex", "otc", "tsmc"];
 
   function taipeiParts(now = new Date()) {
     const parts = new Intl.DateTimeFormat("en-CA", {
@@ -153,14 +153,14 @@
 
   function validateOverview(payload, now = new Date()) {
     if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
-      throw new Error("四大行情格式不正確");
+      throw new Error("首頁行情格式不正確");
     }
     const updatedAt = Date.parse(payload.updated_at);
     if (!Number.isFinite(updatedAt) || updatedAt > now.getTime() + 6 * 3600000) {
-      throw new Error("四大行情更新時間不合理");
+      throw new Error("首頁行情更新時間不合理");
     }
     const instruments = payload.instruments;
-    if (!instruments || typeof instruments !== "object") throw new Error("四大行情內容缺失");
+    if (!instruments || typeof instruments !== "object") throw new Error("首頁行情內容缺失");
     const result = {};
     for (const key of REQUIRED_MARKETS) {
       const item = instruments[key];
@@ -205,20 +205,17 @@
     return value === null || Math.abs(value) < 1e-9 ? "flat" : value > 0 ? "up" : "down";
   }
 
-  function marketInterpretation(instruments, session = "closed") {
+  function marketInterpretation(instruments) {
     const taiex = instruments?.taiex?.changePct;
     const otc = instruments?.otc?.changePct;
-    const tx = instruments?.tx_front?.changePct;
     const tsmc = instruments?.tsmc?.changePct;
     if (![taiex, otc, tsmc].every(Number.isFinite)) return "行情資料尚未完整，暫不做方向判斷。";
-    if (session === "night" && tx < -0.5) return "台指期夜盤偏弱，需留意隔日現貨開盤風險，但不代表一定下跌。";
     if (taiex > 0 && otc < 0) return "加權指數上漲但櫃買指數下跌，資金目前偏向大型權值股。";
     if (otc - taiex >= 0.5) return "櫃買強於加權，中小型股表現相對活躍。";
     if (taiex - otc >= 0.5) return "加權強於櫃買，權值股表現相對突出。";
     if (taiex > 0 && tsmc > 0 && Math.abs(tsmc - taiex) <= 1.2) {
       return "台積電與加權指數同步上漲，權值股目前對市場形成支撐。";
     }
-    if (session !== "closed" && Number.isFinite(tx) && tx < taiex - 0.5) return "台指期弱於現貨，期貨市場態度相對保守。";
     return "加權、櫃買與台積電走勢接近，暫無單一市場明顯主導。";
   }
 

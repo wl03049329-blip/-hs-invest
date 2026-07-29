@@ -41,7 +41,7 @@ TRACKED_CHANNELS = (
 )
 OVERVIEW_CODES = {
     "T00": ("taiex", "台股加權指數"),
-    "O00": ("otc", "櫃買指數"),
+    "O00": ("otc", "上櫃指數"),
     "2330": ("tsmc", "台積電 2330"),
 }
 CODE_RE = re.compile(r"^[0-9A-Z]{4,10}$")
@@ -254,9 +254,7 @@ def select_near_month_tx(rows: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def build_overview(
-    mis_rows: list[dict[str, Any]], futures_row: dict[str, Any], now: datetime
-) -> dict[str, Any]:
+def build_overview(mis_rows: list[dict[str, Any]], now: datetime) -> dict[str, Any]:
     instruments: dict[str, dict[str, Any]] = {}
     for row in mis_rows:
         definition = OVERVIEW_CODES.get(row["code"])
@@ -279,9 +277,8 @@ def build_overview(
             "source": TWSE_MIS_URL,
             "source_status": "ok",
         }
-    instruments["tx_front"] = futures_row
-    if set(instruments) != {"taiex", "otc", "tx_front", "tsmc"}:
-        raise ValueError("market overview does not contain four valid instruments")
+    if set(instruments) != {"taiex", "otc", "tsmc"}:
+        raise ValueError("market overview does not contain three valid instruments")
     comparable = instruments
     for item in comparable.values():
         if finite_number(item["value"], positive=True) is None:
@@ -295,8 +292,6 @@ def build_overview(
         "instruments": instruments,
         "source_status": {
             "spot": "ok",
-            "futures": "official_daily_close_only",
-            "futures_note": "期交所免費 OpenAPI 僅提供每日歷史行情；日盤或夜盤期間必須標示過期，不冒充盤中報價。",
         },
     }
 
@@ -413,10 +408,7 @@ def main() -> None:
     try:
         if not mis_rows:
             raise ValueError("spot snapshot unavailable")
-        futures_payload = fetch_json(TAIFEX_DAILY_URL)
-        if not isinstance(futures_payload, list):
-            raise ValueError("TAIFEX daily report is not an array")
-        overview = build_overview(mis_rows, select_near_month_tx(futures_payload), now)
+        overview = build_overview(mis_rows, now)
         comparable = overview["instruments"]
         previous_comparable = {
             key: item

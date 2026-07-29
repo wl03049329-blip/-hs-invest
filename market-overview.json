@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-07-29T16:00:36.325424Z",
+  "updated_at": "2026-07-29T17:16:16.785428Z",
   "label": "盤中延遲行情｜約每 5 分鐘更新｜僅供參考",
   "instruments": {
     "taiex": {
@@ -19,7 +19,7 @@
     },
     "otc": {
       "key": "otc",
-      "name": "櫃買指數",
+      "name": "上櫃指數",
       "value": 334.24,
       "change": -18.180000000000007,
       "change_pct": -5.15861755859486,
@@ -44,27 +44,9 @@
       "quote_mode": "close",
       "source": "https://mis.twse.com.tw/stock/api/getStockInfo.jsp",
       "source_status": "ok"
-    },
-    "tx_front": {
-      "key": "tx_front",
-      "name": "台指期近月",
-      "value": 43172.0,
-      "change": -708.0,
-      "change_pct": -1.61,
-      "previous_close": 43880.0,
-      "data_date": "2026-07-28",
-      "data_time": "盤後收盤",
-      "source_session": "night_close",
-      "quote_mode": "close",
-      "contract_month": "202608",
-      "source": "https://openapi.taifex.com.tw/v1/DailyMarketReportFut",
-      "source_status": "official_daily_close_only",
-      "availability": "official_close_only"
     }
   },
   "source_status": {
-    "spot": "ok",
-    "futures": "official_daily_close_only",
-    "futures_note": "期交所免費 OpenAPI 僅提供每日歷史行情；日盤或夜盤期間必須標示過期，不冒充盤中報價。"
+    "spot": "ok"
   }
 }
