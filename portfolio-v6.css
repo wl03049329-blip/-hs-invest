@@ -1,4 +1,9 @@
 .homeSentiment{margin:0 0 12px}
+.homeQuoteStatus{
+  margin:0 0 8px;padding:7px 10px;border:1px solid #2b543b;border-radius:11px;
+  background:#0b1c13;color:#cfe8d7;font-size:11px;font-weight:850;line-height:1.35
+}
+.homeQuoteStatus.quoteError{border-color:#7a3b43;background:#2d1519;color:#ffbcc2}
 .compactTitle h2{font-size:19px}
 .homeSentimentCards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}
 .homeSentimentCard{
@@ -44,6 +49,7 @@
 .signalLevel{display:inline-flex;border-radius:999px;padding:5px 8px;font-size:10px;font-weight:950;border:1px solid #ffffff22}
 .signalLevel.neutral{background:#26322c;color:#dce7e0}
 .kdjTurn{color:#e8fff0;font-weight:900}
+.dataSourceNote{margin:9px 0 0;color:#a9c8b4;font-size:11px;font-weight:850;line-height:1.45}
 
 .portfolioPage{display:grid;gap:12px}
 .portfolioTopline{display:flex;align-items:end;justify-content:space-between;gap:12px}
@@ -153,6 +159,7 @@
 .portfolioSaveBtn{width:100%}
 
 @media(max-width:760px){
+  .homeQuoteStatus{padding:6px 9px;font-size:10px;margin-bottom:7px}
   .homeSentiment{padding:12px}.homeSentimentCard{padding:9px}.homeSentimentCard>b{font-size:24px}
   .dashboard{grid-template-columns:1fr}
   .marketPanel{padding:10px;max-height:none}

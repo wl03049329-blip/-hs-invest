@@ -315,6 +315,10 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
   <p class="tabIntro" data-tab-intro="trump">只整理可能影響市場的川普言論與政策。</p>
   <p class="tabIntro" data-tab-intro="more">ETF 比較、提醒與資料設定集中在這裡。</p>
 
+  <div id="homeQuoteStatus" class="homeQuoteStatus" data-tab-section="today" role="status" aria-live="polite">
+    延遲行情｜資料可能非即時｜更新中
+  </div>
+
   <section id="homeSentiment" class="panel homeSentiment" data-tab-section="today" aria-labelledby="homeSentimentTitle">
     <div class="panelTitle compactTitle">
       <div><p class="eyebrow">MARKET SENTIMENT</p><h2 id="homeSentimentTitle">市場情緒快覽</h2></div>
@@ -435,7 +439,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       <div id="sentimentSummaryContent"><div class="skeleton">彙整情緒資料中…</div></div>
     </article>
     <article class="panel">
-      <div class="panelTitle"><div><p class="eyebrow">MARGIN FOMO</p><h2>融資情緒</h2></div><small>每日市場散戶溫度</small></div>
+      <div class="panelTitle"><div><p class="eyebrow">MARGIN FOMO</p><h2>融資情緒</h2></div><small>最近交易日盤後資料</small></div>
       <div id="fomoContent"><div class="skeleton">載入融資資料中…</div></div>
     </article>
     <article class="panel">
@@ -443,7 +447,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       <div id="cnnFearGreedContent"><div class="skeleton">載入 CNN 情緒資料中…</div></div>
     </article>
     <article class="panel">
-      <div class="panelTitle"><div><p class="eyebrow">SMART MONEY</p><h2>三大法人</h2></div><small>今日／近 5 日</small></div>
+      <div class="panelTitle"><div><p class="eyebrow">SMART MONEY</p><h2>三大法人</h2></div><small>今日盤後更新</small></div>
       <div id="institutionContent"><div class="skeleton">載入法人資料中…</div></div>
     </article>
     <article class="panel">
@@ -660,6 +664,11 @@ let latestNews=[];
 let marketChip={margin:null,institutional:null};
 let trumpNews=[];
 let cnnFearGreed=null;
+let pendingDelayedQuotes=null;
+let cnnPollTimer=null;
+let cnnPollInFlight=null;
+let cnnLastAttemptAt=0;
+const CNN_POLL_INTERVAL=20*60*1000;
 
 const $=s=>document.querySelector(s);
 const fmt=n=>Number.isFinite(+n)?new Intl.NumberFormat("zh-TW",{maximumFractionDigits:2}).format(+n):"—";
@@ -942,12 +951,42 @@ function validateCnnFearGreed(json){
     sourceUrl
   };
 }
-async function loadCnnFearGreed(){
+async function loadCnnFearGreed({preserveOnFailure=false}={}){
+  const previous=cnnFearGreed;
   try{
     const response=await fetch("cnn-fear-greed.json?ts="+Date.now(),{cache:"no-store"});
     if(!response.ok)throw new Error("not found");
-    cnnFearGreed=validateCnnFearGreed(await response.json());
-  }catch{cnnFearGreed=null}
+    const next=validateCnnFearGreed(await response.json());
+    if(!next)throw new Error("invalid data");
+    cnnFearGreed=next;
+    return true;
+  }catch{
+    cnnFearGreed=preserveOnFailure?previous:null;
+    return false;
+  }
+}
+function scheduleCnnPoll(delay=CNN_POLL_INTERVAL){
+  clearTimeout(cnnPollTimer);
+  cnnPollTimer=null;
+  if(document.hidden)return;
+  cnnPollTimer=setTimeout(()=>refreshCnnFearGreed(),delay);
+}
+async function refreshCnnFearGreed({force=false}={}){
+  if(document.hidden)return false;
+  if(cnnPollInFlight)return cnnPollInFlight;
+  const now=Date.now(),elapsed=now-cnnLastAttemptAt;
+  if(!force&&elapsed<CNN_POLL_INTERVAL){
+    scheduleCnnPoll(CNN_POLL_INTERVAL-elapsed);
+    return false;
+  }
+  cnnLastAttemptAt=now;
+  cnnPollInFlight=(async()=>{
+    const success=await loadCnnFearGreed({preserveOnFailure:true});
+    renderSentiment();
+    scheduleCnnPoll();
+    return success;
+  })().finally(()=>{cnnPollInFlight=null});
+  return cnnPollInFlight;
 }
 function fomoLabel(score){
   if(score<=14)return"極度去槓桿";
@@ -1056,6 +1095,58 @@ function renderMarket(){
   $("#marketDate").textContent="資料至 "+all[0].date+" 收盤";
   $("#newsList").innerHTML=latestNews.length?latestNews.slice(0,5).map(n=>`<a class="newsItem" href="${esc(n.link)}" target="_blank" rel="noopener"><b>${esc(n.title)}</b><small>${esc(n.source||n.stockId)} · ${esc(String(n.date).slice(0,16))}</small></a>`).join(""):'<div class="newsEmpty">目前沒有取得同日新聞；市場原因暫以 ETF、融資與法人資料判讀。</div>';
 }
+function formatHomeQuoteTime(value){
+  const time=new Date(value);
+  if(!Number.isFinite(time.getTime()))return"—";
+  return new Intl.DateTimeFormat("zh-TW",{timeZone:"Asia/Taipei",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}).format(time);
+}
+function setHomeQuoteStatus(text,isError=false){
+  const status=$("#homeQuoteStatus");
+  status.textContent=text;
+  status.classList.toggle("quoteError",isError);
+}
+function applyHomeDelayedQuotes(detail){
+  const quotes=detail?.quotes;
+  if(!(quotes instanceof Map)){
+    setHomeQuoteStatus("延遲行情｜資料可能非即時｜更新失敗，已保留最後資料",true);
+    return false;
+  }
+  pendingDelayedQuotes=detail;
+  const checkedAt=detail.checkedAt||new Date().toISOString();
+  if(!all.length){
+    setHomeQuoteStatus(`延遲行情｜資料可能非即時｜更新於 ${formatHomeQuoteTime(checkedAt)}`);
+    return false;
+  }
+  let updated=0;
+  for(const x of all){
+    const quote=quotes.get(x.id),price=Number(quote?.price),previousClose=Number(quote?.previousClose);
+    if(!Number.isFinite(price)||price<=0)continue;
+    x.price=price;
+    if(Number.isFinite(previousClose)&&previousClose>0)x.changePct=(price/previousClose-1)*100;
+    if(Number.isFinite(x.high52)&&x.high52>0)x.high52=Math.max(x.high52,price);
+    if(Number.isFinite(x.low52)&&x.low52>0)x.low52=Math.min(x.low52,price);
+    if(Number.isFinite(x.high52)&&x.high52>0)x.fromHigh=(price/x.high52-1)*100;
+    if(Number.isFinite(x.low52)&&x.low52>0)x.fromLow=(price/x.low52-1)*100;
+    if(/^\d{4}-\d{2}-\d{2}$/.test(String(quote.date||"")))x.date=quote.date;
+    x.score=calcBuyScore(x);
+    x.action=actionFor(x);
+    x.scoreParts=scoreParts(x);
+    updated++;
+  }
+  if(!updated){
+    setHomeQuoteStatus("延遲行情｜資料可能非即時｜更新失敗，已保留最後資料",true);
+    return false;
+  }
+  applyCrossRules();
+  renderMarket();
+  renderTop();
+  renderCards();
+  renderTable();
+  setHomeQuoteStatus(`延遲行情｜資料可能非即時｜更新於 ${formatHomeQuoteTime(checkedAt)}`);
+  return true;
+}
+window.addEventListener("hs:delayed-quotes",event=>applyHomeDelayedQuotes(event.detail));
+window.addEventListener("hs:delayed-quotes-error",()=>setHomeQuoteStatus("延遲行情｜資料可能非即時｜更新失敗，已保留最後資料",true));
 function scoreTone(score){return score>=80?"red":score>=68?"orange":score>=55?"yellow":"neutral"}
 function renderTop(){
   const ranked=[...all].sort((a,b)=>b.score-a.score||a.j-b.j),medals=["🥇","🥈","🥉"];
@@ -1090,14 +1181,14 @@ function combinedSentimentConclusion(){
 }
 function renderSentiment(){
   const margin=marketChip.margin;
-  $("#fomoContent").innerHTML=margin?`<div class="fomoHero"><div><div class="fomoScore ${margin.score>=65?"moodUp":margin.score<40?"moodDown":"moodFlat"}">${margin.score}</div><span>${margin.label}</span></div></div><p class="interpretation">${esc(margin.summary)}</p><details class="sentimentDetails"><summary>查看詳細數據與說明</summary><div class="sentimentDetailsBody"><div class="detailMeta"><b>${formatYi(margin.balance)}</b><small>融資餘額<br>資料日期 ${esc(margin.date)}</small></div><div class="miniStats"><div><span>單日</span><b class="${margin.daily>=0?"up":"down"}">${signed(margin.daily)}</b></div><div><span>近 5 日</span><b class="${margin.change5>=0?"up":"down"}">${signed(margin.change5)}</b></div><div><span>近 20 日</span><b class="${margin.change20>=0?"up":"down"}">${signed(margin.change20)}</b></div></div><p class="interpretation">${esc(margin.pattern)}</p><div class="scoreBar fomoBar"><i style="width:${margin.score}%"></i></div><p class="footnote">FOMO 分數是本站依融資單日、20 日趨勢及近 60 日位置計算的市場情緒代理指標，不是交易所官方指數。</p></div></details>`:'<div class="newsEmpty sentimentUnavailable">資料尚未更新</div>';
+  $("#fomoContent").innerHTML=margin?`<div class="fomoHero"><div><div class="fomoScore ${margin.score>=65?"moodUp":margin.score<40?"moodDown":"moodFlat"}">${margin.score}</div><span>${margin.label}</span></div></div><p class="interpretation">${esc(margin.summary)}</p><p class="dataSourceNote">使用最近交易日盤後資料｜資料日期 ${esc(margin.date)}</p><details class="sentimentDetails"><summary>查看詳細數據與說明</summary><div class="sentimentDetailsBody"><div class="detailMeta"><b>${formatYi(margin.balance)}</b><small>融資餘額<br>資料日期 ${esc(margin.date)}</small></div><div class="miniStats"><div><span>單日</span><b class="${margin.daily>=0?"up":"down"}">${signed(margin.daily)}</b></div><div><span>近 5 日</span><b class="${margin.change5>=0?"up":"down"}">${signed(margin.change5)}</b></div><div><span>近 20 日</span><b class="${margin.change20>=0?"up":"down"}">${signed(margin.change20)}</b></div></div><p class="interpretation">${esc(margin.pattern)}</p><div class="scoreBar fomoBar"><i style="width:${margin.score}%"></i></div><p class="footnote">FOMO 分數是本站依融資單日、20 日趨勢及近 60 日位置計算的市場情緒代理指標，不是交易所官方指數。</p></div></details>`:'<div class="newsEmpty sentimentUnavailable">資料尚未更新</div>';
   const cnn=cnnFearGreed;
   $("#cnnFearGreedContent").innerHTML=cnn?`<div class="fomoHero"><div><div class="fomoScore ${cnn.score<=44?"moodDown":cnn.score>=56?"moodUp":"moodFlat"}">${fmt(cnn.score)}</div><span>${cnn.label}</span></div></div><p class="interpretation">${esc(cnn.summary)}</p><details class="sentimentDetails"><summary>查看歷史分數與資料來源</summary><div class="sentimentDetailsBody"><div class="detailMeta"><b>CNN 指數</b><small>資料更新<br>${esc(formatTaipeiDateTime(cnn.sourceUpdatedAt))}（台北）</small></div><div class="miniStats"><div><span>前一日</span><b>${fmt(cnn.day)}</b></div><div><span>1 週前</span><b>${fmt(cnn.week)}</b></div><div><span>1 月前</span><b>${fmt(cnn.month)}</b></div></div><div class="scoreBar fomoBar"><i style="width:${cnn.score}%"></i></div><p class="footnote">指數衡量市場情緒，不是買賣訊號；本站透過 GitHub Actions 讀取 CNN 結構化 JSON 後寫入本地檔案。</p><a class="sourceLink" href="${esc(cnn.sourceUrl)}" target="_blank" rel="noopener">資料來源：CNN Fear &amp; Greed Index</a></div></details>`:'<div class="newsEmpty sentimentUnavailable">資料暫時無法取得</div>';
   $("#sentimentSummaryContent").innerHTML=`<p class="interpretation">${esc(combinedSentimentConclusion())}</p>`;
   const inst=marketChip.institutional;
   if(inst){
     const total=inst.foreign.today+inst.trust.today+inst.dealer.today;
-    $("#institutionContent").innerHTML=`<div class="flowGrid">${flowHtml("外資",inst.foreign)}${flowHtml("投信",inst.trust)}${flowHtml("自營商",inst.dealer)}</div><p class="interpretation">三大法人今日合計${total>=0?"買超":"賣超"} ${formatYi(Math.abs(total))}；資料日期 ${inst.date}。</p>`;
+    $("#institutionContent").innerHTML=`<p class="dataSourceNote">今日盤後更新｜盤中沿用最近交易日資料｜資料日期 ${esc(inst.date)}</p><div class="flowGrid">${flowHtml("外資",inst.foreign)}${flowHtml("投信",inst.trust)}${flowHtml("自營商",inst.dealer)}</div><p class="interpretation">三大法人今日合計${total>=0?"買超":"賣超"} ${formatYi(Math.abs(total))}；資料日期 ${inst.date}。</p>`;
   }else $("#institutionContent").innerHTML='<div class="newsEmpty">尚未取得三大法人資料。資料通常約收盤後更新。</div>';
 }
 function customEvents(){try{return JSON.parse(localStorage.getItem("hs_custom_events")||"[]")}catch{return[]}}
@@ -1230,8 +1321,9 @@ async function load(){
     const failed=settled.map((x,i)=>x.status==="rejected"?ids[i]:null).filter(Boolean);
     if(!all.length)throw new Error("目前清單內的 ETF 都無法取得價格資料");
     all.forEach(x=>{x.action=actionFor(x)});applyCrossRules();renderTop();renderCards();renderChecks();renderTable();renderEvents();
-    await Promise.allSettled([loadNews(all[0].date),loadChipData(),loadTrumpNews(),loadCnnFearGreed()]);
+    await Promise.allSettled([loadNews(all[0].date),loadChipData(),loadTrumpNews(),refreshCnnFearGreed()]);
     all.forEach(x=>{x.action=actionFor(x)});applyCrossRules();renderMarket();renderTrump();renderSentiment();renderEvents();renderTop();renderCards();renderTable();
+    if(pendingDelayedQuotes)applyHomeDelayedQuotes(pendingDelayedQuotes);
     const chipStatus=marketChip.margin&&marketChip.institutional&&cnnFearGreed?"融資、法人與 CNN 情緒已更新":"部分籌碼或情緒資料尚未更新";
     m.textContent=`更新成功：${all.length} 檔價格至 ${all[0].date} 收盤；${chipStatus}${failed.length?`；${failed.join("、")} 暫時讀取失敗`:""}。`;
     $("#updated").textContent="資料至 "+all[0].date+" 收盤｜"+all[0].weekState.label;maybeNotify();
@@ -1241,7 +1333,13 @@ async function load(){
 $("#token").value=localStorage.getItem("finmind_token")||"";
 $("#saveToken").addEventListener("click",()=>{localStorage.setItem("finmind_token",$("#token").value.trim());load()});
 $("#reload").addEventListener("click",load);
-loadAlerts();renderWatchlist();renderEvents();renderTrump();switchTab(sessionStorage.getItem("hs_active_tab")||"today",{scroll:false});load();
+document.addEventListener("visibilitychange",()=>{
+  if(document.hidden){
+    clearTimeout(cnnPollTimer);
+    cnnPollTimer=null;
+  }else refreshCnnFearGreed({force:true});
+});
+loadAlerts();renderWatchlist();renderEvents();renderTrump();switchTab(sessionStorage.getItem("hs_active_tab")||"today",{scroll:false});scheduleCnnPoll();load();
 
 </script>
 <script src="portfolio-core.js"></script>

@@ -18,6 +18,7 @@
 
   let holdings = loadHoldings();
   let quoteMap = loadQuoteCache();
+  let publicQuoteMap = new Map();
   let computed = core.calculatePortfolio(holdings, quoteMap);
   let pendingDuplicate = null;
   let editingCode = null;
@@ -530,13 +531,16 @@
 
   async function fetchBulkQuotes() {
     const fetchedAt = new Date().toISOString();
+    let metadata = null;
     try {
-      const metadata = await fetchJson(`${MARKET_META_URL}?ts=${Date.now()}`);
+      metadata = await fetchJson(`${MARKET_META_URL}?ts=${Date.now()}`);
       const metadataTime = Date.parse(metadata?.updated_at);
       if (!Number.isFinite(metadataTime)) throw new Error("行情版本資訊無效");
-      if (marketCacheVersion === metadata.updated_at) {
-        return {quotes: new Map(quoteMap), fetchedAt: metadata.updated_at, partial: false};
-      }
+      if (marketCacheVersion === metadata.updated_at && publicQuoteMap.size) return {quotes: new Map(publicQuoteMap), fetchedAt: metadata.updated_at, partial: false};
+    } catch {
+      metadata = null;
+    }
+    try {
       const cached = await fetchJson(`${MARKET_CACHE_URL}?ts=${Date.now()}`);
       const quotes = core.parseCachedQuotes(cached);
       marketCacheVersion = String(cached.updated_at);
@@ -553,26 +557,16 @@
     return {quotes: mergeQuoteMaps(maps), fetchedAt, partial: maps.length < 2};
   }
 
-  function latestQuoteDate(map) {
-    return [...map.values()].map(quote => quote.date).filter(date => /^\d{4}-\d{2}-\d{2}$/.test(date)).sort().at(-1) || "";
-  }
-
   function scheduleNext(delayOverride) {
     clearTimeout(refreshTimer);
     refreshTimer = null;
-    const enabled = $v6("#portfolioAutoRefresh").checked;
-    if (!enabled || document.hidden || !holdings.length) return;
+    if (document.hidden) return;
     if (!core.isTaipeiMarketOpen()) return;
     const delay = delayOverride ?? (failureCount ? Math.min(120000 * 2 ** (failureCount - 1), 900000) : 60000);
-    refreshTimer = setTimeout(() => updateQuotes(), delay);
+    refreshTimer = setTimeout(() => updateQuotes({applyPortfolio: $v6("#portfolioAutoRefresh").checked}), delay);
   }
 
-  async function updateQuotes({force = false} = {}) {
-    if (!holdings.length) {
-      renderQuoteStatus("新增持股後才會取得行情");
-      scheduleNext();
-      return;
-    }
+  async function updateQuotes({force = false, applyPortfolio = $v6("#portfolioAutoRefresh").checked} = {}) {
     if (refreshInFlight) return refreshInFlight;
     const now = Date.now();
     if (!force && now - lastAttemptAt < 55000) {
@@ -580,27 +574,37 @@
       return;
     }
     lastAttemptAt = now;
-    renderQuoteStatus("延遲行情更新中…");
+    renderQuoteStatus(holdings.length ? "延遲行情更新中…" : "首頁延遲行情更新中…");
     $v6("#portfolioRefreshBtn").disabled = true;
     refreshInFlight = (async () => {
       try {
         const result = await fetchBulkQuotes();
-        const heldCodes = new Set(holdings.map(item => item.code));
-        for (const [code, quote] of result.quotes) {
-          if (heldCodes.has(code)) quoteMap.set(code, quote);
-        }
+        publicQuoteMap = new Map(result.quotes);
         lastSuccessAt = Date.parse(result.fetchedAt);
         failureCount = 0;
-        saveQuoteCache();
-        renderPortfolio(true);
+        window.dispatchEvent(new CustomEvent("hs:delayed-quotes", {detail: {
+          quotes: new Map(publicQuoteMap),
+          sourceUpdatedAt: result.fetchedAt,
+          checkedAt: new Date().toISOString()
+        }}));
+        if (applyPortfolio && holdings.length) {
+          const heldCodes = new Set(holdings.map(item => item.code));
+          for (const [code, quote] of publicQuoteMap) {
+            if (heldCodes.has(code)) quoteMap.set(code, quote);
+          }
+          saveQuoteCache();
+          renderPortfolio(true);
+        }
         const missing = holdings.filter(item => !quoteMap.has(item.code)).length;
         const suffix = result.partial ? "；部分市場來源暫時無法取得" : "";
-        renderQuoteStatus(`${quoteTimeLabel()}${missing ? `；${missing} 檔行情暫缺` : ""}${suffix}`);
-        const stale = core.isTaipeiMarketOpen() && latestQuoteDate(result.quotes) < taipeiToday();
-        scheduleNext(stale ? 900000 : 60000);
+        if (!holdings.length) renderQuoteStatus("首頁延遲行情已更新；尚未新增持股");
+        else if (!applyPortfolio) renderQuoteStatus(`${quoteTimeLabel()}；持股自動更新已關閉`);
+        else renderQuoteStatus(`${quoteTimeLabel()}${missing ? `；${missing} 檔行情暫缺` : ""}${suffix}`);
+        scheduleNext(60000);
       } catch {
         failureCount += 1;
-        renderPortfolio();
+        if (applyPortfolio && holdings.length) renderPortfolio();
+        window.dispatchEvent(new CustomEvent("hs:delayed-quotes-error"));
         renderQuoteStatus("行情更新失敗，已保留最後資料");
         scheduleNext();
       } finally {
@@ -654,16 +658,12 @@
     $v6("#portfolioImportBtn").addEventListener("click", () => $v6("#portfolioImportFile").click());
     $v6("#portfolioImportFile").addEventListener("change", event => importHoldings(event.target.files?.[0]));
     $v6("#portfolioClearBtn").addEventListener("click", clearHoldings);
-    $v6("#portfolioRefreshBtn").addEventListener("click", () => updateQuotes({force: true}));
+    $v6("#portfolioRefreshBtn").addEventListener("click", () => updateQuotes({force: true, applyPortfolio: true}));
     $v6("#portfolioAutoRefresh").checked = localStorage.getItem(AUTO_KEY) !== "0";
     $v6("#portfolioAutoRefresh").addEventListener("change", event => {
       localStorage.setItem(AUTO_KEY, event.target.checked ? "1" : "0");
-      if (event.target.checked) updateQuotes({force: true});
-      else {
-        clearTimeout(refreshTimer);
-        refreshTimer = null;
-        renderQuoteStatus(`${quoteTimeLabel()}；自動更新已關閉`);
-      }
+      if (event.target.checked) updateQuotes({force: true, applyPortfolio: true});
+      else renderQuoteStatus(`${quoteTimeLabel()}；持股自動更新已關閉`);
     });
     $v6("#portfolioChart").addEventListener("click", chartHit);
     $v6("#portfolioChart").addEventListener("touchstart", chartHit, {passive: true});
@@ -684,9 +684,7 @@
       if (document.hidden) {
         clearTimeout(refreshTimer);
         refreshTimer = null;
-      } else if ($v6("#portfolioAutoRefresh").checked) {
-        updateQuotes({force: true});
-      }
+      } else updateQuotes({force: true, applyPortfolio: $v6("#portfolioAutoRefresh").checked});
     });
     window.addEventListener("resize", () => {
       cancelAnimationFrame(resizeFrame);
@@ -703,12 +701,12 @@
   bindEvents();
   renderPortfolio();
   renderHomeSentiment();
-  if ($v6("#portfolioAutoRefresh").checked && holdings.length) updateQuotes();
+  if (!document.hidden) updateQuotes({applyPortfolio: $v6("#portfolioAutoRefresh").checked});
 
   window.HSPortfolioV6 = Object.freeze({
     storageKey: HOLDINGS_KEY,
     quoteStorageKey: QUOTES_KEY,
     quoteSources: Object.freeze([TWSE_URL, TPEX_URL]),
-    refresh: () => updateQuotes({force: true})
+    refresh: () => updateQuotes({force: true, applyPortfolio: true})
   });
 })();
