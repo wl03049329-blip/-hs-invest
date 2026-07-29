@@ -82,7 +82,7 @@ check("ETF雷達自選與精選互相獨立", () => {
   assert.match(html, /function radarList\(\)/);
   assert.match(html, /hs_etf_watchlist_v1/);
   assert.match(html, /localStorage\.setItem\("hs_etf_radar_mode_v1"/);
-  assert.match(html, /弘昇精選固定追蹤 5 檔 ETF/);
+  assert.match(html, /弘昇精選固定追蹤 6 檔 ETF/);
 });
 
 check("精簡買點卡可展開且有非色彩訊號", () => {

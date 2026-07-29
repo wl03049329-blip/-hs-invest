@@ -1,0 +1,36 @@
+name: Update market events
+
+on:
+  schedule:
+    - cron: "17 */2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-market-events
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify near-term official results
+        run: python scripts/update_market_events.py
+      - name: Commit validated cache
+        run: |
+          if git diff --quiet -- market-events.json; then
+            echo "No event result changed."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add market-events.json
+          git commit -m "更新重大事件結果"
+          git push
