@@ -60,6 +60,92 @@
     return {key: "closed", label: "休市／最新收盤"};
   }
 
+  function parseTaipeiDataDate(value) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ""))) return NaN;
+    return Date.parse(`${value}T12:00:00+08:00`);
+  }
+
+  function txQuoteState(item, now = new Date(), cacheUpdatedAt = "") {
+    const session = futuresSession(now);
+    const value = finite(item?.value);
+    const change = finite(item?.change);
+    const changePct = finite(item?.changePct);
+    const dataDateTime = parseTaipeiDataDate(item?.dataDate);
+    const cacheTime = Date.parse(cacheUpdatedAt);
+    const quoteTime = Date.parse(item?.quoteTimestamp || "");
+    const hasValidQuote = value !== null && value > 0 && change !== null && changePct !== null &&
+      Number.isFinite(dataDateTime) && /^\d{6}$/.test(String(item?.contractMonth || ""));
+
+    if (!hasValidQuote) {
+      return {
+        key: "unavailable",
+        label: "資料暫時無法取得",
+        stale: true,
+        muted: true,
+        notice: "台指期行情暫時無法取得",
+        detail: "未以 0 代替"
+      };
+    }
+
+    const isActive = session.key === "day" || session.key === "night";
+    const quoteAge = now.getTime() - quoteTime;
+    const cacheAge = now.getTime() - cacheTime;
+    const expectedSourceSession = session.key === "day" ? "day" : "night";
+    const delayedFresh = item.quoteMode === "delayed" &&
+      Number.isFinite(quoteTime) &&
+      quoteAge >= -5 * 60 * 1000 &&
+      quoteAge <= 20 * 60 * 1000 &&
+      Number.isFinite(cacheTime) &&
+      cacheAge >= -5 * 60 * 1000 &&
+      cacheAge <= 30 * 60 * 1000 &&
+      item.sourceSession === expectedSourceSession &&
+      futuresSession(new Date(quoteTime)).key === session.key;
+
+    if (isActive && delayedFresh) {
+      return {
+        key: session.key === "day" ? "day_delayed" : "night_delayed",
+        label: session.key === "day" ? "日盤延遲行情" : "夜盤延遲行情",
+        stale: false,
+        muted: false,
+        notice: "延遲行情｜僅供參考",
+        detail: ""
+      };
+    }
+
+    if (isActive) {
+      const isNight = session.key === "night";
+      return {
+        key: "stale",
+        label: "資料已過期",
+        stale: true,
+        muted: true,
+        notice: isNight ? "夜盤行情暫無可靠免費來源" : "日盤行情暫無可靠免費來源",
+        detail: "目前顯示最近官方收盤資料"
+      };
+    }
+
+    const officialCloseAge = now.getTime() - dataDateTime;
+    if (item.quoteMode === "close" && officialCloseAge >= -12 * 3600000 && officialCloseAge <= 7 * 86400000) {
+      return {
+        key: "official_close",
+        label: "最新官方收盤",
+        stale: false,
+        muted: false,
+        notice: "目前顯示最近官方收盤資料",
+        detail: ""
+      };
+    }
+
+    return {
+      key: "stale",
+      label: "資料已過期",
+      stale: true,
+      muted: true,
+      notice: "台指期行情資料已過期",
+      detail: "目前顯示最近官方收盤資料"
+    };
+  }
+
   function finite(value) {
     const number = Number(value);
     return Number.isFinite(number) ? number : null;
@@ -99,7 +185,10 @@
         dataTime,
         quoteMode: item.quote_mode === "delayed" ? "delayed" : "close",
         contractMonth: /^\d{6}$/.test(String(item.contract_month || "")) ? String(item.contract_month) : "",
-        sourceStatus: String(item.source_status || "")
+        sourceStatus: String(item.source_status || ""),
+        sourceSession: ["day", "night"].includes(item.source_session) ? item.source_session : "",
+        quoteTimestamp: Number.isFinite(Date.parse(item.quote_timestamp)) ? new Date(item.quote_timestamp).toISOString() : "",
+        availability: String(item.availability || "")
       };
     }
     return {
@@ -121,7 +210,7 @@
     const otc = instruments?.otc?.changePct;
     const tx = instruments?.tx_front?.changePct;
     const tsmc = instruments?.tsmc?.changePct;
-    if (![taiex, otc, tx, tsmc].every(Number.isFinite)) return "行情資料尚未完整，暫不做方向判斷。";
+    if (![taiex, otc, tsmc].every(Number.isFinite)) return "行情資料尚未完整，暫不做方向判斷。";
     if (session === "night" && tx < -0.5) return "台指期夜盤偏弱，需留意隔日現貨開盤風險，但不代表一定下跌。";
     if (taiex > 0 && otc < 0) return "加權指數上漲但櫃買指數下跌，資金目前偏向大型權值股。";
     if (otc - taiex >= 0.5) return "櫃買強於加權，中小型股表現相對活躍。";
@@ -129,7 +218,7 @@
     if (taiex > 0 && tsmc > 0 && Math.abs(tsmc - taiex) <= 1.2) {
       return "台積電與加權指數同步上漲，權值股目前對市場形成支撐。";
     }
-    if (tx < taiex - 0.5) return "台指期弱於現貨，期貨市場態度相對保守。";
+    if (session !== "closed" && Number.isFinite(tx) && tx < taiex - 0.5) return "台指期弱於現貨，期貨市場態度相對保守。";
     return "加權、櫃買與台積電走勢接近，暫無單一市場明顯主導。";
   }
 
@@ -185,6 +274,7 @@
     taipeiDate,
     spotSession,
     futuresSession,
+    txQuoteState,
     validateOverview,
     validateFuturesPosition,
     tone,

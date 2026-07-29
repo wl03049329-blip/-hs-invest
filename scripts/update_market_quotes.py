@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Build same-origin delayed and closing quote caches from structured Taiwan sources."""
+"""Build same-origin delayed and closing quote caches from structured Taiwan sources.
+
+TAIFEX DailyMarketReportFut is intentionally treated as official daily history only.
+It must never be labelled as a current day-session or night-session quote.
+"""
 
 from __future__ import annotations
 
@@ -245,7 +249,8 @@ def select_near_month_tx(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "quote_mode": "close",
         "contract_month": contract_month,
         "source": TAIFEX_DAILY_URL,
-        "source_status": "official_closing_data",
+        "source_status": "official_daily_close_only",
+        "availability": "official_close_only",
     }
 
 
@@ -277,10 +282,7 @@ def build_overview(
     instruments["tx_front"] = futures_row
     if set(instruments) != {"taiex", "otc", "tx_front", "tsmc"}:
         raise ValueError("market overview does not contain four valid instruments")
-    comparable = {
-        key: {field: value for field, value in item.items() if field != "source_status"}
-        for key, item in instruments.items()
-    }
+    comparable = instruments
     for item in comparable.values():
         if finite_number(item["value"], positive=True) is None:
             raise ValueError("market overview contains an invalid value")
@@ -293,8 +295,8 @@ def build_overview(
         "instruments": instruments,
         "source_status": {
             "spot": "ok",
-            "futures": "official_closing_data",
-            "futures_note": "期交所免費 OpenAPI 為每日行情；目前顯示最後成功行情，不冒充盤中報價。",
+            "futures": "official_daily_close_only",
+            "futures_note": "期交所免費 OpenAPI 僅提供每日歷史行情；日盤或夜盤期間必須標示過期，不冒充盤中報價。",
         },
     }
 
@@ -415,12 +417,9 @@ def main() -> None:
         if not isinstance(futures_payload, list):
             raise ValueError("TAIFEX daily report is not an array")
         overview = build_overview(mis_rows, select_near_month_tx(futures_payload), now)
-        comparable = {
-            key: {field: value for field, value in item.items() if field != "source_status"}
-            for key, item in overview["instruments"].items()
-        }
+        comparable = overview["instruments"]
         previous_comparable = {
-            key: {field: value for field, value in item.items() if field != "source_status"}
+            key: item
             for key, item in existing_overview.get("instruments", {}).items()
             if isinstance(item, dict)
         }

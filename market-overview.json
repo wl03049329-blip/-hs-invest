@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-07-29T15:13:53.950416Z",
+  "updated_at": "2026-07-29T16:00:36.325424Z",
   "label": "盤中延遲行情｜約每 5 分鐘更新｜僅供參考",
   "instruments": {
     "taiex": {
@@ -58,12 +58,13 @@
       "quote_mode": "close",
       "contract_month": "202608",
       "source": "https://openapi.taifex.com.tw/v1/DailyMarketReportFut",
-      "source_status": "official_closing_data"
+      "source_status": "official_daily_close_only",
+      "availability": "official_close_only"
     }
   },
   "source_status": {
     "spot": "ok",
-    "futures": "official_closing_data",
-    "futures_note": "期交所免費 OpenAPI 為每日行情；目前顯示最後成功行情，不冒充盤中報價。"
+    "futures": "official_daily_close_only",
+    "futures_note": "期交所免費 OpenAPI 僅提供每日歷史行情；日盤或夜盤期間必須標示過期，不冒充盤中報價。"
   }
 }

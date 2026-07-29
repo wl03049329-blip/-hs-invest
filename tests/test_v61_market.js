@@ -7,6 +7,7 @@ const root = path.resolve(__dirname, "..");
 const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const css = fs.readFileSync(path.join(root, "portfolio-v6.css"), "utf8");
 const quoteUi = fs.readFileSync(path.join(root, "portfolio-v6.js"), "utf8");
+const marketCore = fs.readFileSync(path.join(root, "market-v61-core.js"), "utf8");
 const quoteScript = fs.readFileSync(path.join(root, "scripts", "update_market_quotes.py"), "utf8");
 const futuresScript = fs.readFileSync(path.join(root, "scripts", "update_futures_position.py"), "utf8");
 const marketWorkflow = fs.readFileSync(path.join(root, ".github", "workflows", "update-market-quotes.yml"), "utf8");
@@ -34,6 +35,35 @@ check("台指期日盤、夜盤與收盤狀態", () => {
   assert.equal(core.futuresSession(new Date("2026-08-02T02:00:00Z")).key, "closed");
 });
 
+check("台指期官方日資料不會冒充日盤或夜盤行情", () => {
+  const item = core.validateOverview(overviewRaw, new Date("2026-07-29T15:49:00Z")).instruments.tx_front;
+  const updatedAt = "2026-07-29T15:40:00Z";
+  for (const [time, session] of [
+    ["2026-07-29T02:30:00Z", "day"],
+    ["2026-07-29T14:00:00Z", "night"],
+    ["2026-07-29T15:49:00Z", "night"],
+    ["2026-07-29T18:00:00Z", "night"],
+    ["2026-07-31T14:00:00Z", "night"],
+    ["2026-07-31T18:00:00Z", "night"]
+  ]) {
+    assert.equal(core.futuresSession(new Date(time)).key, session);
+    const state = core.txQuoteState(item, new Date(time), updatedAt);
+    assert.equal(state.key, "stale");
+    assert.equal(state.label, "資料已過期");
+  }
+  assert.equal(core.txQuoteState(item, new Date("2026-07-29T06:30:00Z"), updatedAt).key, "official_close");
+});
+
+check("台指期有效延遲時間戳才可標示日盤或夜盤", () => {
+  const base = core.validateOverview(overviewRaw, new Date("2026-07-29T14:00:00Z")).instruments.tx_front;
+  const day = {...base, quoteMode: "delayed", sourceSession: "day", quoteTimestamp: "2026-07-29T02:25:00Z"};
+  const night = {...base, quoteMode: "delayed", sourceSession: "night", quoteTimestamp: "2026-07-29T13:55:00Z"};
+  assert.equal(core.txQuoteState(day, new Date("2026-07-29T02:30:00Z"), "2026-07-29T02:26:00Z").key, "day_delayed");
+  assert.equal(core.txQuoteState(night, new Date("2026-07-29T14:00:00Z"), "2026-07-29T13:56:00Z").key, "night_delayed");
+  assert.equal(core.txQuoteState(night, new Date("2026-07-29T14:30:00Z"), "2026-07-29T13:56:00Z").key, "stale");
+  assert.equal(core.txQuoteState(null, new Date("2026-07-29T14:00:00Z"), "").key, "unavailable");
+});
+
 check("四項行情 JSON 完整且不以 0 代替", () => {
   const overview = core.validateOverview(overviewRaw);
   assert.deepEqual(Object.keys(overview.instruments).sort(), ["otc", "taiex", "tsmc", "tx_front"]);
@@ -53,6 +83,11 @@ check("過期行情會標示最後成功資料", () => {
   stale.updated_at = new Date(Date.now() - 31 * 60 * 1000).toISOString();
   assert.equal(core.validateOverview(stale).stale, true);
   assert.match(html, /目前顯示最後成功行情/);
+  assert.match(html + marketCore, /夜盤行情暫無可靠免費來源/);
+  assert.match(html + marketCore, /目前顯示最近官方收盤資料/);
+  assert.match(html + marketCore, /資料已過期/);
+  assert.match(html, /最後成功更新/);
+  assert.match(css, /\.marketQuoteCard\.isStale/);
 });
 
 check("四張行情卡與首頁順序", () => {
@@ -70,6 +105,7 @@ check("行情來源有逾時、驗證與失敗保留", () => {
   assert.match(quoteScript, /fetch_mis_snapshot/);
   assert.match(quoteScript, /select_near_month_tx/);
   assert.match(quoteScript, /existing_overview/);
+  assert.match(quoteScript, /official_daily_close_only/);
   assert.match(html, /目前顯示最後成功行情/);
 });
 
@@ -118,6 +154,11 @@ check("期貨口徑與盤後補抓排程", () => {
   assert.match(futuresWorkflow, /cron: "20 10 \* \* 1-5"/);
   assert.match(futuresWorkflow, /cron: "0 11 \* \* 1-5"/);
   assert.match(marketWorkflow, /cron: "\*\/5 1-6 \* \* 1-5"/);
+  assert.match(marketWorkflow, /cron: "\*\/10 7-15 \* \* 1-5"/);
+  assert.match(marketWorkflow, /cron: "55 15 \* \* 1-5"/);
+  assert.match(marketWorkflow, /cron: "\*\/10 16-20 \* \* 1-5"/);
+  assert.match(marketWorkflow, /cron: "0 21 \* \* 1-5"/);
+  assert.match(marketWorkflow, /cancel-in-progress: true/);
 });
 
 check("市場一句話與額外快速資訊存在", () => {

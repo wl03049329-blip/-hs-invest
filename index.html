@@ -697,6 +697,7 @@ let trumpNews=[];
 let cnnFearGreed=null;
 let marketOverview=null;
 let marketOverviewUpdatedAt="";
+let marketOverviewStateKey="";
 let marketOverviewPollTimer=null;
 let marketOverviewPollInFlight=null;
 let futuresPosition=null;
@@ -1147,13 +1148,25 @@ function marketChangeText(value){
   return `${value>0?"+":""}${new Intl.NumberFormat("zh-TW",{maximumFractionDigits:2}).format(value)}`;
 }
 function marketCardState(item){
-  if(!item)return"資料暫缺";
+  if(!item)return{key:"unavailable",label:"資料暫時無法取得",stale:true,muted:true};
   if(item.key==="tx_front"){
-    const session=HSMarketV61Core.futuresSession();
-    return session.key==="closed"?"休市／最新收盤":`${session.label}｜最後成功行情`;
+    return HSMarketV61Core.txQuoteState(item,new Date(),marketOverview?.updatedAt||"");
   }
   const session=HSMarketV61Core.spotSession(new Date(),item.dataDate);
-  return item.quoteMode==="delayed"&&session.key==="intraday"?"盤中延遲":session.label;
+  return{key:session.key,label:item.quoteMode==="delayed"&&session.key==="intraday"?"盤中延遲行情":session.label,stale:false,muted:false};
+}
+function marketDataDateText(value){
+  return /^\d{4}-\d{2}-\d{2}$/.test(value)?value.replaceAll("-","/"):"—";
+}
+function txQuoteNotice(item,state){
+  const lastSuccess=formatHomeQuoteTime(marketOverview?.updatedAt);
+  if(state.key==="day_delayed"||state.key==="night_delayed"){
+    return `<div class="txQuoteNotice"><strong>${esc(state.notice)}</strong><span>最後成功更新 ${esc(lastSuccess)}</span></div>`;
+  }
+  if(state.key==="official_close"){
+    return `<div class="txQuoteNotice compact"><span>${esc(state.notice)}｜資料日期：${esc(marketDataDateText(item.dataDate))}</span><span>最後成功更新 ${esc(lastSuccess)}</span></div>`;
+  }
+  return `<div class="txQuoteNotice warning"><strong>${esc(state.notice)}</strong><span>${esc(state.detail)}</span><span>資料日期：${esc(marketDataDateText(item.dataDate))}｜最後成功更新 ${esc(lastSuccess)}</span></div>`;
 }
 function renderMarketOverview(){
   if(!marketOverview){
@@ -1164,11 +1177,11 @@ function renderMarketOverview(){
   }
   const items=marketOverview.instruments,order=["taiex","otc","tx_front","tsmc"];
   $("#marketOverviewCards").innerHTML=order.map(key=>{
-    const item=items[key],tone=HSMarketV61Core.tone(item.change),contract=item.contractMonth?` · ${item.contractMonth.slice(0,4)}/${item.contractMonth.slice(4)}`:"";
-    return `<article class="marketQuoteCard" data-market-key="${key}"><div class="marketQuoteHead"><b>${esc(item.name)}${contract}</b><span class="marketQuoteState">${esc(marketCardState(item))}</span></div><div class="marketQuoteValue"><strong class="${tone}">${marketValueText(item)}</strong><span class="${tone}">${marketChangeText(item.change)}<br>${signed(item.changePct)}</span></div><div class="marketQuoteMeta"><span>${esc(item.dataDate)}</span><span>${esc(item.dataTime)}</span></div></article>`;
+    const item=items[key],tone=HSMarketV61Core.tone(item.change),contract=item.contractMonth?` · ${item.contractMonth.slice(0,4)}/${item.contractMonth.slice(4)}`:"",state=marketCardState(item),notice=key==="tx_front"?txQuoteNotice(item,state):"";
+    return `<article class="marketQuoteCard${state.muted?" isStale":""}" data-market-key="${key}"><div class="marketQuoteHead"><b>${esc(item.name)}${contract}</b><span class="marketQuoteState ${esc(state.key)}">${esc(state.label)}</span></div><div class="marketQuoteValue"><strong class="${tone}">${marketValueText(item)}</strong><span class="${tone}">${marketChangeText(item.change)}<br>${signed(item.changePct)}</span></div><div class="marketQuoteMeta"><span>${esc(item.dataDate)}</span><span>${esc(item.dataTime)}</span></div>${notice}</article>`;
   }).join("");
-  const futuresSession=HSMarketV61Core.futuresSession().key;
-  $("#marketOneLine").textContent=HSMarketV61Core.marketInterpretation(items,futuresSession);
+  const txState=marketCardState(items.tx_front),futuresSignal=txState.key==="day_delayed"?"day":txState.key==="night_delayed"?"night":"closed";
+  $("#marketOneLine").textContent=HSMarketV61Core.marketInterpretation(items,futuresSignal);
   const breadth=all.length?marketMetrics():{ups:"—",downs:"—"};
   const ratio=Number.isFinite(breadth.ups)&&Number.isFinite(breadth.downs)&&breadth.downs>0?fmt(breadth.ups/breadth.downs):breadth.ups>0?"僅上漲":"—";
   $("#marketQuickSignals").innerHTML=`<span>市場廣度：${breadth.ups} 漲／${breadth.downs} 跌｜比 ${ratio}</span><span>大型／中小型：${HSMarketV61Core.relativeStrength(items)}</span><span>台積電同步：${HSMarketV61Core.tsmcSync(items,breadth)}</span>`;
@@ -1190,12 +1203,15 @@ async function loadMarketOverview({force=false}={}){
       const response=await fetch("market-overview.json?ts="+Date.now(),{cache:"no-store"});
       if(!response.ok)throw new Error("market overview unavailable");
       const next=HSMarketV61Core.validateOverview(await response.json());
-      if(next.updatedAt!==marketOverviewUpdatedAt){
+      const nextStateKey=`${HSMarketV61Core.futuresSession().key}:${HSMarketV61Core.txQuoteState(next.instruments.tx_front,new Date(),next.updatedAt).key}`;
+      if(next.updatedAt!==marketOverviewUpdatedAt||nextStateKey!==marketOverviewStateKey){
         marketOverview=next;
         marketOverviewUpdatedAt=next.updatedAt;
+        marketOverviewStateKey=nextStateKey;
         renderMarketOverview();
       }
-      setHomeQuoteStatus(next.stale?"盤中延遲行情｜約每 5 分鐘更新｜目前顯示最後成功行情":`盤中延遲行情｜約每 5 分鐘更新｜僅供參考｜快取檢查 ${formatHomeQuoteTime(new Date())}`);
+      const txState=HSMarketV61Core.txQuoteState(next.instruments.tx_front,new Date(),next.updatedAt);
+      setHomeQuoteStatus(txState.stale?`現貨延遲／收盤資料｜台指期資料已過期｜快取檢查 ${formatHomeQuoteTime(new Date())}`:next.stale?"盤中延遲行情｜約每 5 分鐘更新｜目前顯示最後成功行情":`盤中延遲行情｜約每 5 分鐘更新｜僅供參考｜快取檢查 ${formatHomeQuoteTime(new Date())}`,txState.stale);
       return true;
     }catch{
       if(!marketOverview)renderMarketOverview();

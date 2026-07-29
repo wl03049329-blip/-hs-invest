@@ -36,6 +36,46 @@ class MarketQuoteTests(unittest.TestCase):
         result = quotes.select_near_month_tx(rows)
         self.assertEqual(result["contract_month"], "202608")
         self.assertEqual(result["value"], 41200)
+        self.assertEqual(result["quote_mode"], "close")
+        self.assertEqual(result["source_status"], "official_daily_close_only")
+        self.assertEqual(result["availability"], "official_close_only")
+
+    def test_near_month_does_not_mix_contract_months(self):
+        rows = [
+            {
+                "Date": "20260729",
+                "Contract": "TX",
+                "ContractMonth(Week)": "202608",
+                "Last": "42000",
+                "Change": "100",
+                "%": "0.24%",
+                "OpenInterest": "90000",
+                "TradingSession": "一般",
+            },
+            {
+                "Date": "20260729",
+                "Contract": "TX",
+                "ContractMonth(Week)": "202608",
+                "Last": "42100",
+                "Change": "200",
+                "%": "0.48%",
+                "OpenInterest": "80000",
+                "TradingSession": "盤後",
+            },
+            {
+                "Date": "20260729",
+                "Contract": "TX",
+                "ContractMonth(Week)": "202609",
+                "Last": "43000",
+                "Change": "900",
+                "%": "2.14%",
+                "OpenInterest": "70000",
+                "TradingSession": "盤後",
+            },
+        ]
+        result = quotes.select_near_month_tx(rows)
+        self.assertEqual(result["contract_month"], "202608")
+        self.assertEqual(result["value"], 42100)
 
     def test_overview_rejects_missing_required_instrument(self):
         with self.assertRaises(ValueError):
