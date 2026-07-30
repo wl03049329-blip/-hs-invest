@@ -98,7 +98,7 @@
 .signalCardSummary{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(105px,.75fr) auto;gap:10px;align-items:center;min-height:88px;padding:11px 12px;cursor:pointer}
 .signalCompactIdentity{min-width:0}.signalTickerLine{display:flex;gap:7px;align-items:center;min-width:0}.signalTickerLine b{font-size:18px}.signalTickerLine span{color:var(--muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .signalPriceLine{margin-top:5px;font-size:17px;font-weight:950}.signalPriceLine small{margin-left:7px;font-size:11px}
-.signalCompactMetrics{min-width:0}.signalCompactMetrics b{display:block;font-size:13px;white-space:nowrap}.signalCompactMetrics span{display:block;margin-top:5px;color:#d8ede0;font-size:11px;white-space:nowrap}
+.signalCompactMetrics{min-width:0;min-height:68px}.signalCompactMetrics b{display:block;font-size:13px;white-space:nowrap}.signalCompactMetrics span{display:block;margin-top:4px;color:#d8ede0;font-size:11px;white-space:nowrap}.signalCompactMetrics small{display:block;margin-top:4px;color:#89aa96;font-size:9px;white-space:nowrap}
 .signalCompactAction{min-width:0;text-align:right}.signalCompactAction .trendBadge{margin-bottom:5px}.signalCompactAction p{max-width:155px;margin:0;color:#d8ede0;font-size:10px;font-weight:850;line-height:1.35}
 .signalExpandMark{display:block;margin-top:6px;color:var(--muted);font-size:9px}.signalCard[open] .signalExpandMark::after{content:"收合 ▲"}.signalCard:not([open]) .signalExpandMark::after{content:"詳細 ▼"}
 .signalCardDetails{border-top:1px solid var(--line);padding:11px 12px;background:#08150f}
@@ -123,6 +123,7 @@
 .detailSection h4,.historyStatsBlock h4,.buyPlanMap h4{margin:0 0 7px;color:#e3f8ea;font-size:12px}
 .detailSection p,.historyStatsBlock p,.buyPlanMap p,.leverageWarning p{margin:5px 0;color:#b8d0c0;font-size:10px;line-height:1.5}
 .detailSection small{color:#89aa96;font-size:9px}
+.valuationGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}.valuationGrid div{border-radius:8px;background:#0c1d14;padding:7px}.valuationGrid span{display:block;color:#9fbdab;font-size:8px}.valuationGrid b{display:block;margin-top:3px;font-size:11px}.valuationBlock .sourceLink{display:block}
 .scoreBreakdown,.stopComponents{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
 .scoreBreakdown div,.stopComponents span{display:flex;justify-content:space-between;gap:5px;border-radius:8px;background:#0c1d14;padding:6px;color:#9fbdab;font-size:9px}
 .scoreBreakdown b,.stopComponents b{color:#f1fff5}
@@ -247,9 +248,9 @@
   .homeQuoteStatus{padding:6px 9px;font-size:10px}
   .homeSentiment{padding:12px}.homeSentimentCard{padding:9px}.homeSentimentCard>b{font-size:24px}
   .homeEtfBrief{padding:12px}.homeEtfBrief .rankList{grid-template-columns:1fr}
-  .signalCardSummary{grid-template-columns:minmax(0,1fr) auto;min-height:94px;gap:3px 7px;padding:8px 9px}.signalCompactMetrics{grid-column:1}.signalCompactMetrics b{font-size:11px}.signalCompactMetrics span{display:block;margin-top:2px;font-size:9px}.signalCompactAction{grid-column:2;grid-row:1/3}.signalCompactAction p{max-width:108px;font-size:9px;line-height:1.2}.signalCompactAction .signalLevel{padding:3px 5px;font-size:9px}.signalExpandMark{margin-top:3px}.signalTickerLine b{font-size:16px}.signalPriceLine{margin-top:2px;font-size:15px}
+  .signalCardSummary{grid-template-columns:minmax(0,1fr) auto;min-height:104px;gap:3px 7px;padding:8px 9px}.signalCompactMetrics{grid-column:1;min-height:58px}.signalCompactMetrics b{font-size:11px}.signalCompactMetrics span{display:block;margin-top:2px;font-size:9px}.signalCompactMetrics small{margin-top:2px;font-size:8px}.signalCompactAction{grid-column:2;grid-row:1/3}.signalCompactAction p{max-width:108px;font-size:9px;line-height:1.2}.signalCompactAction .signalLevel{padding:3px 5px;font-size:9px}.signalExpandMark{margin-top:3px}.signalTickerLine b{font-size:16px}.signalPriceLine{margin-top:2px;font-size:15px}
   .signalDetailGrid{grid-template-columns:1fr 1fr}.futuresPositionGrid{grid-template-columns:1fr}
-  .scoreBreakdownGrid,.scoreBreakdown,.stopComponents{grid-template-columns:1fr 1fr}.similarStatsGrid,.historyStatsGrid{grid-template-columns:1fr 1fr 1fr}.installmentMap,.buyPlanMap{grid-template-columns:1fr}.buyPlanMap h4,.buyPlanMap p{grid-column:auto}
+  .scoreBreakdownGrid,.scoreBreakdown,.stopComponents{grid-template-columns:1fr 1fr}.valuationGrid{grid-template-columns:1fr 1fr}.similarStatsGrid,.historyStatsGrid{grid-template-columns:1fr 1fr 1fr}.installmentMap,.buyPlanMap{grid-template-columns:1fr}.buyPlanMap h4,.buyPlanMap p{grid-column:auto}
   .dashboard{grid-template-columns:1fr}
   .marketPanel{padding:10px;max-height:none}
   .marketPanel .panelTitle{align-items:flex-start}

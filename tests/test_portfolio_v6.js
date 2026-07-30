@@ -130,9 +130,13 @@ test("櫃買中心整批行情解析", () => {
 test("同源行情快取驗證與解析", () => {
   const map = core.parseCachedQuotes({
     updated_at: new Date().toISOString(),
-    items: [{code: "0050", name: "元大台灣50", price: 52.5, previous_close: 51.5, date: "2026-07-28", market: "TWSE"}]
+    items: [{code: "0050", name: "元大台灣50", price: 52.5, previous_close: 51.5, high:53, low:51, volume:1234000, date: "2026-07-28", market: "TWSE", quote_mode:"delayed", quote_time:"10:30:00"}]
   });
   assert.equal(map.get("0050").price, 52.5);
+  assert.equal(map.get("0050").high, 53);
+  assert.equal(map.get("0050").low, 51);
+  assert.equal(map.get("0050").volume, 1234000);
+  assert.equal(map.get("0050").quoteMode, "delayed");
   assert.throws(() => core.parseCachedQuotes({updated_at: "2000-01-01T00:00:00Z", items: []}), /更新時間/);
 });
 

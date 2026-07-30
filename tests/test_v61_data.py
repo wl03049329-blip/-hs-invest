@@ -90,6 +90,12 @@ class MarketQuoteTests(unittest.TestCase):
         overview = quotes.build_overview(rows, quotes.datetime.now(quotes.TAIPEI))
         self.assertEqual(set(overview["instruments"]), {"taiex", "otc", "tsmc"})
 
+    def test_intraday_channels_cover_official_etf_universe(self):
+        channels = quotes.tracked_channels()
+        self.assertIn("tse_00830.tw", channels)
+        self.assertIn("tse_0050.tw", channels)
+        self.assertGreater(len(channels), 300)
+
 
 class FuturesPositionTests(unittest.TestCase):
     @staticmethod

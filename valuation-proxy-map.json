@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "updated_at": "2026-07-30T00:00:00Z",
+  "items": {
+    "00830": {
+      "benchmark": "PHLX Semiconductor Sector Index",
+      "primary_proxy": "SOXQ",
+      "secondary_proxy": "SOXX",
+      "primary_source": {
+        "name": "Invesco public fund characteristics JSON",
+        "url": "https://dng-api.invesco.com/cache/v1/accounts/en_US/shareclasses/46138G615?variationType=fundCharacteristics&expand=nav&idType=cusip&productType=ETF",
+        "cusip": "46138G615",
+        "benchmark": "PHLX Semiconductor Sector Index"
+      },
+      "secondary_source": {
+        "name": "iShares Semiconductor ETF official portfolio characteristics",
+        "url": "https://www.ishares.com/us/products/overview-v3-ishares-fund-data?portfolioId=239705&seoSlug=SOXX",
+        "portfolio_id": "239705",
+        "benchmark": "NYSE Semiconductor Index"
+      },
+      "proxy_note": "SOXQ與00830追蹤相同費城半導體指數；SOXX追蹤NYSE Semiconductor Index，僅作半導體產業估值代理。"
+    }
+  }
+}

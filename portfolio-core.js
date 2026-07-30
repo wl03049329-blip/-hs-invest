@@ -227,6 +227,9 @@
       const code = normalizeCode(row.code);
       const price = parseNumber(row.price);
       const previousClose = parseNumber(row.previous_close);
+      const high = parseNumber(row.high);
+      const low = parseNumber(row.low);
+      const volume = parseNumber(row.volume);
       const date = String(row.date || "");
       if (!CODE_PATTERN.test(code) || price === null || price <= 0 || !/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
       result.set(code, {
@@ -237,7 +240,10 @@
         fetchedAt: updatedAt,
         market: row.market === "TPEx" ? "TPEx" : "TWSE",
         quoteMode: row.quote_mode === "delayed" ? "delayed" : "close",
-        quoteTime: String(row.quote_time || "")
+        quoteTime: String(row.quote_time || ""),
+        high: high !== null && high > 0 ? high : null,
+        low: low !== null && low > 0 ? low : null,
+        volume: volume !== null && volume >= 0 ? volume : null
       });
     }
     if (!result.size) throw new Error("行情快取沒有有效資料。");

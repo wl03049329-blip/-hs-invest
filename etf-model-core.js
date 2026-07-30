@@ -37,8 +37,8 @@
   };
 
   const EQUITY = {
-    pricePosition: 10, oversold: 10, stopConfirmation: 25, longTrend: 20,
-    historicalStats: 20, marketSentiment: 10, liquidity: 5
+    technicalLow: 20, valuationAttractiveness: 15, stopConfirmation: 25, longTrend: 15,
+    historicalStats: 15, marketSentiment: 5, liquidity: 5
   };
   const GOVERNMENT_BOND = {
     rateTrend: 25, durationFit: 15, longTrend: 20, oversold: 10,
@@ -62,7 +62,7 @@
     bond_emerging: {label: labels.bond_emerging, family: "credit_bond", weights: {creditSpread:15,defaultRisk:10,fxRisk:15,marketSentiment:10,marketRisk:10,liquidity:10,longTrend:10,stopConfirmation:10,pricePosition:5,historicalStats:5}},
     bond_floating: {label: labels.bond_floating, family: "credit_bond", weights: {rateTrend:15,creditSpread:15,longTrend:20,pricePosition:10,stopConfirmation:15,historicalStats:10,marketSentiment:5,momentum:5,liquidity:5}},
     active_bond: {label: labels.active_bond, family: "active_bond", weights: INVESTMENT_GRADE_BOND},
-    leveraged: {label: "槓桿型 ETF｜高波動模型", family: "high_volatility", weights: {stopConfirmation:25,oversold:15,volatilityControl:20,maxDrawdownControl:15,longTrend:10,historicalStats:10,liquidity:5}},
+    leveraged: {label: "槓桿型 ETF｜高波動模型", family: "high_volatility", weights: {stopConfirmation:25,technicalLow:15,valuationAttractiveness:5,volatilityControl:20,maxDrawdownControl:15,longTrend:10,historicalStats:5,liquidity:5}},
     inverse: {label: "反向型 ETF｜高波動模型", family: "high_volatility", weights: {stopConfirmation:25,oversold:15,volatilityControl:20,maxDrawdownControl:15,momentum:10,historicalStats:10,liquidity:5}},
     commodity: {label: labels.commodity, family: "commodity_futures", weights: {longTrend:25,momentum:20,stopConfirmation:20,volatilityControl:15,historicalStats:10,rollCost:10}},
     futures: {label: labels.futures, family: "commodity_futures", weights: {longTrend:25,momentum:20,stopConfirmation:20,volatilityControl:15,historicalStats:10,rollCost:10}},

@@ -7,8 +7,8 @@ for (const [category, config] of Object.entries(core.ETF_MODEL_CONFIG)) {
 }
 
 assert.deepStrictEqual(core.ETF_MODEL_CONFIG.equity_broad.weights, {
-  pricePosition:10, oversold:10, stopConfirmation:25, longTrend:20,
-  historicalStats:20, marketSentiment:10, liquidity:5
+  technicalLow:20, valuationAttractiveness:15, stopConfirmation:25, longTrend:15,
+  historicalStats:15, marketSentiment:5, liquidity:5
 });
 assert.deepStrictEqual(core.ETF_MODEL_CONFIG.bond_government_long.weights, {
   rateTrend:25, durationFit:15, longTrend:20, oversold:10,
@@ -24,15 +24,26 @@ assert.notDeepStrictEqual(
   "leveraged model must differ from equity"
 );
 assert.strictEqual(core.ETF_MODEL_CONFIG.active_bond.family, "active_bond");
+assert.strictEqual(core.ETF_MODEL_CONFIG.leveraged.weights.valuationAttractiveness, 5);
+assert.ok(!Object.hasOwn(core.ETF_MODEL_CONFIG.inverse.weights, "valuationAttractiveness"));
 
 const equityMetrics = {
-  pricePosition:80, oversold:90, stopConfirmation:70, longTrend:65,
+  technicalLow:85, valuationAttractiveness:60, stopConfirmation:70, longTrend:65,
   historicalStats:60, marketSentiment:55, liquidity:100
 };
 const equity = core.scoreModel("equity_broad", equityMetrics, "high");
 assert.strictEqual(equity.status, "available");
 assert.ok(equity.score >= 0 && equity.score <= 100);
 assert.strictEqual(equity.coverage, 100);
+
+const equityWithoutValuation = core.scoreModel("equity_broad", {
+  ...equityMetrics,
+  valuationAttractiveness:null
+}, "high");
+assert.strictEqual(equityWithoutValuation.status, "available");
+assert.strictEqual(equityWithoutValuation.coverage, 85);
+assert.ok(equityWithoutValuation.missing.includes("valuationAttractiveness"));
+assert.notStrictEqual(equityWithoutValuation.score, 0);
 
 const government = core.scoreModel("bond_government_long", {
   durationFit:50, longTrend:70, oversold:80, stopConfirmation:60, historicalStats:55, liquidity:100

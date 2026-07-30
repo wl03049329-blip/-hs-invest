@@ -94,7 +94,7 @@ check("精簡買點卡可展開且有非色彩訊號", () => {
   assert.match(html, /市場環境/);
   assert.match(html, /歷史相似訊號統計/);
   assert.match(html, /分批買進地圖/);
-  assert.match(css, /min-height:94px/);
+  assert.match(css, /min-height:104px/);
   assert.match(css, /@media\(max-width:760px\)/);
 });
 

@@ -29,7 +29,7 @@ TPEX_CLOSE_URL = "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_quotes"
 TWSE_MIS_URL = "https://mis.twse.com.tw/stock/api/getStockInfo.jsp"
 TAIFEX_DAILY_URL = "https://openapi.taifex.com.tw/v1/DailyMarketReportFut"
 
-TRACKED_CHANNELS = (
+BASE_TRACKED_CHANNELS = (
     "tse_t00.tw",
     "otc_o00.tw",
     "tse_2330.tw",
@@ -150,14 +150,29 @@ def normalize_close_rows(rows: list[dict[str, Any]], market: str) -> list[dict[s
     return output
 
 
+def tracked_channels() -> list[str]:
+    channels = set(BASE_TRACKED_CHANNELS)
+    universe = existing_payload(ROOT / "etf-universe.json")
+    for item in universe.get("items", []):
+        code = str(item.get("code", "")).strip().upper()
+        exchange = str(item.get("exchange", "")).strip()
+        if CODE_RE.fullmatch(code) and exchange in {"TWSE", "TPEx"}:
+            channels.add(f"{'otc' if exchange == 'TPEx' else 'tse'}_{code}.tw")
+    return sorted(channels)
+
+
 def fetch_mis_snapshot() -> list[dict[str, Any]]:
-    query = urllib.parse.urlencode(
-        {"ex_ch": "|".join(TRACKED_CHANNELS), "json": "1", "delay": "0"}
-    )
-    payload = fetch_json(f"{TWSE_MIS_URL}?{query}", timeout=20)
-    rows = payload.get("msgArray") if isinstance(payload, dict) else None
-    if not isinstance(rows, list):
-        raise ValueError("TWSE MIS response has no msgArray")
+    rows: list[dict[str, Any]] = []
+    channels = tracked_channels()
+    for offset in range(0, len(channels), 60):
+        query = urllib.parse.urlencode(
+            {"ex_ch": "|".join(channels[offset : offset + 60]), "json": "1", "delay": "0"}
+        )
+        payload = fetch_json(f"{TWSE_MIS_URL}?{query}", timeout=20)
+        batch = payload.get("msgArray") if isinstance(payload, dict) else None
+        if not isinstance(batch, list):
+            raise ValueError("TWSE MIS response has no msgArray")
+        rows.extend(batch)
     valid = []
     for row in rows:
         code = str(row.get("c", "")).strip().upper()
@@ -165,6 +180,10 @@ def fetch_mis_snapshot() -> list[dict[str, Any]]:
         previous_close = finite_number(row.get("y"), positive=True)
         data_date = iso_date(row.get("d") or row.get("^"))
         quote_time = str(row.get("t") or row.get("%") or "").strip()
+        high = finite_number(row.get("h"), positive=True)
+        low = finite_number(row.get("l"), positive=True)
+        volume_lots = finite_number(row.get("v"))
+        volume = volume_lots * 1000 if volume_lots is not None and volume_lots >= 0 else None
         if not code or price is None or previous_close is None or data_date is None:
             continue
         if quote_time and not re.fullmatch(r"\d{2}:\d{2}:\d{2}", quote_time):
@@ -178,6 +197,9 @@ def fetch_mis_snapshot() -> list[dict[str, Any]]:
                 "date": data_date,
                 "quote_time": quote_time or "—",
                 "market": "TPEx" if row.get("ex") == "otc" else "TWSE",
+                "high": high,
+                "low": low,
+                "volume": volume,
             }
         )
     if not all(any(row["code"] == code for row in valid) for code in OVERVIEW_CODES):
@@ -397,6 +419,9 @@ def main() -> None:
                 "market": row["market"],
                 "quote_mode": mode,
                 "quote_time": row["quote_time"],
+                "high": row.get("high"),
+                "low": row.get("low"),
+                "volume": row.get("volume"),
             }
         items = list(item_map.values())
     except Exception as exc:  # noqa: BLE001

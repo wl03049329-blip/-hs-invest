@@ -14,6 +14,14 @@ assert.match(html, /hs_etf_universe_cache_v1/);
 assert.match(html, /ETF清單資料可能過期/);
 assert.match(html, /\^\[0-9A-Z\]\{4,10\}\$/);
 assert.match(html, /模型可用資料/);
+assert.match(html, /技術低檔程度/);
+assert.match(html, /估值吸引力/);
+assert.match(html, /盤中試算買點/);
+assert.match(html, /盤後正式買點/);
+assert.match(html, /盤中模型資料覆蓋率/);
+assert.match(html, /估值尚未納入正式分數/);
+assert.match(html, /valuation-core\.js/);
+assert.match(html, /intraday-buy-point-core\.js/);
 assert.match(html, /同類型前/);
 assert.match(html, /低於 70%/);
 
