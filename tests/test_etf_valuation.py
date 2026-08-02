@@ -31,6 +31,7 @@ assert isinstance(score, int) and 0 <= score <= 100
 assert coverage == 75
 
 proxy_map = json.loads((ROOT / "valuation-proxy-map.json").read_text(encoding="utf-8"))
+assert set(proxy_map["items"]) == {"0050", "00830", "00662", "009815", "00935"}
 item = proxy_map["items"]["00830"]
 assert item["benchmark"] == "PHLX Semiconductor Sector Index"
 assert item["primary_proxy"] == "SOXQ"
@@ -48,6 +49,11 @@ for field in ("current_pe", "forward_pe", "pb", "earnings_growth", "peg", "valua
 
 history = json.loads((ROOT / "valuation-history.json").read_text(encoding="utf-8"))
 assert len(history["snapshots"]) >= 1
-assert history["snapshots"][-1]["date"] == value["source_date"]
+assert history["snapshots"][-1]["date"] >= value["source_date"]
+assert proxy_map["items"]["00662"]["benchmark"] == "NASDAQ-100 Index"
+assert proxy_map["items"]["009815"]["benchmark"] == "彭博TPEx Magnificent 7 Plus美國大型科技指數"
+assert proxy_map["items"]["00935"]["source_type"] == "reference_only"
+assert valuation["items"]["00935"]["valuation_score"] is None
+assert valuation["items"]["00935"]["score_status"] == "benchmark_background"
 
 print("PASS valuation updater validation, proxy benchmark separation and initial history")

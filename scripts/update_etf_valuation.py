@@ -45,7 +45,7 @@ def write_atomic(path: Path, payload: dict[str, Any]) -> None:
             os.unlink(temp_name)
 
 
-def fetch_json(url: str, timeout: int = 25) -> dict[str, Any]:
+def fetch_json(url: str, timeout: int = 25) -> Any:
     request = urllib.request.Request(
         url,
         headers={
@@ -59,11 +59,11 @@ def fetch_json(url: str, timeout: int = 25) -> dict[str, Any]:
         body = response.read(256_001)
     if len(body) > 256_000:
         raise ValueError("valuation response is unexpectedly large")
-    if "json" not in content_type.lower() and not body.lstrip().startswith(b"{"):
+    if "json" not in content_type.lower() and not body.lstrip().startswith((b"{", b"[")):
         raise ValueError("valuation source did not return JSON")
     payload = json.loads(body.decode("utf-8"))
-    if not isinstance(payload, dict):
-        raise ValueError("valuation response is not an object")
+    if not isinstance(payload, (dict, list)):
+        raise ValueError("valuation response is not structured JSON")
     return payload
 
 
@@ -174,15 +174,110 @@ def history_values(
     return values, source_dates
 
 
+def taipei_today() -> date:
+    return datetime.now(timezone(timedelta(hours=8))).date()
+
+
+def roc_date_to_iso(value: Any) -> str:
+    text = str(value or "").strip()
+    if not text.isdigit() or len(text) != 7:
+        raise ValueError("invalid ROC valuation date")
+    return f"{int(text[:3]) + 1911:04d}-{text[3:5]}-{text[5:7]}"
+
+
+def weighted_harmonic(rows: list[tuple[float, float]]) -> float | None:
+    valid = [(weight, value) for weight, value in rows if weight > 0 and value > 0]
+    total_weight = sum(weight for weight, _ in valid)
+    denominator = sum(weight / value for weight, value in valid)
+    if total_weight < 70 or denominator <= 0:
+        return None
+    return total_weight / denominator
+
+
+def fetch_yuanta_weighted(source: dict[str, Any]) -> dict[str, Any]:
+    pcf: dict[str, Any] = {}
+    for days_back in range(0, 12):
+        query_date = (taipei_today() - timedelta(days=days_back)).strftime("%Y%m%d")
+        candidate = fetch_json(source["holdings_url"].replace("{date}", query_date))
+        if isinstance(candidate, dict) and isinstance(candidate.get("PCF"), dict) and candidate.get("FundWeights", {}).get("StockWeights"):
+            pcf = candidate
+            break
+    if not pcf:
+        raise ValueError("0050 official PCF is unavailable")
+    valuation_rows = fetch_json(source["valuation_url"])
+    if not isinstance(valuation_rows, list):
+        raise ValueError("TWSE valuation response is not a list")
+    valuation_by_code = {str(row.get("Code", "")): row for row in valuation_rows}
+    pe_inputs: list[tuple[float, float]] = []
+    pb_inputs: list[tuple[float, float]] = []
+    total_weight = 0.0
+    for holding in pcf.get("FundWeights", {}).get("StockWeights", []):
+        code = str(holding.get("code", ""))
+        weight = number(holding.get("weights"), minimum=0)
+        row = valuation_by_code.get(code, {})
+        if weight is None:
+            continue
+        total_weight += weight
+        pe = number(row.get("PEratio"), minimum=0.000001, maximum=300)
+        pb = number(row.get("PBratio"), minimum=0.000001, maximum=100)
+        if pe is not None:
+            pe_inputs.append((weight, pe))
+        if pb is not None:
+            pb_inputs.append((weight, pb))
+    if total_weight < 90:
+        raise ValueError("0050 official holding weights are incomplete")
+    source_dates = [roc_date_to_iso(row.get("Date")) for row in valuation_rows[:1]]
+    trading_date = datetime.strptime(str(pcf.get("PCF", {}).get("trandate", "")), "%Y%m%d").date().isoformat()
+    source_date = min([trading_date, *source_dates]) if source_dates else trading_date
+    return {
+        "current_pe": weighted_harmonic(pe_inputs),
+        "forward_pe": None,
+        "pb": weighted_harmonic(pb_inputs),
+        "return_on_equity": None,
+        "source_date": parse_source_date(source_date),
+        "source_name": source["name"],
+        "source_url": source["holdings_url"].replace("{date}", trading_date.replace("-", "")),
+        "is_proxy": True,
+        "proxy_level": "official_holdings_weighted",
+    }
+
+
+def fetch_invesco(source: dict[str, Any]) -> dict[str, Any]:
+    payload = fetch_json(source["url"])
+    return {
+        "current_pe": number(payload.get("priceToEarningsRatio"), minimum=0.000001, maximum=300),
+        "forward_pe": number(payload.get("forwardPriceToEarningsRatio"), minimum=0.000001, maximum=300),
+        "pb": number(payload.get("priceToBookRatio"), minimum=0.000001, maximum=100),
+        "return_on_equity": number(payload.get("returnOnEquity"), minimum=-100, maximum=500),
+        "source_date": parse_source_date(payload.get("effectiveDate")),
+        "source_name": source["name"],
+        "source_url": source["url"],
+        "is_proxy": True,
+        "proxy_level": "primary" if source.get("benchmark") else "closest",
+    }
+
+
 def build_item(code: str, config: dict[str, Any], history: dict[str, Any]) -> dict[str, Any]:
     source = config["primary_source"]
-    payload = fetch_json(source["url"])
-    current_pe = number(payload.get("priceToEarningsRatio"), minimum=0.000001, maximum=300)
-    forward_pe = number(payload.get("forwardPriceToEarningsRatio"), minimum=0.000001, maximum=300)
-    pb = number(payload.get("priceToBookRatio"), minimum=0.000001, maximum=100)
-    roe = number(payload.get("returnOnEquity"), minimum=-100, maximum=500)
-    source_date = parse_source_date(payload.get("effectiveDate"))
-    if current_pe is None and forward_pe is None and pb is None:
+    source_type = config.get("source_type", "invesco_json")
+    if source_type == "invesco_json":
+        fetched = fetch_invesco(source)
+    elif source_type == "yuanta_twse_weighted":
+        fetched = fetch_yuanta_weighted(source)
+    elif source_type == "reference_only":
+        fetched = {
+            "current_pe": None, "forward_pe": None, "pb": None, "return_on_equity": None,
+            "source_date": taipei_today().isoformat(), "source_name": source["name"],
+            "source_url": source["url"], "is_proxy": True, "proxy_level": "benchmark_background",
+        }
+    else:
+        raise ValueError(f"unsupported valuation source type: {source_type}")
+    current_pe = fetched["current_pe"]
+    forward_pe = fetched["forward_pe"]
+    pb = fetched["pb"]
+    roe = fetched["return_on_equity"]
+    source_date = fetched["source_date"]
+    if source_type != "reference_only" and current_pe is None and forward_pe is None and pb is None:
         raise ValueError(f"{code} has no usable valuation metrics")
     earnings_growth = None
     peg = None
@@ -190,8 +285,8 @@ def build_item(code: str, config: dict[str, Any], history: dict[str, Any]) -> di
         earnings_growth = max(-100.0, min(500.0, (current_pe / forward_pe - 1) * 100))
         if earnings_growth > 0:
             peg = min(20.0, current_pe / earnings_growth)
-    pe_history, pe_dates = history_values(history, code, "current_pe", source["name"])
-    forward_history, forward_dates = history_values(history, code, "forward_pe", source["name"])
+    pe_history, pe_dates = history_values(history, code, "current_pe", fetched["source_name"])
+    forward_history, forward_dates = history_values(history, code, "forward_pe", fetched["source_name"])
     if current_pe is not None and source_date not in pe_dates:
         pe_history.append(current_pe)
     if forward_pe is not None and source_date not in forward_dates:
@@ -224,13 +319,13 @@ def build_item(code: str, config: dict[str, Any], history: dict[str, Any]) -> di
         "forward_pe_percentile": forward_percentile,
         "history_sample_count": sample_count,
         "history_status": history_status,
-        "source_name": source["name"],
-        "source_url": source["url"],
+        "source_name": fetched["source_name"],
+        "source_url": fetched["source_url"],
         "source_date": source_date,
-        "is_proxy": True,
-        "proxy_level": "primary",
+        "is_proxy": fetched["is_proxy"],
+        "proxy_level": fetched["proxy_level"],
         "proxy_note": config["proxy_note"],
-        "score_status": "provisional_current_metrics",
+        "score_status": "benchmark_background" if source_type == "reference_only" else "provisional_current_metrics",
     }
     item["valuation_score"], item["valuation_coverage"] = valuation_score(item)
     return item

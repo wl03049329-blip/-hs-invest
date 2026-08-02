@@ -8,7 +8,7 @@ const universe = JSON.parse(fs.readFileSync(path.join(root, "etf-universe.json")
 const events = JSON.parse(fs.readFileSync(path.join(root, "market-events.json"), "utf8"));
 
 assert.match(html, /id:"00935",name:"野村臺灣新科技50"/);
-assert.match(html, /弘昇精選固定追蹤 6 檔 ETF/);
+assert.match(html, /弘昇精選固定追蹤 8 檔 ETF/);
 assert.match(html, /slice\(0,20\)/);
 assert.match(html, /hs_etf_universe_cache_v1/);
 assert.match(html, /ETF清單資料可能過期/);
@@ -43,4 +43,4 @@ assert.match(html, /n!==null&&n!==undefined&&n!==""&&Number\.isFinite/);
 assert.match(html, /Number\.isFinite\(x\.score\)/);
 assert.match(html, /不以 0 代替/);
 
-console.log("PASS ETF universe, six featured funds, model UI, event results and chip tabs integration");
+console.log("PASS ETF universe, eight featured funds, model UI, event results and chip tabs integration");

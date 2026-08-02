@@ -45,7 +45,8 @@
     const sourceUpdated = Date.parse(`${sourceDate}T00:00:00Z`);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(sourceDate) || !Number.isFinite(sourceUpdated)) return null;
     if (sourceUpdated > Date.now() + 2 * 86400000 || Date.now() - sourceUpdated > 120 * 86400000) return null;
-    if ([currentPe, forwardPe, pb, peg].every(value => value === null)) return null;
+    const scoreStatus = String(raw.score_status || "unavailable");
+    if ([currentPe, forwardPe, pb, peg].every(value => value === null) && scoreStatus !== "benchmark_background") return null;
     return {
       benchmark: String(raw.benchmark || ""),
       primaryProxy: String(raw.primary_proxy || ""),
@@ -66,7 +67,9 @@
       isProxy: raw.is_proxy === true,
       proxyNote: String(raw.proxy_note || ""),
       proxyLevel: String(raw.proxy_level || "primary"),
-      scoreStatus: String(raw.score_status || "unavailable")
+      scoreStatus,
+      valuationCoverage: Math.max(0, Math.min(100, finite(raw.valuation_coverage) || 0)),
+      returnOnEquity: finite(raw.return_on_equity)
     };
   }
 
