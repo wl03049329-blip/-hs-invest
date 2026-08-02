@@ -18,9 +18,9 @@ function check(name, fn) {
   process.stdout.write(`PASS ${name}\n`);
 }
 
-check("Version 6.1 品牌與六個頂部分頁", () => {
+check("Version 6.2 品牌與六個頂部分頁", () => {
   assert.match(html, /HS \| ETF股市雷達/);
-  assert.match(html, /VERSION 6\.1/);
+  assert.match(html, /VERSION 6\.2/);
   assert.match(html, />ETF雷達<\/button>/);
   for (const tab of ["today", "signals", "portfolio", "sentiment", "trump", "more"]) {
     assert.match(html, new RegExp(`data-tab="${tab}"`));

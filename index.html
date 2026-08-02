@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#07110d" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<title>HS | ETF股市雷達｜Version 6.1</title>
+<title>HS | ETF股市雷達 v6.2</title>
 <style>
 :root{
   --bg:#06100c;--panel:#0c1a14;--panel2:#12271d;--panel3:#08150f;
@@ -294,7 +294,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 <div class="app">
   <section id="home" class="hero">
     <div>
-      <div class="brandLine"><p class="eyebrow">HS ETF STOCK RADAR</p><span class="version">VERSION 6.1</span></div>
+      <div class="brandLine"><p class="eyebrow">HS ETF STOCK RADAR</p><span class="version">VERSION 6.2</span></div>
       <h1>HS | ETF股市雷達</h1>
       <p class="subtitle">打開先看懂今天市場，再決定要不要加碼。週 KD 每日試算；0050、00631L 歷史價格已還原分割。</p>
     </div>
@@ -354,8 +354,8 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       <button id="homeCnnCard" class="homeSentimentCard" type="button" aria-label="查看 CNN 恐懼貪婪完整資料">
         <span>CNN Fear &amp; Greed</span><b>—</b><em>資料載入中</em><small>正在更新</small>
       </button>
-      <button id="homeFomoCard" class="homeSentimentCard" type="button" aria-label="查看台股融資 FOMO 完整資料">
-        <span>台股融資 FOMO</span><b>—</b><em>資料載入中</em><small>正在更新</small>
+      <button id="homeFomoCard" class="homeSentimentCard homeMarginRiskCard" type="button" aria-label="查看台股融資風險完整資料">
+        <span>🏦 台股融資風險</span><b>—</b><em>資料載入中</em><small>最近交易日盤後資料</small>
       </button>
     </div>
     <p id="homeSentimentConclusion" class="homeSentimentConclusion">情緒資料彙整中…</p>
@@ -471,7 +471,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       <div id="sentimentSummaryContent"><div class="skeleton">彙整情緒資料中…</div></div>
     </article>
     <article class="panel">
-      <div class="panelTitle"><div><p class="eyebrow">MARGIN FOMO</p><h2>融資情緒</h2></div><small>最近交易日盤後資料</small></div>
+      <div class="panelTitle"><div><p class="eyebrow">MARGIN RISK</p><h2>台股融資風險</h2></div><small>最近交易日盤後資料</small></div>
       <div id="fomoContent"><div class="skeleton">載入融資資料中…</div></div>
     </article>
     <article class="panel">
@@ -610,7 +610,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
     <p class="footnote">GitHub Pages 無法在網站關閉時持續運作，因此此版會在開啟網站並更新資料時提醒。真正背景推播需另加後端排程服務。</p>
   </details>
 
-  <footer>Version 6.1 · HS | ETF股市雷達 · Developed by 弘昇<br><span class="footnote">新聞、籌碼、買點分數、持股估算與歷史驗證僅供資訊參考，不構成投資建議；FOMO 為本站自製情緒代理指標。</span></footer>
+  <footer>Version 6.2 · HS | ETF股市雷達 · Developed by 弘昇<br><span class="footnote">新聞、籌碼、買點分數、持股估算與歷史驗證僅供資訊參考，不構成投資建議；FOMO 為本站自製情緒代理指標。</span></footer>
 </div>
 
 <nav class="bottomNav">
@@ -697,6 +697,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 <script src="etf-model-core.js"></script>
 <script src="strategy-mode-core.js"></script>
 <script src="drawdown-price-core.js"></script>
+<script src="margin-risk-core.js"></script>
 <script src="market-events-core.js"></script>
 <script>
 const DEFAULT_WATCHLIST=[
@@ -767,7 +768,7 @@ const MARKET_EVENTS=[
 ];
 let all=[];
 let latestNews=[];
-let marketChip={margin:null,institutional:null};
+let marketChip={margin:null,marginRisk:null,institutional:null};
 let trumpNews=[];
 let cnnFearGreed=null;
 let marketOverview=null;
@@ -1083,7 +1084,10 @@ function marketFearMetric(){
   const values=[];
   if(Number.isFinite(cnnFearGreed?.score))values.push(100-cnnFearGreed.score);
   if(Number.isFinite(marketChip.margin?.score))values.push(100-marketChip.margin.score);
-  return values.length?avg(values):null;
+  const base=values.length?avg(values):null;
+  const ratio=marketChip.marginRisk?.maintenance_ratio;
+  const maintenanceFear=HSMarginRiskCore.maintenanceFearScore(ratio?.value,ratio?.percentile_60d);
+  return HSMarginRiskCore.combineFear(base,maintenanceFear,.15);
 }
 function strategyInputs(x){
   const feature=x.currentFeature||{};
@@ -1416,6 +1420,30 @@ async function loadChipData(){
   marketChip.margin=m.status==="fulfilled"?marginFomo(m.value):null;
   marketChip.institutional=i.status==="fulfilled"?institutionalFlow(i.value):null;
 }
+async function loadMarginRisk(){
+  const previous=marketChip.marginRisk;
+  try{
+    const response=await fetch("margin-data.json?ts="+Date.now(),{cache:"no-store"});
+    if(!response.ok)throw new Error("margin cache unavailable");
+    const payload=HSMarginRiskCore.validatePayload(await response.json(),taipeiToday());
+    if(!payload)throw new Error("margin cache validation failed");
+    const tw=all.find(x=>x.id==="0050")?.changePct;
+    payload.interpretation=HSMarginRiskCore.classifyRisk({
+      balanceDailyChange:payload.margin_balance.daily_change,
+      balanceChange20d:payload.margin_balance.change_20d,
+      balancePercentile60d:payload.margin_balance.percentile_60d,
+      maintenanceDailyChange:payload.maintenance_ratio.daily_change,
+      maintenancePercentile60d:payload.maintenance_ratio.percentile_60d,
+      marketAcuteDrop:Number.isFinite(tw)&&tw<=-2,
+      stale:payload.stale
+    });
+    marketChip.marginRisk=payload;
+    return true;
+  }catch(error){
+    marketChip.marginRisk=previous||null;
+    return false;
+  }
+}
 function marketMetrics(){
   const clean=all.filter(x=>!["leveraged","inverse"].includes(x.strategyType));
   const base=clean.length?clean:all,avg=sum(base.map(x=>x.changePct))/(base.length||1);
@@ -1450,6 +1478,8 @@ function marketReasons(){
   if(inst)reasons.push(`外資今日${inst.foreign.today>=0?"買超":"賣超"} ${formatYi(Math.abs(inst.foreign.today))}，法人資金${inst.foreign.today>=0?"提供支撐":"形成壓力"}。`);
   const margin=marketChip.margin;
   if(margin)reasons.push(margin.pattern+`（FOMO ${margin.score} 分）。`);
+  const marginRisk=marketChip.marginRisk;
+  if(marginRisk)reasons.push(`融資風險：${marginRisk.interpretation?.summary||marginRisk.summary}（盤後資料 ${marginRisk.data_date}）。`);
   if(latestNews.length)reasons.push(`新聞標題集中在「${newsTheme()}」，可能是今天${direction}的重要背景。`);
   return reasons.slice(0,4);
 }
@@ -1871,13 +1901,42 @@ function renderCards(){
   document.querySelectorAll("[data-drawdown]").forEach(btn=>btn.addEventListener("click",()=>openDrawdownTool(btn.dataset.drawdown)));
 }
 function formatYi(n){return `${fmt(n/1e8)} 億`}
+function signedYi(n){
+  if(!Number.isFinite(n))return"—";
+  return `${n>0?"+":""}${formatYi(n)}`;
+}
+function marginDirectionText(value){
+  if(!Number.isFinite(value))return"資料暫缺";
+  if(value>0)return"持續增加";
+  if(value<0)return"持續下降";
+  return"大致持平";
+}
+function percentilePosition(value){
+  if(!Number.isFinite(value))return"資料暫缺";
+  if(value<=20)return"偏低";
+  if(value<=40)return"中低";
+  if(value<60)return"中間";
+  if(value<80)return"中高";
+  return"偏高";
+}
+function ratioText(value){return Number.isFinite(value)?`${fmt(value)}%`:"資料暫時無法取得"}
+function ratioChangeText(value){return Number.isFinite(value)?`${value>0?"+":""}${fmt(value)} 個百分點`:"—"}
+function marginRiskTone(risk){return`marginRiskTone-${esc(risk?.interpretation?.tone||"neutral")}`}
+function marginRiskCompactHtml(risk){
+  if(!risk)return'<div class="newsEmpty sentimentUnavailable">台股融資風險資料尚未更新</div>';
+  const balance=risk.margin_balance,ratio=risk.maintenance_ratio,interpretation=risk.interpretation||{};
+  const stale=risk.stale?'<span class="marginStale">資料可能過期</span>':"";
+  return `<div class="marginRiskGrid"><div class="marginMetricCard"><span>🏦 融資餘額</span><b>${formatYi(balance.value)}</b><small>單日 ${signedYi(balance.daily_change)}｜20日 ${signedYi(balance.change_20d)}（${marginDirectionText(balance.change_20d)}）</small><em>60日位置 ${percentilePosition(balance.percentile_60d)}${Number.isFinite(balance.percentile_60d)?` ${fmt(balance.percentile_60d)}%`:""}</em></div><div class="marginMetricCard"><span>🛡️ 融資維持率</span><b>${ratioText(ratio.value)}</b><small>單日 ${ratioChangeText(ratio.daily_change)}｜20日均值 ${Number.isFinite(ratio.average_20d)?fmt(ratio.average_20d)+"%":"—"}</small><em>60日位置 ${percentilePosition(ratio.percentile_60d)}${Number.isFinite(ratio.percentile_60d)?` ${fmt(ratio.percentile_60d)}%`:""}</em></div></div><div class="marginRiskVerdict ${marginRiskTone(risk)}"><b>${esc(interpretation.label||risk.risk_state||"資料不完整")}</b><span>${esc(interpretation.summary||risk.summary||"暫無判斷")}</span>${stale}</div><p class="dataSourceNote">使用最近交易日盤後資料｜資料日期 ${esc(risk.data_date)}｜最後更新 ${esc(formatTaipeiDateTime(risk.updated_at))}</p>`;
+}
 function flowHtml(label,x){
   const cls=x.today>=0?"up":"down",sign=x.today>=0?"+":"";
   return `<div class="flowCard"><span>${label}</span><b class="flowValue ${cls}">${sign}${formatYi(x.today)}</b><small>近 5 日 ${x.five>=0?"+":""}${formatYi(x.five)}</small></div>`;
 }
 function combinedSentimentConclusion(){
-  const margin=marketChip.margin,cnn=cnnFearGreed;
+  const margin=marketChip.margin,cnn=cnnFearGreed,risk=marketChip.marginRisk,ratio=risk?.maintenance_ratio;
   if(!margin&&!cnn)return"台股融資與美股情緒資料尚未更新，暫不做綜合判斷。";
+  if(cnn&&Number.isFinite(ratio?.value)&&cnn.score<=44&&ratio.percentile_60d<=30)return"CNN 處於恐懼區、融資維持率位於偏低區，市場壓力較大；長期核心 ETF 可觀察分批規劃，但波段 ETF 仍需等待止跌。";
+  if(cnn&&Number.isFinite(ratio?.value)&&cnn.score>=56&&margin?.daily>0&&ratio.percentile_60d>=50)return"市場情緒偏貪婪、融資餘額增加且維持率仍高，尚未出現恐慌型買點。";
   if(!margin)return`美股目前為${cnn.label}，但台股融資資料尚未更新，先不要下綜合結論。`;
   if(!cnn)return`台股融資為${margin.label}，但 CNN 情緒資料暫時無法取得，先以價格止跌與法人動向為主。`;
   if(cnn.score<=24&&margin.daily>.05)return"美股極度恐懼，但台股融資仍增加，需防散戶逆勢接刀。";
@@ -1889,8 +1948,9 @@ function combinedSentimentConclusion(){
   return`美股情緒${cnn.label}、台股融資${margin.label}，目前沒有一致的極端訊號，維持分批與趨勢確認。`;
 }
 function renderSentiment(){
-  const margin=marketChip.margin;
-  $("#fomoContent").innerHTML=margin?`<div class="fomoHero"><div><div class="fomoScore ${margin.score>=65?"moodUp":margin.score<40?"moodDown":"moodFlat"}">${margin.score}</div><span>${margin.label}</span></div></div><p class="interpretation">${esc(margin.summary)}</p><p class="dataSourceNote">使用最近交易日盤後資料｜資料日期 ${esc(margin.date)}</p><details class="sentimentDetails"><summary>查看詳細數據與說明</summary><div class="sentimentDetailsBody"><div class="detailMeta"><b>${formatYi(margin.balance)}</b><small>融資餘額<br>資料日期 ${esc(margin.date)}</small></div><div class="miniStats"><div><span>單日</span><b class="${margin.daily>=0?"up":"down"}">${signed(margin.daily)}</b></div><div><span>近 5 日</span><b class="${margin.change5>=0?"up":"down"}">${signed(margin.change5)}</b></div><div><span>近 20 日</span><b class="${margin.change20>=0?"up":"down"}">${signed(margin.change20)}</b></div></div><p class="interpretation">${esc(margin.pattern)}</p><div class="scoreBar fomoBar"><i style="width:${margin.score}%"></i></div><p class="footnote">FOMO 分數是本站依融資單日、20 日趨勢及近 60 日位置計算的市場情緒代理指標，不是交易所官方指數。</p></div></details>`:'<div class="newsEmpty sentimentUnavailable">資料尚未更新</div>';
+  const margin=marketChip.margin,risk=marketChip.marginRisk;
+  const fomoDetail=margin?`<div class="fomoHero"><div><div class="fomoScore ${margin.score>=65?"moodUp":margin.score<40?"moodDown":"moodFlat"}">${margin.score}</div><span>FOMO ${margin.label}</span></div></div><p class="interpretation">${esc(margin.summary)}</p><div class="miniStats"><div><span>單日</span><b class="${margin.daily>=0?"up":"down"}">${signed(margin.daily)}</b></div><div><span>近 5 日</span><b class="${margin.change5>=0?"up":"down"}">${signed(margin.change5)}</b></div><div><span>近 20 日</span><b class="${margin.change20>=0?"up":"down"}">${signed(margin.change20)}</b></div></div><p class="interpretation">${esc(margin.pattern)}</p><div class="scoreBar fomoBar"><i style="width:${margin.score}%"></i></div><p class="footnote">FOMO 分數是本站依融資單日、20 日趨勢及近 60 日位置計算的市場情緒代理指標，不是交易所官方指數。</p>`:'<p class="footnote">FOMO 資料尚未更新，不以 0 分替代。</p>';
+  $("#fomoContent").innerHTML=risk?`${marginRiskCompactHtml(risk)}<details class="sentimentDetails"><summary>查看 FOMO、方法、來源與歷史說明</summary><div class="sentimentDetailsBody">${fomoDetail}<p class="footnote">市場融資維持率僅用於觀察整體融資戶壓力，不代表個人帳戶維持率或追繳狀態。目前官方僅公開個別信用帳戶計算規則，未發布同口徑的全市場平均序列；缺值時不估算、不顯示 0%。</p><div class="marginSources"><a class="sourceLink" href="${esc(risk.source_url)}" target="_blank" rel="noopener">臺灣證券交易所 OpenAPI</a><a class="sourceLink" href="${esc(risk.secondary_source_url)}" target="_blank" rel="noopener">櫃買中心 OpenAPI</a></div></div></details>`:'<div class="newsEmpty sentimentUnavailable">台股融資風險資料尚未更新；不會以 0 代替缺值。</div>';
   const cnn=cnnFearGreed;
   $("#cnnFearGreedContent").innerHTML=cnn?`<div class="fomoHero"><div><div class="fomoScore ${cnn.score<=44?"moodDown":cnn.score>=56?"moodUp":"moodFlat"}">${fmt(cnn.score)}</div><span>${cnn.label}</span></div></div><p class="interpretation">${esc(cnn.summary)}</p><details class="sentimentDetails"><summary>查看歷史分數與資料來源</summary><div class="sentimentDetailsBody"><div class="detailMeta"><b>CNN 指數</b><small>資料更新<br>${esc(formatTaipeiDateTime(cnn.sourceUpdatedAt))}（台北）</small></div><div class="miniStats"><div><span>前一日</span><b>${fmt(cnn.day)}</b></div><div><span>1 週前</span><b>${fmt(cnn.week)}</b></div><div><span>1 月前</span><b>${fmt(cnn.month)}</b></div></div><div class="scoreBar fomoBar"><i style="width:${cnn.score}%"></i></div><p class="footnote">指數衡量市場情緒，不是買賣訊號；本站透過 GitHub Actions 讀取 CNN 結構化 JSON 後寫入本地檔案。</p><a class="sourceLink" href="${esc(cnn.sourceUrl)}" target="_blank" rel="noopener">資料來源：CNN Fear &amp; Greed Index</a></div></details>`:'<div class="newsEmpty sentimentUnavailable">資料暫時無法取得</div>';
   $("#sentimentSummaryContent").innerHTML=`<p class="interpretation">${esc(combinedSentimentConclusion())}</p>`;
@@ -1906,7 +1966,8 @@ function renderChipOverview(){
   const margin=marketChip.margin,cnn=cnnFearGreed,inst=marketChip.institutional,foreign=futuresPosition?.foreign_tx;
   const total=inst?inst.foreign.today+inst.trust.today+inst.dealer.today:null;
   const card=(tab,title,value,status)=>`<button class="chipOverviewCard" type="button" data-chip-jump="${tab}" aria-label="查看${esc(title)}詳細資料"><span>${esc(title)}</span><b>${esc(value)}</b><small>${esc(status)}</small></button>`;
-  target.innerHTML=`<div class="chipOverviewGrid">${card("mood","CNN Fear & Greed",cnn?`${fmt(cnn.score)} 分`:"資料暫缺",cnn?.label||"不以 0 代替")}${card("mood","台股融資 FOMO",margin?`${margin.score} 分`:"資料尚未更新",margin?`${margin.label}｜${margin.date}`:"不以 0 代替")}${card("institutions","三大法人合計",Number.isFinite(total)?`${total>=0?"+":""}${formatYi(total)}`:"資料暫缺",inst?`資料日期 ${inst.date}`:"今日盤後更新")}${card("futures","外資台指期淨部位",foreign?`${foreign.net>=0?"+":""}${fmt(foreign.net)} 口`:"資料暫缺",futuresPosition?`資料日期 ${futuresPosition.dataDate}`:"盤後更新")}</div><p class="chipOverviewConclusion">${esc(combinedSentimentConclusion())}</p>`;
+  const risk=marketChip.marginRisk,ratio=risk?.maintenance_ratio;
+  target.innerHTML=`<div class="chipOverviewGrid">${card("mood","CNN Fear & Greed",cnn?`${fmt(cnn.score)} 分`:"資料暫缺",cnn?.label||"不以 0 代替")}${card("mood","台股融資風險",risk?formatYi(risk.margin_balance.value):"資料尚未更新",risk?`${risk.interpretation?.label||risk.risk_state}｜維持率 ${ratioText(ratio?.value)}｜${risk.data_date}`:"不以 0 代替")}${card("institutions","三大法人合計",Number.isFinite(total)?`${total>=0?"+":""}${formatYi(total)}`:"資料暫缺",inst?`資料日期 ${inst.date}`:"今日盤後更新")}${card("futures","外資台指期淨部位",foreign?`${foreign.net>=0?"+":""}${fmt(foreign.net)} 口`:"資料暫缺",futuresPosition?`資料日期 ${futuresPosition.dataDate}`:"盤後更新")}</div><p class="chipOverviewConclusion">${esc(combinedSentimentConclusion())}</p>`;
   document.querySelectorAll("[data-chip-jump]").forEach(button=>button.addEventListener("click",()=>switchChipTab(button.dataset.chipJump)));
 }
 function switchChipTab(name,{scroll=true}={}){
@@ -2252,7 +2313,7 @@ $("#drawdownForm").addEventListener("submit",async event=>{
   try{await lookupDrawdown($("#drawdownCode").value)}catch(error){$("#drawdownStatus").textContent=error.message||"查詢失敗，請稍後再試。";$("#drawdownResult").innerHTML=""}
 });
 async function load(){
-  const m=$("#message"),b=$("#reload");syncWatchlistState();renderWatchlist();m.className="message info";m.textContent=`正在更新 ${ids.length} 檔 ETF、川普動態、融資與三大法人…`;b.disabled=true;b.textContent="更新中…";
+  const m=$("#message"),b=$("#reload");syncWatchlistState();renderWatchlist();m.className="message info";m.textContent=`正在更新 ${ids.length} 檔 ETF、川普動態、融資風險與三大法人…`;b.disabled=true;b.textContent="更新中…";
   try{
     await Promise.all([loadCorporateActionTables(),loadEtfValuation()]);
     const settled=await Promise.allSettled(ids.map(one));
@@ -2260,10 +2321,10 @@ async function load(){
     const failed=settled.map((x,i)=>x.status==="rejected"?ids[i]:null).filter(Boolean);
     if(!all.length)throw new Error("目前清單內的 ETF 都無法取得價格資料");
     refreshAllDecisionModels();all.forEach(captureFormalState);renderTop();renderCards();renderChecks();renderTable();renderEvents();
-    await Promise.allSettled([loadNews(all[0].date),loadChipData(),loadTrumpNews(),refreshCnnFearGreed(),loadFuturesPosition(),loadMarketEvents()]);
+    await Promise.allSettled([loadNews(all[0].date),loadChipData(),loadMarginRisk(),loadTrumpNews(),refreshCnnFearGreed(),loadFuturesPosition(),loadMarketEvents()]);
     refreshAllDecisionModels();all.forEach(captureFormalState);renderMarket();renderTrump();renderSentiment();renderEvents();renderTop();renderCards();renderTable();
     if(pendingDelayedQuotes)applyHomeDelayedQuotes(pendingDelayedQuotes);
-    const chipStatus=marketChip.margin&&marketChip.institutional&&cnnFearGreed?"融資、法人與 CNN 情緒已更新":"部分籌碼或情緒資料尚未更新";
+    const chipStatus=marketChip.marginRisk&&marketChip.institutional&&cnnFearGreed?"融資風險、法人與 CNN 情緒已更新":"部分籌碼或情緒資料尚未更新";
     m.textContent=`更新成功：${all.length} 檔價格至 ${all[0].date} 收盤；${chipStatus}${failed.length?`；${failed.join("、")} 暫時讀取失敗`:""}。`;
     $("#updated").textContent="資料至 "+all[0].date+" 收盤｜"+all[0].weekState.label;maybeNotify();
   }catch(e){m.className="message error";m.innerHTML="更新失敗："+esc(e.message)+"<br>若 API 額度不足，請填入 FinMind Token 後重新更新。"}

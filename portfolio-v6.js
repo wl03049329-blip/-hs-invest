@@ -628,19 +628,35 @@
 
   function renderHomeSentiment() {
     let margin = null;
+    let marginRisk = null;
     let cnn = null;
     try {
       margin = marketChip?.margin || null;
+      marginRisk = marketChip?.marginRisk || null;
       cnn = cnnFearGreed || null;
     } catch {
       // Sentiment data is still loading.
     }
     const fomoCard = $v6("#homeFomoCard");
     const cnnCard = $v6("#homeCnnCard");
-    if (margin && Number.isFinite(margin.score)) {
-      fomoCard.innerHTML = `<span>台股融資 FOMO</span><b class="${margin.score >= 65 ? "twUp" : margin.score < 40 ? "twDown" : "twFlat"}">${margin.score}</b><em>${escapeHtml(margin.label)}</em><small>${escapeHtml(margin.summary)}<i class="sentimentFreshness">盤後資料 ${escapeHtml(margin.date || "—")}</i></small>`;
+    if (marginRisk && Number.isFinite(marginRisk.margin_balance?.value)) {
+      const balance = marginRisk.margin_balance;
+      const ratio = marginRisk.maintenance_ratio;
+      const riskLabel = marginRisk.interpretation?.label || marginRisk.risk_state || "資料不完整";
+      const balanceText = `${number(balance.value / 1e8, 1)}億`;
+      const dailyText = Number.isFinite(balance.daily_change) ? `${balance.daily_change > 0 ? "+" : ""}${number(balance.daily_change / 1e8, 1)}億` : "—";
+      const change20Text = Number.isFinite(balance.change_20d) ? `${balance.change_20d > 0 ? "+" : ""}${number(balance.change_20d / 1e8, 1)}億` : "—";
+      const balancePosition = Number.isFinite(balance.percentile_60d) ? `${number(balance.percentile_60d, 0)}%` : "—";
+      const ratioValue = Number.isFinite(ratio?.value) ? `${number(ratio.value, 1)}%` : "暫無可靠資料";
+      const ratioDay = Number.isFinite(ratio?.daily_change) ? `${ratio.daily_change > 0 ? "+" : ""}${number(ratio.daily_change, 1)}點` : "—";
+      const ratioAverage = Number.isFinite(ratio?.average_20d) ? `${number(ratio.average_20d, 1)}%` : "—";
+      const ratioPosition = Number.isFinite(ratio?.percentile_60d) ? `${number(ratio.percentile_60d, 0)}%` : "—";
+      const updateTime = Number.isFinite(Date.parse(marginRisk.updated_at)) ? new Intl.DateTimeFormat("zh-TW", {timeZone:"Asia/Taipei",hour:"2-digit",minute:"2-digit",hour12:false}).format(new Date(marginRisk.updated_at)) : "—";
+      fomoCard.innerHTML = `<span>🏦 台股融資風險</span><span class="homeMarginRows"><b>餘額 ${escapeHtml(balanceText)}</b><em>今日 ${escapeHtml(dailyText)}</em><small>20日 ${escapeHtml(change20Text)}｜60日 ${escapeHtml(balancePosition)}</small><b>維持率 ${escapeHtml(ratioValue)}</b><em>今日 ${escapeHtml(ratioDay)}</em><small>20日均 ${escapeHtml(ratioAverage)}｜60日 ${escapeHtml(ratioPosition)}</small></span><small>${escapeHtml(riskLabel)}｜${escapeHtml(marginRisk.interpretation?.summary || marginRisk.summary || "盤後資料待判讀")}<i class="sentimentFreshness">盤後資料 ${escapeHtml(marginRisk.data_date || "—")}｜更新 ${escapeHtml(updateTime)}${marginRisk.stale ? "｜資料可能過期" : ""}</i></small>`;
+    } else if (margin && Number.isFinite(margin.score)) {
+      fomoCard.innerHTML = `<span>🏦 台股融資風險</span><b class="${margin.score >= 65 ? "twUp" : margin.score < 40 ? "twDown" : "twFlat"}">${margin.score}</b><em>FOMO ${escapeHtml(margin.label)}</em><small>完整融資風險快取尚未更新<i class="sentimentFreshness">盤後資料 ${escapeHtml(margin.date || "—")}</i></small>`;
     } else {
-      fomoCard.innerHTML = "<span>台股融資 FOMO</span><b>—</b><em>資料尚未更新</em><small>不會以 0 分代替缺失資料</small>";
+      fomoCard.innerHTML = "<span>🏦 台股融資風險</span><b>—</b><em>資料尚未更新</em><small>融資餘額與維持率都不以 0 代替</small>";
     }
     if (cnn && Number.isFinite(cnn.score)) {
       const cnnTime = Number.isFinite(Date.parse(cnn.sourceUpdatedAt)) ? new Intl.DateTimeFormat("zh-TW", {timeZone: "Asia/Taipei", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false}).format(new Date(cnn.sourceUpdatedAt)) : "—";

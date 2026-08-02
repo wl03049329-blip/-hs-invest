@@ -42,6 +42,21 @@
 .homeSentimentCard>small{grid-column:1/-1;color:#cfe8d7;font-size:10px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sentimentFreshness{display:block;margin-top:3px;color:#86a994;font-size:9px;font-style:normal;font-weight:800}
 .homeSentimentConclusion{margin:9px 0 0;color:#dffff0;font-size:12px;font-weight:800;line-height:1.45}
+.homeMarginRiskCard{align-content:start}
+.homeMarginRiskCard>span{margin-bottom:2px}
+.homeMarginRows{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr);gap:3px 7px;align-items:center;text-align:left}
+.homeMarginRows b{font-size:12px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.homeMarginRows em{font-size:10px;font-style:normal;text-align:right;color:#dcebe1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.homeMarginRows small{grid-column:1/-1;color:#9eb6a8;font-size:9px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.marginRiskGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.marginMetricCard{display:grid;gap:4px;min-width:0;padding:11px;border:1px solid #294838;border-radius:13px;background:#091710}
+.marginMetricCard span{font-size:11px;color:var(--muted);font-weight:850}
+.marginMetricCard b{font-size:19px;line-height:1.2;overflow-wrap:anywhere}
+.marginMetricCard small,.marginMetricCard em{font-size:10px;line-height:1.4;color:#d1e4d8;font-style:normal}
+.marginRiskVerdict{display:grid;grid-template-columns:auto 1fr;gap:6px 9px;align-items:start;margin-top:8px;padding:9px 10px;border:1px solid #425047;border-radius:12px;background:#102018;font-size:11px;line-height:1.45}
+.marginRiskVerdict b{white-space:nowrap}.marginRiskVerdict span{min-width:0}.marginStale{grid-column:1/-1;color:#ffd84d;font-weight:900}
+.marginRiskTone-calm{border-color:#297f74;color:#bffaf0}.marginRiskTone-warning{border-color:#8f772d;color:#ffeaa0}.marginRiskTone-orange{border-color:#a65e2e;color:#ffd0a8}.marginRiskTone-danger{border-color:#9d3d49;color:#ffc1c7}
+.marginSources{display:flex;gap:10px;flex-wrap:wrap;margin-top:9px}
 .dashboard{grid-template-columns:1fr}
 .marketPanel{grid-column:auto;grid-row:auto;padding:14px}
 .marketPanel .panelTitle h2{font-size:20px}
@@ -276,6 +291,7 @@
 }
 @media(max-width:430px){
   .homeSentimentCard>small{font-size:9px}.homeSentimentConclusion{font-size:11px}
+  .marginMetricCard{padding:9px}.marginMetricCard b{font-size:16px}.marginMetricCard small,.marginMetricCard em{font-size:9px}
   .quoteControls{align-items:flex-start}.quoteControls>span{width:100%;flex-basis:100%}
   .portfolioToolbar>div{display:grid;grid-template-columns:1fr 1fr;width:100%}.portfolioToolbar>div .miniBtn:last-of-type{grid-column:1/-1}
   .holdingMain{grid-template-columns:minmax(100px,1.15fr) repeat(3,minmax(52px,.6fr))}
@@ -283,6 +299,8 @@
 }
 @media(max-width:375px){
   .homeSentimentCard{gap:2px 4px}.homeSentimentCard>em{font-size:10px}.homeSentimentCard>b{font-size:21px}
+  .homeMarginRows{gap:2px 5px}.homeMarginRows b{font-size:11px}.homeMarginRows em{font-size:9px}
+  .marginRiskGrid{gap:6px}.marginMetricCard{padding:8px}.marginMetricCard b{font-size:14px}
   .summaryCard>b{font-size:13px}.summaryCard>small{font-size:8px}
   .holdingMain{grid-template-columns:minmax(92px,1fr) repeat(3,minmax(48px,.56fr));gap:4px}
 }
