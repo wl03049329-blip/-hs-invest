@@ -1,0 +1,80 @@
+:root{
+  --bg:#050609;--panel:#0c0e13;--panel2:#12151c;--panel3:#08090d;
+  --line:#272b35;--text:#f5f7fb;--muted:#929aaa;--green:#35d6ff;
+  --green2:#6f7cff;--red:#ff637d;--yellow:#f2c94c;--orange:#ff9f43;
+  --purple:#b468ff;--blue:#35d6ff;--shadow:0 18px 48px #000a
+}
+html{background:#050609;color-scheme:dark}
+body{background:radial-gradient(circle at 50% -20%,#161b27 0,#08090d 32%,#050609 68%);color:var(--text)}
+.iconSprite{position:absolute;pointer-events:none}
+.srOnly{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.app{padding-top:12px}
+.hero{padding:5px 2px 2px;align-items:center}
+.brandBlock{min-width:0}
+.brandLogo{display:flex;align-items:center;gap:10px;width:min(520px,76vw);height:auto}.brandMark{width:58px;height:58px;border-radius:15px;box-shadow:0 8px 24px #0009}.brandWordmark{min-width:0}.brandWordmark b{display:block;font-size:clamp(22px,4.5vw,38px);letter-spacing:.01em;white-space:nowrap}.brandWordmark span{display:block;margin-top:4px;color:#8f98aa;font-size:10px;font-weight:800;letter-spacing:.2em;white-space:nowrap}
+.brandLine{margin-top:3px}.eyebrow{color:#35d6ff}.version{color:#a9b0c0}
+.subtitle{color:#9aa2b1;margin-top:5px}
+.refreshBtn{display:inline-flex;align-items:center;gap:7px;background:#151923;border-color:#343b4b;color:#f8f9fd;box-shadow:0 10px 30px #0008}
+.refreshBtn svg{width:17px;height:17px;fill:none;stroke:#35d6ff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.panel,.card,.holdingRow,.settings,.fold{background:linear-gradient(155deg,#11141b,#090b10);border-color:#282d37;box-shadow:var(--shadow)}
+.panelTitle h2{display:flex;align-items:center;gap:7px}.titleIcon{width:19px;height:19px;fill:none;stroke:#6f7cff;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+.panelTitle h2:not(:has(.titleIcon))::before,.sectionHead h2::before,.portfolioTopline h2::before{content:"";width:11px;height:11px;flex:0 0 11px;border:2px solid #6f7cff;border-radius:3px;box-shadow:4px -4px 0 -2px #35d6ff}.sectionHead h2,.portfolioTopline h2{display:flex;align-items:center;gap:8px}
+.message.info{background:#111722;color:#c5d8ff;border:1px solid #27334a}.message.error{background:#2d121a;color:#ffb7c1}.warning{background:#292313;color:#ffe6a0}
+.topTabs{top:0;gap:5px;padding:7px;margin-bottom:9px;background:linear-gradient(180deg,#050609f5 76%,#05060900);border-bottom:1px solid #1d2028}
+.appNavButton{font:inherit}
+.topTab{display:inline-flex;align-items:center;gap:7px;border-color:transparent;background:transparent;color:#8f97a6;border-radius:12px;padding:9px 12px}
+.topTab svg,.bottomNavButton svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.topTab.active{background:#191d27;color:#f5f7fb;border-color:#343b4b;box-shadow:inset 0 -2px #6f7cff}
+.topTab:focus-visible,.bottomNavButton:focus-visible{outline:2px solid #35d6ff;outline-offset:2px}
+.bottomNav{display:none!important}
+.marketOverviewLabel,.homeQuoteStatus,.dataSourceNote{color:#9ea7b8}
+.marketOverviewCards{grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+.homeMarketOverview{overflow:hidden}
+.marketQuoteCard{min-height:104px;display:flex;flex-direction:column;justify-content:space-between}
+.commodityQuoteCard .commoditySource{display:block;margin-top:5px;color:#7f8796;font-size:8px;line-height:1.25}
+.buyOpportunityCard{border-color:#424a67;background:linear-gradient(145deg,#111625,#0b0d13)}
+.buyOpportunityCard strong{font-size:16px}.buyOpportunityCard>span,.buyOpportunityCard>small{display:block;font-size:10px;color:#a8b1c2;line-height:1.3}
+.homeFastFacts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:8px}
+.homeFastFacts span{min-width:0;background:#090b10;border:1px solid #242934;border-radius:10px;padding:7px 8px;color:#cbd3e4;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.homeFastFacts b{display:block;color:#6f7cff;font-size:9px;margin-bottom:2px}
+.todayBuyDecision{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:10px;margin-top:8px;padding:9px 10px;border:1px solid #343b50;border-radius:12px;background:linear-gradient(90deg,#101422,#0a0c11)}
+.todayBuyDecision>div{display:flex;align-items:center;gap:6px;color:#f5f7fb;font-size:12px;white-space:nowrap}.todayBuyDecision p{margin:0;color:#d9deea;font-size:11px;line-height:1.45}
+.marketQuoteCard,.marketOpportunityCard,.homeSentimentCard,.snapshot,.rankItem,.reasonItem,.chipOverviewCard,.marginMetricCard,.flowCard,.eventItem,.modelBreakdown div,.signalDetailGrid div,.signalAnalysisSection,.detailSection,.historyStatsBlock,.buyPlanMap,.leverageWarning,.mobileMetric{background:#0a0c11;border-color:#242934}
+.marketQuoteCard:hover,.marketOpportunityCard:hover,.homeSentimentCard:hover,.chipOverviewCard:hover{border-color:#4d5a78}
+.marketQuoteState{background:#1b202b;color:#cbd3e4}.marketQuoteState.stale,.marketQuoteState.unavailable{background:#2b261a;color:#ffe29a}
+.marketQuoteValue strong,.chipOverviewCard b,.fomoScore{font-variant-numeric:tabular-nums}
+.moodUp,.twUp,.up{color:#ff637d}.moodDown,.twDown,.down{color:#41d6a3}.moodFlat,.twFlat{color:#f2c94c}
+.homeSentimentConclusion,.interpretation,.eventResult{color:#e5e9f3}
+.scoreBar,.chartBox{background:#08090d;border-color:#272c36}.scoreBar i{background:linear-gradient(90deg,#35d6ff,#6f7cff,#b468ff)}
+.chipSegments{background:#080a0ef2;border-color:#252a34}.chipSegment.active{background:#1b202a;color:#fff;border-color:#394255;box-shadow:inset 0 -2px #6f7cff}
+.chipOverviewCard,.homeSentimentCard{color:#f4f6fb}
+.sourceLink,.eventSource{color:#65dfff}
+.modelMeta span,.strategyBadge{background:#1b202b;color:#c9d3e6}
+.radarSegment.active,.buyPlanModes button[aria-pressed="true"]{background:#242a38;color:#fff;border-color:#536080}
+.watchManageDetails{margin-top:7px;border-top:1px solid #252a34;padding-top:6px}.watchManageDetails>summary{cursor:pointer;color:#aeb6c5;font-size:11px;font-weight:850;list-style:none}.watchManageDetails>summary::after{content:"＋";float:right}.watchManageDetails[open]>summary::after{content:"－"}.watchManageDetails[open]>summary{margin-bottom:9px}
+.signalCard{background:#0c0e13}.signalCardSummary{background:linear-gradient(90deg,#0e1117,#090b10)}
+.cards{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}.radarGroupHead{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 10px;margin-top:4px;border-left:3px solid #6f7cff;background:#0b0e15;border-radius:8px}.radarGroupHead b,.radarGroupHead small{display:block}.radarGroupHead b{font-size:14px}.radarGroupHead small,.radarGroupHead span{color:#929aaa;font-size:10px}.signalCardSummary{min-height:96px}.signalCompactMetrics span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.homeOpportunityRow{background:#0b0e15!important;border-color:#282e3a!important;grid-template-columns:minmax(0,1fr) auto!important;padding:8px 9px!important}
+.homeOpportunityTicker em{color:#929aaa;font-style:normal;font-size:9px;margin-left:4px}.homeOpportunityMetrics{grid-column:1/-1;font-size:9px;color:#aeb6c5}.homeOpportunityRow small{font-size:10px}.homeOpportunityGroup{background:#090b10!important;border-color:#272b35!important}
+.signalCard[open]{border-color:#4a5265}.signalLevel{border-color:currentColor}
+.btn{background:#202637;border-color:#3c465d;color:#fff}.btn:hover{border-color:#617093}.btn.secondary,.miniBtn{background:#141820;border-color:#303744;color:#dbe0eb}
+.footer,footer{color:#7f8796}
+
+@media(max-width:760px){
+  .app{padding:9px 10px 92px}.hero{padding:0 2px 2px}.brandLogo{width:min(300px,78vw)}.brandMark{width:42px;height:42px;border-radius:11px}.brandWordmark b{font-size:18px}.brandWordmark span{font-size:7px;letter-spacing:.12em}.brandLine{display:none}.subtitle{display:none}.refreshBtn{padding:9px 10px}.refreshBtn span{display:none}
+  .topTabs{display:none}
+  .bottomNav{position:fixed;display:grid!important;grid-template-columns:repeat(5,1fr);left:0;right:0;bottom:0;transform:none;width:auto;gap:0;border-width:1px 0 0;border-radius:0;z-index:80;padding:7px max(8px,env(safe-area-inset-right)) calc(7px + env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));background:#08090df2;border-color:#272c36;backdrop-filter:blur(18px);box-shadow:0 -10px 30px #0009}
+  .bottomNavButton{min-width:0;display:grid;place-items:center;gap:3px;border:0;background:transparent;color:#7f8796;padding:5px 2px;border-radius:10px;font-size:10px;font-weight:800}
+  .bottomNavButton svg{width:20px;height:20px}.bottomNavButton.active{color:#fff;background:#1a1e29}.bottomNavButton.active svg{stroke:#35d6ff}
+  .tabIntro{margin:4px 2px 8px;font-size:11px}
+  .panel{border-radius:16px;box-shadow:0 10px 30px #0008}
+  .marketOverviewCards{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}.marketQuoteCard{min-height:83px;padding:7px}.marketQuoteHead{gap:3px}.marketQuoteHead b{font-size:10px}.marketQuoteState{font-size:7px;padding:2px 4px}.marketQuoteValue strong{font-size:16px}.marketQuoteValue span{font-size:9px}.marketQuoteMeta{font-size:7px}.commodityQuoteCard .commoditySource{display:none}.buyOpportunityCard strong{font-size:12px}.buyOpportunityCard>span{font-size:8px}.buyOpportunityCard>small{display:none}
+  .marketOneLine{font-size:11px;margin:7px 0}.marketQuickSignals{display:none}.marketOverviewLabel{margin:4px 0;font-size:9px}.homeQuoteStatus{font-size:9px;padding:5px 7px}
+  .homeFastFacts{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin-top:5px}.homeFastFacts span{padding:5px 4px;text-align:center;font-size:8px}.homeFastFacts b{font-size:8px}.todayBuyDecision{grid-template-columns:1fr;gap:3px;margin-top:5px;padding:7px 8px}.todayBuyDecision p{font-size:9px;line-height:1.35}
+  .homeEtfBrief{padding:10px}.homeEtfBrief .panelTitle small{display:none}.rankList{gap:5px;margin-top:7px}.homeOpportunityGroup{padding:7px;gap:4px}.homeOpportunityRow{padding:6px 7px!important}.homeOpportunityMetrics{font-size:8px}.homeOpportunityRow small{font-size:9px}.homeOpportunityTicker{font-size:10px}.homeOpportunityRow strong{font-size:10px}
+  .watchPanel{padding:8px}.radarSegments{margin-bottom:0}.signalLegend{padding:9px;margin-top:7px}.sectionHead{margin:8px 1px 6px}.sectionHead small{display:none}
+  .cards{grid-template-columns:1fr}.radarGroupHead{padding:6px 8px}.signalCardSummary{min-height:94px}.signalCompactMetrics span{font-size:8px!important}
+  .chipSegments{top:0}.chipSegment{flex:0 0 auto;padding:8px 9px}
+}
+
+@media(max-width:430px){.app{padding-left:8px;padding-right:8px}.brandLogo{width:min(270px,77vw)}.brandWordmark b{font-size:16px}.panelTitle h2{font-size:17px}.titleIcon{width:17px;height:17px}}

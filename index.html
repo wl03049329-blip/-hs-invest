@@ -3,22 +3,28 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<meta name="theme-color" content="#07110d" />
+<meta name="theme-color" content="#050609" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <title>HS | ETF股市雷達 v6.2</title>
+<meta name="application-name" content="HS ETF雷達" />
+<meta name="apple-mobile-web-app-title" content="HS ETF雷達" />
+<meta name="description" content="台股延遲行情、ETF買點、估值、籌碼與個人持股雷達" />
+<link rel="icon" type="image/svg+xml" href="assets/hs-etf-radar-mark.svg" />
+<link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png" />
+<link rel="manifest" href="site.webmanifest" />
 <style>
 :root{
-  --bg:#06100c;--panel:#0c1a14;--panel2:#12271d;--panel3:#08150f;
-  --line:#244332;--text:#f5fff8;--muted:#9eb6a8;--green:#52e38c;
-  --green2:#1fbf69;--red:#ff6674;--yellow:#ffd84d;--orange:#ff9d42;
+  --bg:#050609;--panel:#0c0e13;--panel2:#12151c;--panel3:#08090d;
+  --line:#272b35;--text:#f5f7fb;--muted:#929aaa;--green:#35d6ff;
+  --green2:#6f7cff;--red:#ff6674;--yellow:#ffd84d;--orange:#ff9d42;
   --purple:#bd72ff;--blue:#72b8ff;--shadow:0 18px 45px #0007
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{
   margin:0;
-  background:radial-gradient(circle at 25% -5%,#1d4a31 0,#07120d 32%,#06100c 70%);
+  background:radial-gradient(circle at 50% -20%,#161b27 0,#08090d 32%,#050609 70%);
   color:var(--text);
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   min-height:100vh
@@ -155,7 +161,7 @@ a{color:inherit}
 .up{color:#ff7480}.down{color:#67e59b}
 .signal{font-weight:950;font-size:13px;margin-bottom:7px}
 .kdjInline{display:flex;gap:7px;flex-wrap:wrap}
-.kdjInline span{background:#06100c;border-radius:10px;padding:7px 8px;font-size:11px}
+.kdjInline span{background:#08090d;border-radius:10px;padding:7px 8px;font-size:11px}
 .cardActions{display:flex;gap:7px;justify-content:flex-end;flex-wrap:wrap}
 .miniBtn{
   border:1px solid #2a5039;background:#10271a;color:#dffff0;border-radius:11px;
@@ -184,7 +190,7 @@ th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:
 .mobileEtfHead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:12px}
 .mobileEtfHead b{font-size:21px}.mobileEtfHead small{display:block;margin-top:3px}
 .mobileMetrics{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.mobileMetric{background:#06100c;border-radius:12px;padding:10px;min-width:0}
+.mobileMetric{background:#08090d;border-radius:12px;padding:10px;min-width:0}
 .mobileMetric span{display:block;color:var(--muted);font-size:11px;margin-bottom:4px}
 .mobileMetric strong{font-size:16px;word-break:break-word}
 .splitNote{
@@ -228,7 +234,7 @@ th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:
 .sheetHead{display:flex;justify-content:space-between;align-items:center;gap:12px}
 .sheetHead h3{margin:0}
 .close{border:0;background:#1a3024;color:white;border-radius:12px;padding:9px 12px}
-.chartBox{background:#06100c;border:1px solid var(--line);border-radius:16px;padding:8px;margin-top:13px}
+.chartBox{background:#08090d;border:1px solid var(--line);border-radius:16px;padding:8px;margin-top:13px}
 .chartBox canvas{width:100%;height:260px;display:block}
 .chartLegend{display:flex;gap:13px;flex-wrap:wrap;color:var(--muted);font-size:12px;margin-top:10px}
 .trendList{display:grid;gap:8px;margin-top:13px}
@@ -281,7 +287,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
   .miniBtn{padding:8px 9px}
 }
 
-.topTabs{position:sticky;top:0;z-index:30;display:flex;gap:8px;overflow-x:auto;padding:10px 0 12px;margin:0 0 14px;background:linear-gradient(180deg,#06100c 72%,#06100c00);scrollbar-width:none}.topTabs::-webkit-scrollbar{display:none}.topTab{flex:0 0 auto;border:1px solid var(--line);background:#0b1811;color:var(--muted);border-radius:999px;padding:10px 15px;font-weight:900;white-space:nowrap}.topTab.active{background:#173f2a;color:#effff5;border-color:#3f7b58}.tabHidden{display:none!important}.tabIntro{display:none;margin:2px 0 12px;color:var(--muted);font-size:13px;line-height:1.5}.tabIntro.active{display:block}.bottomNav{display:none!important}@media(max-width:760px){.app{padding-top:14px}.hero{gap:10px}.hero h1{font-size:30px}.subtitle{font-size:14px;line-height:1.5}.topTabs{margin-left:-2px;margin-right:-2px}.topTab{padding:9px 14px}.dashboard,.sentimentGrid{grid-template-columns:1fr}.section{margin-top:12px}}
+.topTabs{position:sticky;top:0;z-index:30;display:flex;gap:8px;overflow-x:auto;padding:10px 0 12px;margin:0 0 14px;background:linear-gradient(180deg,#050609 72%,#05060900);scrollbar-width:none}.topTabs::-webkit-scrollbar{display:none}.topTab{flex:0 0 auto;border:1px solid var(--line);background:#0d1016;color:var(--muted);border-radius:14px;padding:10px 15px;font-weight:900;white-space:nowrap}.topTab.active{background:#1b202b;color:#f5f7fb;border-color:#536080}.tabHidden{display:none!important}.tabIntro{display:none;margin:2px 0 12px;color:var(--muted);font-size:13px;line-height:1.5}.tabIntro.active{display:block}.bottomNav{display:none!important}@media(max-width:760px){.app{padding-top:14px}.hero{gap:10px}.hero h1{font-size:30px}.subtitle{font-size:14px;line-height:1.5}.topTabs{margin-left:-2px;margin-right:-2px}.topTab{padding:9px 14px}.dashboard,.sentimentGrid{grid-template-columns:1fr}.section{margin-top:12px}}
 
 .watchPanel{margin-bottom:14px}.watchHead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.watchHead h2{margin:3px 0 0}.watchActions{display:flex;gap:8px;flex-wrap:wrap}.watchActions .miniBtn{white-space:nowrap}.watchHint{margin:10px 0 0;color:var(--muted);font-size:13px;line-height:1.55}.watchList{display:grid;gap:8px;margin-top:13px}.watchRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;background:#07130e;border:1px solid var(--line);border-radius:16px;padding:11px 12px}.watchIdentity{min-width:0}.watchIdentity b{font-size:18px}.watchIdentity small{display:block;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.watchControls{display:flex;gap:5px}.watchIcon{border:1px solid #2a5039;background:#10271a;color:#dffff0;border-radius:10px;padding:7px 9px;font-weight:900;line-height:1}.watchIcon.danger{color:#ff9ba4;border-color:#67313a}.watchCount{display:inline-flex;align-items:center;border-radius:999px;background:#173f2a;color:#effff5;padding:6px 10px;font-size:12px;font-weight:900}.searchBox{width:100%;background:#07130e;border:1px solid var(--line);color:#fff;border-radius:14px;padding:13px 14px;margin-top:13px}.searchResults{display:grid;gap:8px;margin-top:12px}.searchResult{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#07130e;border:1px solid var(--line);border-radius:15px;padding:11px 12px}.searchResult div{min-width:0}.searchResult b{font-size:17px}.searchResult small{display:block;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.searchAdd{border:1px solid #3f7b58;background:#173f2a;color:#effff5;border-radius:11px;padding:9px 11px;font-weight:900;white-space:nowrap}.typeBadge{display:inline-flex;margin-top:6px;border-radius:999px;padding:4px 8px;font-size:11px;font-weight:900;background:#26322c;color:#d9e7df}.watchEmpty{color:var(--muted);padding:20px;text-align:center}.watchSheet{padding-bottom:calc(20px + env(safe-area-inset-bottom))}@media(max-width:520px){.watchHead{display:block}.watchActions{margin-top:10px}.watchActions .miniBtn{flex:1}.watchControls{gap:4px}.watchIcon{padding:7px 8px}}
 .chipPage{margin-top:12px}.chipSegments{position:sticky;top:67px;z-index:18;display:flex;gap:6px;overflow-x:auto;margin-bottom:10px;padding:8px;background:#07130df2;border:1px solid var(--line);border-radius:16px;scrollbar-width:none}.chipSegments::-webkit-scrollbar{display:none}.chipSegment{flex:1 0 auto;border:1px solid transparent;background:transparent;color:var(--muted);border-radius:11px;padding:9px 10px;font-size:12px;font-weight:900;white-space:nowrap}.chipSegment.active{background:#173f2a;color:#effff5;border-color:#3f7b58}.chipPanel{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.chipPanel[hidden]{display:none}.chipWide{grid-column:1/-1}.chipOverviewGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}.chipOverviewCard{border:1px solid #234533;background:#07130e;color:inherit;text-align:left;border-radius:14px;padding:11px;min-width:0}.chipOverviewCard span,.chipOverviewCard small{display:block;color:var(--muted);font-size:10px}.chipOverviewCard b{display:block;font-size:20px;margin:4px 0}.chipOverviewConclusion{margin:11px 0 0;line-height:1.5;font-weight:850}.eventGroupTitle{margin:14px 0 7px;font-size:15px}.eventResult{display:block;color:#dffff0;margin-top:5px;line-height:1.45}.eventSource{display:inline-block;margin-top:5px;color:#a9e8c0;font-size:11px}.eventResultInput{width:100%;margin-top:6px;background:#07130e;border:1px solid var(--line);color:#fff;border-radius:9px;padding:7px;font-size:12px}.modelMeta{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px}.modelMeta span{font-size:10px;border-radius:999px;padding:4px 7px;background:#173126;color:#caead6}.modelWarning{margin-top:10px;padding:10px;border-radius:11px;background:#3a2a0e;color:#ffe2a1;font-size:12px;line-height:1.5}.modelBreakdown{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.modelBreakdown div{background:#07130e;border-radius:10px;padding:8px}.modelBreakdown span,.modelBreakdown small{display:block;color:var(--muted);font-size:10px}.modelBreakdown b{display:block;margin:3px 0}.catalogFreshness{display:block;margin-top:5px;color:#ffe2a1}.scoreUnavailable{font-size:13px!important;color:#ffe2a1}.methodFold{margin-top:10px}.methodFold>summary{cursor:pointer;font-weight:850;color:#cdebd8}@media(max-width:760px){.chipPanel{grid-template-columns:1fr}.chipWide{grid-column:auto}.chipSegments{top:61px}.chipPage .panel{box-shadow:none}.chipOverviewGrid{gap:7px}.chipOverviewCard{padding:10px}.chipOverviewCard b{font-size:18px}}@media(max-width:430px){.chipSegment{padding:8px 9px}.chipOverviewCard b{font-size:17px}.modelBreakdown{grid-template-columns:1fr 1fr}}
@@ -289,27 +295,47 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 @media(max-width:620px){.watchRow{grid-template-columns:minmax(0,1fr) auto}.watchStrategy{grid-column:1/-1}.watchStrategy select{max-width:none;width:100%}.homeOpportunityRow{font-size:12px}.drawdownHeadline{gap:6px}.drawdownHeadline>div{padding:8px}.drawdownHeadline b{font-size:16px}.drawdownForm{grid-template-columns:1fr}.drawdownForm .btn{width:100%}}
 </style>
 <link rel="stylesheet" href="portfolio-v6.css" />
+<link rel="stylesheet" href="v62-tech.css" />
 </head>
 <body>
+<svg class="iconSprite" aria-hidden="true" width="0" height="0">
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5v8a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-radar" viewBox="0 0 24 24"><path d="M4 16a8 8 0 0 1 16 0M7 16a5 5 0 0 1 10 0M12 16l6-7M5 20h14"/><circle cx="12" cy="16" r="1.8"/></symbol>
+  <symbol id="i-portfolio" viewBox="0 0 24 24"><path d="M4 7h16v12H4zM8 7V4h8v3M4 11h16M10 14h4"/></symbol>
+  <symbol id="i-chip" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 9h6v6H9zM9 2v4m6-4v4M9 18v4m6-4v4M2 9h4m-4 6h4m12-6h4m-4 6h4"/></symbol>
+  <symbol id="i-trump" viewBox="0 0 24 24"><path d="M5 5h14v10H9l-4 4zM8 9h8m-8 3h5"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></symbol>
+  <symbol id="i-market" viewBox="0 0 24 24"><path d="M4 19V9m5 10V5m6 14v-7m5 7V3M3 19h18"/></symbol>
+  <symbol id="i-sentiment" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 10h.01M16 10h.01M8 15c2.5 2 5.5 2 8 0"/></symbol>
+  <symbol id="i-summary" viewBox="0 0 24 24"><path d="M5 4h14v16H5zM8 8h8m-8 4h8m-8 4h5"/></symbol>
+  <symbol id="i-event" viewBox="0 0 24 24"><path d="M5 6h14v14H5zM8 3v6m8-6v6M5 10h14"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M19 7V3l-2 2a8 8 0 1 0 2.3 9M19 3h-4"/></symbol>
+  <symbol id="i-commodity" viewBox="0 0 24 24"><path d="M4 17 9 7h6l5 10zM7 17h10M10 7l2-3 2 3"/></symbol>
+  <symbol id="i-fund" viewBox="0 0 24 24"><path d="M4 8h16M6 8v10m4-10v10m4-10v10m4-10v10M3 19h18M5 5h14l-7-3z"/></symbol>
+</svg>
 <div class="app">
   <section id="home" class="hero">
-    <div>
-      <div class="brandLine"><p class="eyebrow">HS ETF STOCK RADAR</p><span class="version">VERSION 6.2</span></div>
-      <h1>HS | ETF股市雷達</h1>
+    <div class="brandBlock">
+      <div class="brandLogo" aria-label="HS | ETF股市雷達">
+        <img class="brandMark" src="assets/icon-192.png" alt="" width="64" height="64" />
+        <div class="brandWordmark"><b>HS | ETF股市雷達</b><span>ETF MARKET SIGNAL SYSTEM</span></div>
+      </div>
+      <div class="brandLine"><p class="eyebrow">ETF MARKET SIGNAL SYSTEM</p><span class="version">VERSION 6.2</span></div>
+      <h1 class="srOnly">HS | ETF股市雷達</h1>
       <p class="subtitle">打開先看懂今天市場，再決定要不要加碼。週 KD 每日試算；0050、00631L 歷史價格已還原分割。</p>
     </div>
-    <button class="btn" id="reload">更新</button>
+    <button class="btn refreshBtn" id="reload" aria-label="重新整理全部資料"><svg aria-hidden="true"><use href="#i-refresh"/></svg><span>更新</span></button>
   </section>
 
   <div id="message" class="message info">正在取得最新資料…</div>
 
   <nav class="topTabs" aria-label="主要分頁">
-    <button class="topTab active" type="button" data-tab="today">今日</button>
-    <button class="topTab" type="button" data-tab="signals">ETF雷達</button>
-    <button class="topTab" type="button" data-tab="portfolio">我的持股</button>
-    <button class="topTab" type="button" data-tab="sentiment">籌碼</button>
-    <button class="topTab" type="button" data-tab="trump">川普</button>
-    <button class="topTab" type="button" data-tab="more">更多</button>
+    <button class="topTab appNavButton active" type="button" data-tab="today"><svg aria-hidden="true"><use href="#i-home"/></svg><span>今日</span></button>
+    <button class="topTab appNavButton" type="button" data-tab="signals"><svg aria-hidden="true"><use href="#i-radar"/></svg><span>ETF雷達</span></button>
+    <button class="topTab appNavButton" type="button" data-tab="portfolio"><svg aria-hidden="true"><use href="#i-portfolio"/></svg><span>我的持股</span></button>
+    <button class="topTab appNavButton" type="button" data-tab="sentiment"><svg aria-hidden="true"><use href="#i-chip"/></svg><span>籌碼</span></button>
+    <button class="topTab appNavButton" type="button" data-tab="trump"><svg aria-hidden="true"><use href="#i-trump"/></svg><span>川普</span></button>
+    <button class="topTab appNavButton" type="button" data-tab="more"><svg aria-hidden="true"><use href="#i-more"/></svg><span>更多</span></button>
   </nav>
   <p class="tabIntro active" data-tab-intro="today">先看三項行情、今日買點機會與 ETF 買點快報。</p>
   <p class="tabIntro" data-tab-intro="signals">切換自己的自選清單與弘昇精選，再查看買點細節。</p>
@@ -320,7 +346,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 
   <section id="homeMarketOverview" class="panel homeMarketOverview" data-tab-section="today" aria-labelledby="homeMarketOverviewTitle">
     <div class="panelTitle compactTitle">
-      <div><p class="eyebrow">TAIWAN MARKET</p><h2 id="homeMarketOverviewTitle">三項行情與今日買點</h2></div>
+      <div><p class="eyebrow">TAIWAN &amp; GLOBAL MARKET</p><h2 id="homeMarketOverviewTitle"><svg class="titleIcon" aria-hidden="true"><use href="#i-market"/></svg>市場脈動</h2></div>
       <small id="marketOverviewFreshness">資料載入中</small>
     </div>
     <p class="marketOverviewLabel">盤中延遲行情｜約每 5 分鐘更新｜僅供參考</p>
@@ -331,6 +357,13 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
     <div id="marketQuickSignals" class="marketQuickSignals">
       <span>市場廣度：更新中</span><span>大型／中小型：更新中</span><span>台積電同步：更新中</span>
     </div>
+    <div id="homeFastFacts" class="homeFastFacts" aria-live="polite">
+      <span>CNN：載入中</span><span>融資：載入中</span><span>維持率：載入中</span><span>買點：載入中</span>
+    </div>
+    <div class="todayBuyDecision">
+      <div><svg class="titleIcon" aria-hidden="true"><use href="#i-radar"/></svg><b>今天怎麼買</b></div>
+      <p id="todayBuyDecisionText">整合市場、籌碼、估值與均線資料中…</p>
+    </div>
     <div id="homeQuoteStatus" class="homeQuoteStatus" role="status" aria-live="polite">
       盤中延遲行情｜約每 5 分鐘更新｜僅供參考
     </div>
@@ -338,7 +371,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 
   <button id="homeEtfBrief" class="panel homeEtfBrief" data-tab-section="today" type="button" aria-label="前往 ETF雷達查看完整買點">
     <div class="panelTitle compactTitle">
-      <div><p class="eyebrow">ETF ENTRY RADAR</p><h2>買點快報前三名</h2></div>
+      <div><p class="eyebrow">ETF ENTRY RADAR</p><h2><svg class="titleIcon" aria-hidden="true"><use href="#i-radar"/></svg>精選ETF買點</h2></div>
       <small id="updatedTop">週 KD 依最近完成資料或目前週線試算</small>
     </div>
     <div id="homeEtfBriefSummary" class="homeEtfBriefSummary">買點資料載入中…</div>
@@ -347,7 +380,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 
   <section id="homeSentiment" class="panel homeSentiment" data-tab-section="today" aria-labelledby="homeSentimentTitle">
     <div class="panelTitle compactTitle">
-      <div><p class="eyebrow">MARKET SENTIMENT</p><h2 id="homeSentimentTitle">市場情緒快覽</h2></div>
+      <div><p class="eyebrow">MARKET SENTIMENT</p><h2 id="homeSentimentTitle"><svg class="titleIcon" aria-hidden="true"><use href="#i-sentiment"/></svg>市場情緒快覽</h2></div>
       <small>點卡片看完整籌碼</small>
     </div>
     <div class="homeSentimentCards">
@@ -355,7 +388,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
         <span>CNN Fear &amp; Greed</span><b>—</b><em>資料載入中</em><small>正在更新</small>
       </button>
       <button id="homeFomoCard" class="homeSentimentCard homeMarginRiskCard" type="button" aria-label="查看台股融資風險完整資料">
-        <span>🏦 台股融資風險</span><b>—</b><em>資料載入中</em><small>最近交易日盤後資料</small>
+        <span>台股融資風險</span><b>—</b><em>資料載入中</em><small>最近交易日盤後資料</small>
       </button>
     </div>
     <p id="homeSentimentConclusion" class="homeSentimentConclusion">情緒資料彙整中…</p>
@@ -364,7 +397,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
   <section class="dashboard" data-tab-section="today">
     <article class="panel marketPanel">
       <div class="panelTitle">
-        <div><p class="eyebrow">TODAY'S MARKET</p><h2>今天市場摘要</h2></div>
+        <div><p class="eyebrow">TODAY'S MARKET</p><h2><svg class="titleIcon" aria-hidden="true"><use href="#i-summary"/></svg>今天市場摘要</h2></div>
         <small id="marketDate">—</small>
       </div>
       <div id="marketPulse"><div class="skeleton">載入市場摘要中…</div></div>
@@ -455,6 +488,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
     <div id="chipPageTop" class="chipSegments" role="tablist" aria-label="籌碼內容分頁">
       <button class="chipSegment active" type="button" role="tab" aria-selected="true" data-chip-tab="overview">總覽</button>
       <button class="chipSegment" type="button" role="tab" aria-selected="false" data-chip-tab="mood">市場情緒</button>
+      <button class="chipSegment" type="button" role="tab" aria-selected="false" data-chip-tab="margin">融資風險</button>
       <button class="chipSegment" type="button" role="tab" aria-selected="false" data-chip-tab="institutions">三大法人</button>
       <button class="chipSegment" type="button" role="tab" aria-selected="false" data-chip-tab="futures">期貨籌碼</button>
       <button class="chipSegment" type="button" role="tab" aria-selected="false" data-chip-tab="events">重大事件</button>
@@ -471,13 +505,15 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       <div id="sentimentSummaryContent"><div class="skeleton">彙整情緒資料中…</div></div>
     </article>
     <article class="panel">
-      <div class="panelTitle"><div><p class="eyebrow">MARGIN RISK</p><h2>台股融資風險</h2></div><small>最近交易日盤後資料</small></div>
-      <div id="fomoContent"><div class="skeleton">載入融資資料中…</div></div>
-    </article>
-    <article class="panel">
       <div class="panelTitle"><div><p class="eyebrow">CNN FEAR &amp; GREED</p><h2>美股恐懼貪婪</h2></div><small>本地 JSON 定時更新</small></div>
       <div id="cnnFearGreedContent"><div class="skeleton">載入 CNN 情緒資料中…</div></div>
     </article>
+    </div>
+    <div class="chipPanel" data-chip-panel="margin" hidden>
+      <article class="panel chipWide">
+        <div class="panelTitle"><div><p class="eyebrow">MARGIN RISK</p><h2><svg class="titleIcon" aria-hidden="true"><use href="#i-fund"/></svg>融資餘額與維持率</h2></div><small>最近交易日盤後資料</small></div>
+        <div id="fomoContent"><div class="skeleton">載入融資資料中…</div></div>
+      </article>
     </div>
     <div class="chipPanel" data-chip-panel="institutions" hidden>
     <article class="panel chipWide">
@@ -544,6 +580,8 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
         <button class="radarSegment" type="button" data-radar-mode="my" aria-pressed="false">我的自選</button>
         <button class="radarSegment active" type="button" data-radar-mode="featured" aria-pressed="true">弘昇精選</button>
       </div>
+      <details class="watchManageDetails">
+        <summary>清單與自選管理</summary>
       <div class="watchHead">
         <div><p class="eyebrow">MY WATCHLIST</p><h2 id="radarListTitle">弘昇精選</h2></div>
         <div class="watchActions"><button class="miniBtn" id="addEtfBtn" type="button">＋ 新增 ETF</button><button class="miniBtn" id="resetEtfBtn" type="button">清除我的自選</button></div>
@@ -557,6 +595,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
         <button type="button" data-buy-plan-mode="aggressive" aria-pressed="false">積極</button>
         <small>只調整分批比例，不改變買點分數。</small>
       </div>
+      </details>
     </article>
     <details class="panel signalLegend">
       <summary>外框顏色代表什麼？</summary>
@@ -613,12 +652,12 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
   <footer>Version 6.2 · HS | ETF股市雷達 · Developed by 弘昇<br><span class="footnote">新聞、籌碼、買點分數、持股估算與歷史驗證僅供資訊參考，不構成投資建議；FOMO 為本站自製情緒代理指標。</span></footer>
 </div>
 
-<nav class="bottomNav">
-  <a href="#home">今日</a>
-  <a href="#trump-watch">川普</a>
-  <a href="#signals">買點</a>
-  <a href="#compare">比較</a>
-  <a href="#alerts">提醒</a>
+<nav class="bottomNav" aria-label="手機主要分頁">
+  <button class="bottomNavButton appNavButton active" type="button" data-tab="today"><svg aria-hidden="true"><use href="#i-home"/></svg><span>今日</span></button>
+  <button class="bottomNavButton appNavButton" type="button" data-tab="signals"><svg aria-hidden="true"><use href="#i-radar"/></svg><span>ETF雷達</span></button>
+  <button class="bottomNavButton appNavButton" type="button" data-tab="portfolio"><svg aria-hidden="true"><use href="#i-portfolio"/></svg><span>持股</span></button>
+  <button class="bottomNavButton appNavButton" type="button" data-tab="sentiment"><svg aria-hidden="true"><use href="#i-chip"/></svg><span>籌碼</span></button>
+  <button class="bottomNavButton appNavButton" type="button" data-tab="more"><svg aria-hidden="true"><use href="#i-more"/></svg><span>更多</span></button>
 </nav>
 
 
@@ -691,6 +730,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 
 <script src="market-ui-core.js"></script>
 <script src="market-v61-core.js"></script>
+<script src="commodity-quotes-core.js"></script>
 <script src="buy-point-core.js"></script>
 <script src="valuation-core.js"></script>
 <script src="intraday-buy-point-core.js"></script>
@@ -772,6 +812,7 @@ let marketChip={margin:null,marginRisk:null,institutional:null};
 let trumpNews=[];
 let cnnFearGreed=null;
 let marketOverview=null;
+let commodityQuotes=null;
 let marketOverviewUpdatedAt="";
 let marketOverviewStateKey="";
 let marketOverviewPollTimer=null;
@@ -1521,23 +1562,56 @@ function opportunityCardHtml(){
   const data=homeOpportunityData(),best=data.best;
   return `<button class="marketQuoteCard buyOpportunityCard" type="button" data-open-etf-radar aria-label="前往 ETF雷達查看今日買點機會"><div class="marketQuoteHead"><b>今日買點機會</b><span class="marketQuoteState opportunity">ETF雷達</span></div><strong>${data.observing}／${data.total||0} 檔進入買點區</strong><span>其中 ${data.rebound} 檔出現止跌回升</span><span>最高：${best?`${esc(best.id)}，${scoreText(best)}`:"資料載入中"}</span><small>${esc(data.risk.text)}</small></button>`;
 }
+function commodityCardHtml(key){
+  const item=commodityQuotes?.items?.[key];
+  if(!item)return`<article class="marketQuoteCard marketQuotePlaceholder"><div class="marketQuoteHead"><b>${key==="gold"?"黃金":"布蘭特原油"}</b><span class="marketQuoteState unavailable">資料暫缺</span></div><span>延遲行情載入中</span></article>`;
+  const tone=item.change>0?"moodUp":item.change<0?"moodDown":"moodFlat",stale=HSCommodityQuotesCore.stale(item);
+  return `<article class="marketQuoteCard commodityQuoteCard ${stale?"isStale":""}" data-market-key="${key}"><div class="marketQuoteHead"><b>${esc(item.name)}</b><span class="marketQuoteState ${stale?"stale":"delayed"}">${stale?"最後成功行情":"延遲行情"}</span></div><div class="marketQuoteValue"><strong class="${tone}">${fmt(item.price)}</strong><span class="${tone}">${signed(item.changePct)}</span></div><div class="marketQuoteMeta"><span>${esc(item.unit)}</span><span>${esc(formatHomeQuoteTime(item.quoteTime))}</span></div><small class="commoditySource">${esc(item.sourceName)}｜${esc(item.delayNote)}</small></article>`;
+}
+function homeMovingAverageStates(x){
+  const feature=x?.currentFeature||{},price=Number(x?.price);
+  const status=(value)=>Number.isFinite(price)&&Number.isFinite(Number(value))?(price>=Number(value)?"上":"下"):"—";
+  return `月線${status(feature.ma20)}｜季線${status(feature.ma60)}｜半年線${status(feature.ma120)}｜年線${status(feature.ma200)}`;
+}
+function updateHomeFastFacts(){
+  const target=$("#homeFastFacts");if(!target)return;
+  const risk=marketChip.marginRisk,balance=risk?.margin_balance,ratio=risk?.maintenance_ratio;
+  const featured=[...all].filter(x=>DEFAULT_WATCHLIST.some(item=>item.id===x.id)).sort((a,b)=>(displayScore(b,strategyModeFor(b,"featured"))??-1)-(displayScore(a,strategyModeFor(a,"featured"))??-1));
+  const best=featured[0],bestMode=best?strategyModeFor(best,"featured"):null;
+  target.innerHTML=`<span><b>CNN</b>${cnnFearGreed?`${fmt(cnnFearGreed.score)}｜${esc(cnnFearGreed.label)}`:"資料暫缺"}</span><span><b>融資餘額</b>${Number.isFinite(balance?.value)?formatYi(balance.value):"資料暫缺"}</span><span><b>融資維持率</b>${Number.isFinite(ratio?.value)?`${fmt(ratio.value)}%｜${percentilePosition(ratio.percentile_60d)}`:"資料暫無可靠來源"}</span><span><b>精選買點</b>${best?`${esc(best.id)}｜${displayScore(best,bestMode)}分`:"載入中"}</span>`;
+  $("#todayBuyDecisionText").textContent=todayBuyDecisionText();
+}
+function todayBuyDecisionText(){
+  if(!all.length)return"買點資料載入中，暫不做判斷。";
+  const longIds=new Set(["0050","00830","00662","009815"]),swingIds=new Set(["00935","00631L","00733","006201"]);
+  const longs=all.filter(x=>longIds.has(x.id)).map(x=>({x,d:strategyDecisionFor(x,"long_term_core")})).filter(row=>Number.isFinite(row.d?.score)).sort((a,b)=>b.d.score-a.d.score);
+  const swings=all.filter(x=>swingIds.has(x.id)).map(x=>({x,d:strategyDecisionFor(x,"swing")})).filter(row=>Number.isFinite(row.d?.score)).sort((a,b)=>b.d.score-a.d.score);
+  const longReady=longs.filter(row=>row.d.score>=55).slice(0,2),swingReady=swings.filter(row=>["first","confirmed"].includes(row.d.stage?.key));
+  const fear=cnnFearGreed?.score<=44||marketFearMetric()>=60;
+  const opening=fear?"市場情緒偏恐懼":"市場情緒未進入極端恐慌";
+  const longText=longReady.length?`${longReady.map(row=>row.x.id).join("、")}進入長期${longReady[0].d.stage?.label||"分批觀察區"}`:"長期核心 ETF 尚未進入明顯加碼區";
+  const swingText=swingReady.length?`${swingReady.map(row=>row.x.id).join("、")}出現波段初步確認`:`波段 ETF 仍等待站回短期均線與動能轉強`;
+  return `${opening}，${longText}；${swingText}。資料為延遲行情與最近盤後估值的客觀試算。`;
+}
 function renderMarketOverview(){
   if(!marketOverview){
-    $("#marketOverviewCards").innerHTML=["台股加權指數","上櫃指數","台積電 2330"].map(name=>`<article class="marketQuoteCard marketQuotePlaceholder"><b>${name}</b><span>資料載入中</span></article>`).join("")+opportunityCardHtml();
+    $("#marketOverviewCards").innerHTML=["台股加權指數","上櫃指數","台積電 2330"].map(name=>`<article class="marketQuoteCard marketQuotePlaceholder"><b>${name}</b><span>資料載入中</span></article>`).join("")+commodityCardHtml("gold")+commodityCardHtml("brent")+opportunityCardHtml();
     $("#marketOneLine").textContent="行情資料尚未完整，暫不做方向判斷。";
     $("#marketOverviewFreshness").textContent="資料暫缺";
+    updateHomeFastFacts();
     return;
   }
   const items=marketOverview.instruments,order=["taiex","otc","tsmc"];
   $("#marketOverviewCards").innerHTML=order.map(key=>{
     const item=items[key],tone=HSMarketV61Core.tone(item.change),state=marketCardState(item);
     return `<article class="marketQuoteCard" data-market-key="${key}"><div class="marketQuoteHead"><b>${esc(item.name)}</b><span class="marketQuoteState ${esc(state.key)}">${esc(state.label)}</span></div><div class="marketQuoteValue"><strong class="${tone}">${marketValueText(item)}</strong><span class="${tone}">${marketChangeText(item.change)}<br>${signed(item.changePct)}</span></div><div class="marketQuoteMeta"><span>${esc(item.dataDate)}</span><span>${esc(item.dataTime)}</span></div></article>`;
-  }).join("")+opportunityCardHtml();
+  }).join("")+commodityCardHtml("gold")+commodityCardHtml("brent")+opportunityCardHtml();
   $("#marketOneLine").textContent=HSMarketV61Core.marketInterpretation(items);
   const breadth=all.length?marketMetrics():{ups:"—",downs:"—"};
   const ratio=Number.isFinite(breadth.ups)&&Number.isFinite(breadth.downs)&&breadth.downs>0?fmt(breadth.ups/breadth.downs):breadth.ups>0?"僅上漲":"—";
   $("#marketQuickSignals").innerHTML=`<span>市場廣度：${breadth.ups} 漲／${breadth.downs} 跌｜比 ${ratio}</span><span>大型／中小型：${HSMarketV61Core.relativeStrength(items)}</span><span>台積電同步：${HSMarketV61Core.tsmcSync(items,breadth)}</span>`;
   $("#marketOverviewFreshness").textContent=marketOverview.stale?`目前顯示最後成功行情｜${formatHomeQuoteTime(marketOverview.updatedAt)}`:`快取更新 ${formatHomeQuoteTime(marketOverview.updatedAt)}`;
+  updateHomeFastFacts();
 }
 function scheduleMarketOverviewPoll(){
   clearTimeout(marketOverviewPollTimer);
@@ -1868,11 +1942,13 @@ function valuationDetailsHtml(x){
   const value=n=>Number.isFinite(n)?fmt(n):"不適用";
   const proxy=v.isProxy?`估值代理：${v.primaryProxy}`:"官方估值";
   const score=Number.isFinite(v.score)?v.score:"尚未納入正式分數";
-  return `<section class="detailSection valuationBlock"><h4>${esc(proxy)}</h4><p><b>Benchmark：</b>${esc(v.benchmark||"—")}</p><div class="valuationGrid"><div><span>Current P/E</span><b>${value(v.currentPe)}</b></div><div><span>Forward P/E</span><b>${value(v.forwardPe)}</b></div><div><span>P/E 歷史百分位</span><b>${Number.isFinite(v.pePercentile)?fmt(v.pePercentile)+"%":"樣本建立中"}</b></div><div><span>獲利成長</span><b>${Number.isFinite(v.earningsGrowth)?signed(v.earningsGrowth):"不適用"}</b></div><div><span>PEG</span><b>${value(v.peg)}</b></div><div><span>估值吸引力</span><b>${score}</b></div></div><p>${esc(v.proxyNote||"")}</p><small>${esc(valuationHistoryLabel(v))}｜來源：${esc(v.sourceName||"—")}｜資料日：${esc(v.sourceDate||"—")}</small>${v.sourceUrl?`<a class="sourceLink" href="${esc(v.sourceUrl)}" target="_blank" rel="noopener">查看官方資料來源</a>`:""}</section>`;
+  const level=Number.isFinite(v.pePercentile)?(v.pePercentile<=30?"估值偏便宜":v.pePercentile>=70?"估值偏貴":"估值合理"):Number.isFinite(v.score)?(v.score>=67?"估值偏便宜":v.score<=35?"估值偏貴":"估值合理"):"估值樣本建立中";
+  return `<section class="detailSection valuationBlock"><h4>${esc(proxy)}｜${esc(level)}</h4><p><b>Benchmark：</b>${esc(v.benchmark||"—")}</p><div class="valuationGrid"><div><span>Current P/E</span><b>${value(v.currentPe)}</b></div><div><span>Forward P/E</span><b>${value(v.forwardPe)}</b></div><div><span>P/E 歷史百分位</span><b>${Number.isFinite(v.pePercentile)?fmt(v.pePercentile)+"%":"樣本建立中"}</b></div><div><span>Forward EPS／獲利成長</span><b>${Number.isFinite(v.earningsGrowth)?signed(v.earningsGrowth):"不適用"}</b></div><div><span>PEG</span><b>${value(v.peg)}</b></div><div><span>估值吸引力</span><b>${score}｜${esc(level)}</b></div></div><p>${esc(v.proxyNote||"")}</p><small>${esc(valuationHistoryLabel(v))}｜來源：${esc(v.sourceName||"—")}｜資料日：${esc(v.sourceDate||"—")}｜${v.isProxy?"代理估值":"非代理或官方資料"}</small>${v.sourceUrl?`<a class="sourceLink" href="${esc(v.sourceUrl)}" target="_blank" rel="noopener">查看官方資料來源</a>`:""}</section>`;
 }
 function compactOpportunityRow(x,mode){
   const d=strategyDecisionFor(x,mode),score=d?.score,stage=d?.stage;
-  return `<button class="homeOpportunityRow" type="button" data-open-etf-radar="true"><span><b>${esc(x.id)}</b> ${esc(x.name)}</span><strong>${Number.isFinite(score)?score:"—"}分｜${esc(stage?.label||"資料不足")}</strong><small>${mode==="long_term_core"?`目前回檔 ${Number.isFinite(x.fromHigh)?fmt(x.fromHigh)+"%":"—"}｜`:""}${esc(stage?.recommendation||"等待資料更新")}</small></button>`;
+  const valuation=valuationScoreLabel(x),ma=homeMovingAverageStates(x);
+  return `<button class="homeOpportunityRow" type="button" data-open-etf-radar="true"><span class="homeOpportunityTicker"><b>${esc(x.id)}</b> ${esc(x.name)} <em>$${fmt(x.price)} ${signed(x.changePct)}</em></span><strong>${Number.isFinite(score)?score:"—"}分｜${esc(stage?.label||"資料不足")}</strong><span class="homeOpportunityMetrics">${esc(ma)}｜距高 ${Number.isFinite(x.fromHigh)?fmt(x.fromHigh)+"%":"—"}</span><span class="homeOpportunityMetrics">技術 ${metricScore(x.technicalLow?.score)}｜止跌 ${metricScore(x.stopConfirmation?.score)}｜估值 ${esc(valuation)}</span><small>${esc(stage?.recommendation||"等待資料更新")}</small></button>`;
 }
 function renderTop(){
   const longIds=new Set(["0050","00830","00662","009815"]),swingIds=new Set(["00935","00631L","00733","006201"]);
@@ -1888,13 +1964,18 @@ function renderTop(){
   renderMarketOverview();
 }
 function renderCards(){
-  const radar=[...activeRadarItems()].sort((a,b)=>(displayScore(b)??-1)-(displayScore(a)??-1));
-  $("#cards").innerHTML=radar.length?radar.map(x=>{
+  const modeOrder={long_term_core:0,swing:1,user_selected:2};
+  const radar=[...activeRadarItems()].sort((a,b)=>(modeOrder[strategyModeFor(a)]??9)-(modeOrder[strategyModeFor(b)]??9)||(displayScore(b)??-1)-(displayScore(a)??-1));
+  $("#cards").innerHTML=radar.length?radar.map((x,index)=>{
     const mode=strategyModeFor(x),decision=strategyDecisionFor(x,mode),stage=decision?.stage||x.buyStage,score=displayScore(x,mode);
+    const previousMode=index?strategyModeFor(radar[index-1]):null;
+    const groupTitle=mode==="long_term_core"?"長期核心加碼":mode==="swing"?"波段進場":"使用者自訂策略";
+    const groupIntro=mode==="long_term_core"?"回檔、估值與恐慌環境主導；止跌確認調整批次。":mode==="swing"?"止跌、均線、趨勢與動能確認優先。":"依自選策略呈現決策層。";
+    const groupHead=mode!==previousMode?`<div class="radarGroupHead"><div><b>${esc(groupTitle)}</b><small>${esc(groupIntro)}</small></div><span>${radar.filter(item=>strategyModeFor(item)===mode).length} 檔</span></div>`:"";
     const next=mode==="long_term_core"?nextDrawdownSummary(x):"";
     const proxy=x.valuation?.isProxy?`${x.valuation.primaryProxy} 代理`:x.valuation?.benchmark||"估值資料建立中";
     const formal=mode==="user_selected"?x.formalScore:x.formalStrategyDecisions?.[mode]?.score;
-    return `<details class="card signalCard ${x.signal.className}" data-signal-level="${esc(x.signal.label)}"><summary class="signalCardSummary" aria-label="${esc(x.id)} ${esc(x.name)}，${esc(strategyModeLabel(mode))}，${Number.isFinite(score)?score+"分":"資料不足"}，${esc(stage?.label||"資料不足")}"><div class="signalCompactIdentity"><div class="signalTickerLine"><b>${x.id}</b><span>${esc(x.name)}</span></div><div class="signalPriceLine">$${fmt(x.price)} <small class="${x.changePct>=0?"up":"down"}">${signed(x.changePct)}</small></div><div class="modelMeta"><span>${esc(strategyModeLabel(mode))}</span></div></div><div class="signalCompactMetrics"><b class="${Number.isFinite(score)?"":"scoreUnavailable"}">${esc(strategyScoreLabel(x,mode))}</b><span>技術低檔 ${metricScore(x.technicalLow?.score)}｜估值 ${esc(valuationScoreLabel(x))}</span><span>止跌確認 ${metricScore(x.stopConfirmation?.score)}｜距高點 ${Number.isFinite(x.fromHigh)?fmt(x.fromHigh)+"%":"—"}</span>${next?`<small>${esc(next)}</small>`:""}</div><div class="signalCompactAction"><span class="signalLevel ${x.signal.className}">${esc(stage?.label||"資料不足")}</span><p>${esc(stage?.recommendation||stage?.conclusion||"等待資料更新")}</p><span class="signalExpandMark" aria-hidden="true"></span></div></summary><div class="signalCardDetails"><div class="signalDetailGrid"><div><span>綜合買點分數</span><b>${Number.isFinite(score)?score:"資料不足"}</b></div><div><span>盤後正式分數</span><b>${Number.isFinite(formal)?formal:"—"}</b></div><div><span>技術低檔程度</span><b>${metricScore(x.technicalLow?.score)}</b></div><div><span>估值吸引力</span><b>${esc(valuationScoreLabel(x))}</b></div><div><span>止跌確認度</span><b>${metricScore(x.stopConfirmation?.score)}｜${esc(x.stopConfirmation?.label||"—")}</b></div><div><span>高點回檔幅度</span><b>${Number.isFinite(x.fromHigh)?fmt(x.fromHigh)+"%":"—"}</b></div><div><span>週 K／D／J</span><b>${fmt(x.k)}／${fmt(x.d)}／${fmt(x.j)}｜${esc(x.direction)}</b></div><div><span>估值標的</span><b>${esc(proxy)}</b></div></div>${x.intradayProvisionalHigh?'<div class="modelWarning">盤中暫定新高；正式 52 週高點待收盤後確認。</div>':""}${strategyBreakdownHtml(x,mode)}${valuationDetailsHtml(x)}${legacyComparisonHtml(x)}<section class="detailSection"><h4>歷史相似訊號統計</h4>${similarStatsHtml(x.historyStats.sameEnvironment,`相同市場環境｜${x.environment}`)}${similarStatsHtml(x.historyStats.allEnvironments,"全部市場環境")}</section>${buyPlanHtml(x)}<div class="dataFreshnessGrid"><span>價格：${esc(x.quoteTime?`${x.date} ${x.quoteTime}`:`${x.date} 收盤`)}</span><span>週 KD：${esc(x.kdDataDate)}｜${esc(x.weekDataLabel)}</span><span>估值：${esc(x.valuation?.sourceDate||"資料建立中")}</span><span>歷史統計截止：${esc(x.historyCutoff)}</span></div>${isHighVolatilityType(x.strategyType)?'<section class="leverageWarning"><b>槓桿型 ETF｜高波動模型</b><p>估值僅作標的市場背景；每日重設與波動耗損可能使長期結果偏離標的倍數。</p></section>':""}<div class="signalDetailActions"><button class="miniBtn" type="button" data-detail="${x.id}">查看走勢</button><button class="miniBtn" type="button" data-compare="${x.id}">加入比較</button><button class="miniBtn" type="button" data-drawdown="${x.id}">查看回檔價位</button></div></div></details>`;
+    return `${groupHead}<details class="card signalCard ${x.signal.className}" data-signal-level="${esc(x.signal.label)}"><summary class="signalCardSummary" aria-label="${esc(x.id)} ${esc(x.name)}，${esc(strategyModeLabel(mode))}，${Number.isFinite(score)?score+"分":"資料不足"}，${esc(stage?.label||"資料不足")}"><div class="signalCompactIdentity"><div class="signalTickerLine"><b>${x.id}</b><span>${esc(x.name)}</span></div><div class="signalPriceLine">$${fmt(x.price)} <small class="${x.changePct>=0?"up":"down"}">${signed(x.changePct)}</small></div><div class="modelMeta"><span>${esc(strategyModeLabel(mode))}</span></div></div><div class="signalCompactMetrics"><b class="${Number.isFinite(score)?"":"scoreUnavailable"}">${esc(strategyScoreLabel(x,mode))}</b><span>技術 ${metricScore(x.technicalLow?.score)}｜估值 ${esc(valuationScoreLabel(x))}｜止跌 ${metricScore(x.stopConfirmation?.score)}</span><span>${esc(homeMovingAverageStates(x))}</span><span>距高點 ${Number.isFinite(x.fromHigh)?fmt(x.fromHigh)+"%":"—"}${next?`｜${esc(next)}`:""}</span></div><div class="signalCompactAction"><span class="signalLevel ${x.signal.className}">${esc(stage?.label||"資料不足")}</span><p>${esc(stage?.recommendation||stage?.conclusion||"等待資料更新")}</p><span class="signalExpandMark" aria-hidden="true"></span></div></summary><div class="signalCardDetails"><div class="signalDetailGrid"><div><span>綜合買點分數</span><b>${Number.isFinite(score)?score:"資料不足"}</b></div><div><span>盤後正式分數</span><b>${Number.isFinite(formal)?formal:"—"}</b></div><div><span>技術低檔程度</span><b>${metricScore(x.technicalLow?.score)}</b></div><div><span>估值吸引力</span><b>${esc(valuationScoreLabel(x))}</b></div><div><span>止跌確認度</span><b>${metricScore(x.stopConfirmation?.score)}｜${esc(x.stopConfirmation?.label||"—")}</b></div><div><span>高點回檔幅度</span><b>${Number.isFinite(x.fromHigh)?fmt(x.fromHigh)+"%":"—"}</b></div><div><span>均線狀態</span><b>${esc(homeMovingAverageStates(x))}</b></div><div><span>週 K／D／J</span><b>${fmt(x.k)}／${fmt(x.d)}／${fmt(x.j)}｜${esc(x.direction)}</b></div><div><span>估值標的</span><b>${esc(proxy)}</b></div></div>${x.intradayProvisionalHigh?'<div class="modelWarning">盤中暫定新高；正式 52 週高點待收盤後確認。</div>':""}${strategyBreakdownHtml(x,mode)}${valuationDetailsHtml(x)}${legacyComparisonHtml(x)}<section class="detailSection"><h4>歷史相似訊號統計</h4>${similarStatsHtml(x.historyStats.sameEnvironment,`相同市場環境｜${x.environment}`)}${similarStatsHtml(x.historyStats.allEnvironments,"全部市場環境")}</section>${buyPlanHtml(x)}<div class="dataFreshnessGrid"><span>價格：${esc(x.quoteTime?`${x.date} ${x.quoteTime}`:`${x.date} 收盤`)}</span><span>週 KD：${esc(x.kdDataDate)}｜${esc(x.weekDataLabel)}</span><span>估值：${esc(x.valuation?.sourceDate||"資料建立中")}</span><span>歷史統計截止：${esc(x.historyCutoff)}</span></div>${isHighVolatilityType(x.strategyType)?'<section class="leverageWarning"><b>槓桿型 ETF｜高波動模型</b><p>估值僅作標的市場背景；每日重設與波動耗損可能使長期結果偏離標的倍數。</p></section>':""}<div class="signalDetailActions"><button class="miniBtn" type="button" data-detail="${x.id}">查看走勢</button><button class="miniBtn" type="button" data-compare="${x.id}">加入比較</button><button class="miniBtn" type="button" data-drawdown="${x.id}">查看回檔價位</button></div></div></details>`;
   }).join(""):'<div class="watchEmpty">我的自選尚未加入 ETF。</div>';
   document.querySelectorAll("[data-detail]").forEach(btn=>btn.addEventListener("click",()=>openDetail(btn.dataset.detail)));
   document.querySelectorAll("[data-compare]").forEach(btn=>btn.addEventListener("click",()=>scrollToCompare(btn.dataset.compare)));
@@ -1904,6 +1985,20 @@ function formatYi(n){return `${fmt(n/1e8)} 億`}
 function signedYi(n){
   if(!Number.isFinite(n))return"—";
   return `${n>0?"+":""}${formatYi(n)}`;
+}
+async function loadCommodityQuotes(){
+  try{
+    const response=await fetch("commodity-quotes.json?ts="+Date.now(),{cache:"no-store"});
+    if(!response.ok)throw new Error("commodity quotes unavailable");
+    const payload=HSCommodityQuotesCore.validate(await response.json());
+    if(!payload)throw new Error("commodity quotes invalid");
+    commodityQuotes=payload;
+    renderMarketOverview();
+    return true;
+  }catch{
+    renderMarketOverview();
+    return false;
+  }
 }
 function marginDirectionText(value){
   if(!Number.isFinite(value))return"資料暫缺";
@@ -1926,7 +2021,7 @@ function marginRiskCompactHtml(risk){
   if(!risk)return'<div class="newsEmpty sentimentUnavailable">台股融資風險資料尚未更新</div>';
   const balance=risk.margin_balance,ratio=risk.maintenance_ratio,interpretation=risk.interpretation||{};
   const stale=risk.stale?'<span class="marginStale">資料可能過期</span>':"";
-  return `<div class="marginRiskGrid"><div class="marginMetricCard"><span>🏦 融資餘額</span><b>${formatYi(balance.value)}</b><small>單日 ${signedYi(balance.daily_change)}｜20日 ${signedYi(balance.change_20d)}（${marginDirectionText(balance.change_20d)}）</small><em>60日位置 ${percentilePosition(balance.percentile_60d)}${Number.isFinite(balance.percentile_60d)?` ${fmt(balance.percentile_60d)}%`:""}</em></div><div class="marginMetricCard"><span>🛡️ 融資維持率</span><b>${ratioText(ratio.value)}</b><small>單日 ${ratioChangeText(ratio.daily_change)}｜20日均值 ${Number.isFinite(ratio.average_20d)?fmt(ratio.average_20d)+"%":"—"}</small><em>60日位置 ${percentilePosition(ratio.percentile_60d)}${Number.isFinite(ratio.percentile_60d)?` ${fmt(ratio.percentile_60d)}%`:""}</em></div></div><div class="marginRiskVerdict ${marginRiskTone(risk)}"><b>${esc(interpretation.label||risk.risk_state||"資料不完整")}</b><span>${esc(interpretation.summary||risk.summary||"暫無判斷")}</span>${stale}</div><p class="dataSourceNote">使用最近交易日盤後資料｜資料日期 ${esc(risk.data_date)}｜最後更新 ${esc(formatTaipeiDateTime(risk.updated_at))}</p>`;
+  return `<div class="marginRiskGrid"><div class="marginMetricCard"><span>融資餘額</span><b>${formatYi(balance.value)}</b><small>單日 ${signedYi(balance.daily_change)}｜20日 ${signedYi(balance.change_20d)}（${marginDirectionText(balance.change_20d)}）</small><em>60日位置 ${percentilePosition(balance.percentile_60d)}${Number.isFinite(balance.percentile_60d)?` ${fmt(balance.percentile_60d)}%`:""}</em></div><div class="marginMetricCard"><span>融資維持率</span><b>${ratioText(ratio.value)}</b><small>單日 ${ratioChangeText(ratio.daily_change)}｜20日均值 ${Number.isFinite(ratio.average_20d)?fmt(ratio.average_20d)+"%":"—"}</small><em>60日位置 ${percentilePosition(ratio.percentile_60d)}${Number.isFinite(ratio.percentile_60d)?` ${fmt(ratio.percentile_60d)}%`:""}</em></div></div><div class="marginRiskVerdict ${marginRiskTone(risk)}"><b>${esc(interpretation.label||risk.risk_state||"資料不完整")}</b><span>${esc(interpretation.summary||risk.summary||"暫無判斷")}</span>${stale}</div><p class="dataSourceNote">使用最近交易日盤後資料｜資料日期 ${esc(risk.data_date)}｜最後更新 ${esc(formatTaipeiDateTime(risk.updated_at))}</p>`;
 }
 function flowHtml(label,x){
   const cls=x.today>=0?"up":"down",sign=x.today>=0?"+":"";
@@ -1960,6 +2055,7 @@ function renderSentiment(){
     $("#institutionContent").innerHTML=`<p class="dataSourceNote">今日盤後更新｜盤中沿用最近交易日資料｜資料日期 ${esc(inst.date)}</p><div class="flowGrid">${flowHtml("外資",inst.foreign)}${flowHtml("投信",inst.trust)}${flowHtml("自營商",inst.dealer)}</div><p class="interpretation">三大法人今日合計${total>=0?"買超":"賣超"} ${formatYi(Math.abs(total))}；資料日期 ${inst.date}。</p>`;
   }else $("#institutionContent").innerHTML='<div class="newsEmpty">尚未取得三大法人資料。資料通常約收盤後更新。</div>';
   renderChipOverview();
+  updateHomeFastFacts();
 }
 function renderChipOverview(){
   const target=$("#chipOverviewContent");if(!target)return;
@@ -1967,11 +2063,11 @@ function renderChipOverview(){
   const total=inst?inst.foreign.today+inst.trust.today+inst.dealer.today:null;
   const card=(tab,title,value,status)=>`<button class="chipOverviewCard" type="button" data-chip-jump="${tab}" aria-label="查看${esc(title)}詳細資料"><span>${esc(title)}</span><b>${esc(value)}</b><small>${esc(status)}</small></button>`;
   const risk=marketChip.marginRisk,ratio=risk?.maintenance_ratio;
-  target.innerHTML=`<div class="chipOverviewGrid">${card("mood","CNN Fear & Greed",cnn?`${fmt(cnn.score)} 分`:"資料暫缺",cnn?.label||"不以 0 代替")}${card("mood","台股融資風險",risk?formatYi(risk.margin_balance.value):"資料尚未更新",risk?`${risk.interpretation?.label||risk.risk_state}｜維持率 ${ratioText(ratio?.value)}｜${risk.data_date}`:"不以 0 代替")}${card("institutions","三大法人合計",Number.isFinite(total)?`${total>=0?"+":""}${formatYi(total)}`:"資料暫缺",inst?`資料日期 ${inst.date}`:"今日盤後更新")}${card("futures","外資台指期淨部位",foreign?`${foreign.net>=0?"+":""}${fmt(foreign.net)} 口`:"資料暫缺",futuresPosition?`資料日期 ${futuresPosition.dataDate}`:"盤後更新")}</div><p class="chipOverviewConclusion">${esc(combinedSentimentConclusion())}</p>`;
+  target.innerHTML=`<div class="chipOverviewGrid">${card("mood","CNN Fear & Greed",cnn?`${fmt(cnn.score)} 分`:"資料暫缺",cnn?.label||"不以 0 代替")}${card("margin","台股融資風險",risk?formatYi(risk.margin_balance.value):"資料尚未更新",risk?`${risk.interpretation?.label||risk.risk_state}｜維持率 ${ratioText(ratio?.value)}｜${risk.data_date}`:"不以 0 代替")}${card("institutions","三大法人合計",Number.isFinite(total)?`${total>=0?"+":""}${formatYi(total)}`:"資料暫缺",inst?`資料日期 ${inst.date}`:"今日盤後更新")}${card("futures","外資台指期淨部位",foreign?`${foreign.net>=0?"+":""}${fmt(foreign.net)} 口`:"資料暫缺",futuresPosition?`資料日期 ${futuresPosition.dataDate}`:"盤後更新")}</div><p class="chipOverviewConclusion">${esc(combinedSentimentConclusion())}</p>`;
   document.querySelectorAll("[data-chip-jump]").forEach(button=>button.addEventListener("click",()=>switchChipTab(button.dataset.chipJump)));
 }
 function switchChipTab(name,{scroll=true}={}){
-  const allowed=["overview","mood","institutions","futures","events"],active=allowed.includes(name)?name:"overview";
+  const allowed=["overview","mood","margin","institutions","futures","events"],active=allowed.includes(name)?name:"overview";
   document.querySelectorAll("[data-chip-panel]").forEach(panel=>{panel.hidden=panel.dataset.chipPanel!==active});
   document.querySelectorAll("[data-chip-tab]").forEach(button=>{
     const selected=button.dataset.chipTab===active;button.classList.toggle("active",selected);button.setAttribute("aria-selected",String(selected));
@@ -2006,18 +2102,27 @@ function dayDiff(date){
 function nearestEventDays(){
   const x=allMarketEvents().filter(e=>e.status==="scheduled").map(e=>dayDiff(e.date)).filter(d=>d>=0).sort((a,b)=>a-b);return x.length?x[0]:999;
 }
+function eventMarketSummary(event){
+  if(!event?.resultConfirmed)return"";
+  if(event.type==="FOMC")return"中性摘要：利率決策會影響殖利率與股票估值，但單次結果不能用來確定預測市場方向。";
+  if(["CPI","PCE"].includes(event.type))return"中性摘要：通膨數據需和預期、核心項目及後續利率路徑一起解讀，單一數值不是買賣訊號。";
+  if(event.type==="GDP")return"中性摘要：景氣結果可能同時影響企業獲利與利率預期，對股市的淨影響仍需觀察。";
+  if(event.type==="TARIFF")return"中性摘要：關稅可能增加供應鏈成本與政策不確定性，實際影響取決於適用範圍、豁免與企業調整。";
+  return"中性摘要：事件結果已由官方來源確認，市場影響仍需配合價格、趨勢與後續資料觀察。";
+}
 function eventResultHtml(event){
   if(!event.resultConfirmed)return'<span class="eventResult">結果待確認</span>';
+  const marketSummary=`<br><small>${esc(event.market_summary||eventMarketSummary(event))}</small>`;
   if(event.type==="FOMC"){
     const decision=HSMarketEventsCore.decisionLabel(event.decision_change_bps);
-    return `<span class="eventResult">結果：${esc(event.result_summary)}${decision?`<br>${esc(decision)}`:""}${event.target_range?`<br>目標區間：${esc(event.target_range)}`:""}</span>`;
+    return `<span class="eventResult">結果：${esc(event.result_summary)}${decision?`<br>${esc(decision)}`:""}${event.target_range?`<br>目標區間：${esc(event.target_range)}`:""}${marketSummary}</span>`;
   }
   if(["CPI","PCE","GDP","NFP","UNEMPLOYMENT","PCE_GDP"].includes(event.type)){
     const comparison=HSMarketEventsCore.comparisonLabel(event);
-    return `<span class="eventResult">結果：${esc(event.result_summary)}${event.actual!==""?`<br>實際 ${esc(event.actual)}${esc(event.unit||"")}｜前值 ${event.previous!==""?esc(event.previous)+esc(event.unit||""):"—"}${event.expected!==""?`｜預期 ${esc(event.expected)}${esc(event.unit||"")}`:""}`:""}${comparison?`<br>${esc(comparison)}`:""}</span>`;
+    return `<span class="eventResult">結果：${esc(event.result_summary)}${event.actual!==""?`<br>實際 ${esc(event.actual)}${esc(event.unit||"")}｜前值 ${event.previous!==""?esc(event.previous)+esc(event.unit||""):"—"}${event.expected!==""?`｜預期 ${esc(event.expected)}${esc(event.unit||"")}`:""}`:""}${comparison?`<br>${esc(comparison)}`:""}${marketSummary}</span>`;
   }
-  if(event.type==="TARIFF")return`<span class="eventResult">結果：${esc(event.result_summary)}${event.tariff_rate?`<br>稅率：${esc(event.tariff_rate)}`:""}${event.affected_scope?`<br>對象：${esc(event.affected_scope)}`:""}${event.effective_date?`<br>生效日：${esc(event.effective_date)}`:""}</span>`;
-  return`<span class="eventResult">結果：${esc(event.result_summary)}</span>`;
+  if(event.type==="TARIFF")return`<span class="eventResult">結果：${esc(event.result_summary)}${event.tariff_rate?`<br>稅率：${esc(event.tariff_rate)}`:""}${event.affected_scope?`<br>對象：${esc(event.affected_scope)}`:""}${event.effective_date?`<br>生效日：${esc(event.effective_date)}`:""}${marketSummary}</span>`;
+  return`<span class="eventResult">結果：${esc(event.result_summary)}${marketSummary}</span>`;
 }
 function eventItemHtml(event){
   const d=dayDiff(event.date),when=event.status==="cancelled"?"已取消":event.resultConfirmed?"官方結果":d===0?"今天":d===1?"明天":d>1?`${d} 天後`:"結果待確認";
@@ -2268,12 +2373,12 @@ async function openDrawdownTool(code){
 }
 function switchTab(name,{scroll=true}={}){
   document.querySelectorAll("[data-tab-section]").forEach(el=>el.classList.toggle("tabHidden",el.dataset.tabSection!==name));
-  document.querySelectorAll(".topTab").forEach(btn=>btn.classList.toggle("active",btn.dataset.tab===name));
+  document.querySelectorAll(".appNavButton").forEach(btn=>{const active=btn.dataset.tab===name;btn.classList.toggle("active",active);btn.setAttribute("aria-current",active?"page":"false")});
   document.querySelectorAll("[data-tab-intro]").forEach(el=>el.classList.toggle("active",el.dataset.tabIntro===name));
   sessionStorage.setItem("hs_active_tab",name);
   if(scroll)document.querySelector(".topTabs")?.scrollIntoView({behavior:"smooth",block:"start"});
 }
-document.querySelectorAll(".topTab").forEach(btn=>btn.addEventListener("click",()=>switchTab(btn.dataset.tab)));
+document.querySelectorAll(".appNavButton").forEach(btn=>btn.addEventListener("click",()=>switchTab(btn.dataset.tab)));
 function loadAlerts(){const a=JSON.parse(localStorage.getItem("hs_alerts")||"[20,10,0,-10]");["#alert1","#alert2","#alert3","#alert4"].forEach((s,i)=>$(s).value=a[i])}
 function getAlerts(){return["#alert1","#alert2","#alert3","#alert4"].map(s=>+$(s).value)}
 function maybeNotify(){
@@ -2342,9 +2447,10 @@ document.addEventListener("visibilitychange",()=>{
   }else{
     refreshCnnFearGreed({force:true});
     loadMarketOverview({force:true});
+    loadCommodityQuotes();
   }
 });
-loadAlerts();renderWatchlist();renderEvents();renderTrump();renderMarketOverview();switchChipTab(localStorage.getItem("hs_chip_tab_v1")||"overview",{scroll:false});switchTab(sessionStorage.getItem("hs_active_tab")||"today",{scroll:false});scheduleCnnPoll();loadMarketOverview();ensureStockCatalog().finally(load);
+loadAlerts();renderWatchlist();renderEvents();renderTrump();renderMarketOverview();switchChipTab(localStorage.getItem("hs_chip_tab_v1")||"overview",{scroll:false});switchTab(sessionStorage.getItem("hs_active_tab")||"today",{scroll:false});scheduleCnnPoll();loadMarketOverview();loadCommodityQuotes();ensureStockCatalog().finally(load);
 
 </script>
 <script src="portfolio-core.js"></script>

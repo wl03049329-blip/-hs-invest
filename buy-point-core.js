@@ -239,7 +239,9 @@
     return weekly.map((week, weeklyIndex) => {
       const dailyIndex = indexByDate.get(week.date);
       const price = closes[dailyIndex];
+      const ma20 = sliceMean(closes, dailyIndex, 20);
       const ma60 = sliceMean(closes, dailyIndex, 60);
+      const ma120 = sliceMean(closes, dailyIndex, 120);
       const ma200 = sliceMean(closes, dailyIndex, 200);
       const priorMa60 = sliceMean(closes, dailyIndex - 20, 60);
       const priorMa200 = sliceMean(closes, dailyIndex - 20, 200);
@@ -263,7 +265,9 @@
         ...week,
         dailyIndex,
         price,
+        ma20,
         ma60,
+        ma120,
         ma200,
         ma60Slope,
         ma200Slope,
@@ -273,7 +277,9 @@
         return20,
         relativePosition,
         direction: week.j > week.previousJ ? "回升" : "下探",
+        above20: ma20 !== null ? price >= ma20 : false,
         above60: ma60 !== null ? price >= ma60 : false,
+        above120: ma120 !== null ? price >= ma120 : false,
         above200: ma200 !== null ? price >= ma200 : false,
         strategyType,
         stop

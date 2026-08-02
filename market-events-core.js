@@ -34,6 +34,9 @@
     event.title = String(event.title || event.name || "").replace(/[<>]/g, "").trim().slice(0, 120);
     event.type = String(event.type || "其他").replace(/[<>]/g, "").trim().slice(0, 40);
     event.risk = ["低", "中", "高", "自訂"].includes(event.risk) ? event.risk : "中";
+    for (const key of ["result_summary", "market_summary", "target_range", "tariff_rate", "affected_scope", "effective_date", "official_source_name"]) {
+      event[key] = String(event[key] || "").replace(/[<>]/g, "").trim().slice(0, key === "market_summary" ? 300 : 180);
+    }
     event.custom = Boolean(custom || event.custom);
     event.sourceConfirmed = event.custom || isOfficialUrl(event.official_source_url);
     event.resultConfirmed = CONFIRMED.has(event.status) && event.sourceConfirmed && Boolean(String(event.result_summary || "").trim());

@@ -21,7 +21,7 @@ function check(name, fn) {
 check("Version 6.2 品牌與六個頂部分頁", () => {
   assert.match(html, /HS \| ETF股市雷達/);
   assert.match(html, /VERSION 6\.2/);
-  assert.match(html, />ETF雷達<\/button>/);
+  assert.match(html, /data-tab="signals"[^>]*>[\s\S]*?<span>ETF雷達<\/span><\/button>/);
   for (const tab of ["today", "signals", "portfolio", "sentiment", "trump", "more"]) {
     assert.match(html, new RegExp(`data-tab="${tab}"`));
   }
