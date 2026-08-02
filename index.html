@@ -114,7 +114,8 @@ a{color:inherit}
 .fomoBar{margin-top:13px}.interpretation{line-height:1.55;font-weight:800;margin:12px 0}
 .miniStats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.miniStats div{background:#07130e;border:1px solid #193425;border-radius:12px;padding:9px}.miniStats span{display:block;color:var(--muted);font-size:10px;margin-bottom:4px}.miniStats b{font-size:14px}
 .sentimentDetails{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}.sentimentDetails summary{cursor:pointer;color:#cdebd8;font-size:12px;font-weight:900;list-style:none}.sentimentDetails summary::-webkit-details-marker{display:none}.sentimentDetails summary::after{content:"＋";float:right}.sentimentDetails[open] summary::after{content:"－"}.sentimentDetailsBody{padding-top:11px}.detailMeta{display:flex;justify-content:space-between;gap:10px;align-items:flex-end;margin-bottom:9px}.detailMeta b{font-size:17px}.detailMeta small{color:var(--muted);text-align:right}.sourceLink{display:inline-flex;margin-top:8px;color:#a9e8c0;font-size:12px;font-weight:850}.sentimentUnavailable{min-height:110px;display:grid;place-items:center;text-align:center}
-.flowGrid{display:grid;gap:8px;margin-top:12px}.flowCard{background:#07130e;border:1px solid #193425;border-radius:13px;padding:10px}.flowCard>span{display:block;color:var(--muted);font-size:11px}.flowValue{display:block;font-size:18px;margin:4px 0}.flowCard small{font-size:11px}
+.flowGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:12px}.flowCard{background:#0b0d12;border:1px solid #252a35;border-radius:13px;padding:10px;min-width:0}.flowCard>span{display:block;color:var(--muted);font-size:11px}.flowValue{display:block;font-size:18px;margin:4px 0}.flowCard small{display:block;font-size:11px;line-height:1.45}.headingEmoji{display:inline-grid;place-items:center;width:1.35em;margin-right:.3em;font-size:.92em;filter:saturate(.8);vertical-align:-.05em}.marginCoverage{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.marginCoverage span{border:1px solid #303644;background:#10131a;border-radius:999px;padding:4px 7px;font-size:10px;color:var(--muted)}
+@media(max-width:620px){.flowGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.flowValue{font-size:16px}.headingEmoji{width:1.1em;margin-right:.22em}}
 .eventList{display:grid;gap:8px;margin-top:12px}.eventItem{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:center;background:#07130e;border:1px solid #193425;border-radius:13px;padding:9px}.eventDateBadge{min-width:62px;text-align:center;border-right:1px solid var(--line);padding-right:9px}.eventDateBadge b{display:block}.eventDateBadge small{display:block;margin-top:3px}.eventMeta b{display:block;font-size:13px}.eventMeta small{display:block;margin-top:4px}
 .rankAction{font-size:11px;font-weight:900;color:#dffff0;margin-top:5px}.rankScore{font-size:24px;font-weight:950}.rankScore small{font-size:10px;margin-left:2px}.rankSignal{color:var(--muted)}
 .actionLine{font-size:12px;font-weight:900;color:#dffff0;margin-top:7px}.scoreBlock{min-width:130px}.scoreHeadline{display:flex;align-items:end;justify-content:space-between;gap:8px;margin-bottom:6px}.scoreHeadline b{font-size:24px}.scoreHeadline span{font-size:10px;color:var(--muted)}
@@ -346,7 +347,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 
   <section id="homeMarketOverview" class="panel homeMarketOverview" data-tab-section="today" aria-labelledby="homeMarketOverviewTitle">
     <div class="panelTitle compactTitle">
-      <div><p class="eyebrow">TAIWAN &amp; GLOBAL MARKET</p><h2 id="homeMarketOverviewTitle"><svg class="titleIcon" aria-hidden="true"><use href="#i-market"/></svg>市場脈動</h2></div>
+      <div><p class="eyebrow">TAIWAN &amp; GLOBAL MARKET</p><h2 id="homeMarketOverviewTitle"><span class="headingEmoji" aria-hidden="true">📊</span>市場脈動</h2></div>
       <small id="marketOverviewFreshness">資料載入中</small>
     </div>
     <p class="marketOverviewLabel">盤中延遲行情｜約每 5 分鐘更新｜僅供參考</p>
@@ -361,7 +362,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       <span>CNN：載入中</span><span>融資：載入中</span><span>維持率：載入中</span><span>買點：載入中</span>
     </div>
     <div class="todayBuyDecision">
-      <div><svg class="titleIcon" aria-hidden="true"><use href="#i-radar"/></svg><b>今天怎麼買</b></div>
+      <div><span class="headingEmoji" aria-hidden="true">📡</span><b>今天怎麼買</b></div>
       <p id="todayBuyDecisionText">整合市場、籌碼、估值與均線資料中…</p>
     </div>
     <div id="homeQuoteStatus" class="homeQuoteStatus" role="status" aria-live="polite">
@@ -371,7 +372,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 
   <button id="homeEtfBrief" class="panel homeEtfBrief" data-tab-section="today" type="button" aria-label="前往 ETF雷達查看完整買點">
     <div class="panelTitle compactTitle">
-      <div><p class="eyebrow">ETF ENTRY RADAR</p><h2><svg class="titleIcon" aria-hidden="true"><use href="#i-radar"/></svg>精選ETF買點</h2></div>
+      <div><p class="eyebrow">ETF ENTRY RADAR</p><h2><span class="headingEmoji" aria-hidden="true">🎯</span>精選ETF買點</h2></div>
       <small id="updatedTop">週 KD 依最近完成資料或目前週線試算</small>
     </div>
     <div id="homeEtfBriefSummary" class="homeEtfBriefSummary">買點資料載入中…</div>
@@ -380,7 +381,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 
   <section id="homeSentiment" class="panel homeSentiment" data-tab-section="today" aria-labelledby="homeSentimentTitle">
     <div class="panelTitle compactTitle">
-      <div><p class="eyebrow">MARKET SENTIMENT</p><h2 id="homeSentimentTitle"><svg class="titleIcon" aria-hidden="true"><use href="#i-sentiment"/></svg>市場情緒快覽</h2></div>
+      <div><p class="eyebrow">MARKET SENTIMENT</p><h2 id="homeSentimentTitle"><span class="headingEmoji" aria-hidden="true">😨</span>市場情緒快覽</h2></div>
       <small>點卡片看完整籌碼</small>
     </div>
     <div class="homeSentimentCards">
@@ -397,7 +398,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
   <section class="dashboard" data-tab-section="today">
     <article class="panel marketPanel">
       <div class="panelTitle">
-        <div><p class="eyebrow">TODAY'S MARKET</p><h2><svg class="titleIcon" aria-hidden="true"><use href="#i-summary"/></svg>今天市場摘要</h2></div>
+        <div><p class="eyebrow">TODAY'S MARKET</p><h2><span class="headingEmoji" aria-hidden="true">🧠</span>今天市場摘要</h2></div>
         <small id="marketDate">—</small>
       </div>
       <div id="marketPulse"><div class="skeleton">載入市場摘要中…</div></div>
@@ -419,7 +420,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 
   <section id="portfolio" class="section portfolioPage tabHidden" data-tab-section="portfolio" aria-labelledby="portfolioTitle">
     <div class="portfolioTopline">
-      <div><p class="eyebrow">MY PORTFOLIO</p><h2 id="portfolioTitle">我的持股</h2></div>
+      <div><p class="eyebrow">MY PORTFOLIO</p><h2 id="portfolioTitle"><span class="headingEmoji" aria-hidden="true">💼</span>我的持股</h2></div>
       <button id="portfolioAddBtn" class="btn" type="button" aria-label="新增持股">＋ 新增持股</button>
     </div>
     <div class="portfolioPrivacy" role="note">
@@ -443,7 +444,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 
     <article class="panel allocationPanel">
       <div class="panelTitle compactTitle">
-        <div><p class="eyebrow">ALLOCATION</p><h2>資產配置</h2></div>
+        <div><p class="eyebrow">ALLOCATION</p><h2><span class="headingEmoji" aria-hidden="true">🥧</span>資產配置</h2></div>
         <small>依目前市值</small>
       </div>
       <div class="allocationLayout">
@@ -487,11 +488,11 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
   <section id="sentiment" class="chipPage tabHidden" data-tab-section="sentiment" aria-labelledby="chipPageTitle">
     <div id="chipPageTop" class="chipSegments" role="tablist" aria-label="籌碼內容分頁">
       <button class="chipSegment active" type="button" role="tab" aria-selected="true" data-chip-tab="overview">總覽</button>
-      <button class="chipSegment" type="button" role="tab" aria-selected="false" data-chip-tab="mood">市場情緒</button>
-      <button class="chipSegment" type="button" role="tab" aria-selected="false" data-chip-tab="margin">融資風險</button>
-      <button class="chipSegment" type="button" role="tab" aria-selected="false" data-chip-tab="institutions">三大法人</button>
-      <button class="chipSegment" type="button" role="tab" aria-selected="false" data-chip-tab="futures">期貨籌碼</button>
-      <button class="chipSegment" type="button" role="tab" aria-selected="false" data-chip-tab="events">重大事件</button>
+      <button class="chipSegment" type="button" role="tab" aria-selected="false" data-chip-tab="mood">😨 市場情緒</button>
+      <button class="chipSegment" type="button" role="tab" aria-selected="false" data-chip-tab="margin">🏦 融資風險</button>
+      <button class="chipSegment" type="button" role="tab" aria-selected="false" data-chip-tab="institutions">🏛️ 三大法人</button>
+      <button class="chipSegment" type="button" role="tab" aria-selected="false" data-chip-tab="futures">📑 期貨籌碼</button>
+      <button class="chipSegment" type="button" role="tab" aria-selected="false" data-chip-tab="events">📅 重大事件</button>
     </div>
     <div class="chipPanel" data-chip-panel="overview">
       <article class="panel chipWide">
@@ -511,13 +512,13 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
     </div>
     <div class="chipPanel" data-chip-panel="margin" hidden>
       <article class="panel chipWide">
-        <div class="panelTitle"><div><p class="eyebrow">MARGIN RISK</p><h2><svg class="titleIcon" aria-hidden="true"><use href="#i-fund"/></svg>融資餘額與維持率</h2></div><small>最近交易日盤後資料</small></div>
+        <div class="panelTitle"><div><p class="eyebrow">MARGIN RISK</p><h2><span class="headingEmoji" aria-hidden="true">🛡️</span>市場推估融資維持率</h2></div><small>最近交易日盤後資料</small></div>
         <div id="fomoContent"><div class="skeleton">載入融資資料中…</div></div>
       </article>
     </div>
     <div class="chipPanel" data-chip-panel="institutions" hidden>
     <article class="panel chipWide">
-      <div class="panelTitle"><div><p class="eyebrow">SMART MONEY</p><h2>三大法人</h2></div><small>今日盤後更新</small></div>
+      <div class="panelTitle"><div><p class="eyebrow">SMART MONEY</p><h2><span class="headingEmoji" aria-hidden="true">🏛️</span>三大法人</h2></div><small>今日盤後更新</small></div>
       <div id="institutionContent"><div class="skeleton">載入法人資料中…</div></div>
     </article>
     </div>
@@ -738,6 +739,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 <script src="strategy-mode-core.js"></script>
 <script src="drawdown-price-core.js"></script>
 <script src="margin-risk-core.js"></script>
+<script src="institutional-flow-core.js"></script>
 <script src="market-events-core.js"></script>
 <script>
 const DEFAULT_WATCHLIST=[
@@ -1436,21 +1438,7 @@ function marginFomo(rows){
   return{date:latest.date,balance:today,daily,change5,change20,percentile:rank,score,label,pattern,summary};
 }
 function institutionalFlow(rows){
-  if(!rows.length)return null;
-  const dates=[...new Set(rows.map(x=>x.date))].sort();
-  const latestDate=dates.at(-1),last5=dates.slice(-5);
-  const cat={
-    foreign:["Foreign_Investor","Foreign_Dealer_Self"],
-    trust:["Investment_Trust"],
-    dealer:["Dealer","Dealer_self","Dealer_Hedging"]
-  };
-  const net=(dateSet,names)=>sum(rows.filter(x=>dateSet.includes(x.date)&&names.includes(x.name)).map(x=>+x.buy-+x.sell));
-  return{
-    date:latestDate,
-    foreign:{today:net([latestDate],cat.foreign),five:net(last5,cat.foreign)},
-    trust:{today:net([latestDate],cat.trust),five:net(last5,cat.trust)},
-    dealer:{today:net([latestDate],cat.dealer),five:net(last5,cat.dealer)}
-  };
+  return HSInstitutionalFlowCore.build(rows);
 }
 async function loadChipData(){
   const start=dateBefore(90),end=taipeiToday();
@@ -1473,6 +1461,7 @@ async function loadMarginRisk(){
       balanceDailyChange:payload.margin_balance.daily_change,
       balanceChange20d:payload.margin_balance.change_20d,
       balancePercentile60d:payload.margin_balance.percentile_60d,
+      maintenanceValue:payload.maintenance_ratio.value,
       maintenanceDailyChange:payload.maintenance_ratio.daily_change,
       maintenancePercentile60d:payload.maintenance_ratio.percentile_60d,
       marketAcuteDrop:Number.isFinite(tw)&&tw<=-2,
@@ -1578,7 +1567,7 @@ function updateHomeFastFacts(){
   const risk=marketChip.marginRisk,balance=risk?.margin_balance,ratio=risk?.maintenance_ratio;
   const featured=[...all].filter(x=>DEFAULT_WATCHLIST.some(item=>item.id===x.id)).sort((a,b)=>(displayScore(b,strategyModeFor(b,"featured"))??-1)-(displayScore(a,strategyModeFor(a,"featured"))??-1));
   const best=featured[0],bestMode=best?strategyModeFor(best,"featured"):null;
-  target.innerHTML=`<span><b>CNN</b>${cnnFearGreed?`${fmt(cnnFearGreed.score)}｜${esc(cnnFearGreed.label)}`:"資料暫缺"}</span><span><b>融資餘額</b>${Number.isFinite(balance?.value)?formatYi(balance.value):"資料暫缺"}</span><span><b>融資維持率</b>${Number.isFinite(ratio?.value)?`${fmt(ratio.value)}%｜${percentilePosition(ratio.percentile_60d)}`:"資料暫無可靠來源"}</span><span><b>精選買點</b>${best?`${esc(best.id)}｜${displayScore(best,bestMode)}分`:"載入中"}</span>`;
+  target.innerHTML=`<span><b>CNN</b>${cnnFearGreed?`${fmt(cnnFearGreed.score)}｜${esc(cnnFearGreed.label)}`:"資料暫缺"}</span><span><b>🏦 融資餘額</b>${Number.isFinite(balance?.value)?formatYi(balance.value):"資料暫缺"}</span><span><b>🛡️ 市場推估融資維持率</b>${Number.isFinite(ratio?.value)?`${fmt(ratio.value)}%｜${esc(HSMarginRiskCore.ratioBand(ratio.value).label)}`:"資料暫無可靠來源"}</span><span><b>精選買點</b>${best?`${esc(best.id)}｜${displayScore(best,bestMode)}分`:"載入中"}</span>`;
   $("#todayBuyDecisionText").textContent=todayBuyDecisionText();
 }
 function todayBuyDecisionText(){
@@ -2021,11 +2010,15 @@ function marginRiskCompactHtml(risk){
   if(!risk)return'<div class="newsEmpty sentimentUnavailable">台股融資風險資料尚未更新</div>';
   const balance=risk.margin_balance,ratio=risk.maintenance_ratio,interpretation=risk.interpretation||{};
   const stale=risk.stale?'<span class="marginStale">資料可能過期</span>':"";
-  return `<div class="marginRiskGrid"><div class="marginMetricCard"><span>融資餘額</span><b>${formatYi(balance.value)}</b><small>單日 ${signedYi(balance.daily_change)}｜20日 ${signedYi(balance.change_20d)}（${marginDirectionText(balance.change_20d)}）</small><em>60日位置 ${percentilePosition(balance.percentile_60d)}${Number.isFinite(balance.percentile_60d)?` ${fmt(balance.percentile_60d)}%`:""}</em></div><div class="marginMetricCard"><span>融資維持率</span><b>${ratioText(ratio.value)}</b><small>單日 ${ratioChangeText(ratio.daily_change)}｜20日均值 ${Number.isFinite(ratio.average_20d)?fmt(ratio.average_20d)+"%":"—"}</small><em>60日位置 ${percentilePosition(ratio.percentile_60d)}${Number.isFinite(ratio.percentile_60d)?` ${fmt(ratio.percentile_60d)}%`:""}</em></div></div><div class="marginRiskVerdict ${marginRiskTone(risk)}"><b>${esc(interpretation.label||risk.risk_state||"資料不完整")}</b><span>${esc(interpretation.summary||risk.summary||"暫無判斷")}</span>${stale}</div><p class="dataSourceNote">使用最近交易日盤後資料｜資料日期 ${esc(risk.data_date)}｜最後更新 ${esc(formatTaipeiDateTime(risk.updated_at))}</p>`;
+  const band=HSMarginRiskCore.ratioBand(ratio.value),effectiveDate=ratio.effective_data_date||risk.data_date;
+  const estimateMeta=Number.isFinite(ratio.value)
+    ?`<div class="marginCoverage"><span>擔保品估值 ${Number.isFinite(ratio.collateral_market_value)?formatYi(ratio.collateral_market_value):"—"}</span><span>融資金額 ${Number.isFinite(ratio.financing_amount)?formatYi(ratio.financing_amount):"—"}</span><span>股數覆蓋 ${Number.isFinite(ratio.coverage_ratio)?fmt(ratio.coverage_ratio)+"%":"—"}</span><span>配對 ${fmt(ratio.matched_security_count||0)} 檔／缺 ${fmt(ratio.missing_security_count||0)} 檔</span><span>沿用近期收盤 ${fmt(ratio.suspended_price_count||0)} 檔</span></div>`:"";
+  return `<div class="marginRiskGrid"><div class="marginMetricCard"><span>🏦 融資餘額</span><b>${formatYi(balance.value)}</b><small>單日 ${signedYi(balance.daily_change)}｜20日 ${signedYi(balance.change_20d)}（${marginDirectionText(balance.change_20d)}）</small><em>60日位置 ${percentilePosition(balance.percentile_60d)}${Number.isFinite(balance.percentile_60d)?` ${fmt(balance.percentile_60d)}%`:""}</em></div><div class="marginMetricCard"><span>🛡️ 市場推估融資維持率</span><b>${ratioText(ratio.value)}</b><small>${esc(band.label)}｜單日 ${ratioChangeText(ratio.daily_change)}｜20日均值 ${Number.isFinite(ratio.average_20d)?fmt(ratio.average_20d)+"%":"樣本建立中"}</small><em>60日位置 ${Number.isFinite(ratio.percentile_60d)?`${percentilePosition(ratio.percentile_60d)} ${fmt(ratio.percentile_60d)}%`:"樣本建立中"}</em>${estimateMeta}</div></div><div class="marginRiskVerdict ${marginRiskTone(risk)}"><b>${esc(interpretation.label||risk.risk_state||"資料不完整")}</b><span>${esc(interpretation.summary||risk.summary||"暫無判斷")}</span>${stale}</div><p class="dataSourceNote">使用最近交易日盤後資料｜資料日期 ${esc(risk.data_date)}｜推估比率日期 ${esc(effectiveDate)}｜最後更新 ${esc(formatTaipeiDateTime(risk.updated_at))}</p>`;
 }
-function flowHtml(label,x){
-  const cls=x.today>=0?"up":"down",sign=x.today>=0?"+":"";
-  return `<div class="flowCard"><span>${label}</span><b class="flowValue ${cls}">${sign}${formatYi(x.today)}</b><small>近 5 日 ${x.five>=0?"+":""}${formatYi(x.five)}</small></div>`;
+function flowTone(value){return !Number.isFinite(value)||Math.abs(value)<1e6?"moodFlat":value>0?"up":"down"}
+function flowPeriod(value){return Number.isFinite(value)?`${value>0?"+":""}${formatYi(value)}｜${value>0?"買超":value<0?"賣超":"近乎持平"}`:"資料暫缺"}
+function flowHtml(label,x,periods){
+  return `<div class="flowCard"><span>${label}</span><b class="flowValue ${flowTone(x.today)}">${flowPeriod(x.today)}</b><small>近 ${periods.five} 日 ${flowPeriod(x.five)}</small><small>近 ${periods.twenty} 日 ${flowPeriod(x.twenty)}</small></div>`;
 }
 function combinedSentimentConclusion(){
   const margin=marketChip.margin,cnn=cnnFearGreed,risk=marketChip.marginRisk,ratio=risk?.maintenance_ratio;
@@ -2044,15 +2037,16 @@ function combinedSentimentConclusion(){
 }
 function renderSentiment(){
   const margin=marketChip.margin,risk=marketChip.marginRisk;
+  const missingRows=risk?.source_status?.estimate?.missing_securities;
+  const missingDetail=Array.isArray(missingRows)&&missingRows.length?`<p class="footnote">未配對證券：${missingRows.map(row=>`${esc(row.market)} ${esc(row.code)}（同日或近期收盤價缺少）`).join("、")}</p>`:'<p class="footnote">本次沒有未配對證券。</p>';
   const fomoDetail=margin?`<div class="fomoHero"><div><div class="fomoScore ${margin.score>=65?"moodUp":margin.score<40?"moodDown":"moodFlat"}">${margin.score}</div><span>FOMO ${margin.label}</span></div></div><p class="interpretation">${esc(margin.summary)}</p><div class="miniStats"><div><span>單日</span><b class="${margin.daily>=0?"up":"down"}">${signed(margin.daily)}</b></div><div><span>近 5 日</span><b class="${margin.change5>=0?"up":"down"}">${signed(margin.change5)}</b></div><div><span>近 20 日</span><b class="${margin.change20>=0?"up":"down"}">${signed(margin.change20)}</b></div></div><p class="interpretation">${esc(margin.pattern)}</p><div class="scoreBar fomoBar"><i style="width:${margin.score}%"></i></div><p class="footnote">FOMO 分數是本站依融資單日、20 日趨勢及近 60 日位置計算的市場情緒代理指標，不是交易所官方指數。</p>`:'<p class="footnote">FOMO 資料尚未更新，不以 0 分替代。</p>';
-  $("#fomoContent").innerHTML=risk?`${marginRiskCompactHtml(risk)}<details class="sentimentDetails"><summary>查看 FOMO、方法、來源與歷史說明</summary><div class="sentimentDetailsBody">${fomoDetail}<p class="footnote">市場融資維持率僅用於觀察整體融資戶壓力，不代表個人帳戶維持率或追繳狀態。目前官方僅公開個別信用帳戶計算規則，未發布同口徑的全市場平均序列；缺值時不估算、不顯示 0%。</p><div class="marginSources"><a class="sourceLink" href="${esc(risk.source_url)}" target="_blank" rel="noopener">臺灣證券交易所 OpenAPI</a><a class="sourceLink" href="${esc(risk.secondary_source_url)}" target="_blank" rel="noopener">櫃買中心 OpenAPI</a></div></div></details>`:'<div class="newsEmpty sentimentUnavailable">台股融資風險資料尚未更新；不會以 0 代替缺值。</div>';
+  $("#fomoContent").innerHTML=risk?`${marginRiskCompactHtml(risk)}<details class="sentimentDetails"><summary>查看 FOMO、推估方法、缺漏與資料來源</summary><div class="sentimentDetailsBody">${fomoDetail}<p class="footnote">市場融資維持率僅用於觀察整體融資戶壓力；${esc(risk.disclaimer||"市場推估融資維持率不是個人帳戶維持率。")}</p><p class="footnote">${esc(risk.methodology||"")}</p><p class="footnote">覆蓋率達 98% 正常發布、95%～97.99% 標示部分覆蓋；低於 95% 時保留上一筆有效估值。停牌證券僅在有 10 日內最後收盤價時納入。</p>${missingDetail}<div class="marginSources"><a class="sourceLink" href="${esc(risk.source_url)}" target="_blank" rel="noopener">TWSE 融資與收盤資料</a><a class="sourceLink" href="${esc(risk.secondary_source_url)}" target="_blank" rel="noopener">TPEx 融資與收盤資料</a><a class="sourceLink" href="${esc(risk.financing_source_url)}" target="_blank" rel="noopener">FinMind 市場融資金額</a></div></div></details>`:'<div class="newsEmpty sentimentUnavailable">台股融資風險資料尚未更新；不會以 0 代替缺值。</div>';
   const cnn=cnnFearGreed;
   $("#cnnFearGreedContent").innerHTML=cnn?`<div class="fomoHero"><div><div class="fomoScore ${cnn.score<=44?"moodDown":cnn.score>=56?"moodUp":"moodFlat"}">${fmt(cnn.score)}</div><span>${cnn.label}</span></div></div><p class="interpretation">${esc(cnn.summary)}</p><details class="sentimentDetails"><summary>查看歷史分數與資料來源</summary><div class="sentimentDetailsBody"><div class="detailMeta"><b>CNN 指數</b><small>資料更新<br>${esc(formatTaipeiDateTime(cnn.sourceUpdatedAt))}（台北）</small></div><div class="miniStats"><div><span>前一日</span><b>${fmt(cnn.day)}</b></div><div><span>1 週前</span><b>${fmt(cnn.week)}</b></div><div><span>1 月前</span><b>${fmt(cnn.month)}</b></div></div><div class="scoreBar fomoBar"><i style="width:${cnn.score}%"></i></div><p class="footnote">指數衡量市場情緒，不是買賣訊號；本站透過 GitHub Actions 讀取 CNN 結構化 JSON 後寫入本地檔案。</p><a class="sourceLink" href="${esc(cnn.sourceUrl)}" target="_blank" rel="noopener">資料來源：CNN Fear &amp; Greed Index</a></div></details>`:'<div class="newsEmpty sentimentUnavailable">資料暫時無法取得</div>';
   $("#sentimentSummaryContent").innerHTML=`<p class="interpretation">${esc(combinedSentimentConclusion())}</p>`;
   const inst=marketChip.institutional;
   if(inst){
-    const total=inst.foreign.today+inst.trust.today+inst.dealer.today;
-    $("#institutionContent").innerHTML=`<p class="dataSourceNote">今日盤後更新｜盤中沿用最近交易日資料｜資料日期 ${esc(inst.date)}</p><div class="flowGrid">${flowHtml("外資",inst.foreign)}${flowHtml("投信",inst.trust)}${flowHtml("自營商",inst.dealer)}</div><p class="interpretation">三大法人今日合計${total>=0?"買超":"賣超"} ${formatYi(Math.abs(total))}；資料日期 ${inst.date}。</p>`;
+    $("#institutionContent").innerHTML=`<p class="dataSourceNote">今日盤後更新｜盤中沿用最近交易日資料｜資料日期 ${esc(inst.date)}</p><div class="flowGrid">${flowHtml("外資",inst.foreign,inst.periods)}${flowHtml("投信",inst.trust,inst.periods)}${flowHtml("自營商",inst.dealer,inst.periods)}${flowHtml("三大法人合計",inst.total,inst.periods)}</div><p class="interpretation">${esc(HSInstitutionalFlowCore.trendText(inst))}</p><details class="methodFold"><summary>法人分類映射與計算口徑</summary><p class="footnote">外資＝Foreign_Investor＋Foreign_Dealer_Self；投信＝Investment_Trust；自營商優先採 Dealer 總計，僅在總計缺少時才加總 Dealer_self＋Dealer_Hedging，避免總計與子項重複計算。合計恆等於外資＋投信＋自營商；近月為最近 ${inst.periods.twenty} 個有效交易日。</p></details>`;
   }else $("#institutionContent").innerHTML='<div class="newsEmpty">尚未取得三大法人資料。資料通常約收盤後更新。</div>';
   renderChipOverview();
   updateHomeFastFacts();
@@ -2063,7 +2057,7 @@ function renderChipOverview(){
   const total=inst?inst.foreign.today+inst.trust.today+inst.dealer.today:null;
   const card=(tab,title,value,status)=>`<button class="chipOverviewCard" type="button" data-chip-jump="${tab}" aria-label="查看${esc(title)}詳細資料"><span>${esc(title)}</span><b>${esc(value)}</b><small>${esc(status)}</small></button>`;
   const risk=marketChip.marginRisk,ratio=risk?.maintenance_ratio;
-  target.innerHTML=`<div class="chipOverviewGrid">${card("mood","CNN Fear & Greed",cnn?`${fmt(cnn.score)} 分`:"資料暫缺",cnn?.label||"不以 0 代替")}${card("margin","台股融資風險",risk?formatYi(risk.margin_balance.value):"資料尚未更新",risk?`${risk.interpretation?.label||risk.risk_state}｜維持率 ${ratioText(ratio?.value)}｜${risk.data_date}`:"不以 0 代替")}${card("institutions","三大法人合計",Number.isFinite(total)?`${total>=0?"+":""}${formatYi(total)}`:"資料暫缺",inst?`資料日期 ${inst.date}`:"今日盤後更新")}${card("futures","外資台指期淨部位",foreign?`${foreign.net>=0?"+":""}${fmt(foreign.net)} 口`:"資料暫缺",futuresPosition?`資料日期 ${futuresPosition.dataDate}`:"盤後更新")}</div><p class="chipOverviewConclusion">${esc(combinedSentimentConclusion())}</p>`;
+  target.innerHTML=`<div class="chipOverviewGrid">${card("mood","😨 CNN Fear & Greed",cnn?`${fmt(cnn.score)} 分`:"資料暫缺",cnn?.label||"不以 0 代替")}${card("margin","🛡️ 市場推估融資維持率",risk?ratioText(ratio?.value):"資料尚未更新",risk?`${risk.interpretation?.label||risk.risk_state}｜覆蓋 ${Number.isFinite(ratio?.coverage_ratio)?fmt(ratio.coverage_ratio)+"%":"—"}｜${ratio?.effective_data_date||risk.data_date}`:"不以 0 代替")}${card("institutions","🏛️ 三大法人近月",inst&&Number.isFinite(inst.total.twenty)?`${inst.total.twenty>=0?"+":""}${formatYi(inst.total.twenty)}`:"資料暫缺",inst?`${inst.periods.twenty}個交易日｜${inst.date}`:"今日盤後更新")}${card("futures","📑 外資台指期淨部位",foreign?`${foreign.net>=0?"+":""}${fmt(foreign.net)} 口`:"資料暫缺",futuresPosition?`資料日期 ${futuresPosition.dataDate}`:"盤後更新")}</div><p class="chipOverviewConclusion">${esc(combinedSentimentConclusion())}</p>`;
   document.querySelectorAll("[data-chip-jump]").forEach(button=>button.addEventListener("click",()=>switchChipTab(button.dataset.chipJump)));
 }
 function switchChipTab(name,{scroll=true}={}){

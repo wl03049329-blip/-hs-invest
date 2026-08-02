@@ -8,59 +8,72 @@
   const clamp=(value,min,max)=>Math.min(max,Math.max(min,value));
 
   function tradingDayAge(dataDate,today){
-    const start=new Date(`${dataDate}T00:00:00+08:00`);
-    const end=new Date(`${today}T00:00:00+08:00`);
+    const start=new Date(`${dataDate}T00:00:00+08:00`),end=new Date(`${today}T00:00:00+08:00`);
     if(!Number.isFinite(start.getTime())||!Number.isFinite(end.getTime())||start>end)return null;
     let cursor=new Date(start),days=0;
     while(cursor<end){
       cursor.setUTCDate(cursor.getUTCDate()+1);
-      const label=new Intl.DateTimeFormat("en-US",{timeZone:"Asia/Taipei",weekday:"short"}).format(cursor);
-      if(["Mon","Tue","Wed","Thu","Fri"].includes(label))days+=1;
+      const weekday=new Intl.DateTimeFormat("en-US",{timeZone:"Asia/Taipei",weekday:"short"}).format(cursor);
+      if(["Mon","Tue","Wed","Thu","Fri"].includes(weekday))days+=1;
     }
     return days;
   }
 
   function validatePayload(payload,today){
-    if(!payload||typeof payload!=="object")return null;
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(payload.data_date||""))return null;
+    if(!payload||typeof payload!=="object"||!/^\d{4}-\d{2}-\d{2}$/.test(payload.data_date||""))return null;
     const balance=payload.margin_balance||{},maintenance=payload.maintenance_ratio||{};
     if(!finite(balance.value)||balance.value<=0)return null;
-    const ratio=finite(maintenance.value)&&maintenance.value>0&&maintenance.value<1000?maintenance.value:null;
+    const estimated=maintenance.method==="estimated_market_margin_maintenance_ratio"&&maintenance.is_estimated===true;
+    const ratio=estimated&&finite(maintenance.value)&&maintenance.value>100&&maintenance.value<1000?maintenance.value:null;
+    const coverage=finite(maintenance.coverage_ratio)&&maintenance.coverage_ratio>=0&&maintenance.coverage_ratio<=100?maintenance.coverage_ratio:null;
     const age=tradingDayAge(payload.data_date,today);
     return{
       ...payload,
       margin_balance:{...balance},
-      maintenance_ratio:{...maintenance,value:ratio},
+      maintenance_ratio:{...maintenance,value:ratio,coverage_ratio:coverage},
       trading_day_age:age,
       stale:Number.isFinite(age)&&age>3
     };
   }
 
+  function ratioBand(ratio){
+    if(!finite(ratio))return{key:"unavailable",label:"資料暫時無法取得",tone:"neutral"};
+    if(ratio>=180)return{key:"high_cushion",label:"安全墊較高",tone:"calm"};
+    if(ratio>=160)return{key:"general",label:"一般水位",tone:"neutral"};
+    if(ratio>=150)return{key:"shrinking",label:"安全墊縮小",tone:"warning"};
+    if(ratio>=140)return{key:"pressure",label:"壓力升高",tone:"warning"};
+    if(ratio>=130)return{key:"reference",label:"接近法規參考區",tone:"orange"};
+    return{key:"extreme",label:"極端壓力區",tone:"danger"};
+  }
+
   function classifyRisk(input={}){
     const balanceDirection=finite(input.balanceDailyChange)?Math.sign(input.balanceDailyChange):0;
     const ratioDirection=finite(input.maintenanceDailyChange)?Math.sign(input.maintenanceDailyChange):0;
-    let key="incomplete",label="資料不完整",tone="neutral",summary="融資維持率資料暫時無法取得，暫以融資餘額與價格趨勢觀察。";
+    const band=ratioBand(input.maintenanceValue);
+    let key="incomplete",label="資料不完整",tone=band.tone,summary="融資餘額與推估維持率需一起觀察，目前資料不足以形成完整判斷。";
     if(balanceDirection>0&&ratioDirection<0){
-      key="risk_high";label="風險升高";tone="warning";summary="槓桿增加、融資戶壓力升高。";
+      key="risk_high";label="槓桿壓力升高";tone="warning";summary="融資餘額增加、推估維持率下降，代表槓桿增加且融資戶壓力升高。";
     }else if(balanceDirection<0&&ratioDirection<0){
-      key="deleverage";label="去槓桿壓力";tone="orange";summary="可能出現停損、減碼或被動去槓桿，短期壓力仍高。";
+      key="deleverage";label="去槓桿壓力";tone="orange";summary="融資餘額與推估維持率同步下降，可能出現停損、減碼或被動去槓桿，短期壓力仍高。";
     }else if(balanceDirection<0&&ratioDirection>0){
-      key="improving";label="改善中";tone="calm";summary="槓桿壓力逐步舒緩。";
+      key="improving";label="壓力改善中";tone="calm";summary="融資餘額下降、推估維持率回升，槓桿壓力正逐步舒緩。";
     }else if(balanceDirection>0&&ratioDirection>0){
-      key="neutral_crowding";label="中性";tone="neutral";summary="市場上漲帶動融資增加，暫未出現明顯壓力，但需觀察是否過度擁擠。";
+      key="neutral_crowding";label="中性、留意擁擠";tone="neutral";summary="市場上漲可能帶動融資增加，推估維持率同步回升，暫未見明顯壓力，但仍需觀察是否過度擁擠。";
     }else if(balanceDirection<0){
-      key="balance_falling";label="去槓桿觀察";tone="orange";summary="融資餘額下降，市場正在降低槓桿；維持率缺值，仍需搭配價格是否止跌。";
+      key="balance_falling";label="融資退場";tone="orange";summary="融資餘額下降，但推估維持率趨勢樣本不足，先觀察去槓桿是否伴隨價格止穩。";
     }else if(balanceDirection>0){
-      key="balance_rising";label="擁擠度觀察";tone="warning";summary="融資餘額增加，追價與擁擠風險需持續觀察；維持率資料目前缺值。";
+      key="balance_rising";label="融資增加";tone="warning";summary="融資餘額增加，但推估維持率趨勢樣本不足，暫不判定壓力方向。";
     }
-    if(input.stale)return{key:"stale",label:"資料可能過期",tone:"warning",summary:`${summary} 資料已超過 3 個交易日，解讀僅供參考。`};
-    if(input.marketAcuteDrop&&["risk_high","deleverage"].includes(key))summary+= " 市場同步急跌，短線波動風險較高。";
-    if(finite(input.balanceChange20d)&&input.balanceChange20d>5&&key==="risk_high")summary+=" 近 20 日融資也持續增加，籌碼較擁擠。";
-    return{key,label,tone,summary};
+    if(finite(input.balanceChange20d)&&input.balanceChange20d>0&&balanceDirection>0)summary+=" 近20日融資亦偏增，須留意追價擁擠。";
+    if(input.marketAcuteDrop&&["risk_high","deleverage"].includes(key))summary+=" 大盤同時急跌，短線壓力可能放大。";
+    if(band.key==="reference")summary+=" 130%是個別信用帳戶的法規參考，不代表所有投資人必然追繳。";
+    if(band.key==="extreme")summary+=" 數值低於130%僅表示估算壓力極高，不能推論個人帳戶狀態。";
+    if(input.stale)return{key:"stale",label:"資料可能過期",tone:"warning",summary:`${summary} 資料已超過3個交易日，解讀需保守。`,band};
+    return{key,label,tone,summary,band};
   }
 
-  function maintenanceFearScore(ratio,percentile){
-    if(finite(percentile))return clamp(100-percentile,0,100);
+  function maintenanceFearScore(ratio,percentileValue){
+    if(finite(percentileValue))return clamp(100-percentileValue,0,100);
     if(!finite(ratio))return null;
     return clamp((190-ratio)/60*100,0,100);
   }
@@ -72,5 +85,5 @@
     return baseFear*(1-weight)+maintenanceFear*weight;
   }
 
-  return{finite,clamp,tradingDayAge,validatePayload,classifyRisk,maintenanceFearScore,combineFear};
+  return{finite,clamp,tradingDayAge,validatePayload,ratioBand,classifyRisk,maintenanceFearScore,combineFear};
 });
