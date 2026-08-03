@@ -625,6 +625,34 @@
   }
 
   function renderHomeSentiment() {
+    {
+      const risk=typeof marketChip!=="undefined"?marketChip?.marginRisk:null;
+      const values=risk&&typeof HSMarginRiskCore!=="undefined"?HSMarginRiskCore.displayValues(risk):null;
+      const cnn=typeof cnnFearGreed!=="undefined"?cnnFearGreed:null;
+      const futures=typeof futuresPosition!=="undefined"?futuresPosition:null;
+      const foreign=futures?.foreign_tx,tmf=futures?.estimated_non_institutional_tmf;
+      const card=(selector,title,value,status,date)=>{
+        const node=$v6(selector);if(!node)return;
+        node.innerHTML=`<span>${escapeHtml(title)}</span><b>${escapeHtml(value)}</b><em>${escapeHtml(status)}</em><small>資料日期 ${escapeHtml(date||"—")}</small>`;
+      };
+      const marginDate=values?.dataDate||risk?.data_date||"—",futuresDate=futures?.dataDate||"—";
+      card("#homeMarginBalanceCard","台股融資餘額",Number.isFinite(values?.financingPrincipal)?`${number(values.financingPrincipal/1e8,2)}億`:"—",risk?.interpretation?.label||risk?.risk_state||"資料暫缺",marginDate);
+      card("#homeMaintenanceCard","市場推估融資維持率",Number.isFinite(values?.maintenanceRatio)?`${number(values.maintenanceRatio,2)}%`:"—",Number.isFinite(values?.maintenanceRatio)?HSMarginRiskCore.ratioBand(values.maintenanceRatio).label:"資料暫缺",marginDate);
+      card("#homeCnnCard","CNN Fear & Greed",Number.isFinite(cnn?.score)?number(cnn.score,0):"—",cnn?.label||"資料暫缺",cnn?.sourceUpdatedAt?String(cnn.sourceUpdatedAt).slice(0,10):"—");
+      card("#homeForeignFuturesCard","外資台指期",Number.isFinite(foreign?.net)?`${foreign.net<0?"淨空":"淨多"} ${number(Math.abs(foreign.net),0)}口`:"—",Number.isFinite(foreign?.net)?(foreign.net<0?"偏空":"偏多"):"資料暫缺",futuresDate);
+      const tmfRatio=Number.isFinite(tmf?.long)&&Number.isFinite(tmf?.short)&&tmf.short>0?tmf.long/tmf.short:null;
+      const tmfState=Number.isFinite(tmfRatio)?(tmfRatio>1.1?"偏多":tmfRatio<.9?"偏空":"中性"):"資料暫缺";
+      card("#homeTmfRatioCard","微台散戶多空比",Number.isFinite(tmfRatio)?number(tmfRatio,2):"—",tmfState,futuresDate);
+      let conclusion="市場情緒資料仍在更新，長期 ETF 維持分批原則。";
+      if(Number.isFinite(cnn?.score)){
+        if(cnn.score>=56&&tmfState==="偏多")conclusion="市場情緒偏熱且散戶偏多，避免追高，等待週線回檔。";
+        else if(cnn.score<=44)conclusion=`市場情緒偏恐懼，融資壓力${values?.maintenanceRatio<140?"偏高":"中性"}，長期 ETF 可留意低檔分批。`;
+        else conclusion=`市場情緒中性，融資壓力${values?.maintenanceRatio<140?"偏高":"中性"}，依長期加碼排名分批評估。`;
+      }
+      const conclusionNode=$v6("#homeSentimentConclusion");if(conclusionNode)conclusionNode.textContent=conclusion;
+      const details=$v6("#homeSentimentDetails");if(details)details.innerHTML=`<summary>展開資料方法與日期</summary><div><p>融資餘額與推估維持率：最近交易日盤後資料 ${escapeHtml(marginDate)}。</p><p>外資台指期與微台非三大法人部位：期交所盤後資料 ${escapeHtml(futuresDate)}；微台多空比＝推估多單÷推估空單，不等同官方純自然人持倉。</p><p>CNN：${escapeHtml(cnn?.sourceUpdatedAt||"資料暫缺")}。</p></div>`;
+      return;
+    }
     let margin = null;
     let marginRisk = null;
     let cnn = null;
@@ -720,8 +748,7 @@
       else if (event.key === "ArrowRight") showChartDetail(chartSelection + 1);
       else showChartDetail(chartSelection < 0 ? 0 : chartSelection);
     });
-    $v6("#homeCnnCard").addEventListener("click", () => { switchTab("sentiment"); if (typeof switchChipTab === "function") switchChipTab("mood", {scroll: false}); });
-    $v6("#homeFomoCard").addEventListener("click", event => { if (!event.target.closest("[data-open-margin]")) return; switchTab("sentiment"); if (typeof switchChipTab === "function") switchChipTab("margin", {scroll: false}); });
+    $v6("#homeSentimentCards").addEventListener("click", event => { const card=event.target.closest("[data-home-chip]");if(!card)return;switchTab("sentiment");if(typeof switchChipTab==="function")switchChipTab(card.dataset.homeChip,{scroll:false}); });
     document.querySelector('[data-tab="portfolio"]').addEventListener("click", () => {
       renderPortfolio();
       if ($v6("#portfolioAutoRefresh").checked) updateQuotes();

@@ -110,8 +110,11 @@
       marketFear: finite(input.marketFear),
       valuation: finite(input.valuation)
     };
-    const result = weightedScore(metrics, LONG_TERM_WEIGHTS);
-    return {mode:"long_term_core", modeLabel:MODES.long_term_core, ...result, metrics, stage:longTermStage(result.score, input.stopConfirmation)};
+    const requiredReady = metrics.weeklyKdj !== null && (metrics.weeklyBias !== null || metrics.drawdown !== null);
+    const result = weightedScore(metrics, LONG_TERM_WEIGHTS, 55);
+    if (!requiredReady) result.score = null;
+    const scoreStatus = result.score === null ? "unavailable" : result.coverage >= 70 ? "complete" : "provisional";
+    return {mode:"long_term_core", modeLabel:MODES.long_term_core, ...result, scoreStatus, metrics, stage:longTermStage(result.score, input.stopConfirmation)};
   }
 
   function swingDecision(input = {}) {

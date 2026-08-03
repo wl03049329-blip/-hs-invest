@@ -297,7 +297,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 @media(max-width:620px){.watchRow{grid-template-columns:minmax(0,1fr) auto}.watchStrategy{grid-column:1/-1}.watchStrategy select{max-width:none;width:100%}.homeOpportunityRow{font-size:12px}.drawdownHeadline{gap:6px}.drawdownHeadline>div{padding:8px}.drawdownHeadline b{font-size:16px}.drawdownForm{grid-template-columns:1fr}.drawdownForm .btn{width:100%}}
 </style>
 <link rel="stylesheet" href="portfolio-v6.css" />
-<link rel="stylesheet" href="v62-tech.css?v=20260803b" />
+<link rel="stylesheet" href="v62-tech.css?v=20260804a" />
 </head>
 <body>
 <svg class="iconSprite" aria-hidden="true" width="0" height="0">
@@ -339,62 +339,37 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
     <button class="topTab appNavButton" type="button" data-tab="trump"><svg aria-hidden="true"><use href="#i-trump"/></svg><span>川普</span></button>
     <button class="topTab appNavButton" type="button" data-tab="more"><svg aria-hidden="true"><use href="#i-more"/></svg><span>更多</span></button>
   </nav>
-  <p class="tabIntro active" data-tab-intro="today">先看三項行情、今日買點機會與 ETF 買點快報。</p>
+  <p class="tabIntro active" data-tab-intro="today">先看市場情緒與五檔長期 ETF 加碼排名。</p>
   <p class="tabIntro" data-tab-intro="signals">切換自己的自選清單與弘昇精選，再查看買點細節。</p>
   <p class="tabIntro" data-tab-intro="portfolio">只在此裝置管理個人持股，使用免費延遲行情估算損益與配置。</p>
   <p class="tabIntro" data-tab-intro="sentiment">查看融資 FOMO、CNN 恐懼貪婪、三大法人與重大事件。</p>
   <p class="tabIntro" data-tab-intro="trump">只整理可能影響市場的川普言論與政策。</p>
   <p class="tabIntro" data-tab-intro="more">ETF 比較、提醒與資料設定集中在這裡。</p>
 
-  <section id="homeMarketOverview" class="panel homeMarketOverview" data-tab-section="today" aria-labelledby="homeMarketOverviewTitle">
-    <div class="panelTitle compactTitle">
-      <div><p class="eyebrow">TAIWAN &amp; GLOBAL MARKET</p><h2 id="homeMarketOverviewTitle"><span class="headingEmoji" aria-hidden="true">📊</span>市場脈動</h2></div>
-      <small id="marketOverviewFreshness">資料載入中</small>
-    </div>
-    <p class="marketOverviewLabel">動態行情｜盤中 15～30 秒檢查｜來源時間為準｜僅供參考</p>
-    <div id="marketOverviewCards" class="marketOverviewCards" aria-live="polite">
-      <div class="marketOverviewSkeleton">載入行情與買點機會中…</div>
-    </div>
-    <p id="marketOneLine" class="marketOneLine">市場解讀整理中…</p>
-    <div id="marketQuickSignals" class="marketQuickSignals">
-      <span>市場廣度：更新中</span><span>大型／中小型：更新中</span><span>台積電同步：更新中</span>
-    </div>
-    <div id="homeFastFacts" class="homeFastFacts" aria-live="polite">
-      <span>CNN：載入中</span><span>融資：載入中</span><span>維持率：載入中</span><span>買點：載入中</span>
-    </div>
-    <div class="todayBuyDecision">
-      <div><span class="headingEmoji" aria-hidden="true">📡</span><b>今天怎麼買</b></div>
-      <p id="todayBuyDecisionText">整合市場、籌碼、估值與均線資料中…</p>
-    </div>
-    <div id="homeQuoteStatus" class="homeQuoteStatus" role="status" aria-live="polite">
-      行情來源初始化中｜失敗時保留最後有效資料
-    </div>
-  </section>
-
   <section id="homeSentiment" class="panel homeSentiment" data-tab-section="today" aria-labelledby="homeSentimentTitle">
     <div class="panelTitle compactTitle">
       <div><p class="eyebrow">MARKET SENTIMENT</p><h2 id="homeSentimentTitle"><span class="headingEmoji" aria-hidden="true">😨</span>市場情緒快覽</h2></div>
       <small>點卡片看完整籌碼</small>
     </div>
-    <div class="homeSentimentCards">
-      <button id="homeCnnCard" class="homeSentimentCard" type="button" aria-label="查看 CNN 恐懼貪婪完整資料">
-        <span>CNN Fear &amp; Greed</span><b>—</b><em>資料載入中</em><small>正在更新</small>
-      </button>
-      <article id="homeFomoCard" class="homeSentimentCard homeMarginRiskCard" aria-label="台股融資風險摘要">
-        <span>台股融資風險</span><b>—</b><em>資料載入中</em><small>最近交易日盤後資料</small>
-      </article>
+    <div id="homeSentimentCards" class="homeSentimentCards">
+      <button id="homeMarginBalanceCard" class="homeSentimentCard" type="button" data-home-chip="margin"><span>台股融資餘額</span><b>—</b><em>載入中</em><small>盤後資料</small></button>
+      <button id="homeMaintenanceCard" class="homeSentimentCard" type="button" data-home-chip="margin"><span>市場推估融資維持率</span><b>—</b><em>載入中</em><small>盤後資料</small></button>
+      <button id="homeCnnCard" class="homeSentimentCard" type="button" data-home-chip="mood"><span>CNN Fear &amp; Greed</span><b>—</b><em>載入中</em><small>更新中</small></button>
+      <button id="homeForeignFuturesCard" class="homeSentimentCard" type="button" data-home-chip="futures"><span>外資台指期</span><b>—</b><em>載入中</em><small>盤後資料</small></button>
+      <button id="homeTmfRatioCard" class="homeSentimentCard homeSentimentWide" type="button" data-home-chip="futures"><span>微台散戶多空比</span><b>—</b><em>載入中</em><small>非三大法人部位推估</small></button>
     </div>
     <p id="homeSentimentConclusion" class="homeSentimentConclusion">情緒資料彙整中…</p>
+    <details id="homeSentimentDetails" class="homeSentimentDetails"><summary>展開資料方法與日期</summary><div>資料載入中…</div></details>
   </section>
 
-  <button id="homeEtfBrief" class="panel homeEtfBrief" data-tab-section="today" type="button" aria-label="前往 ETF雷達查看完整買點">
+  <section id="homeEtfBrief" class="panel homeEtfBrief" data-tab-section="today" aria-labelledby="homeEtfBriefTitle">
     <div class="panelTitle compactTitle">
-      <div><p class="eyebrow">ETF ENTRY RADAR</p><h2><span class="headingEmoji" aria-hidden="true">🎯</span>精選ETF買點</h2></div>
-      <small id="updatedTop">週 KD 依最近完成資料或目前週線試算</small>
+      <div><p class="eyebrow">ETF ENTRY RADAR</p><h2 id="homeEtfBriefTitle"><span class="headingEmoji" aria-hidden="true">🎯</span>盤中長期加碼雷達</h2></div>
+      <small id="updatedTop">載入最新排名</small>
     </div>
     <div id="homeEtfBriefSummary" class="homeEtfBriefSummary">買點資料載入中…</div>
     <div id="rankList" class="rankList"><div class="skeleton">載入排名中…</div></div>
-  </button>
+  </section>
 
   <section class="dashboard" data-tab-section="today">
     <article class="panel marketPanel">
@@ -417,6 +392,11 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       </div>
       <div id="snapshotGrid" class="snapshotGrid"><div class="skeleton">載入中…</div></div>
     </article>
+  </section>
+
+  <section id="homeSwingBrief" class="panel homeEtfBrief" data-tab-section="today" aria-labelledby="homeSwingBriefTitle">
+    <div class="panelTitle compactTitle"><div><p class="eyebrow">SWING SIGNALS</p><h2 id="homeSwingBriefTitle">波段買點</h2></div><small>沿用既有模型</small></div>
+    <div id="homeSwingList" class="rankList"><div class="skeleton">載入波段資料中…</div></div>
   </section>
 
   <section id="portfolio" class="section portfolioPage tabHidden" data-tab-section="portfolio" aria-labelledby="portfolioTitle">
@@ -757,7 +737,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 <script src="valuation-core.js"></script>
 <script src="intraday-buy-point-core.js"></script>
 <script src="etf-model-core.js"></script>
-<script src="strategy-mode-core.js?v=20260803b"></script>
+<script src="strategy-mode-core.js?v=20260804a"></script>
 <script src="drawdown-price-core.js"></script>
 <script src="margin-risk-core.js"></script>
 <script src="institutional-flow-core.js"></script>
@@ -839,14 +819,16 @@ let commodityQuotes=null;
 let txFuturesQuote=null;
 let marketOverviewUpdatedAt="";
 let marketOverviewStateKey="";
-let liveQuoteTimer=null;
+let longRankTimer=null;
 let liveQuoteInFlight=null;
 let liveQuoteAbortController=null;
 let liveQuoteFailures=0;
 let liveQuoteLastAttemptAt=0;
-let liveCommodityLastAttemptAt=0;
 let liveQuoteHttpStatus=0;
 let liveQuotePreviousValues=new Map();
+let lastRankSnapshotVersion="";
+const LONG_RANK_STORAGE_KEY="hs_long_rank_v1";
+const LONG_RANK_HOURS=new Set([9,10,11,12,13]);
 let futuresPosition=null;
 let etfValuationItems={};
 let etfValuationUpdatedAt="";
@@ -1199,7 +1181,7 @@ function applyStrategyModes(x){
   return x;
 }
 function strategyDecisionFor(x,mode){return x.strategyDecisions?.[mode]||x.strategyDecisions?.user_selected||null}
-function displayScore(x,mode=x.activeStrategyMode){const value=strategyDecisionFor(x,mode)?.score;return Number.isFinite(value)?value:x.score}
+function displayScore(x,mode=x.activeStrategyMode){const value=strategyDecisionFor(x,mode)?.score;return Number.isFinite(value)?value:mode==="long_term_core"?null:x.score}
 function displayStage(x,mode=x.activeStrategyMode){return strategyDecisionFor(x,mode)?.stage||x.buyStage}
 function refreshDecisionModel(x){
   x.marketRisk=currentMarketRisk();
@@ -1699,12 +1681,15 @@ function applyAuthorizedMarket(payload,{includeCommodities=true}={}){
   if(normalized.items.tsmc)quoteMap.set("2330",{...normalized.items.tsmc,previousClose:normalized.items.tsmc.previousClose,date:normalized.items.tsmc.dataDate,quoteTime:normalized.items.tsmc.dataTime,quoteMode:"delayed",fetchedAt:normalized.items.tsmc.quoteTime});
   if(quoteMap.size)window.dispatchEvent(new CustomEvent("hs:delayed-quotes",{detail:{quotes:quoteMap,sourceUpdatedAt:normalized.updatedAt,checkedAt:new Date().toISOString(),source:"authorized_proxy"}}));
 }
-function scheduleLiveQuotePoll(){
-  clearTimeout(liveQuoteTimer);liveQuoteTimer=null;
+function longRankRefreshWindow(date=new Date()){
+  const parts=Object.fromEntries(new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Taipei",weekday:"short",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false}).formatToParts(date).map(part=>[part.type,part.value]));
+  const hour=Number(parts.hour),minute=Number(parts.minute),weekday=parts.weekday;
+  return !["Sat","Sun"].includes(weekday)&&LONG_RANK_HOURS.has(hour)&&minute>=30&&minute<=39?`${parts.year}-${parts.month}-${parts.day}-${hour}`:"";
+}
+function scheduleLongRankRefresh(){
+  clearTimeout(longRankTimer);longRankTimer=null;
   if(document.hidden)return;
-  const spotActive=HSMarketV61Core.spotSession(new Date(),taipeiToday()).key==="intraday",futureKey=HSMarketV61Core.futuresSession().key;
-  const delay=HSLiveMarketCore.pollDelay({spotActive,commodityActive:true,futuresActive:["day","night"].includes(futureKey),failures:liveQuoteFailures,httpStatus:liveQuoteHttpStatus});
-  liveQuoteTimer=setTimeout(()=>refreshLiveQuotes(),delay);
+  longRankTimer=setTimeout(async()=>{if(longRankRefreshWindow())await refreshLiveQuotes({force:true});scheduleLongRankRefresh()},60000);
 }
 async function refreshLiveQuotes({force=false}={}){
   if(document.hidden&&!force)return false;
@@ -1713,32 +1698,16 @@ async function refreshLiveQuotes({force=false}={}){
     liveQuoteAbortController?.abort();
   }
   const now=Date.now();
-  if(!force&&now-liveQuoteLastAttemptAt<10000){scheduleLiveQuotePoll();return false}
+  if(!force&&now-liveQuoteLastAttemptAt<10000)return false;
   liveQuoteLastAttemptAt=now;liveQuoteAbortController=new AbortController();
-  const commodityDue=force||now-liveCommodityLastAttemptAt>=45000;
-  if(commodityDue)liveCommodityLastAttemptAt=now;
   const signal=liveQuoteAbortController.signal,proxy=HSLiveMarketCore.validProxyUrl(localStorage.getItem(LIVE_QUOTE_PROXY_KEY)||"",location.href);
   liveQuoteInFlight=(async()=>{
     const requests=[
-      fetchNoStore(`market-overview.json?ts=${now}`,signal),
-      commodityDue?fetchNoStore(`commodity-quotes.json?ts=${now}`,signal):Promise.resolve(null),
-      fetchNoStore(`tx-futures-quote.json?ts=${now}`,signal),
       fetchNoStore(`market-quotes-meta.json?ts=${now}`,signal),
       proxy?fetchNoStore(`${proxy}${proxy.includes("?")?"&":"?"}ts=${now}`,signal):Promise.resolve(null)
     ];
-    const [overviewResult,commodityResult,txResult,metaResult,proxyResult]=await Promise.allSettled(requests);
-    let successes=0,sourceLabel="GitHub Actions 快取";
-    if(overviewResult.status==="fulfilled"){
-      const payload=overviewResult.value,updatedAt=Date.parse(payload?.updated_at),merged={...(marketOverview?.instruments||{})};let validItems=0;
-      if(Number.isFinite(updatedAt)&&updatedAt<=Date.now()+6*3600000){
-        for(const key of ["taiex","otc","tsmc"]){try{merged[key]=HSMarketV61Core.validateOverviewItem(key,payload?.instruments?.[key]);validItems++}catch{}}
-        if(validItems){marketOverview={updatedAt:new Date(updatedAt).toISOString(),stale:Date.now()-updatedAt>30*60000,label:"盤中延遲行情｜來源時間為準｜僅供參考",instruments:merged,sourceStatus:payload?.source_status||{}};marketOverviewUpdatedAt=marketOverview.updatedAt;successes++}
-      }
-    }
-    if(commodityDue&&commodityResult.status==="fulfilled"){
-      const next=HSCommodityQuotesCore.validate(commodityResult.value);if(next){commodityQuotes={updatedAt:next.updatedAt,items:{...(commodityQuotes?.items||{}),...next.items},sourceStatus:{...(commodityQuotes?.sourceStatus||{}),...next.sourceStatus}};successes++}
-    }
-    if(txResult.status==="fulfilled"&&txResult.value&&typeof txResult.value==="object"){txFuturesQuote=txResult.value;successes++}
+    const [metaResult,proxyResult]=await Promise.allSettled(requests);
+    let successes=0;
     if(metaResult.status==="fulfilled"){
       const metaTime=String(metaResult.value?.updated_at||"");
       if(metaTime&&metaTime!==liveMarketCacheVersion){
@@ -1749,16 +1718,15 @@ async function refreshLiveQuotes({force=false}={}){
         }catch{}
       }else window.dispatchEvent(new CustomEvent("hs:quote-cache-checked",{detail:{sourceUpdatedAt:metaTime,checkedAt:new Date().toISOString()}}));
     }
-    if(proxyResult.status==="fulfilled"&&proxyResult.value){applyAuthorizedMarket(proxyResult.value,{includeCommodities:commodityDue});sourceLabel="授權行情 Proxy";successes++}
+    if(proxyResult.status==="fulfilled"&&proxyResult.value){applyAuthorizedMarket(proxyResult.value,{includeCommodities:false});successes++}
     else if(proxyResult.status==="rejected")liveQuoteHttpStatus=Number(proxyResult.reason?.status)||0;
     if(!successes)throw new Error("all quote sources failed");
-    liveQuoteFailures=0;liveQuoteHttpStatus=0;renderMarketOverview();
-    setHomeQuoteStatus(`${sourceLabel}｜延遲行情｜最後成功更新 ${formatHomeQuoteTime(new Date())}｜資料時間為準`);
+    liveQuoteFailures=0;liveQuoteHttpStatus=0;
     return true;
   })().catch(error=>{
     if(error?.name==="AbortError")return false;
-    liveQuoteFailures++;renderMarketOverview();setHomeQuoteStatus("更新失敗，已保留最後資料",true);return false;
-  }).finally(()=>{liveQuoteInFlight=null;liveQuoteAbortController=null;scheduleLiveQuotePoll()});
+    liveQuoteFailures++;return false;
+  }).finally(()=>{liveQuoteInFlight=null;liveQuoteAbortController=null});
   return liveQuoteInFlight;
 }
 let livePublicQuotes=new Map(),liveMarketCacheVersion="";
@@ -1795,6 +1763,7 @@ function renderFuturesPosition(){
 }
 function setHomeQuoteStatus(text,isError=false){
   const status=$("#homeQuoteStatus");
+  if(!status)return;
   status.textContent=text;
   status.classList.toggle("quoteError",isError);
 }
@@ -2074,18 +2043,32 @@ function compactOpportunityRow(x,mode){
   const valuation=valuationScoreLabel(x),ma=homeMovingAverageStates(x);
   return `<button class="homeOpportunityRow" type="button" data-open-etf-radar="true"><span class="homeOpportunityTicker"><b>${esc(x.id)}</b> ${esc(x.name)} <em>$${fmt(x.price)} ${signed(x.changePct)}</em></span><strong>${Number.isFinite(score)?score:"—"}分｜${esc(stage?.label||"資料不足")}</strong><span class="homeOpportunityMetrics">${esc(ma)}｜距高 ${Number.isFinite(x.fromHigh)?fmt(x.fromHigh)+"%":"—"}</span><span class="homeOpportunityMetrics">技術 ${metricScore(x.technicalLow?.score)}｜止跌 ${metricScore(x.stopConfirmation?.score)}｜估值 ${esc(valuation)}</span><small>${esc(stage?.recommendation||"等待資料更新")}</small></button>`;
 }
+function longRankComparator(a,b){
+  const scoreA=displayScore(a,"long_term_core"),scoreB=displayScore(b,"long_term_core");
+  return (Number.isFinite(scoreB)?scoreB:-1)-(Number.isFinite(scoreA)?scoreA:-1)||(Number.isFinite(a.j)?a.j:999)-(Number.isFinite(b.j)?b.j:999)||(Number.isFinite(a.fromHigh)?a.fromHigh:999)-(Number.isFinite(b.fromHigh)?b.fromHigh:999)||a.id.localeCompare(b.id);
+}
+function previousLongRanks(){try{const value=JSON.parse(localStorage.getItem(LONG_RANK_STORAGE_KEY)||"{}");return value&&typeof value==="object"?value:{}}catch{return{}}}
+function longRankRow(x,index,previous){
+  const decision=strategyDecisionFor(x,"long_term_core"),score=decision?.score,stage=decision?.stage;
+  const oldRank=Number(previous?.ranks?.[x.id]),change=Number.isFinite(oldRank)?oldRank-(index+1):0;
+  const movement=change>0?`↑${change}`:change<0?`↓${Math.abs(change)}`:"—",moveClass=change>0?"rank-up":change<0?"rank-down":"";
+  const scoreState=decision?.scoreStatus==="complete"?"完整分數":decision?.scoreStatus==="provisional"?"暫定分數｜部分資料未納入":"資料不足";
+  return `<details class="homeLongRankCard ${moveClass}"><summary><span class="longRankNo">第${index+1}名</span><span class="longRankTicker"><b>${esc(x.id)}</b><small>${esc(x.name)}</small></span><span class="longRankScore"><b>${Number.isFinite(score)?score:"—"}</b><small>長期加碼分</small></span><span class="longRankMove">${movement}</span><span class="longRankCore">週J ${fmt(x.j)}｜${esc(stage?.label||"資料不足")}</span></summary><div class="longRankDetails"><span>週乖離 <b>${Number.isFinite(x.weekBias)?fmt(x.weekBias)+"%":"—"}</b></span><span>距52週高點 <b>${Number.isFinite(x.fromHigh)?fmt(x.fromHigh)+"%":"—"}</b></span><span>資料覆蓋率 <b>${Math.round(decision?.coverage||0)}%｜${esc(scoreState)}</b></span><p>${esc(stage?.recommendation||"等待資料更新")}</p></div></details>`;
+}
 function renderTop(){
   const longIds=new Set(["0050","00830","00662","009815","00935"]),swingIds=new Set(["00631L","00733","006201"]);
-  const longs=all.filter(x=>longIds.has(x.id)).sort((a,b)=>(displayScore(b,"long_term_core")??-1)-(displayScore(a,"long_term_core")??-1));
+  const longs=all.filter(x=>longIds.has(x.id)).sort(longRankComparator);
   const swings=all.filter(x=>swingIds.has(x.id)).sort((a,b)=>(displayScore(b,"swing")??-1)-(displayScore(a,"swing")??-1));
   const longCount=longs.filter(x=>(strategyDecisionFor(x,"long_term_core")?.score??0)>=55).length;
   const swingCount=swings.filter(x=>["first","confirmed"].includes(strategyDecisionFor(x,"swing")?.stage?.key)).length;
-  $("#homeEtfBriefSummary").textContent=`長期加碼 ${longCount} 檔進入分批區；波段 ${swingCount} 檔完成初步確認。盤中為延遲行情試算。`;
-  $("#rankList").innerHTML=`<div class="homeOpportunityGroup"><h3>長期加碼機會</h3>${longs.slice(0,2).map(x=>compactOpportunityRow(x,"long_term_core")).join("")||'<div class="newsEmpty">資料載入中</div>'}</div><div class="homeOpportunityGroup"><h3>波段買點</h3>${swings.slice(0,2).map(x=>compactOpportunityRow(x,"swing")).join("")||'<div class="newsEmpty">資料載入中</div>'}</div>`;
+  const previous=previousLongRanks(),version=liveMarketCacheVersion||all[0]?.date||"";
+  $("#homeEtfBriefSummary").textContent=longs.length>=2?`第1優先：${longs[0].id}｜${displayScore(longs[0],"long_term_core")}分｜${displayStage(longs[0],"long_term_core")?.label}；第2優先：${longs[1].id}｜${displayScore(longs[1],"long_term_core")}分｜${displayStage(longs[1],"long_term_core")?.label}；其餘${longs.length-2}支依排名分批評估。`:"長期加碼資料載入中。";
+  $("#rankList").innerHTML=longs.map((x,index)=>longRankRow(x,index,previous)).join("")||'<div class="newsEmpty">資料載入中</div>';
+  $("#homeSwingList").innerHTML=`<div class="homeOpportunityGroup">${swings.slice(0,2).map(x=>compactOpportunityRow(x,"swing")).join("")||'<div class="newsEmpty">資料載入中</div>'}</div>`;
+  if(version&&version!==lastRankSnapshotVersion){localStorage.setItem(LONG_RANK_STORAGE_KEY,JSON.stringify({version,ranks:Object.fromEntries(longs.map((x,index)=>[x.id,index+1]))}));lastRankSnapshotVersion=version}
   const radar=activeRadarItems(),sorted=[...radar].sort((a,b)=>(displayScore(b)??-1)-(displayScore(a)??-1)),low=[...radar].sort((a,b)=>a.j-b.j)[0],best=sorted.find(x=>Number.isFinite(displayScore(x)));
   $("#snapshotGrid").innerHTML=(best||low)?`<div class="snapshot"><span>最高策略分數</span><b>${best?`${best.id}｜${displayScore(best)} 分`:"資料不足"}</b></div><div class="snapshot"><span>最低週 J 值</span><b>${low?`${low.id}｜${fmt(low.j)}`:"—"}</b></div><div class="snapshot"><span>長期加碼區</span><b>${longCount} 檔</b></div><div class="snapshot"><span>波段已確認</span><b>${swingCount} 檔</b></div>`:'<div class="newsEmpty">尚無 ETF 資料。</div>';
-  $("#updatedTop").textContent="週 KD 依最近完成資料計算；盤中價格僅作延遲試算。";
-  renderMarketOverview();
+  $("#updatedTop").textContent=`盤中試算｜最後分數 ${formatHomeQuoteTime(liveMarketCacheVersion||all[0]?.date)}｜週 KD 以目前週線試算`;
 }
 function renderCards(){
   const modeOrder={long_term_core:0,swing:1,user_selected:2};
@@ -2523,8 +2506,7 @@ document.querySelectorAll("[data-radar-mode]").forEach(button=>button.addEventLi
   refreshAllDecisionModels();renderWatchlist();renderTop();renderCards();
 }));
 document.querySelectorAll("[data-chip-tab]").forEach(button=>button.addEventListener("click",()=>switchChipTab(button.dataset.chipTab)));
-$("#homeEtfBrief").addEventListener("click",()=>switchTab("signals"));
-$("#marketOverviewCards").addEventListener("click",event=>{if(event.target.closest("[data-open-etf-radar]"))switchTab("signals")});
+$("#homeSwingBrief").addEventListener("click",event=>{if(event.target.closest("[data-open-etf-radar]"))switchTab("signals")});
 document.querySelectorAll("[data-buy-plan-mode]").forEach(button=>button.addEventListener("click",()=>{
   buyPlanMode=["conservative","balanced","aggressive"].includes(button.dataset.buyPlanMode)?button.dataset.buyPlanMode:"balanced";
   localStorage.setItem("hs_buy_plan_mode_v1",buyPlanMode);
@@ -2577,24 +2559,25 @@ document.addEventListener("visibilitychange",()=>{
   if(document.hidden){
     clearTimeout(cnnPollTimer);
     cnnPollTimer=null;
-    clearTimeout(liveQuoteTimer);
-    liveQuoteTimer=null;
+    clearTimeout(longRankTimer);
+    longRankTimer=null;
     liveQuoteAbortController?.abort();
   }else{
     refreshCnnFearGreed({force:true});
     refreshLiveQuotes({force:true});
+    scheduleLongRankRefresh();
   }
 });
 window.HSLiveMarket=Object.freeze({
   refresh:()=>refreshLiveQuotes({force:true}),
   latestQuotes:()=>new Map(livePublicQuotes),
   proxyConfigured:()=>Boolean(HSLiveMarketCore.validProxyUrl(localStorage.getItem(LIVE_QUOTE_PROXY_KEY)||"",location.href)),
-  state:()=>Object.freeze({timerCount:liveQuoteTimer===null?0:1,inFlight:Boolean(liveQuoteInFlight),failures:liveQuoteFailures,lastAttemptAt:liveQuoteLastAttemptAt})
+  state:()=>Object.freeze({rankTimerCount:longRankTimer===null?0:1,inFlight:Boolean(liveQuoteInFlight),failures:liveQuoteFailures,lastAttemptAt:liveQuoteLastAttemptAt})
 });
-loadAlerts();renderWatchlist();renderEvents();renderTrump();renderMarketOverview();switchChipTab(localStorage.getItem("hs_chip_tab_v1")||"overview",{scroll:false});switchTab(sessionStorage.getItem("hs_active_tab")||"today",{scroll:false});scheduleCnnPoll();refreshLiveQuotes({force:true});ensureStockCatalog().finally(load);
+loadAlerts();renderWatchlist();renderEvents();renderTrump();switchChipTab(localStorage.getItem("hs_chip_tab_v1")||"overview",{scroll:false});switchTab(sessionStorage.getItem("hs_active_tab")||"today",{scroll:false});scheduleCnnPoll();refreshLiveQuotes({force:true});scheduleLongRankRefresh();ensureStockCatalog().finally(load);
 
 </script>
 <script src="portfolio-core.js"></script>
-<script src="portfolio-v6.js?v=20260803b"></script>
+<script src="portfolio-v6.js?v=20260804a"></script>
 </body>
 </html>

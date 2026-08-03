@@ -38,6 +38,14 @@ const missingValuation = core.longTermDecision({
 assert(Number.isFinite(missingValuation.score));
 assert(missingValuation.missing.includes("valuation"));
 assert(missingValuation.coverage === 90);
+assert.strictEqual(missingValuation.scoreStatus,"complete");
+
+const provisional = core.longTermDecision({j:8,k:15,d:18,weeklyBias:-9,fromHigh:null,valuation:null,marketFear:null,stopConfirmation:20});
+assert(Number.isFinite(provisional.score));
+assert.strictEqual(provisional.coverage,60);
+assert.strictEqual(provisional.scoreStatus,"provisional");
+assert.strictEqual(core.longTermDecision({j:null,weeklyBias:-9,fromHigh:-20}).score,null);
+assert.strictEqual(core.longTermDecision({j:8,weeklyBias:null,fromHigh:null}).score,null);
 
 assert(core.weeklyKdjFactor(-5,12,15)>core.weeklyKdjFactor(5,15,18));
 assert(core.weeklyKdjFactor(5,15,18)>core.weeklyKdjFactor(15,22,24));
