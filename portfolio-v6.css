@@ -48,13 +48,14 @@
 .homeMarginRows b{font-size:12px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .homeMarginRows em{font-size:10px;font-style:normal;text-align:right;color:#dcebe1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .homeMarginRows small{grid-column:1/-1;color:#9eb6a8;font-size:9px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.marginRiskGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.marginMetricCard{display:grid;gap:4px;min-width:0;padding:11px;border:1px solid #294838;border-radius:13px;background:#091710}
-.marginMetricCard span{font-size:11px;color:var(--muted);font-weight:850}
-.marginMetricCard b{font-size:19px;line-height:1.2;overflow-wrap:anywhere}
-.marginMetricCard small,.marginMetricCard em{font-size:10px;line-height:1.4;color:#d1e4d8;font-style:normal}
-.marginRiskVerdict{display:grid;grid-template-columns:auto 1fr;gap:6px 9px;align-items:start;margin-top:8px;padding:9px 10px;border:1px solid #425047;border-radius:12px;background:#102018;font-size:11px;line-height:1.45}
-.marginRiskVerdict b{white-space:nowrap}.marginRiskVerdict span{min-width:0}.marginStale{grid-column:1/-1;color:#ffd84d;font-weight:900}
+.marginBalanceCard{width:100%;box-sizing:border-box;overflow:hidden;border:1px solid #30343d;border-radius:24px;background:#08090c;color:#f5f7fa;padding:18px 18px 14px;box-shadow:0 16px 34px rgba(0,0,0,.22)}
+.marginBalanceCard header,.marginBalanceRow,.marginBalanceCard footer{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0}
+.marginBalanceCard h3{margin:0;font-size:17px;line-height:1.25}.marginBalanceCard time{color:#9aa0aa;font-size:11px;white-space:nowrap}
+.marginBalanceSection{padding:16px 0;border-top:1px solid #292d35}.marginBalanceCard header+.marginBalanceSection{margin-top:11px;border-top:0;padding-top:4px}
+.marginBalanceRow>span{color:#9fa5af;font-size:13px;font-weight:750;min-width:0}.marginBalanceRow>b{font-size:22px;line-height:1.12;text-align:right;white-space:nowrap}.marginSubRow{margin-top:7px}.marginSubRow strong{font-size:13px;text-align:right;white-space:nowrap}
+.marginFormula,.marginCompactNote{margin:9px 0 0;color:#b4bac4;font-size:11px;line-height:1.6}.marginBandText{margin-top:8px;font-size:11px;font-weight:900;text-align:right}
+.marginBalanceCard footer{border-top:1px solid #292d35;padding-top:12px;color:#969da8;font-size:10px;flex-wrap:wrap}.marginBalanceCard footer .marginStale{width:100%;color:#ffd84d}
+.marginIncrease{color:#54d08b}.marginDecrease{color:#ff6868}.marginNeutral{color:#d7dbe1}.marginSafe{color:#54d08b}.marginCaution{color:#f3d35a}.marginWarning{color:#ff9d45}.marginDangerOrange{color:#ff704f}.marginDanger{color:#ff5555}
 .marginRiskTone-calm{border-color:#297f74;color:#bffaf0}.marginRiskTone-warning{border-color:#8f772d;color:#ffeaa0}.marginRiskTone-orange{border-color:#a65e2e;color:#ffd0a8}.marginRiskTone-danger{border-color:#9d3d49;color:#ffc1c7}
 .marginSources{display:flex;gap:10px;flex-wrap:wrap;margin-top:9px}
 .dashboard{grid-template-columns:1fr}
@@ -291,7 +292,7 @@
 }
 @media(max-width:430px){
   .homeSentimentCard>small{font-size:9px}.homeSentimentConclusion{font-size:11px}
-  .marginMetricCard{padding:9px}.marginMetricCard b{font-size:16px}.marginMetricCard small,.marginMetricCard em{font-size:9px}
+  .marginBalanceCard{padding:16px;border-radius:22px}.marginBalanceRow>b{font-size:20px}
   .quoteControls{align-items:flex-start}.quoteControls>span{width:100%;flex-basis:100%}
   .portfolioToolbar>div{display:grid;grid-template-columns:1fr 1fr;width:100%}.portfolioToolbar>div .miniBtn:last-of-type{grid-column:1/-1}
   .holdingMain{grid-template-columns:minmax(100px,1.15fr) repeat(3,minmax(52px,.6fr))}
@@ -300,7 +301,7 @@
 @media(max-width:375px){
   .homeSentimentCard{gap:2px 4px}.homeSentimentCard>em{font-size:10px}.homeSentimentCard>b{font-size:21px}
   .homeMarginRows{gap:2px 5px}.homeMarginRows b{font-size:11px}.homeMarginRows em{font-size:9px}
-  .marginRiskGrid{gap:6px}.marginMetricCard{padding:8px}.marginMetricCard b{font-size:14px}
+  .marginBalanceCard{padding:15px}.marginBalanceCard h3{font-size:15px}.marginBalanceRow>span{font-size:12px}.marginBalanceRow>b{font-size:18px}.marginFormula,.marginCompactNote{font-size:10px}
   .summaryCard>b{font-size:13px}.summaryCard>small{font-size:8px}
   .holdingMain{grid-template-columns:minmax(92px,1fr) repeat(3,minmax(48px,.56fr));gap:4px}
 }

@@ -23,13 +23,11 @@ jobs:
         with:
           python-version: "3.12"
       - name: Fetch structured after-hours margin data
-        env:
-          FINMIND_TOKEN: ${{ secrets.FINMIND_TOKEN }}
         run: python scripts/update_margin_data.py
       - name: Commit margin cache
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add margin-data.json
+          git add -A -- margin-data.json margin-cost-state.json reconciliation-report.json
           git diff --cached --quiet || git commit -m "Update margin risk data"
           git push

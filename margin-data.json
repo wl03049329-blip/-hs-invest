@@ -1,1352 +1,820 @@
 {
-  "updated_at": "2026-08-03T02:59:39+08:00",
   "data_date": "2026-07-31",
+  "updated_at": "2026-08-03T08:42:54+08:00",
   "data_mode": "after_hours",
+  "model": {
+    "name": "rolling_estimated_margin_cost",
+    "financing_ratio": 0.6,
+    "initial_maintenance_ratio": 166.6667,
+    "warmup_trading_days": 120,
+    "is_estimated": true,
+    "sample_state": "ready"
+  },
   "margin_balance": {
-    "value": 507462771000,
-    "daily_change": 13595477000,
-    "change_20d": -113374518000,
-    "percentile_60d": 21.7
+    "estimated_financing_principal": 797227948168,
+    "daily_change": 14925258336,
+    "daily_change_pct": 1.91,
+    "change_20d": -172003437105,
+    "percentile_60d": 15.0,
+    "balance_shares": 11314113000
   },
   "maintenance_ratio": {
-    "value": 221.33,
-    "daily_change": null,
-    "average_20d": null,
-    "percentile_60d": null,
-    "collateral_market_value": 1123164253830,
-    "financing_amount": 507462771000,
-    "coverage_ratio": 99.96,
-    "matched_security_count": 2036,
-    "missing_security_count": 9,
-    "suspended_price_count": 0,
-    "method": "estimated_market_margin_maintenance_ratio",
-    "is_estimated": true,
-    "coverage_state": "normal",
-    "effective_data_date": "2026-07-31",
-    "retained_previous": false
+    "value": 141.01,
+    "daily_change": 11.56,
+    "average_20d": 150.71,
+    "percentile_60d": 8.3,
+    "collateral_market_value": 1124139846530,
+    "estimated_financing_principal": 797227948168,
+    "method": "rolling_estimated_margin_cost",
+    "is_estimated": true
   },
-  "risk_state": "安全墊較高",
-  "summary": "融資餘額與推估維持率需交叉觀察；單日變動不代表後續方向。",
-  "source_name": "TWSE／TPEx OpenAPI（擔保品市值）＋ FinMind 市場融資金額",
-  "source_url": "https://www.twse.com.tw/zh/trading/margin/mi-margn.html",
-  "secondary_source_url": "https://www.tpex.org.tw/zh-tw/mainboard/trading/margin-trading/transactions.html",
-  "financing_source_url": "https://finmind.github.io/",
-  "source_status": {
+  "short_balance": {
+    "shares": 218970000,
+    "daily_change": -17187000
+  },
+  "markets": {
     "twse": {
-      "ok": true,
-      "margin_records": 1291,
-      "price_records": 1373,
-      "url": "https://openapi.twse.com.tw/v1/exchangeReport/MI_MARGN"
+      "collateral_market_value": 861736101660.0,
+      "estimated_remaining_cost": 992559784989.0,
+      "estimated_financing_principal": 595535870994.0,
+      "margin_balance_shares": 9143708000.0,
+      "matched_count": 1226,
+      "missing_count": 1,
+      "stale_price_count": 1,
+      "maintenance_ratio": 144.7
     },
     "tpex": {
-      "ok": true,
-      "margin_records": 914,
-      "price_records": 10218,
-      "url": "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_margin_balance"
+      "collateral_market_value": 262403744870.0,
+      "estimated_remaining_cost": 336153461958.0,
+      "estimated_financing_principal": 201692077175.0,
+      "margin_balance_shares": 2170405000.0,
+      "matched_count": 818,
+      "missing_count": 0,
+      "stale_price_count": 7,
+      "maintenance_ratio": 130.1
     },
-    "estimate": {
-      "ok": true,
-      "coverage_state": "normal",
-      "coverage_ratio": 99.96,
-      "missing_securities": [
-        {
-          "market": "TWSE",
-          "code": "1459",
-          "reason": "same_or_recent_close_unavailable"
-        },
-        {
-          "market": "TWSE",
-          "code": "1589",
-          "reason": "same_or_recent_close_unavailable"
-        },
-        {
-          "market": "TPEX",
-          "code": "1259",
-          "reason": "same_or_recent_close_unavailable"
-        },
-        {
-          "market": "TPEX",
-          "code": "2924",
-          "reason": "same_or_recent_close_unavailable"
-        },
-        {
-          "market": "TPEX",
-          "code": "3587",
-          "reason": "same_or_recent_close_unavailable"
-        },
-        {
-          "market": "TPEX",
-          "code": "4305",
-          "reason": "same_or_recent_close_unavailable"
-        },
-        {
-          "market": "TPEX",
-          "code": "5520",
-          "reason": "same_or_recent_close_unavailable"
-        },
-        {
-          "market": "TPEX",
-          "code": "5904",
-          "reason": "same_or_recent_close_unavailable"
-        },
-        {
-          "market": "TPEX",
-          "code": "6624",
-          "reason": "same_or_recent_close_unavailable"
-        }
-      ],
-      "reason": null,
-      "unit_mapping": {
-        "twse_margin_balance": "trading_units_x_1000_shares",
-        "tpex_margin_balance": "thousand_shares_x_1000",
-        "close": "TWD_per_share",
-        "financing_amount": "FinMind_TodayBalance_TWD"
-      }
+    "combined": {
+      "collateral_market_value": 1124139846530.0,
+      "estimated_remaining_cost": 1328713246947.0,
+      "estimated_financing_principal": 797227948168.0,
+      "margin_balance_shares": 11314113000.0,
+      "matched_count": 2044,
+      "missing_count": 1,
+      "stale_price_count": 8,
+      "maintenance_ratio": 141.01
     }
+  },
+  "coverage": {
+    "matched_count": 2044,
+    "missing_count": 1,
+    "coverage_ratio": 99.99,
+    "stale_price_count": 8
+  },
+  "risk_state": "依推估維持率判讀",
+  "summary": "融資本金採逐檔滾動成本推估；融資增減與維持率需交叉觀察，單日變動不代表後續方向。",
+  "source_name": "臺灣證券交易所／證券櫃檯買賣中心官方結構化資料",
+  "source_url": "https://www.twse.com.tw/zh/trading/margin/mi-margn.html",
+  "secondary_source_url": "https://www.tpex.org.tw/zh-tw/mainboard/trading/margin-trading/transactions.html",
+  "source_status": {
+    "twse": {
+      "ok": true
+    },
+    "tpex": {
+      "ok": true
+    },
+    "same_scope": true,
+    "unit_mapping": "融資與融券張數欄位 x 1,000 股；價格為新臺幣/股"
   },
   "history": [
     {
-      "date": "2025-12-08",
-      "margin_balance": 324739391000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
-    },
-    {
-      "date": "2025-12-09",
-      "margin_balance": 326884262000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
-    },
-    {
-      "date": "2025-12-10",
-      "margin_balance": 327694562000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
-    },
-    {
-      "date": "2025-12-11",
-      "margin_balance": 326671838000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
-    },
-    {
-      "date": "2025-12-12",
-      "margin_balance": 329349582000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
-    },
-    {
-      "date": "2025-12-15",
-      "margin_balance": 331859338000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
-    },
-    {
-      "date": "2025-12-16",
-      "margin_balance": 328789479000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
-    },
-    {
-      "date": "2025-12-17",
-      "margin_balance": 332174898000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
-    },
-    {
-      "date": "2025-12-18",
-      "margin_balance": 332380151000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
-    },
-    {
-      "date": "2025-12-19",
-      "margin_balance": 333308741000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
-    },
-    {
-      "date": "2025-12-22",
-      "margin_balance": 335196079000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
-    },
-    {
-      "date": "2025-12-23",
-      "margin_balance": 337588452000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
-    },
-    {
-      "date": "2025-12-24",
-      "margin_balance": 338902814000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
-    },
-    {
-      "date": "2025-12-26",
-      "margin_balance": 340337126000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
-    },
-    {
-      "date": "2025-12-29",
-      "margin_balance": 339886882000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
-    },
-    {
-      "date": "2025-12-30",
-      "margin_balance": 341367756000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
-    },
-    {
-      "date": "2025-12-31",
-      "margin_balance": 343409624000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
-    },
-    {
-      "date": "2026-01-02",
-      "margin_balance": 346634298000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
-    },
-    {
-      "date": "2026-01-05",
-      "margin_balance": 350948272000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
-    },
-    {
-      "date": "2026-01-06",
-      "margin_balance": 354549156000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
-    },
-    {
-      "date": "2026-01-07",
-      "margin_balance": 357058834000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
-    },
-    {
-      "date": "2026-01-08",
-      "margin_balance": 352387558000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
-    },
-    {
-      "date": "2026-01-09",
-      "margin_balance": 351492667000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
-    },
-    {
-      "date": "2026-01-12",
-      "margin_balance": 356489999000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
-    },
-    {
-      "date": "2026-01-13",
-      "margin_balance": 355638826000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
-    },
-    {
-      "date": "2026-01-14",
-      "margin_balance": 358452806000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
-    },
-    {
-      "date": "2026-01-15",
-      "margin_balance": 359299228000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
-    },
-    {
-      "date": "2026-01-16",
-      "margin_balance": 363391797000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
-    },
-    {
-      "date": "2026-01-19",
-      "margin_balance": 369415656000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
-    },
-    {
-      "date": "2026-01-20",
-      "margin_balance": 371225738000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
-    },
-    {
-      "date": "2026-01-21",
-      "margin_balance": 367750150000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
-    },
-    {
-      "date": "2026-01-22",
-      "margin_balance": 371734427000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
-    },
-    {
-      "date": "2026-01-23",
-      "margin_balance": 376076978000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
-    },
-    {
-      "date": "2026-01-26",
-      "margin_balance": 381580658000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
-    },
-    {
-      "date": "2026-01-27",
-      "margin_balance": 382728015000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
-    },
-    {
       "date": "2026-01-28",
-      "margin_balance": 384920473000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 589882056350.0,
+      "collateral_market_value": 985995002170.0,
+      "maintenance_ratio": 167.15
     },
     {
       "date": "2026-01-29",
-      "margin_balance": 381778070000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 582592970813.0,
+      "collateral_market_value": 965145837700.0,
+      "maintenance_ratio": 165.66
     },
     {
       "date": "2026-01-30",
-      "margin_balance": 383893252000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 583157321053.0,
+      "collateral_market_value": 958378153950.0,
+      "maintenance_ratio": 164.34
     },
     {
       "date": "2026-02-02",
-      "margin_balance": 378848321000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 574473261395.0,
+      "collateral_market_value": 915711908940.0,
+      "maintenance_ratio": 159.4
     },
     {
       "date": "2026-02-03",
-      "margin_balance": 382125198000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 576325828290.0,
+      "collateral_market_value": 931553667080.0,
+      "maintenance_ratio": 161.64
     },
     {
       "date": "2026-02-04",
-      "margin_balance": 384045976000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 578601115329.0,
+      "collateral_market_value": 955037186110.0,
+      "maintenance_ratio": 165.06
     },
     {
       "date": "2026-02-05",
-      "margin_balance": 382917747000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 575349501947.0,
+      "collateral_market_value": 925104883000.0,
+      "maintenance_ratio": 160.79
     },
     {
       "date": "2026-02-06",
-      "margin_balance": 373990690000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 563735453173.0,
+      "collateral_market_value": 887093918430.0,
+      "maintenance_ratio": 157.36
     },
     {
       "date": "2026-02-09",
-      "margin_balance": 375470000000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 564028399686.0,
+      "collateral_market_value": 908210573690.0,
+      "maintenance_ratio": 161.02
     },
     {
       "date": "2026-02-10",
-      "margin_balance": 372586424000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 559226727293.0,
+      "collateral_market_value": 905308355970.0,
+      "maintenance_ratio": 161.89
     },
     {
       "date": "2026-02-11",
-      "margin_balance": 368046780000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 552329420596.0,
+      "collateral_market_value": 901443023020.0,
+      "maintenance_ratio": 163.21
     },
     {
       "date": "2026-02-23",
-      "margin_balance": 372155937000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 557429386592.0,
+      "collateral_market_value": 930557191390.0,
+      "maintenance_ratio": 166.94
     },
     {
       "date": "2026-02-24",
-      "margin_balance": 377495245000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 563527823888.0,
+      "collateral_market_value": 970439299330.0,
+      "maintenance_ratio": 172.21
     },
     {
       "date": "2026-02-25",
-      "margin_balance": 383127012000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 569814425830.0,
+      "collateral_market_value": 984894619250.0,
+      "maintenance_ratio": 172.84
     },
     {
       "date": "2026-02-26",
-      "margin_balance": 389861168000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 579436605427.0,
+      "collateral_market_value": 1008567748830.0,
+      "maintenance_ratio": 174.06
     },
     {
       "date": "2026-03-02",
-      "margin_balance": 391622964000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 582847115151.0,
+      "collateral_market_value": 1011480931680.0,
+      "maintenance_ratio": 173.54
     },
     {
       "date": "2026-03-03",
-      "margin_balance": 384358166000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 573519753522.0,
+      "collateral_market_value": 960148574340.0,
+      "maintenance_ratio": 167.41
     },
     {
       "date": "2026-03-04",
-      "margin_balance": 376616380000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 563923430740.0,
+      "collateral_market_value": 891012965930.0,
+      "maintenance_ratio": 158.0
     },
     {
       "date": "2026-03-05",
-      "margin_balance": 379166593000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 568380553744.0,
+      "collateral_market_value": 929020836520.0,
+      "maintenance_ratio": 163.45
     },
     {
       "date": "2026-03-06",
-      "margin_balance": 382683605000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 572841581551.0,
+      "collateral_market_value": 934749178630.0,
+      "maintenance_ratio": 163.18
     },
     {
       "date": "2026-03-09",
-      "margin_balance": 371960474000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 554399507118.0,
+      "collateral_market_value": 851090637040.0,
+      "maintenance_ratio": 153.52
     },
     {
       "date": "2026-03-10",
-      "margin_balance": 368236339000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 550310894651.0,
+      "collateral_market_value": 870166207710.0,
+      "maintenance_ratio": 158.12
     },
     {
       "date": "2026-03-11",
-      "margin_balance": 376148010000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 561292310371.0,
+      "collateral_market_value": 933386690280.0,
+      "maintenance_ratio": 166.29
     },
     {
       "date": "2026-03-12",
-      "margin_balance": 379366977000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 563775642154.0,
+      "collateral_market_value": 930132442210.0,
+      "maintenance_ratio": 164.98
     },
     {
       "date": "2026-03-13",
-      "margin_balance": 385446747000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 570347337459.0,
+      "collateral_market_value": 946430067190.0,
+      "maintenance_ratio": 165.94
     },
     {
       "date": "2026-03-16",
-      "margin_balance": 392284076000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 580104814001.0,
+      "collateral_market_value": 974366379320.0,
+      "maintenance_ratio": 167.96
     },
     {
       "date": "2026-03-17",
-      "margin_balance": 393467031000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 583313260908.0,
+      "collateral_market_value": 989760769690.0,
+      "maintenance_ratio": 169.68
     },
     {
       "date": "2026-03-18",
-      "margin_balance": 399772079000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 593826919924.0,
+      "collateral_market_value": 1025499489130.0,
+      "maintenance_ratio": 172.69
     },
     {
       "date": "2026-03-19",
-      "margin_balance": 402095986000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 598334769954.0,
+      "collateral_market_value": 1027121454960.0,
+      "maintenance_ratio": 171.66
     },
     {
       "date": "2026-03-20",
-      "margin_balance": 398591129000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 594630109388.0,
+      "collateral_market_value": 1006012147200.0,
+      "maintenance_ratio": 169.18
     },
     {
       "date": "2026-03-23",
-      "margin_balance": 393333803000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 587622560312.0,
+      "collateral_market_value": 950848608850.0,
+      "maintenance_ratio": 161.81
     },
     {
       "date": "2026-03-24",
-      "margin_balance": 390102627000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 583571914901.0,
+      "collateral_market_value": 928673414700.0,
+      "maintenance_ratio": 159.14
     },
     {
       "date": "2026-03-25",
-      "margin_balance": 395499028000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 591255625363.0,
+      "collateral_market_value": 977269437000.0,
+      "maintenance_ratio": 165.29
     },
     {
       "date": "2026-03-26",
-      "margin_balance": 391136615000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 585903222034.0,
+      "collateral_market_value": 957269461990.0,
+      "maintenance_ratio": 163.38
     },
     {
       "date": "2026-03-27",
-      "margin_balance": 393722769000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 589530351489.0,
+      "collateral_market_value": 966708876020.0,
+      "maintenance_ratio": 163.98
     },
     {
       "date": "2026-03-30",
-      "margin_balance": 392708646000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 588360030380.0,
+      "collateral_market_value": 949693512020.0,
+      "maintenance_ratio": 161.41
     },
     {
       "date": "2026-03-31",
-      "margin_balance": 381724855000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 572220006196.0,
+      "collateral_market_value": 879892262860.0,
+      "maintenance_ratio": 153.77
     },
     {
       "date": "2026-04-01",
-      "margin_balance": 384907899000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 578003989106.0,
+      "collateral_market_value": 930590522210.0,
+      "maintenance_ratio": 161.0
     },
     {
       "date": "2026-04-02",
-      "margin_balance": 385200709000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 576278982136.0,
+      "collateral_market_value": 913931874900.0,
+      "maintenance_ratio": 158.59
     },
     {
       "date": "2026-04-07",
-      "margin_balance": 387735006000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 584600518727.0,
+      "collateral_market_value": 948204515750.0,
+      "maintenance_ratio": 162.2
     },
     {
       "date": "2026-04-08",
-      "margin_balance": 394820817000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 595340471079.0,
+      "collateral_market_value": 1013664048540.0,
+      "maintenance_ratio": 170.27
     },
     {
       "date": "2026-04-09",
-      "margin_balance": 396518145000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 599301612651.0,
+      "collateral_market_value": 1019565316410.0,
+      "maintenance_ratio": 170.13
     },
     {
       "date": "2026-04-10",
-      "margin_balance": 401240705000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 607641728922.0,
+      "collateral_market_value": 1048920071300.0,
+      "maintenance_ratio": 172.62
     },
     {
       "date": "2026-04-13",
-      "margin_balance": 408651307000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 617551095073.0,
+      "collateral_market_value": 1073117598740.0,
+      "maintenance_ratio": 173.77
     },
     {
       "date": "2026-04-14",
-      "margin_balance": 414955067000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 625598695588.0,
+      "collateral_market_value": 1093555744820.0,
+      "maintenance_ratio": 174.8
     },
     {
       "date": "2026-04-15",
-      "margin_balance": 416253785000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 629156026965.0,
+      "collateral_market_value": 1098228997710.0,
+      "maintenance_ratio": 174.56
     },
     {
       "date": "2026-04-16",
-      "margin_balance": 422408757000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 639168052823.0,
+      "collateral_market_value": 1127444472670.0,
+      "maintenance_ratio": 176.39
     },
     {
       "date": "2026-04-17",
-      "margin_balance": 427120349000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 648790610422.0,
+      "collateral_market_value": 1153956678560.0,
+      "maintenance_ratio": 177.86
     },
     {
       "date": "2026-04-20",
-      "margin_balance": 429830661000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 654864884818.0,
+      "collateral_market_value": 1181610101090.0,
+      "maintenance_ratio": 180.44
     },
     {
       "date": "2026-04-21",
-      "margin_balance": 433163894000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 662074278926.0,
+      "collateral_market_value": 1209303681110.0,
+      "maintenance_ratio": 182.65
     },
     {
       "date": "2026-04-22",
-      "margin_balance": 438545241000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 671751681239.0,
+      "collateral_market_value": 1230076598920.0,
+      "maintenance_ratio": 183.11
     },
     {
       "date": "2026-04-23",
-      "margin_balance": 430827021000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 662309701018.0,
+      "collateral_market_value": 1161396006770.0,
+      "maintenance_ratio": 175.36
     },
     {
       "date": "2026-04-24",
-      "margin_balance": 440907083000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 677450579205.0,
+      "collateral_market_value": 1190462057760.0,
+      "maintenance_ratio": 175.73
     },
     {
       "date": "2026-04-27",
-      "margin_balance": 452044394000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 692297129845.0,
+      "collateral_market_value": 1206351951230.0,
+      "maintenance_ratio": 174.25
     },
     {
       "date": "2026-04-28",
-      "margin_balance": 457109757000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 705079728886.0,
+      "collateral_market_value": 1243789681660.0,
+      "maintenance_ratio": 176.4
     },
     {
       "date": "2026-04-29",
-      "margin_balance": 460963803000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 712704162083.0,
+      "collateral_market_value": 1252605714470.0,
+      "maintenance_ratio": 175.75
     },
     {
       "date": "2026-04-30",
-      "margin_balance": 460904578000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 715421783911.0,
+      "collateral_market_value": 1256073497170.0,
+      "maintenance_ratio": 175.57
     },
     {
       "date": "2026-05-04",
-      "margin_balance": 470393584000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 731621887041.0,
+      "collateral_market_value": 1321751752540.0,
+      "maintenance_ratio": 180.66
     },
     {
       "date": "2026-05-05",
-      "margin_balance": 475145292000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 745595987476.0,
+      "collateral_market_value": 1360348523460.0,
+      "maintenance_ratio": 182.45
     },
     {
       "date": "2026-05-06",
-      "margin_balance": 475648471000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 750907386627.0,
+      "collateral_market_value": 1357240285710.0,
+      "maintenance_ratio": 180.75
     },
     {
       "date": "2026-05-07",
-      "margin_balance": 482664170000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 764466406156.0,
+      "collateral_market_value": 1391841892350.0,
+      "maintenance_ratio": 182.07
     },
     {
       "date": "2026-05-08",
-      "margin_balance": 477184758000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 759337872636.0,
+      "collateral_market_value": 1348300791220.0,
+      "maintenance_ratio": 177.56
     },
     {
       "date": "2026-05-11",
-      "margin_balance": 484592746000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 773340288476.0,
+      "collateral_market_value": 1407701223250.0,
+      "maintenance_ratio": 182.03
     },
     {
       "date": "2026-05-12",
-      "margin_balance": 491194951000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 783404191611.0,
+      "collateral_market_value": 1423160859170.0,
+      "maintenance_ratio": 181.66
     },
     {
       "date": "2026-05-13",
-      "margin_balance": 494418035000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 787393840913.0,
+      "collateral_market_value": 1397342740500.0,
+      "maintenance_ratio": 177.46
     },
     {
       "date": "2026-05-14",
-      "margin_balance": 499134844000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 797803855645.0,
+      "collateral_market_value": 1416407898420.0,
+      "maintenance_ratio": 177.54
     },
     {
       "date": "2026-05-15",
-      "margin_balance": 492797137000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 788864656294.0,
+      "collateral_market_value": 1351121744450.0,
+      "maintenance_ratio": 171.27
     },
     {
       "date": "2026-05-18",
-      "margin_balance": 501619604000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 799958510213.0,
+      "collateral_market_value": 1371361809170.0,
+      "maintenance_ratio": 171.43
     },
     {
       "date": "2026-05-19",
-      "margin_balance": 496887083000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 794476861565.0,
+      "collateral_market_value": 1321215110250.0,
+      "maintenance_ratio": 166.3
     },
     {
       "date": "2026-05-20",
-      "margin_balance": 502079185000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 799695166256.0,
+      "collateral_market_value": 1324747135200.0,
+      "maintenance_ratio": 165.66
     },
     {
       "date": "2026-05-21",
-      "margin_balance": 511154475000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 813857376242.0,
+      "collateral_market_value": 1404490219510.0,
+      "maintenance_ratio": 172.57
     },
     {
       "date": "2026-05-22",
-      "margin_balance": 522289307000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 829661405864.0,
+      "collateral_market_value": 1481125849240.0,
+      "maintenance_ratio": 178.52
     },
     {
       "date": "2026-05-25",
-      "margin_balance": 530476074000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 843450032468.0,
+      "collateral_market_value": 1547196062240.0,
+      "maintenance_ratio": 183.44
     },
     {
       "date": "2026-05-26",
-      "margin_balance": 534592623000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 852177286307.0,
+      "collateral_market_value": 1560558875110.0,
+      "maintenance_ratio": 183.13
     },
     {
       "date": "2026-05-27",
-      "margin_balance": 536269185000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 855110960984.0,
+      "collateral_market_value": 1548638142580.0,
+      "maintenance_ratio": 181.1
     },
     {
       "date": "2026-05-28",
-      "margin_balance": 535029538000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 853849838391.0,
+      "collateral_market_value": 1499654756760.0,
+      "maintenance_ratio": 175.63
     },
     {
       "date": "2026-05-29",
-      "margin_balance": 556359646000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 884006001146.0,
+      "collateral_market_value": 1586361451600.0,
+      "maintenance_ratio": 179.45
     },
     {
       "date": "2026-06-01",
-      "margin_balance": 565779103000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 898971363534.0,
+      "collateral_market_value": 1634785885770.0,
+      "maintenance_ratio": 181.85
     },
     {
       "date": "2026-06-02",
-      "margin_balance": 566970793000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 901946556400.0,
+      "collateral_market_value": 1617304762170.0,
+      "maintenance_ratio": 179.31
     },
     {
       "date": "2026-06-03",
-      "margin_balance": 568395323000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 908981958904.0,
+      "collateral_market_value": 1633280685970.0,
+      "maintenance_ratio": 179.68
     },
     {
       "date": "2026-06-04",
-      "margin_balance": 572635940000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 912476770042.0,
+      "collateral_market_value": 1591349294940.0,
+      "maintenance_ratio": 174.4
     },
     {
       "date": "2026-06-05",
-      "margin_balance": 566649267000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 905662483790.0,
+      "collateral_market_value": 1546019563970.0,
+      "maintenance_ratio": 170.71
     },
     {
       "date": "2026-06-08",
-      "margin_balance": 551012201000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 880559465126.0,
+      "collateral_market_value": 1434793871370.0,
+      "maintenance_ratio": 162.94
     },
     {
       "date": "2026-06-09",
-      "margin_balance": 563876896000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 895261298557.0,
+      "collateral_market_value": 1515307681440.0,
+      "maintenance_ratio": 169.26
     },
     {
       "date": "2026-06-10",
-      "margin_balance": 546811625000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 869228647511.0,
+      "collateral_market_value": 1392427375640.0,
+      "maintenance_ratio": 160.19
     },
     {
       "date": "2026-06-11",
-      "margin_balance": 549176982000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 868342466810.0,
+      "collateral_market_value": 1393856520480.0,
+      "maintenance_ratio": 160.52
     },
     {
       "date": "2026-06-12",
-      "margin_balance": 557027949000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 878533576247.0,
+      "collateral_market_value": 1448161481140.0,
+      "maintenance_ratio": 164.84
     },
     {
       "date": "2026-06-15",
-      "margin_balance": 571907094000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 897016208870.0,
+      "collateral_market_value": 1528512186120.0,
+      "maintenance_ratio": 170.4
     },
     {
       "date": "2026-06-16",
-      "margin_balance": 571307649000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 898275444778.0,
+      "collateral_market_value": 1529079447410.0,
+      "maintenance_ratio": 170.22
     },
     {
       "date": "2026-06-17",
-      "margin_balance": 583911936000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 914881173733.0,
+      "collateral_market_value": 1573255941990.0,
+      "maintenance_ratio": 171.96
     },
     {
       "date": "2026-06-18",
-      "margin_balance": 593046547000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 926536757923.0,
+      "collateral_market_value": 1632195939800.0,
+      "maintenance_ratio": 176.16
     },
     {
       "date": "2026-06-22",
-      "margin_balance": 605041591000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 943336522196.0,
+      "collateral_market_value": 1686426044010.0,
+      "maintenance_ratio": 178.77
     },
     {
       "date": "2026-06-23",
-      "margin_balance": 593929137000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 933674556818.0,
+      "collateral_market_value": 1606941695150.0,
+      "maintenance_ratio": 172.11
     },
     {
       "date": "2026-06-24",
-      "margin_balance": 607456271000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 950390216487.0,
+      "collateral_market_value": 1626728238010.0,
+      "maintenance_ratio": 171.16
     },
     {
       "date": "2026-06-25",
-      "margin_balance": 611000560000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 956403190621.0,
+      "collateral_market_value": 1638008140510.0,
+      "maintenance_ratio": 171.27
     },
     {
       "date": "2026-06-26",
-      "margin_balance": 590925882000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 930974653216.0,
+      "collateral_market_value": 1502175205530.0,
+      "maintenance_ratio": 161.36
     },
     {
       "date": "2026-06-29",
-      "margin_balance": 594229687000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 932770899438.0,
+      "collateral_market_value": 1511111970160.0,
+      "maintenance_ratio": 162.0
     },
     {
       "date": "2026-06-30",
-      "margin_balance": 611652207000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 954864916437.0,
+      "collateral_market_value": 1606360706410.0,
+      "maintenance_ratio": 168.23
     },
     {
       "date": "2026-07-01",
-      "margin_balance": 609502407000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 955533297640.0,
+      "collateral_market_value": 1601816712570.0,
+      "maintenance_ratio": 167.64
     },
     {
       "date": "2026-07-02",
-      "margin_balance": 620837289000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 969231385273.0,
+      "collateral_market_value": 1626493980560.0,
+      "maintenance_ratio": 167.81
     },
     {
       "date": "2026-07-03",
-      "margin_balance": 630812485000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 982685939028.0,
+      "collateral_market_value": 1659331703820.0,
+      "maintenance_ratio": 168.86
     },
     {
       "date": "2026-07-06",
-      "margin_balance": 631344856000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 984716326335.0,
+      "collateral_market_value": 1637726381860.0,
+      "maintenance_ratio": 166.31
     },
     {
       "date": "2026-07-07",
-      "margin_balance": 610945256000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 958697929293.0,
+      "collateral_market_value": 1518687766120.0,
+      "maintenance_ratio": 158.41
     },
     {
       "date": "2026-07-08",
-      "margin_balance": 613815725000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 962260840796.0,
+      "collateral_market_value": 1536064675490.0,
+      "maintenance_ratio": 159.63
     },
     {
       "date": "2026-07-09",
-      "margin_balance": 619648244000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 968274649719.0,
+      "collateral_market_value": 1550103112250.0,
+      "maintenance_ratio": 160.09
     },
     {
       "date": "2026-07-13",
-      "margin_balance": 618299040000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 966172656908.0,
+      "collateral_market_value": 1525891042090.0,
+      "maintenance_ratio": 157.93
     },
     {
       "date": "2026-07-14",
-      "margin_balance": 604034106000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 945205749868.0,
+      "collateral_market_value": 1458316525500.0,
+      "maintenance_ratio": 154.29
     },
     {
       "date": "2026-07-15",
-      "margin_balance": 615368175000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 960870035239.0,
+      "collateral_market_value": 1530698760970.0,
+      "maintenance_ratio": 159.3
     },
     {
       "date": "2026-07-16",
-      "margin_balance": 615575992000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 960218754829.0,
+      "collateral_market_value": 1494518638790.0,
+      "maintenance_ratio": 155.64
     },
     {
       "date": "2026-07-17",
-      "margin_balance": 587962513000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 917557466694.0,
+      "collateral_market_value": 1323346583960.0,
+      "maintenance_ratio": 144.22
     },
     {
       "date": "2026-07-20",
-      "margin_balance": 569035788000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 890993175871.0,
+      "collateral_market_value": 1255134569640.0,
+      "maintenance_ratio": 140.87
     },
     {
       "date": "2026-07-21",
-      "margin_balance": 576496237000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 899474101202.0,
+      "collateral_market_value": 1330385484320.0,
+      "maintenance_ratio": 147.91
     },
     {
       "date": "2026-07-22",
-      "margin_balance": 582823505000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 905678766930.0,
+      "collateral_market_value": 1390623369910.0,
+      "maintenance_ratio": 153.54
     },
     {
       "date": "2026-07-23",
-      "margin_balance": 582626351000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 903159068550.0,
+      "collateral_market_value": 1379852159570.0,
+      "maintenance_ratio": 152.78
     },
     {
       "date": "2026-07-24",
-      "margin_balance": 577059537000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 892732884480.0,
+      "collateral_market_value": 1313414652470.0,
+      "maintenance_ratio": 147.12
     },
     {
       "date": "2026-07-27",
-      "margin_balance": 568663454000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 880657252340.0,
+      "collateral_market_value": 1300345733700.0,
+      "maintenance_ratio": 147.66
     },
     {
       "date": "2026-07-28",
-      "margin_balance": 545534811000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 849556411718.0,
+      "collateral_market_value": 1170676694110.0,
+      "maintenance_ratio": 137.8
     },
     {
       "date": "2026-07-29",
-      "margin_balance": 507011173000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 800830052054.0,
+      "collateral_market_value": 1052134048900.0,
+      "maintenance_ratio": 131.38
     },
     {
       "date": "2026-07-30",
-      "margin_balance": 493867294000,
-      "collateral_market_value": null,
-      "financing_amount": null,
-      "maintenance_ratio": null,
-      "coverage_ratio": null
+      "estimated_financing_principal": 782302689832.0,
+      "collateral_market_value": 1012674050480.0,
+      "maintenance_ratio": 129.45
     },
     {
       "date": "2026-07-31",
-      "margin_balance": 507462771000,
-      "collateral_market_value": 1123164253830,
-      "financing_amount": 507462771000,
-      "maintenance_ratio": 221.33,
-      "coverage_ratio": 99.96
+      "estimated_financing_principal": 797227948168.0,
+      "collateral_market_value": 1124139846530.0,
+      "maintenance_ratio": 141.01
     }
   ],
-  "disclaimer": "市場推估融資維持率為本站依官方個股融資餘額與同日收盤價估算，不是交易所公布的全市場維持率，也不代表個人帳戶維持率或追繳狀態。130% 僅為個別信用帳戶法規參考，不代表所有投資人必然追繳。",
-  "methodology": "Σ(融資餘額仟股×1,000×同日收盤價) ÷ 同日市場融資金額餘額 ×100；覆蓋率低於95%時不發布新估值。",
+  "missing_securities": [
+    {
+      "market": "TWSE",
+      "code": "1589",
+      "reason": "initial_price_unavailable"
+    }
+  ],
+  "methodology": "逐檔昨日平均成本＝昨日推估成本÷昨日融資股數；新增融資以當日均價（缺少時收盤價）計成本；賣出與現償按昨日平均成本減除；剩餘成本×60%為推估本金。全市場先各自加總同範圍擔保品與本金，再計算比率。",
+  "disclaimer": "市場推估融資維持率僅用於觀察整體融資戶壓力，不代表個人帳戶維持率或追繳狀態。130%僅為個別信用帳戶法規參考。",
   "rule_url": "https://twse-regulation.twse.com.tw/TW/law/DOC01.aspx?FLCODE=FL007121&FLNO=53"
 }

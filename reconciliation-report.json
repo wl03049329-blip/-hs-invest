@@ -1,0 +1,82 @@
+{
+  "data_date": "2026-07-31",
+  "generated_at": "2026-08-03T08:42:54+08:00",
+  "reason": "與使用者提供的畫面參考值相差超過3%；未套用任何調整係數。",
+  "reference": {
+    "estimated_financing_principal": 545500000000,
+    "collateral_market_value": 889600000000,
+    "maintenance_ratio": 163.08,
+    "balance_shares": 9096008000,
+    "short_balance_shares": 219259000
+  },
+  "actual": {
+    "estimated_financing_principal": 797227948168,
+    "collateral_market_value": 1124139846530,
+    "maintenance_ratio": 141.01,
+    "balance_shares": 11314113000,
+    "short_balance_shares": 218970000
+  },
+  "difference_pct": {
+    "estimated_financing_principal": 46.15,
+    "collateral_market_value": 26.36,
+    "maintenance_ratio": -13.53,
+    "balance_shares": 24.39,
+    "short_balance_shares": -0.13
+  },
+  "markets": {
+    "twse": {
+      "collateral_market_value": 861736101660.0,
+      "estimated_remaining_cost": 992559784989.0,
+      "estimated_financing_principal": 595535870994.0,
+      "margin_balance_shares": 9143708000.0,
+      "matched_count": 1226,
+      "missing_count": 1,
+      "stale_price_count": 1,
+      "maintenance_ratio": 144.7
+    },
+    "tpex": {
+      "collateral_market_value": 262403744870.0,
+      "estimated_remaining_cost": 336153461958.0,
+      "estimated_financing_principal": 201692077175.0,
+      "margin_balance_shares": 2170405000.0,
+      "matched_count": 818,
+      "missing_count": 0,
+      "stale_price_count": 7,
+      "maintenance_ratio": 130.1
+    },
+    "combined": {
+      "collateral_market_value": 1124139846530.0,
+      "estimated_remaining_cost": 1328713246947.0,
+      "estimated_financing_principal": 797227948168.0,
+      "margin_balance_shares": 11314113000.0,
+      "matched_count": 2044,
+      "missing_count": 1,
+      "stale_price_count": 8,
+      "maintenance_ratio": 141.01
+    }
+  },
+  "coverage": {
+    "matched_count": 2044,
+    "missing_count": 1,
+    "coverage_ratio": 99.99,
+    "stale_price_count": 8
+  },
+  "missing_securities": [
+    {
+      "market": "TWSE",
+      "code": "1589",
+      "reason": "initial_price_unavailable"
+    }
+  ],
+  "estimated_remaining_cost": 1328713246947.0,
+  "financing_ratio": 0.6,
+  "sources": [
+    "https://www.twse.com.tw/zh/trading/margin/mi-margn.html",
+    "https://www.tpex.org.tw/zh-tw/mainboard/trading/margin-trading/transactions.html"
+  ],
+  "units": {
+    "money": "TWD",
+    "shares": "shares",
+    "maintenance_ratio": "percent"
+  }
+}

@@ -12,106 +12,89 @@ assert SPEC.loader
 SPEC.loader.exec_module(MODULE)
 
 
-def official_fixture(missing_tpex_price=False):
-    return {
-        "twse_margin": [{"股票代號": "2330", "融資今日餘額": "10"}],
-        "twse_prices": [{"Date": "1150731", "Code": "2330", "ClosingPrice": "100"}],
-        "tpex_margin": [{"Date": "1150731", "SecuritiesCompanyCode": "6488", "MarginPurchaseBalance": "10"}],
-        "tpex_prices": ([{"Date": "1150731", "SecuritiesCompanyCode": "9999", "Close": "100"}]
-                        if missing_tpex_price else [{"Date": "1150731", "SecuritiesCompanyCode": "6488", "Close": "100"}]),
-    }
+def rec(market="twse", code="2330", previous=1000, buy=0, sell=0, cash=0,
+        balance=1000, close=100, average=100, short_previous=10, short_balance=10):
+    return {"market": market, "code": code, "name": code, "previous": previous,
+            "buy": buy, "sell": sell, "cash": cash, "balance": balance,
+            "close": close, "average": average,
+            "short_previous": short_previous, "short_balance": short_balance}
 
 
-def balance_history(count=130):
-    start = dt.date(2026, 1, 30)
-    rows = []
-    date = start
-    while len(rows) < count:
-        if date.weekday() < 5:
-            rows.append({"date": date.isoformat(), "value": 10_000_000 + len(rows) * 1000, "previous": 10_000_000})
-        date += dt.timedelta(days=1)
-    rows[-1]["date"] = "2026-07-31"
-    return rows
+def shorts():
+    return {"twse": {"short_balance": 10, "short_previous": 9},
+            "tpex": {"short_balance": 20, "short_previous": 18}}
 
 
 class MarginDataTests(unittest.TestCase):
-    def test_estimate_formula_and_unit_conversion(self):
-        result = MODULE.estimate_market_ratio(official_fixture(), 1_000_000, "2026-07-31")
-        self.assertEqual(result["collateral_market_value"], 2_000_000)
-        self.assertEqual(result["financing_amount"], 1_000_000)
-        self.assertEqual(result["value"], 200.0)
+    def test_initial_sixty_percent_financing_is_166_67(self):
+        state = MODULE.blank_state()
+        result = MODULE.summarize(state, [rec()], shorts(), dt.date(2026, 1, 2))
+        self.assertAlmostEqual(result["markets"]["combined"]["maintenance_ratio"], 166.67, places=2)
 
-    def test_estimate_rejects_unreasonable_ratio(self):
-        with self.assertRaisesRegex(ValueError, "unreasonable"):
-            MODULE.estimate_market_ratio(official_fixture(), 10_000_000, "2026-07-31")
+    def test_price_down_and_up_change_ratio_without_changing_cost(self):
+        state = MODULE.blank_state()
+        MODULE.summarize(state, [rec()], shorts(), dt.date(2026, 1, 2))
+        down = MODULE.summarize(state, [rec(close=80, average=80)], shorts(), dt.date(2026, 1, 5))
+        self.assertAlmostEqual(down["markets"]["combined"]["maintenance_ratio"], 133.33, places=2)
+        up = MODULE.summarize(state, [rec(close=120, average=120)], shorts(), dt.date(2026, 1, 6))
+        self.assertAlmostEqual(up["markets"]["combined"]["maintenance_ratio"], 200.0, places=2)
 
-    def test_publishable_estimate_uses_realistic_fixture(self):
-        data = official_fixture()
-        data["twse_prices"][0]["ClosingPrice"] = "1000"
-        data["tpex_prices"][0]["Close"] = "1000"
-        result = MODULE.estimate_market_ratio(data, 10_000_000, "2026-07-31")
-        self.assertEqual(result["value"], 200.0)
-        self.assertEqual(result["coverage_ratio"], 100.0)
-        self.assertEqual(result["matched_security_count"], 2)
+    def test_new_buy_uses_average_then_close_fallback(self):
+        old = {"shares": 1000, "estimated_cost": 100000, "last_close": 100, "price_date": "2026-01-02"}
+        rolled, _ = MODULE.roll_security(rec(previous=1000, buy=100, balance=1100, close=120, average=110), old, dt.date(2026, 1, 5))
+        self.assertEqual(rolled["estimated_cost"], 111000)
+        rolled, _ = MODULE.roll_security(rec(previous=1000, buy=100, balance=1100, close=120, average=None), old, dt.date(2026, 1, 5))
+        self.assertEqual(rolled["estimated_cost"], 112000)
 
-    def test_date_scope_must_match(self):
-        data = official_fixture()
-        data["tpex_margin"][0]["Date"] = "1150730"
-        with self.assertRaisesRegex(ValueError, "dates do not match"):
-            MODULE.estimate_market_ratio(data, 10_000_000, "2026-07-31")
+    def test_sell_and_cash_repayment_remove_previous_average_cost(self):
+        old = {"shares": 1000, "estimated_cost": 120000, "last_close": 100, "price_date": "2026-01-02"}
+        rolled, _ = MODULE.roll_security(rec(previous=1000, sell=100, cash=50, balance=850), old, dt.date(2026, 1, 5))
+        self.assertEqual(rolled["estimated_cost"], 102000)
 
-    def test_recent_cached_close_counts_as_suspended(self):
-        data = official_fixture(missing_tpex_price=True)
-        data["twse_prices"][0]["ClosingPrice"] = "1000"
-        data["tpex_prices"].append({"Date": "1150730", "SecuritiesCompanyCode": "6488", "Close": "1000"})
-        result = MODULE.estimate_market_ratio(data, 10_000_000, "2026-07-31")
-        self.assertEqual(result["suspended_price_count"], 1)
-        self.assertEqual(result["coverage_ratio"], 100.0)
+    def test_twse_and_tpex_use_identical_numerator_denominator_scope(self):
+        state = MODULE.blank_state()
+        result = MODULE.summarize(state, [rec(), rec("tpex", "6488", close=50, average=50)], shorts(), dt.date(2026, 1, 2))
+        combined = result["markets"]["combined"]
+        self.assertEqual(combined["collateral_market_value"], 150000)
+        self.assertEqual(combined["estimated_financing_principal"], 90000)
+        self.assertAlmostEqual(combined["maintenance_ratio"], 166.67, places=2)
 
-    def test_coverage_below_95_retains_previous(self):
-        data = official_fixture(missing_tpex_price=True)
-        data["twse_prices"][0]["ClosingPrice"] = "2000"
-        previous = {
-            "data_date": "2026-07-30",
-            "maintenance_ratio": {"value": 175.5, "effective_data_date": "2026-07-30", "collateral_market_value": 1, "financing_amount": 1},
-            "history": [], "price_cache": {}
-        }
-        payload = MODULE.build_payload(balance_history(), dt.datetime(2026, 7, 31, 12, tzinfo=dt.timezone.utc), previous, data)
-        self.assertEqual(payload["maintenance_ratio"]["value"], 175.5)
-        self.assertTrue(payload["maintenance_ratio"]["retained_previous"])
-        self.assertEqual(payload["maintenance_ratio"]["coverage_state"], "retained_previous")
+    def test_split_preserves_total_cost(self):
+        old = {"shares": 1000, "estimated_cost": 100000, "last_close": 100, "price_date": "2026-01-02"}
+        rolled, event = MODULE.roll_security(rec(previous=2000, balance=2000, close=50, average=50), old, dt.date(2026, 1, 5))
+        self.assertTrue(event["corporate_action"])
+        self.assertEqual(rolled["estimated_cost"], 100000)
+        self.assertEqual(rolled["shares"], 2000)
 
-    def test_checked_in_payload_is_valid_and_estimated(self):
+    def test_suspended_security_uses_recent_close_not_zero(self):
+        old = {"shares": 1000, "estimated_cost": 100000, "last_close": 100, "price_date": "2026-01-02"}
+        rolled, event = MODULE.roll_security(rec(close=None, average=None), old, dt.date(2026, 1, 5))
+        self.assertTrue(event["stale"])
+        self.assertEqual(rolled["last_close"], 100)
+
+    def test_checked_in_payload_is_valid_and_no_old_denominator(self):
         payload = json.loads((ROOT / "margin-data.json").read_text(encoding="utf-8"))
         MODULE.validate_payload(payload)
-        self.assertGreater(payload["margin_balance"]["value"], 0)
-        self.assertEqual(payload["maintenance_ratio"]["method"], "estimated_market_margin_maintenance_ratio")
-        self.assertTrue(payload["maintenance_ratio"]["is_estimated"])
-        self.assertGreaterEqual(len(payload["history"]), 120)
+        self.assertEqual(payload["model"]["name"], "rolling_estimated_margin_cost")
+        self.assertGreaterEqual(payload["model"]["warmup_trading_days"], 120)
+        self.assertNotIn("value", payload["margin_balance"])
+        self.assertNotIn("financing_amount", payload["maintenance_ratio"])
+        self.assertNotIn("FinMind", json.dumps(payload, ensure_ascii=False))
 
-    def test_payload_rejects_nan_and_zero(self):
-        payload = {
-            "data_date": "2026-07-31", "margin_balance": {"value": math.nan},
-            "maintenance_ratio": {"value": 0, "method": "estimated_market_margin_maintenance_ratio", "is_estimated": True},
-            "history": [{}] * 120,
-        }
+    def test_payload_rejects_nan_zero_and_mismatched_principal(self):
+        payload = {"data_date": "2026-07-31", "model": {"name": "rolling_estimated_margin_cost", "warmup_trading_days": 120},
+                   "margin_balance": {"estimated_financing_principal": math.nan, "balance_shares": 1},
+                   "maintenance_ratio": {"value": 0, "collateral_market_value": 1, "estimated_financing_principal": 2},
+                   "markets": {}}
         with self.assertRaises(ValueError):
             MODULE.validate_payload(payload)
 
-    def test_history_keeps_at_least_120_rows(self):
-        rows = MODULE.merge_history(balance_history(130), None, None)
-        self.assertEqual(len(rows), 130)
-        self.assertIn("collateral_market_value", rows[-1])
-
-    def test_risk_bands_include_regulatory_reference_without_margin_call_claim(self):
-        self.assertEqual(MODULE.risk_state_for(130), "接近法規參考區")
-        self.assertEqual(MODULE.risk_state_for(129.9), "極端壓力區")
-
-    def test_workflow_has_both_taipei_after_hours_runs(self):
+    def test_workflow_has_two_after_hours_runs_and_persists_state(self):
         workflow = (ROOT / ".github" / "workflows" / "update-margin-data.yml").read_text(encoding="utf-8")
         self.assertIn('cron: "0 10 * * 1-5"', workflow)
         self.assertIn('cron: "0 11 * * 1-5"', workflow)
-        self.assertIn("cancel-in-progress: true", workflow)
+        self.assertIn("margin-cost-state.json", workflow)
+        self.assertNotIn("FINMIND_TOKEN", workflow)
 
 
 if __name__ == "__main__":

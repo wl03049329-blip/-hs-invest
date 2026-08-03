@@ -22,24 +22,39 @@
   function validatePayload(payload,today){
     if(!payload||typeof payload!=="object"||!/^\d{4}-\d{2}-\d{2}$/.test(payload.data_date||""))return null;
     const balance=payload.margin_balance||{},maintenance=payload.maintenance_ratio||{};
-    if(!finite(balance.value)||balance.value<=0)return null;
-    const estimated=maintenance.method==="estimated_market_margin_maintenance_ratio"&&maintenance.is_estimated===true;
-    const ratio=estimated&&finite(maintenance.value)&&maintenance.value>100&&maintenance.value<1000?maintenance.value:null;
-    const coverage=finite(maintenance.coverage_ratio)&&maintenance.coverage_ratio>=0&&maintenance.coverage_ratio<=100?maintenance.coverage_ratio:null;
+    const model=payload.model||{},coverageData=payload.coverage||{};
+    const principal=balance.estimated_financing_principal;
+    const estimated=model.name==="rolling_estimated_margin_cost"&&model.is_estimated===true&&maintenance.method==="rolling_estimated_margin_cost"&&maintenance.is_estimated===true;
+    if(!estimated||!finite(principal)||principal<=0||!finite(balance.balance_shares)||balance.balance_shares<=0)return null;
+    const ratio=finite(maintenance.value)&&maintenance.value>100&&maintenance.value<400?maintenance.value:null;
+    const collateral=maintenance.collateral_market_value;
+    const detailPrincipal=maintenance.estimated_financing_principal;
+    if(ratio===null||!finite(collateral)||collateral<=0||!finite(detailPrincipal)||detailPrincipal!==principal)return null;
+    const coverage=finite(coverageData.coverage_ratio)&&coverageData.coverage_ratio>=0&&coverageData.coverage_ratio<=100?coverageData.coverage_ratio:null;
     const age=tradingDayAge(payload.data_date,today);
     return{
       ...payload,
       margin_balance:{...balance},
-      maintenance_ratio:{...maintenance,value:ratio,coverage_ratio:coverage},
+      maintenance_ratio:{...maintenance,value:ratio},
+      coverage:{...coverageData,coverage_ratio:coverage},
       trading_day_age:age,
       stale:Number.isFinite(age)&&age>3
     };
   }
 
+  function displayValues(payload){
+    const balance=payload?.margin_balance||{},maintenance=payload?.maintenance_ratio||{};
+    return{
+      financingPrincipal:finite(balance.estimated_financing_principal)&&balance.estimated_financing_principal>0?balance.estimated_financing_principal:null,
+      collateralMarketValue:finite(maintenance.collateral_market_value)&&maintenance.collateral_market_value>0?maintenance.collateral_market_value:null,
+      maintenanceRatio:finite(maintenance.value)&&maintenance.value>100&&maintenance.value<400?maintenance.value:null,
+      dataDate:/^\d{4}-\d{2}-\d{2}$/.test(payload?.data_date||"")?payload.data_date:null
+    };
+  }
+
   function ratioBand(ratio){
     if(!finite(ratio))return{key:"unavailable",label:"資料暫時無法取得",tone:"neutral"};
-    if(ratio>=180)return{key:"high_cushion",label:"安全墊較高",tone:"calm"};
-    if(ratio>=160)return{key:"general",label:"一般水位",tone:"neutral"};
+    if(ratio>=160)return{key:"general",label:"安全墊一般",tone:"calm"};
     if(ratio>=150)return{key:"shrinking",label:"安全墊縮小",tone:"warning"};
     if(ratio>=140)return{key:"pressure",label:"壓力升高",tone:"warning"};
     if(ratio>=130)return{key:"reference",label:"接近法規參考區",tone:"orange"};
@@ -85,5 +100,5 @@
     return baseFear*(1-weight)+maintenanceFear*weight;
   }
 
-  return{finite,clamp,tradingDayAge,validatePayload,ratioBand,classifyRisk,maintenanceFearScore,combineFear};
+  return{finite,clamp,tradingDayAge,validatePayload,displayValues,ratioBand,classifyRisk,maintenanceFearScore,combineFear};
 });

@@ -1,442 +1,502 @@
 #!/usr/bin/env python3
-"""Build the after-hours Taiwan margin-risk cache from structured data.
+"""Build the after-hours TWSE + TPEx rolling margin-cost estimate.
 
-The exchange does not publish one official market-wide maintenance ratio.  We
-therefore publish an explicitly labelled estimate:
+The exchanges do not publish a market-wide maintenance ratio.  This script
+therefore estimates the remaining financed cost security by security and uses
+the *same matched security scope* for collateral and principal:
 
-    same-day market value of margin-financed collateral
-    ----------------------------------------------------  x 100
-         same-day outstanding financing amount
+    sum(margin balance shares x close)
+    ---------------------------------- x 100
+    sum(rolling remaining cost x 0.60)
 
-Security balances and closes come from TWSE / TPEx OpenAPI.  The market-wide
-financing amount and its history come from FinMind's structured Taiwan market
-aggregate.  Missing values are never replaced by zero.
+No external aggregate financing field is used as the denominator.
 """
 from __future__ import annotations
 
+import argparse
 import datetime as dt
 import json
 import math
 import os
 import tempfile
-import urllib.parse
+import time
+import urllib.error
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "margin-data.json"
-FINMIND_API = "https://api.finmindtrade.com/api/v4/data"
-TWSE_MARGIN_API = "https://openapi.twse.com.tw/v1/exchangeReport/MI_MARGN"
-TWSE_PRICE_API = "https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL"
-TPEX_MARGIN_API = "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_margin_balance"
-TPEX_PRICE_API = "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes"
+STATE = ROOT / "margin-cost-state.json"
+RECONCILIATION = ROOT / "reconciliation-report.json"
+FINANCING_RATIO = 0.60
+INITIAL_RATIO = 100 / FINANCING_RATIO
+MIN_WARMUP_DAYS = 120
+TARGET_WARMUP_DAYS = 125
+MAX_STALE_DAYS = 10
+TAIPEI = dt.timezone(dt.timedelta(hours=8))
+HEADERS = {"User-Agent": "HS-ETF-Stock-Radar/6.2 (+GitHub Actions)", "Accept": "application/json"}
+TWSE_MARGIN = "https://www.twse.com.tw/rwd/zh/marginTrading/MI_MARGN?date={date}&selectType=ALL&response=json"
+TWSE_PRICE = "https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?date={date}&type=ALLBUT0999&response=json"
+TPEX_MARGIN = "https://www.tpex.org.tw/web/stock/margin_trading/margin_balance/margin_bal_result.php?l=zh-tw&o=json&d={roc}"
+TPEX_PRICE = "https://www.tpex.org.tw/www/zh-tw/afterTrading/dailyQuotes?date={slash}&id=&response=json"
 TWSE_SOURCE = "https://www.twse.com.tw/zh/trading/margin/mi-margn.html"
 TPEX_SOURCE = "https://www.tpex.org.tw/zh-tw/mainboard/trading/margin-trading/transactions.html"
-FINMIND_SOURCE = "https://finmind.github.io/"
-MAINTENANCE_RULE = "https://twse-regulation.twse.com.tw/TW/law/DOC01.aspx?FLCODE=FL007121&FLNO=53"
-HEADERS = {"User-Agent": "HS-ETF-Stock-Radar/6.2 (+GitHub Actions)", "Accept": "application/json"}
-TAIPEI = dt.timezone(dt.timedelta(hours=8))
-SHARES_PER_REPORTED_UNIT = 1_000  # TWSE trading unit / TPEx thousand shares.
-MONEY_SCALE = 1  # FinMind TodayBalance is already NTD.
-MIN_PUBLISH_COVERAGE = 95.0
-NORMAL_COVERAGE = 98.0
-MAX_PRICE_CACHE_AGE_DAYS = 10
+RULE_SOURCE = "https://twse-regulation.twse.com.tw/TW/law/DOC01.aspx?FLCODE=FL007121&FLNO=53"
 
 
-def finite_number(value: object, *, positive: bool = False) -> float:
+def number(value: object, *, positive: bool = False) -> float:
     if isinstance(value, bool):
         raise ValueError("boolean is not numeric")
-    if isinstance(value, str):
-        value = value.replace(",", "").replace("+", "").strip()
-    number = float(value)
-    if not math.isfinite(number) or (positive and number <= 0):
-        raise ValueError("invalid numeric value")
-    return number
+    text = str(value).replace(",", "").replace("+", "").strip()
+    result = float(text)
+    if not math.isfinite(result) or (positive and result <= 0):
+        raise ValueError("invalid number")
+    return result
 
 
-def optional_positive(value: object) -> float | None:
+def maybe(value: object, *, positive: bool = False) -> float | None:
     try:
-        return finite_number(value, positive=True)
+        return number(value, positive=positive)
     except (TypeError, ValueError):
         return None
 
 
-def get_json(url: str, timeout: int = 30) -> object:
-    request = urllib.request.Request(url, headers=HEADERS)
-    with urllib.request.urlopen(request, timeout=timeout) as response:
-        if response.status != 200:
-            raise RuntimeError(f"HTTP {response.status}")
-        return json.loads(response.read().decode("utf-8-sig"))
-
-
-def finmind_history(now: dt.datetime) -> list[dict]:
-    params = {
-        "dataset": "TaiwanStockTotalMarginPurchaseShortSale",
-        "start_date": (now.date() - dt.timedelta(days=240)).isoformat(),
-        "end_date": now.date().isoformat(),
-    }
-    token = os.getenv("FINMIND_TOKEN", "").strip()
-    if token:
-        params["token"] = token
-    payload = get_json(FINMIND_API + "?" + urllib.parse.urlencode(params))
-    if not isinstance(payload, dict) or payload.get("status") != 200 or not isinstance(payload.get("data"), list):
-        raise ValueError("FinMind margin response is invalid")
-    rows: list[dict] = []
-    for row in payload["data"]:
-        if row.get("name") != "MarginPurchaseMoney" or not isinstance(row.get("date"), str):
-            continue
+def get_json(url: str, timeout: int = 35, attempts: int = 3) -> dict:
+    last: Exception | None = None
+    for attempt in range(attempts):
         try:
-            value = finite_number(row.get("TodayBalance"), positive=True) * MONEY_SCALE
-            previous = finite_number(row.get("YesBalance"), positive=True) * MONEY_SCALE
-        except (TypeError, ValueError):
+            request = urllib.request.Request(url, headers=HEADERS)
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                if response.status != 200:
+                    raise RuntimeError(f"HTTP {response.status}")
+                payload = json.loads(response.read().decode("utf-8-sig"))
+            if not isinstance(payload, dict):
+                raise ValueError("JSON root is not an object")
+            return payload
+        except (OSError, ValueError, urllib.error.URLError) as exc:
+            last = exc
+            if attempt + 1 < attempts:
+                time.sleep(0.6 * (attempt + 1))
+    raise RuntimeError(f"structured source failed: {last}")
+
+
+def table(payload: dict, index: int) -> list[list[Any]]:
+    tables = payload.get("tables")
+    if not isinstance(tables, list) or index >= len(tables):
+        raise ValueError("expected data table is absent")
+    rows = tables[index].get("data")
+    if not isinstance(rows, list):
+        raise ValueError("table rows are absent")
+    return rows
+
+
+def formats(day: dt.date) -> dict[str, str]:
+    return {
+        "date": day.strftime("%Y%m%d"),
+        "roc": f"{day.year - 1911:03d}/{day:%m/%d}",
+        "slash": day.strftime("%Y/%m/%d"),
+    }
+
+
+def parse_twse(day: dt.date, margin: dict, prices: dict) -> tuple[list[dict], dict]:
+    if margin.get("stat") != "OK" or prices.get("stat") != "OK":
+        raise ValueError("TWSE has no data for date")
+    price_rows = table(prices, 8)
+    price_map: dict[str, dict] = {}
+    for row in price_rows:
+        if not isinstance(row, list) or len(row) < 10:
             continue
-        rows.append({"date": row["date"], "value": round(value), "previous": round(previous)})
-    rows.sort(key=lambda item: item["date"])
-    if len(rows) < 21:
-        raise ValueError("FinMind margin history has fewer than 21 observations")
-    return rows[-160:]
+        code, close = str(row[0]).strip(), maybe(row[8], positive=True)
+        shares, amount = maybe(row[2], positive=True), maybe(row[4], positive=True)
+        if code and close:
+            price_map[code] = {"close": close, "average": amount / shares if shares and amount else None}
+    records = []
+    short_balance = short_previous = 0.0
+    for row in table(margin, 1):
+        if not isinstance(row, list) or len(row) < 16:
+            continue
+        values = [maybe(row[i]) for i in (2, 3, 4, 5, 6, 11, 12)]
+        if any(value is None for value in values):
+            continue
+        code = str(row[0]).strip()
+        quote = price_map.get(code, {})
+        rec = {
+            "market": "twse", "code": code, "name": str(row[1]).strip(),
+            "buy": values[0] * 1000, "sell": values[1] * 1000, "cash": values[2] * 1000,
+            "previous": values[3] * 1000, "balance": values[4] * 1000,
+            "short_previous": values[5] * 1000, "short_balance": values[6] * 1000,
+            "close": quote.get("close"), "average": quote.get("average"),
+        }
+        records.append(rec)
+        short_previous += rec["short_previous"]
+        short_balance += rec["short_balance"]
+    return records, {"short_balance": short_balance, "short_previous": short_previous}
+
+
+def parse_tpex(day: dt.date, margin: dict, prices: dict) -> tuple[list[dict], dict]:
+    if margin.get("stat") != "ok" or prices.get("stat") != "ok":
+        raise ValueError("TPEx has no data for date")
+    price_map: dict[str, dict] = {}
+    for row in table(prices, 0):
+        if not isinstance(row, list) or len(row) < 10:
+            continue
+        code, close, average = str(row[0]).strip(), maybe(row[2], positive=True), maybe(row[7], positive=True)
+        if code and close:
+            price_map[code] = {"close": close, "average": average}
+    records = []
+    short_balance = short_previous = 0.0
+    for row in table(margin, 0):
+        if not isinstance(row, list) or len(row) < 16:
+            continue
+        values = [maybe(row[i]) for i in (2, 3, 4, 5, 6, 10, 14)]
+        if any(value is None for value in values):
+            continue
+        code = str(row[0]).strip()
+        quote = price_map.get(code, {})
+        rec = {
+            "market": "tpex", "code": code, "name": str(row[1]).strip(),
+            "previous": values[0] * 1000, "buy": values[1] * 1000, "sell": values[2] * 1000,
+            "cash": values[3] * 1000, "balance": values[4] * 1000,
+            "short_previous": values[5] * 1000, "short_balance": values[6] * 1000,
+            "close": quote.get("close"), "average": quote.get("average"),
+        }
+        records.append(rec)
+        short_previous += rec["short_previous"]
+        short_balance += rec["short_balance"]
+    return records, {"short_balance": short_balance, "short_previous": short_previous}
+
+
+def fetch_day(day: dt.date) -> tuple[list[dict], dict]:
+    fmt = formats(day)
+    twse_margin = get_json(TWSE_MARGIN.format(**fmt))
+    if twse_margin.get("stat") != "OK" or str(twse_margin.get("date", "")) != fmt["date"]:
+        raise ValueError("not a TWSE trading day")
+    last: Exception | None = None
+    for attempt in range(3):
+        try:
+            with ThreadPoolExecutor(max_workers=3) as executor:
+                futures = [executor.submit(get_json, url) for url in (
+                    TWSE_PRICE.format(**fmt), TPEX_MARGIN.format(**fmt), TPEX_PRICE.format(**fmt))]
+                twse_price, tpex_margin, tpex_price = [future.result() for future in futures]
+            twse, twse_totals = parse_twse(day, twse_margin, twse_price)
+            tpex, tpex_totals = parse_tpex(day, tpex_margin, tpex_price)
+            if len(twse) < 100 or len(tpex) < 50:
+                raise RuntimeError("security coverage is unexpectedly small")
+            return twse + tpex, {"twse": twse_totals, "tpex": tpex_totals}
+        except (ValueError, RuntimeError) as exc:
+            last = exc
+            if attempt + 1 < 3:
+                time.sleep(1.2 * (attempt + 1))
+    raise RuntimeError(f"official trading day is incomplete: {last}")
+
+
+def blank_state() -> dict:
+    return {"model": "rolling_estimated_margin_cost", "data_date": None, "warmup_trading_days": 0,
+            "securities": {}, "history": [], "events": []}
+
+
+def load_json(path: Path) -> dict | None:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        return payload if isinstance(payload, dict) else None
+    except (OSError, ValueError):
+        return None
+
+
+def safe_quote(rec: dict, old: dict | None, day: dt.date) -> tuple[float | None, bool]:
+    close = maybe(rec.get("close"), positive=True)
+    if close is not None:
+        return close, False
+    if not old:
+        return None, False
+    old_close = maybe(old.get("last_close"), positive=True)
+    old_date = str(old.get("price_date", ""))
+    try:
+        age = (day - dt.date.fromisoformat(old_date)).days
+    except ValueError:
+        return None, False
+    return (old_close, True) if old_close and 0 <= age <= MAX_STALE_DAYS else (None, False)
+
+
+def roll_security(rec: dict, old: dict | None, day: dt.date) -> tuple[dict | None, dict]:
+    close, stale = safe_quote(rec, old, day)
+    balance, reported_previous = number(rec["balance"]), number(rec["previous"])
+    buy, removed = number(rec["buy"]), number(rec["sell"]) + number(rec["cash"])
+    event = {"corporate_action": False, "reconciled": False, "stale": stale}
+    if old and maybe(old.get("estimated_cost"), positive=True) and maybe(old.get("shares"), positive=True):
+        old_cost, old_shares = number(old["estimated_cost"]), number(old["shares"])
+        if reported_previous > 0 and abs(reported_previous - old_shares) >= max(1000, old_shares * 0.002):
+            ratio = reported_previous / old_shares
+            if 0.1 <= ratio <= 10:
+                event["corporate_action"] = True
+                event["share_adjustment_ratio"] = round(ratio, 6)
+            else:
+                event["reconciled"] = True
+            old_shares = reported_previous
+        previous_average = old_cost / old_shares if old_shares > 0 else 0
+        purchase_price = maybe(rec.get("average"), positive=True) or close
+        if buy > 0 and purchase_price is None:
+            return None, {**event, "reason": "purchase_price_unavailable"}
+        cost = old_cost + buy * (purchase_price or 0) - min(removed, old_shares + buy) * previous_average
+        expected = max(0.0, reported_previous + buy - removed)
+        if abs(expected - balance) > max(1000, balance * 0.002):
+            event["reconciled"] = True
+            cost = max(0.0, cost + (balance - expected) * previous_average)
+    else:
+        purchase_price = maybe(rec.get("average"), positive=True) or close
+        if balance <= 0 or purchase_price is None:
+            return None, {**event, "reason": "initial_price_unavailable"}
+        cost = balance * purchase_price
+    if balance <= 0:
+        return None, event
+    if close is None or not math.isfinite(cost) or cost <= 0:
+        return None, {**event, "reason": "invalid_cost_or_close"}
+    return {
+        "market": rec["market"], "code": rec["code"], "name": rec["name"], "shares": round(balance),
+        "estimated_cost": round(cost, 2), "last_close": close,
+        "price_date": old.get("price_date") if stale and old else day.isoformat(),
+    }, event
+
+
+def summarize(state: dict, records: list[dict], short: dict, day: dt.date) -> dict:
+    old_securities = state.get("securities", {}) if isinstance(state.get("securities"), dict) else {}
+    securities: dict[str, dict] = {}
+    market = {name: {"collateral_market_value": 0.0, "estimated_remaining_cost": 0.0,
+                     "estimated_financing_principal": 0.0, "margin_balance_shares": 0.0,
+                     "matched_count": 0, "missing_count": 0, "stale_price_count": 0}
+              for name in ("twse", "tpex")}
+    events, missing = [], []
+    official_balance_shares = 0.0
+    for rec in records:
+        key = f"{rec['market']}:{rec['code']}"
+        official_balance_shares += rec["balance"]
+        rolled, event = roll_security(rec, old_securities.get(key), day)
+        if event.get("corporate_action") or event.get("reconciled"):
+            events.append({"date": day.isoformat(), "market": rec["market"], "code": rec["code"], **event})
+        if rolled is None:
+            if rec["balance"] > 0:
+                market[rec["market"]]["missing_count"] += 1
+                missing.append({"market": rec["market"].upper(), "code": rec["code"], "reason": event.get("reason", "unmatched")})
+            continue
+        securities[key] = rolled
+        bucket = market[rec["market"]]
+        collateral = rolled["shares"] * rolled["last_close"]
+        bucket["collateral_market_value"] += collateral
+        bucket["estimated_remaining_cost"] += rolled["estimated_cost"]
+        bucket["estimated_financing_principal"] += rolled["estimated_cost"] * FINANCING_RATIO
+        bucket["margin_balance_shares"] += rolled["shares"]
+        bucket["matched_count"] += 1
+        bucket["stale_price_count"] += int(event.get("stale", False))
+    combined: dict[str, float] = {}
+    for key in ("collateral_market_value", "estimated_remaining_cost", "estimated_financing_principal",
+                "margin_balance_shares", "matched_count", "missing_count", "stale_price_count"):
+        combined[key] = market["twse"][key] + market["tpex"][key]
+    for bucket in (market["twse"], market["tpex"], combined):
+        principal = bucket["estimated_financing_principal"]
+        bucket["maintenance_ratio"] = bucket["collateral_market_value"] / principal * 100 if principal > 0 else None
+        for key, value in list(bucket.items()):
+            if isinstance(value, float):
+                bucket[key] = round(value, 2 if key == "maintenance_ratio" else 0)
+    coverage = combined["margin_balance_shares"] / official_balance_shares * 100 if official_balance_shares else 0
+    state["securities"] = securities
+    state["data_date"] = day.isoformat()
+    state["warmup_trading_days"] = int(state.get("warmup_trading_days", 0)) + 1
+    state["events"] = (state.get("events", []) + events)[-300:]
+    summary = {
+        "date": day.isoformat(), "markets": {**market, "combined": combined},
+        "short_balance": round(short["twse"]["short_balance"] + short["tpex"]["short_balance"]),
+        "short_previous": round(short["twse"]["short_previous"] + short["tpex"]["short_previous"]),
+        "coverage_ratio": round(coverage, 2), "missing_securities": missing[:200],
+    }
+    state["history"] = (state.get("history", []) + [summary])[-260:]
+    return summary
 
 
 def percentile(values: list[float], current: float, minimum: int = 20) -> float | None:
-    clean = [value for value in values if math.isfinite(value)]
-    if len(clean) < minimum:
-        return None
-    return round(sum(value <= current for value in clean) / len(clean) * 100, 1)
+    clean = [value for value in values if isinstance(value, (int, float)) and math.isfinite(value)]
+    return round(sum(value <= current for value in clean) / len(clean) * 100, 1) if len(clean) >= minimum else None
 
 
-def roc_date_to_iso(value: object) -> str | None:
-    text = str(value or "").strip().replace("/", "")
-    if len(text) != 7 or not text.isdigit():
-        return None
-    try:
-        return dt.date(int(text[:3]) + 1911, int(text[3:5]), int(text[5:7])).isoformat()
-    except ValueError:
-        return None
-
-
-def row_date(row: dict) -> str | None:
-    raw = row.get("Date") or row.get("date")
-    text = str(raw or "").strip()
-    if len(text) == 10:
-        try:
-            return dt.date.fromisoformat(text.replace("/", "-")).isoformat()
-        except ValueError:
-            return None
-    return roc_date_to_iso(text)
-
-
-def official_rows() -> dict[str, list[dict]]:
-    result = {
-        "twse_margin": get_json(TWSE_MARGIN_API),
-        "twse_prices": get_json(TWSE_PRICE_API),
-        "tpex_margin": get_json(TPEX_MARGIN_API),
-        "tpex_prices": get_json(TPEX_PRICE_API),
-    }
-    minimums = {"twse_margin": 100, "twse_prices": 100, "tpex_margin": 50, "tpex_prices": 50}
-    for key, rows in result.items():
-        if not isinstance(rows, list) or len(rows) < minimums[key] or not all(isinstance(row, dict) for row in rows[:10]):
-            raise ValueError(f"{key} response is invalid")
-    return result
-
-
-def _latest_common_date(data: dict[str, list[dict]], financing_date: str) -> str:
-    twse_dates = {date for row in data["twse_prices"] if (date := row_date(row))}
-    tpex_margin_dates = {date for row in data["tpex_margin"] if (date := row_date(row))}
-    tpex_price_dates = {date for row in data["tpex_prices"] if (date := row_date(row))}
-    common = twse_dates & tpex_margin_dates & tpex_price_dates & {financing_date}
-    if not common:
-        raise ValueError("TWSE, TPEx and financing amount dates do not match")
-    return max(common)
-
-
-def _price_map(rows: list[dict], market: str, target_date: str, previous_cache: dict) -> tuple[dict, int]:
-    code_key = "Code" if market == "twse" else "SecuritiesCompanyCode"
-    price_key = "ClosingPrice" if market == "twse" else "Close"
-    by_code: dict[str, list[tuple[str, float]]] = {}
-    for row in rows:
-        code = str(row.get(code_key, "")).strip()
-        date = row_date(row)
-        price = optional_positive(row.get(price_key))
-        if code and date and date <= target_date and price is not None:
-            by_code.setdefault(code, []).append((date, price))
-    prices: dict[str, dict] = {}
-    suspended = 0
-    target = dt.date.fromisoformat(target_date)
-    for code, observations in by_code.items():
-        date, price = max(observations, key=lambda item: item[0])
-        age = (target - dt.date.fromisoformat(date)).days
-        if age <= MAX_PRICE_CACHE_AGE_DAYS:
-            prices[code] = {"price": price, "date": date, "is_previous_close": date != target_date}
-            suspended += int(date != target_date)
-    for key, cached in (previous_cache or {}).items():
-        if not key.startswith(market + ":") or not isinstance(cached, dict):
-            continue
-        code = key.split(":", 1)[1]
-        if code in prices:
-            continue
-        price, date = optional_positive(cached.get("price")), str(cached.get("date", ""))
-        try:
-            age = (target - dt.date.fromisoformat(date)).days
-        except ValueError:
-            continue
-        if price is not None and 0 <= age <= MAX_PRICE_CACHE_AGE_DAYS:
-            prices[code] = {"price": price, "date": date, "is_previous_close": True}
-            suspended += 1
-    return prices, suspended
-
-
-def estimate_market_ratio(data: dict[str, list[dict]], financing_amount: float, financing_date: str,
-                          previous_cache: dict | None = None) -> dict:
-    """Return a same-day, unit-normalised estimate and coverage diagnostics."""
-    date = _latest_common_date(data, financing_date)
-    twse_prices, twse_suspended = _price_map(data["twse_prices"], "twse", date, previous_cache or {})
-    tpex_prices, tpex_suspended = _price_map(data["tpex_prices"], "tpex", date, previous_cache or {})
-    specs = [
-        ("twse", data["twse_margin"], "股票代號", "融資今日餘額", twse_prices),
-        ("tpex", data["tpex_margin"], "SecuritiesCompanyCode", "MarginPurchaseBalance", tpex_prices),
-    ]
-    total_shares = matched_shares = collateral = 0.0
-    matched_count = missing_count = 0
-    missing: list[dict[str, str]] = []
-    cache: dict[str, dict] = {}
-    for market, rows, code_key, balance_key, prices in specs:
-        for row in rows:
-            code = str(row.get(code_key, "")).strip()
-            units = optional_positive(row.get(balance_key))
-            if not code or units is None:
-                continue
-            shares = units * SHARES_PER_REPORTED_UNIT
-            total_shares += shares
-            quote = prices.get(code)
-            if quote is None:
-                missing_count += 1
-                missing.append({"market": market.upper(), "code": code, "reason": "same_or_recent_close_unavailable"})
-                continue
-            matched_count += 1
-            matched_shares += shares
-            collateral += shares * quote["price"]
-            cache[f"{market}:{code}"] = {"price": quote["price"], "date": quote["date"]}
-    if total_shares <= 0 or financing_amount <= 0:
-        raise ValueError("market balances or financing amount are invalid")
-    coverage = matched_shares / total_shares * 100
-    ratio = collateral / financing_amount * 100
-    if not math.isfinite(ratio) or ratio <= 100 or ratio >= 1000:
-        raise ValueError("estimated maintenance ratio is unreasonable")
-    return {
-        "data_date": date,
-        "value": round(ratio, 2),
-        "collateral_market_value": round(collateral),
-        "financing_amount": round(financing_amount),
-        "coverage_ratio": round(coverage, 2),
-        "matched_security_count": matched_count,
-        "missing_security_count": missing_count,
-        "suspended_price_count": twse_suspended + tpex_suspended,
-        "missing_securities": missing[:100],
-        "price_cache": cache,
-    }
-
-
-def merge_history(balance_history: list[dict], previous: dict | None, estimate: dict | None) -> list[dict]:
-    previous_rows = {row.get("date"): row for row in (previous or {}).get("history", []) if isinstance(row, dict)}
-    output: list[dict] = []
-    for balance in balance_history[-160:]:
-        old = previous_rows.get(balance["date"], {})
-        row = {
-            "date": balance["date"],
-            "margin_balance": round(float(balance["value"])),
-            "collateral_market_value": old.get("collateral_market_value"),
-            "financing_amount": old.get("financing_amount"),
-            "maintenance_ratio": old.get("maintenance_ratio"),
-            "coverage_ratio": old.get("coverage_ratio"),
-        }
-        if estimate and balance["date"] == estimate["data_date"]:
-            row.update({key: estimate[key] for key in (
-                "collateral_market_value", "financing_amount", "coverage_ratio")})
-            row["maintenance_ratio"] = estimate["value"]
-        output.append(row)
-    return output[-160:]
-
-
-def ratio_statistics(history: list[dict], current: float | None) -> tuple[float | None, float | None, float | None]:
-    samples = [float(row["maintenance_ratio"]) for row in history if optional_positive(row.get("maintenance_ratio"))]
-    if current is None:
-        return None, None, None
-    previous = samples[-2] if len(samples) >= 2 else None
-    daily_change = round(current - previous, 2) if previous is not None else None
-    average20 = round(sum(samples[-20:]) / 20, 2) if len(samples) >= 20 else None
-    pct60 = percentile(samples[-60:], current)
-    return daily_change, average20, pct60
-
-
-def risk_state_for(ratio: float | None) -> str:
-    if ratio is None:
-        return "資料不完整"
-    if ratio >= 180:
-        return "安全墊較高"
-    if ratio >= 160:
-        return "一般水位"
-    if ratio >= 150:
-        return "安全墊縮小"
-    if ratio >= 140:
-        return "壓力升高"
-    if ratio >= 130:
-        return "接近法規參考區"
-    return "極端壓力區"
-
-
-def build_payload(balance_history: list[dict], now: dt.datetime, previous: dict | None = None,
-                  official: dict[str, list[dict]] | None = None) -> dict:
-    latest = balance_history[-1]
-    current, previous_balance = float(latest["value"]), float(balance_history[-2]["value"])
-    ref20 = float(balance_history[-21]["value"])
-    status: dict[str, Any] = {}
-    estimate = None
-    estimate_error = None
-    try:
-        official = official or official_rows()
-        estimate = estimate_market_ratio(
-            official, current, latest["date"], (previous or {}).get("price_cache", {})
-        )
-        status["twse"] = {"ok": True, "margin_records": len(official["twse_margin"]), "price_records": len(official["twse_prices"]), "url": TWSE_MARGIN_API}
-        status["tpex"] = {"ok": True, "margin_records": len(official["tpex_margin"]), "price_records": len(official["tpex_prices"]), "url": TPEX_MARGIN_API}
-    except Exception as exc:
-        estimate_error = str(exc)[:200]
-        status["estimate"] = {"ok": False, "error": estimate_error}
-
-    publish_estimate = estimate if estimate and estimate["coverage_ratio"] >= MIN_PUBLISH_COVERAGE else None
-    history = merge_history(balance_history, previous, publish_estimate)
-    retained = False
-    effective_date = latest["date"]
-    if publish_estimate:
-        ratio_value = publish_estimate["value"]
-        coverage_state = "normal" if publish_estimate["coverage_ratio"] >= NORMAL_COVERAGE else "partial"
-    else:
-        old_ratio = (previous or {}).get("maintenance_ratio", {})
-        ratio_value = optional_positive(old_ratio.get("value"))
-        retained = ratio_value is not None
-        effective_date = str(old_ratio.get("effective_data_date") or (previous or {}).get("data_date") or latest["date"])
-        coverage_state = "retained_previous" if retained else "unavailable"
-    daily, average20, pct60 = ratio_statistics(history, ratio_value)
-    diagnostics = estimate or {}
-    maintenance = {
-        "value": ratio_value,
-        "daily_change": daily,
-        "average_20d": average20,
-        "percentile_60d": pct60,
-        "collateral_market_value": diagnostics.get("collateral_market_value") if publish_estimate else (previous or {}).get("maintenance_ratio", {}).get("collateral_market_value") if retained else None,
-        "financing_amount": diagnostics.get("financing_amount") if publish_estimate else (previous or {}).get("maintenance_ratio", {}).get("financing_amount") if retained else None,
-        "coverage_ratio": diagnostics.get("coverage_ratio") if estimate else None,
-        "matched_security_count": diagnostics.get("matched_security_count", 0),
-        "missing_security_count": diagnostics.get("missing_security_count", 0),
-        "suspended_price_count": diagnostics.get("suspended_price_count", 0),
-        "method": "estimated_market_margin_maintenance_ratio",
-        "is_estimated": True,
-        "coverage_state": coverage_state,
-        "effective_data_date": effective_date,
-        "retained_previous": retained,
-    }
-    status["estimate"] = {
-        "ok": publish_estimate is not None,
-        "coverage_state": coverage_state,
-        "coverage_ratio": diagnostics.get("coverage_ratio"),
-        "missing_securities": diagnostics.get("missing_securities", []),
-        "reason": estimate_error or ("coverage_below_95_percent" if estimate and not publish_estimate else None),
-        "unit_mapping": {
-            "twse_margin_balance": "trading_units_x_1000_shares",
-            "tpex_margin_balance": "thousand_shares_x_1000",
-            "close": "TWD_per_share",
-            "financing_amount": "FinMind_TodayBalance_TWD",
-        },
-    }
-    daily_change = current - previous_balance
-    balance_change20 = current - ref20
-    summary = "融資餘額與推估維持率需交叉觀察；單日變動不代表後續方向。"
+def build_payload(state: dict, now: dt.datetime) -> dict:
+    history = state["history"]
+    current, previous = history[-1], history[-2] if len(history) > 1 else None
+    combined = current["markets"]["combined"]
+    prev_combined = previous["markets"]["combined"] if previous else None
+    principal, ratio = combined["estimated_financing_principal"], combined["maintenance_ratio"]
+    principal_change = principal - prev_combined["estimated_financing_principal"] if prev_combined else None
+    ratio_change = ratio - prev_combined["maintenance_ratio"] if prev_combined else None
+    principal_samples = [row["markets"]["combined"]["estimated_financing_principal"] for row in history]
+    ratio_samples = [row["markets"]["combined"]["maintenance_ratio"] for row in history]
+    short_change = current["short_balance"] - current["short_previous"]
     payload = {
-        "updated_at": now.astimezone(TAIPEI).isoformat(timespec="seconds"),
-        "data_date": latest["date"],
+        "data_date": current["date"], "updated_at": now.astimezone(TAIPEI).isoformat(timespec="seconds"),
         "data_mode": "after_hours",
+        "model": {"name": "rolling_estimated_margin_cost", "financing_ratio": FINANCING_RATIO,
+                  "initial_maintenance_ratio": round(INITIAL_RATIO, 4),
+                  "warmup_trading_days": state["warmup_trading_days"], "is_estimated": True,
+                  "sample_state": "ready" if state["warmup_trading_days"] >= 60 else "building"},
         "margin_balance": {
-            "value": round(current), "daily_change": round(daily_change),
-            "change_20d": round(balance_change20),
-            "percentile_60d": percentile([float(item["value"]) for item in balance_history[-60:]], current),
+            "estimated_financing_principal": round(principal),
+            "daily_change": round(principal_change) if principal_change is not None else None,
+            "daily_change_pct": round(principal_change / prev_combined["estimated_financing_principal"] * 100, 2) if principal_change is not None and prev_combined["estimated_financing_principal"] else None,
+            "change_20d": round(principal - principal_samples[-21]) if len(principal_samples) >= 21 else None,
+            "percentile_60d": percentile(principal_samples[-60:], principal),
+            "balance_shares": round(combined["margin_balance_shares"]),
         },
-        "maintenance_ratio": maintenance,
-        "risk_state": risk_state_for(ratio_value),
-        "summary": summary,
-        "source_name": "TWSE／TPEx OpenAPI（擔保品市值）＋ FinMind 市場融資金額",
-        "source_url": TWSE_SOURCE,
-        "secondary_source_url": TPEX_SOURCE,
-        "financing_source_url": FINMIND_SOURCE,
-        "source_status": status,
-        "history": history,
-        "disclaimer": "市場推估融資維持率為本站依官方個股融資餘額與同日收盤價估算，不是交易所公布的全市場維持率，也不代表個人帳戶維持率或追繳狀態。130% 僅為個別信用帳戶法規參考，不代表所有投資人必然追繳。",
-        "methodology": "Σ(融資餘額仟股×1,000×同日收盤價) ÷ 同日市場融資金額餘額 ×100；覆蓋率低於95%時不發布新估值。",
-        "rule_url": MAINTENANCE_RULE,
+        "maintenance_ratio": {
+            "value": round(ratio, 2), "daily_change": round(ratio_change, 2) if ratio_change is not None else None,
+            "average_20d": round(sum(ratio_samples[-20:]) / 20, 2) if len(ratio_samples) >= 20 else None,
+            "percentile_60d": percentile(ratio_samples[-60:], ratio),
+            "collateral_market_value": round(combined["collateral_market_value"]),
+            "estimated_financing_principal": round(principal), "method": "rolling_estimated_margin_cost",
+            "is_estimated": True,
+        },
+        "short_balance": {"shares": current["short_balance"], "daily_change": round(short_change)},
+        "markets": current["markets"],
+        "coverage": {"matched_count": round(combined["matched_count"]), "missing_count": round(combined["missing_count"]),
+                     "coverage_ratio": current["coverage_ratio"], "stale_price_count": round(combined["stale_price_count"])},
+        "risk_state": "成本模型樣本建立中" if state["warmup_trading_days"] < 60 else "依推估維持率判讀",
+        "summary": "融資本金採逐檔滾動成本推估；融資增減與維持率需交叉觀察，單日變動不代表後續方向。",
+        "source_name": "臺灣證券交易所／證券櫃檯買賣中心官方結構化資料",
+        "source_url": TWSE_SOURCE, "secondary_source_url": TPEX_SOURCE,
+        "source_status": {"twse": {"ok": True}, "tpex": {"ok": True}, "same_scope": True,
+                          "unit_mapping": "融資與融券張數欄位 x 1,000 股；價格為新臺幣/股"},
+        "history": [{"date": row["date"], "estimated_financing_principal": row["markets"]["combined"]["estimated_financing_principal"],
+                     "collateral_market_value": row["markets"]["combined"]["collateral_market_value"],
+                     "maintenance_ratio": row["markets"]["combined"]["maintenance_ratio"]} for row in history[-160:]],
+        "missing_securities": current.get("missing_securities", []),
+        "methodology": "逐檔昨日平均成本＝昨日推估成本÷昨日融資股數；新增融資以當日均價（缺少時收盤價）計成本；賣出與現償按昨日平均成本減除；剩餘成本×60%為推估本金。全市場先各自加總同範圍擔保品與本金，再計算比率。",
+        "disclaimer": "市場推估融資維持率僅用於觀察整體融資戶壓力，不代表個人帳戶維持率或追繳狀態。130%僅為個別信用帳戶法規參考。",
+        "rule_url": RULE_SOURCE,
     }
     validate_payload(payload)
     return payload
 
 
 def validate_payload(payload: dict) -> None:
-    if not isinstance(payload, dict) or not isinstance(payload.get("data_date"), str):
-        raise ValueError("margin payload/date is invalid")
-    try:
-        data_date = dt.date.fromisoformat(payload["data_date"])
-    except ValueError as exc:
-        raise ValueError("margin data date is invalid") from exc
-    if data_date > dt.datetime.now(TAIPEI).date() + dt.timedelta(days=1):
-        raise ValueError("margin data date is unexpectedly in the future")
-    balance, ratio = payload.get("margin_balance"), payload.get("maintenance_ratio")
-    if not isinstance(balance, dict) or finite_number(balance.get("value"), positive=True) <= 0:
-        raise ValueError("margin balance is invalid")
-    balance_value = finite_number(balance["value"], positive=True)
-    if abs(finite_number(balance.get("daily_change", 0))) > balance_value * 0.5:
-        raise ValueError("margin balance daily jump is unreasonable")
-    if not isinstance(ratio, dict) or ratio.get("method") != "estimated_market_margin_maintenance_ratio" or ratio.get("is_estimated") is not True:
-        raise ValueError("estimated maintenance ratio metadata is missing")
-    if ratio.get("value") is not None:
-        value = finite_number(ratio["value"], positive=True)
-        if value <= 100 or value >= 1000:
-            raise ValueError("maintenance ratio is unreasonable")
-        if ratio.get("daily_change") is not None and abs(finite_number(ratio["daily_change"])) > 100:
-            raise ValueError("maintenance ratio daily jump is unreasonable")
-    for key in ("coverage_ratio",):
-        if ratio.get(key) is not None and not 0 <= finite_number(ratio[key]) <= 100:
-            raise ValueError(f"{key} is invalid")
-    if not isinstance(payload.get("history"), list) or len(payload["history"]) < 120:
-        raise ValueError("margin history must retain at least 120 trading observations")
+    dt.date.fromisoformat(payload["data_date"])
+    if payload.get("model", {}).get("name") != "rolling_estimated_margin_cost":
+        raise ValueError("wrong model")
+    if payload["model"].get("warmup_trading_days", 0) < MIN_WARMUP_DAYS:
+        raise ValueError("rolling model has fewer than 120 warmup days")
+    balance, maintenance = payload["margin_balance"], payload["maintenance_ratio"]
+    for value in (balance["estimated_financing_principal"], balance["balance_shares"],
+                  maintenance["value"], maintenance["collateral_market_value"],
+                  maintenance["estimated_financing_principal"]):
+        if maybe(value, positive=True) is None:
+            raise ValueError("required model value is invalid")
+    if balance["estimated_financing_principal"] != maintenance["estimated_financing_principal"]:
+        raise ValueError("homepage and detail principal fields diverge")
+    if not 100 < maintenance["value"] < 400:
+        raise ValueError("maintenance estimate is unreasonable")
+    for name in ("twse", "tpex", "combined"):
+        bucket = payload["markets"][name]
+        expected = bucket["collateral_market_value"] / bucket["estimated_financing_principal"] * 100
+        if abs(expected - bucket["maintenance_ratio"]) > 0.02:
+            raise ValueError(f"{name} market scope is inconsistent")
     json.dumps(payload, ensure_ascii=False, allow_nan=False)
 
 
-def atomic_write(payload: dict) -> None:
-    handle, temporary = tempfile.mkstemp(prefix="margin-data-", suffix=".json", dir=ROOT)
+def atomic_write(path: Path, payload: dict) -> None:
+    handle, temporary = tempfile.mkstemp(prefix=path.stem + "-", suffix=".json", dir=ROOT)
     try:
         with os.fdopen(handle, "w", encoding="utf-8", newline="\n") as stream:
             json.dump(payload, stream, ensure_ascii=False, indent=2, allow_nan=False)
             stream.write("\n")
-        os.replace(temporary, OUT)
+        os.replace(temporary, path)
     finally:
         if os.path.exists(temporary):
             os.unlink(temporary)
 
 
-def main() -> int:
-    now = dt.datetime.now(dt.timezone.utc)
-    previous = None
-    if OUT.exists():
+def reconciliation(payload: dict) -> dict | None:
+    if payload["data_date"] != "2026-07-31":
+        return None
+    reference = {"estimated_financing_principal": 545_500_000_000, "collateral_market_value": 889_600_000_000,
+                 "maintenance_ratio": 163.08, "balance_shares": 9_096_008_000,
+                 "short_balance_shares": 219_259_000}
+    actual = {
+        "estimated_financing_principal": payload["margin_balance"]["estimated_financing_principal"],
+        "collateral_market_value": payload["maintenance_ratio"]["collateral_market_value"],
+        "maintenance_ratio": payload["maintenance_ratio"]["value"],
+        "balance_shares": payload["margin_balance"]["balance_shares"],
+        "short_balance_shares": payload["short_balance"]["shares"],
+    }
+    differences = {key: round((actual[key] - value) / value * 100, 2) for key, value in reference.items()}
+    if all(abs(value) <= 3 for value in differences.values()):
+        return None
+    return {
+        "data_date": payload["data_date"], "generated_at": payload["updated_at"],
+        "reason": "與使用者提供的畫面參考值相差超過3%；未套用任何調整係數。",
+        "reference": reference, "actual": actual, "difference_pct": differences,
+        "markets": payload["markets"], "coverage": payload["coverage"],
+        "missing_securities": payload["missing_securities"],
+        "estimated_remaining_cost": payload["markets"]["combined"]["estimated_remaining_cost"],
+        "financing_ratio": FINANCING_RATIO, "sources": [TWSE_SOURCE, TPEX_SOURCE],
+        "units": {"money": "TWD", "shares": "shares", "maintenance_ratio": "percent"},
+    }
+
+
+def trading_days_to_fetch(end: dt.date, target: int) -> list[dt.date]:
+    days, cursor = [], end
+    while len(days) < target and (end - cursor).days < 260:
+        if cursor.weekday() < 5:
+            try:
+                records, short = fetch_day(cursor)
+                days.append((cursor, records, short))
+                print(f"bootstrap {len(days):03d}/{target}: {cursor}", flush=True)
+            except (ValueError, RuntimeError):
+                pass
+        cursor -= dt.timedelta(days=1)
+    if len(days) < target:
+        raise RuntimeError(f"only {len(days)} official trading days were available")
+    return list(reversed(days))
+
+
+def newest_day(now: dt.date, after: str | None) -> tuple[dt.date, list[dict], dict] | None:
+    for offset in range(0, 12):
+        day = now - dt.timedelta(days=offset)
+        if day.weekday() >= 5 or (after and day.isoformat() <= after):
+            continue
         try:
-            previous = json.loads(OUT.read_text(encoding="utf-8"))
-        except Exception:
-            previous = None
+            records, short = fetch_day(day)
+            return day, records, short
+        except (ValueError, RuntimeError):
+            continue
+    return None
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--bootstrap-days", type=int, default=TARGET_WARMUP_DAYS)
+    args = parser.parse_args()
+    now = dt.datetime.now(dt.timezone.utc)
+    today = now.astimezone(TAIPEI).date()
+    old_payload, state = load_json(OUT), load_json(STATE)
+    if not state or state.get("model") != "rolling_estimated_margin_cost" or state.get("warmup_trading_days", 0) < MIN_WARMUP_DAYS:
+        state = blank_state()
+        for day, records, short in trading_days_to_fetch(today, max(MIN_WARMUP_DAYS, args.bootstrap_days)):
+            summarize(state, records, short, day)
+    else:
+        latest = newest_day(today, state.get("data_date"))
+        if latest:
+            summarize(state, latest[1], latest[2], latest[0])
     try:
-        payload = build_payload(finmind_history(now.astimezone(TAIPEI)), now, previous)
-        atomic_write(payload)
-        print(f"updated {OUT.name}: {payload['data_date']} ratio={payload['maintenance_ratio']['value']}")
+        payload = build_payload(state, now)
+        atomic_write(STATE, state)
+        atomic_write(OUT, payload)
+        report = reconciliation(payload)
+        if report:
+            atomic_write(RECONCILIATION, report)
+        elif RECONCILIATION.exists():
+            RECONCILIATION.unlink()
+        print(f"updated {OUT.name}: {payload['data_date']} ratio={payload['maintenance_ratio']['value']} warmup={payload['model']['warmup_trading_days']}")
         return 0
     except Exception as exc:
-        if previous is not None:
-            print(f"update failed; retained previous cache: {exc}")
+        if old_payload and old_payload.get("model", {}).get("name") == "rolling_estimated_margin_cost":
+            print(f"update failed; retained previous valid rolling cache: {exc}")
             return 0
         raise
 
