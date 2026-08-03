@@ -31,7 +31,7 @@
     if(!Number.isFinite(quoteAt))return{key:"unavailable",label:"資料暫時無法取得",ageSeconds:null,stale:true};
     const ageSeconds=Math.max(0,(now.getTime()-quoteAt)/1000);
     if(!["intraday","day","night"].includes(sessionKey))return{key:"closed",label:"最近正式收盤",ageSeconds,stale:false};
-    if(ageSeconds<=60)return{key:"updating",label:"更新中",ageSeconds,stale:false};
+    if(ageSeconds<=60)return{key:"updating",label:"交易中",ageSeconds,stale:false};
     if(ageSeconds<=180)return{key:"delayed",label:"延遲行情",ageSeconds,stale:false};
     return{key:"stale",label:"資料過期",ageSeconds,stale:true};
   }
@@ -85,9 +85,10 @@
       const item=normalizeQuote(raw,code,defaults);
       if(item)etfs[code]=item;
     }
-    const futures=normalizeFutures(payload.futures,defaults);
+    let futures=null,futuresError="";
+    try{futures=normalizeFutures(payload.futures,defaults)}catch(error){futuresError=safeText(error?.message||"台指期來源驗證失敗",120)}
     if(!Object.keys(items).length&&!Object.keys(etfs).length&&!futures)throw new Error("授權行情沒有有效項目");
-    return{updatedAt:new Date().toISOString(),sourceName,sourceUrl,items,etfs,futures};
+    return{updatedAt:new Date().toISOString(),sourceName,sourceUrl,items,etfs,futures,sourceErrors:{futures:futuresError}};
   }
 
   function normalizeFutures(raw,defaults={}){

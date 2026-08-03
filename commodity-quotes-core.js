@@ -4,7 +4,7 @@
   root.HSCommodityQuotesCore=api;
 })(typeof globalThis!=="undefined"?globalThis:this,function(){
   "use strict";
-  const finite=value=>Number.isFinite(Number(value))?Number(value):null;
+  const finite=value=>value===null||value===undefined||value===""?null:(Number.isFinite(Number(value))?Number(value):null);
   const iso=value=>{
     const time=Date.parse(String(value||""));
     return Number.isFinite(time)&&time<=Date.now()+6*3600000?new Date(time).toISOString():null;

@@ -24,31 +24,39 @@ def lerp(left: int, right: int, position: float) -> int:
 
 
 def render(size: int) -> Image.Image:
-    image = Image.new("RGB", (size, size), "#050609")
+    image = Image.new("RGB", (size, size), "#030407")
     pixels = image.load()
     for y in range(size):
         for x in range(size):
             t = (x + y) / (size * 2)
-            pixels[x, y] = (lerp(17, 5, t), lerp(20, 6, t), lerp(27, 9, t))
+            glow = max(0.0, 1 - (((x-size*.5)**2 + (y-size*.38)**2) ** .5) / (size*.7))
+            pixels[x, y] = (lerp(3, 14, glow), lerp(4, 24, glow), lerp(7, 42, glow))
     draw = ImageDraw.Draw(image)
     scale = size / 512
     radius = round(112 * scale)
-    draw.rounded_rectangle((18 * scale, 18 * scale, 494 * scale, 494 * scale), radius=radius, outline="#292e3a", width=max(2, round(4 * scale)))
-    draw.arc((104 * scale, 152 * scale, 408 * scale, 456 * scale), 180, 360, fill="#252b38", width=max(4, round(18 * scale)))
-    draw.arc((146 * scale, 194 * scale, 366 * scale, 414 * scale), 180, 360, fill="#303746", width=max(3, round(12 * scale)))
-    draw.line((256 * scale, 304 * scale, 388 * scale, 184 * scale), fill="#6f7cff", width=max(3, round(13 * scale)))
-    draw.ellipse((236 * scale, 284 * scale, 276 * scale, 324 * scale), fill="#090b10", outline="#35d6ff", width=max(3, round(9 * scale)))
-    draw.line((116 * scale, 352 * scale, 396 * scale, 352 * scale), fill="#363e4f", width=max(2, round(6 * scale)))
-    for x, top, bottom in ((158, 289, 337), (224, 261, 339), (290, 235, 339), (356, 271, 339)):
-        draw.line((x * scale, top * scale, x * scale, bottom * scale), fill="#35d6ff", width=max(3, round(10 * scale)))
-    label_font = font(round(86 * scale))
-    draw.text((size / 2, 424 * scale), "HS", fill="#f6f8ff", font=label_font, anchor="mm", stroke_width=max(0, round(scale)), stroke_fill="#11141b")
+    draw.rounded_rectangle((18 * scale, 18 * scale, 494 * scale, 494 * scale), radius=radius, outline="#26334a", width=max(2, round(4 * scale)))
+    draw.ellipse((90 * scale, 86 * scale, 422 * scale, 418 * scale), outline="#1e2b40", width=max(2, round(3 * scale)))
+    draw.ellipse((140 * scale, 136 * scale, 372 * scale, 368 * scale), outline="#263750", width=max(2, round(3 * scale)))
+    draw.line((256 * scale, 252 * scale, 398 * scale, 112 * scale), fill="#3b82f6", width=max(3, round(8 * scale)))
+    draw.ellipse((390 * scale, 104 * scale, 406 * scale, 120 * scale), fill="#67e8f9")
+    accent = "#22d3ee"
+    width = max(4, round(18 * scale))
+    draw.line((120 * scale, 177 * scale, 120 * scale, 331 * scale), fill=accent, width=width)
+    draw.line((218 * scale, 177 * scale, 218 * scale, 331 * scale), fill="#3b82f6", width=width)
+    draw.line((120 * scale, 252 * scale, 218 * scale, 252 * scale), fill="#2f9ff4", width=width)
+    s_font = font(round(178 * scale))
+    draw.text((313 * scale, 254 * scale), "S", fill="#6284f5", font=s_font, anchor="mm", stroke_width=max(1, round(2 * scale)), stroke_fill="#17243a")
+    draw.line((91 * scale, 388 * scale, 421 * scale, 388 * scale), fill="#27364e", width=max(2, round(4 * scale)))
+    points=[(102,409),(160,382),(207,397),(268,359),(319,375),(410,318)]
+    draw.line([(x*scale,y*scale) for x,y in points],fill="#22d3ee",width=max(3,round(7*scale)),joint="curve")
+    draw.ellipse((403*scale,311*scale,417*scale,325*scale),fill="#67e8f9")
     return image
 
 
 def main() -> None:
     ASSETS.mkdir(exist_ok=True)
-    for size, name in ((180, "apple-touch-icon.png"), (192, "icon-192.png"), (512, "icon-512.png")):
+    outputs=((180,"apple-touch-icon.png"),(192,"icon-192.png"),(512,"icon-512.png"),(180,"apple-touch-icon-v2.png"),(192,"icon-192-v2.png"),(512,"icon-512-v2.png"))
+    for size, name in outputs:
         render(size).save(ASSETS / name, "PNG", optimize=True)
         print(f"generated {name}")
 

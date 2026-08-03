@@ -2,8 +2,7 @@ const assert = require("assert");
 const core = require("../strategy-mode-core.js");
 
 assert.deepStrictEqual(core.LONG_TERM_WEIGHTS, {
-  drawdown:25, valuation:20, technicalLow:15, marketFear:15,
-  longTermFundamental:10, historicalStats:10, stopConfirmation:5
+  weeklyKdj:35, weeklyBias:25, drawdown:20, marketFear:10, valuation:10
 });
 assert.deepStrictEqual(core.SWING_WEIGHTS, {
   stopConfirmation:30, trendStrength:25, technicalLow:15, momentum:10,
@@ -11,8 +10,7 @@ assert.deepStrictEqual(core.SWING_WEIGHTS, {
 });
 
 const long = core.longTermDecision({
-  fromHigh:-34, valuation:82, technicalLow:90, marketFear:88,
-  longTermFundamental:75, historicalStats:72, stopConfirmation:25
+  j:-5, k:12, d:16, weeklyBias:-12, fromHigh:-34, valuation:82, marketFear:88, stopConfirmation:25
 });
 assert(long.score >= 70, "large drawdown and reasonable valuation must remain an add opportunity");
 assert(["second","fear"].includes(long.stage.key));
@@ -35,11 +33,18 @@ const swingConfirmed = core.swingDecision({
 assert.strictEqual(swingConfirmed.stage.key, "confirmed");
 
 const missingValuation = core.longTermDecision({
-  fromHigh:-25, valuation:null, technicalLow:80, marketFear:75,
-  longTermFundamental:70, historicalStats:65, stopConfirmation:45
+  j:5, k:15, d:18, weeklyBias:-8, fromHigh:-25, valuation:null, marketFear:75, stopConfirmation:45
 });
 assert(Number.isFinite(missingValuation.score));
 assert(missingValuation.missing.includes("valuation"));
-assert(missingValuation.coverage === 80);
+assert(missingValuation.coverage === 90);
+
+assert(core.weeklyKdjFactor(-5,12,15)>core.weeklyKdjFactor(5,15,18));
+assert(core.weeklyKdjFactor(5,15,18)>core.weeklyKdjFactor(15,22,24));
+assert(core.weeklyKdjFactor(15,22,24)>core.weeklyKdjFactor(25,30,32));
+const falling=core.longTermDecision({j:2,k:12,d:18,weeklyBias:-10,fromHigh:-22,valuation:60,marketFear:80,stopConfirmation:20});
+const recovered=core.longTermDecision({j:2,k:12,d:18,weeklyBias:-10,fromHigh:-22,valuation:60,marketFear:80,stopConfirmation:80});
+assert.strictEqual(falling.score,recovered.score,"止跌確認不可否決或改寫長期加碼分");
+assert(falling.stage.batchScale<recovered.stage.batchScale,"止跌不足只下修投入批次");
 
 console.log("PASS long-term and swing strategy rules");

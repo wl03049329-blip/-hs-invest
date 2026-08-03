@@ -152,6 +152,23 @@
     return Number.isFinite(number) ? number : null;
   }
 
+  function validateOverviewItem(key, item) {
+    if (!REQUIRED_MARKETS.includes(key)) throw new Error(`${key} 不是支援的首頁行情`);
+    const value = finite(item?.value), change = finite(item?.change), changePct = finite(item?.change_pct);
+    const dataDate = String(item?.data_date || ""), dataTime = String(item?.data_time || "");
+    if (value === null || value <= 0 || change === null || changePct === null) throw new Error(`${key} 行情數值無效`);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dataDate) || !dataTime || dataTime.length > 20) throw new Error(`${key} 行情時間無效`);
+    return {
+      key,name:String(item.name||key).slice(0,30),value,change,changePct,dataDate,dataTime,
+      quoteTime:Number.isFinite(Date.parse(item.quote_time))?new Date(item.quote_time).toISOString():"",
+      previousClose:finite(item.previous_close),open:finite(item.open),high:finite(item.high),low:finite(item.low),volume:finite(item.volume),
+      quoteMode:item.quote_mode==="delayed"?"delayed":"close",contractMonth:/^\d{6}$/.test(String(item.contract_month||""))?String(item.contract_month):"",
+      sourceStatus:String(item.source_status||""),sourceSession:["day","night"].includes(item.source_session)?item.source_session:"",
+      quoteTimestamp:Number.isFinite(Date.parse(item.quote_timestamp||item.quote_time))?new Date(item.quote_timestamp||item.quote_time).toISOString():"",
+      availability:String(item.availability||"")
+    };
+  }
+
   function validateOverview(payload, now = new Date()) {
     if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
       throw new Error("首頁行情格式不正確");
@@ -164,39 +181,7 @@
     if (!instruments || typeof instruments !== "object") throw new Error("首頁行情內容缺失");
     const result = {};
     for (const key of REQUIRED_MARKETS) {
-      const item = instruments[key];
-      const value = finite(item?.value);
-      const change = finite(item?.change);
-      const changePct = finite(item?.change_pct);
-      const dataDate = String(item?.data_date || "");
-      const dataTime = String(item?.data_time || "");
-      if (value === null || value <= 0 || change === null || changePct === null) {
-        throw new Error(`${key} 行情數值無效`);
-      }
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(dataDate) || !dataTime || dataTime.length > 20) {
-        throw new Error(`${key} 行情時間無效`);
-      }
-      result[key] = {
-        key,
-        name: String(item.name || key).slice(0, 30),
-        value,
-        change,
-        changePct,
-        dataDate,
-        dataTime,
-        quoteTime: Number.isFinite(Date.parse(item.quote_time)) ? new Date(item.quote_time).toISOString() : "",
-        previousClose: finite(item.previous_close),
-        open: finite(item.open),
-        high: finite(item.high),
-        low: finite(item.low),
-        volume: finite(item.volume),
-        quoteMode: item.quote_mode === "delayed" ? "delayed" : "close",
-        contractMonth: /^\d{6}$/.test(String(item.contract_month || "")) ? String(item.contract_month) : "",
-        sourceStatus: String(item.source_status || ""),
-        sourceSession: ["day", "night"].includes(item.source_session) ? item.source_session : "",
-        quoteTimestamp: Number.isFinite(Date.parse(item.quote_timestamp || item.quote_time)) ? new Date(item.quote_timestamp || item.quote_time).toISOString() : "",
-        availability: String(item.availability || "")
-      };
+      result[key] = validateOverviewItem(key, instruments[key]);
     }
     return {
       updatedAt: new Date(updatedAt).toISOString(),
@@ -279,6 +264,7 @@
     spotSession,
     futuresSession,
     txQuoteState,
+    validateOverviewItem,
     validateOverview,
     validateFuturesPosition,
     tone,

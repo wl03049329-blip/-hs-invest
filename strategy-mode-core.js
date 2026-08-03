@@ -11,8 +11,7 @@
     user_selected: "預設模型"
   });
   const LONG_TERM_WEIGHTS = Object.freeze({
-    drawdown: 25, valuation: 20, technicalLow: 15, marketFear: 15,
-    longTermFundamental: 10, historicalStats: 10, stopConfirmation: 5
+    weeklyKdj: 35, weeklyBias: 25, drawdown: 20, marketFear: 10, valuation: 10
   });
   const SWING_WEIGHTS = Object.freeze({
     stopConfirmation: 30, trendStrength: 25, technicalLow: 15, momentum: 10,
@@ -45,7 +44,32 @@
 
   function drawdownFactor(fromHigh) {
     const value = finite(fromHigh);
-    return value === null ? null : Math.round(clamp(Math.abs(Math.min(0, value)) / 40 * 100));
+    return value === null ? null : Math.round(clamp(Math.abs(Math.min(0, value)) / 30 * 100));
+  }
+
+  function weeklyKdjFactor(jValue, kValue, dValue) {
+    const j = finite(jValue);
+    if (j === null) return null;
+    let score;
+    if (j >= 50) score = 0;
+    else if (j >= 20) score = (50 - j) / 30 * 35;
+    else if (j >= 10) score = 55 + (20 - j) * 2;
+    else if (j >= 0) score = 76 + (10 - j) * 1.8;
+    else score = 94 + Math.min(6, Math.abs(j) * .6);
+    const k = finite(kValue), d = finite(dValue);
+    if (k !== null && d !== null && k < 20 && d < 20) score += 3;
+    return Math.round(clamp(score));
+  }
+
+  function weeklyBiasFactor(biasValue) {
+    const bias = finite(biasValue);
+    if (bias === null) return null;
+    if (bias >= 5) return 0;
+    if (bias >= 0) return Math.round((5 - bias) / 5 * 20);
+    if (bias >= -5) return Math.round(20 + Math.abs(bias) / 5 * 25);
+    if (bias >= -10) return Math.round(45 + (Math.abs(bias) - 5) / 5 * 30);
+    if (bias >= -15) return Math.round(75 + (Math.abs(bias) - 10) / 5 * 20);
+    return Math.round(clamp(95 + Math.min(5, (Math.abs(bias) - 15) / 5 * 5)));
   }
 
   function longTermStage(score, stopConfirmation) {
@@ -80,13 +104,14 @@
 
   function longTermDecision(input = {}) {
     const metrics = {
-      drawdown: drawdownFactor(input.fromHigh), valuation: finite(input.valuation),
-      technicalLow: finite(input.technicalLow), marketFear: finite(input.marketFear),
-      longTermFundamental: finite(input.longTermFundamental), historicalStats: finite(input.historicalStats),
-      stopConfirmation: finite(input.stopConfirmation)
+      weeklyKdj: weeklyKdjFactor(input.j, input.k, input.d),
+      weeklyBias: weeklyBiasFactor(input.weeklyBias),
+      drawdown: drawdownFactor(input.fromHigh),
+      marketFear: finite(input.marketFear),
+      valuation: finite(input.valuation)
     };
     const result = weightedScore(metrics, LONG_TERM_WEIGHTS);
-    return {mode:"long_term_core", modeLabel:MODES.long_term_core, ...result, metrics, stage:longTermStage(result.score, metrics.stopConfirmation)};
+    return {mode:"long_term_core", modeLabel:MODES.long_term_core, ...result, metrics, stage:longTermStage(result.score, input.stopConfirmation)};
   }
 
   function swingDecision(input = {}) {
@@ -117,5 +142,5 @@
     };
   }
 
-  return {MODES, LONG_TERM_WEIGHTS, SWING_WEIGHTS, weightedScore, drawdownFactor, longTermStage, swingStage, longTermDecision, swingDecision, defaultDecision, buildDecisions};
+  return {MODES, LONG_TERM_WEIGHTS, SWING_WEIGHTS, weightedScore, drawdownFactor, weeklyKdjFactor, weeklyBiasFactor, longTermStage, swingStage, longTermDecision, swingDecision, defaultDecision, buildDecisions};
 });

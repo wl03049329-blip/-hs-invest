@@ -61,7 +61,7 @@ check("三項行情加今日買點機會與首頁順序", () => {
   const brief = html.indexOf('id="homeEtfBrief"');
   const sentiment = html.indexOf('id="homeSentiment"');
   const summary = html.indexOf('class="panel marketPanel"');
-  assert.ok(overview < brief && brief < sentiment && sentiment < summary);
+  assert.ok(overview < sentiment && sentiment < brief && brief < summary);
   assert.doesNotMatch(html + css + quoteUi, /即時行情|即時報價|零延遲/);
 });
 

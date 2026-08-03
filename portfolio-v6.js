@@ -652,9 +652,16 @@
       const ratioAverage = Number.isFinite(ratio?.average_20d) ? `${number(ratio.average_20d, 1)}%` : "—";
       const ratioPosition = Number.isFinite(ratio?.percentile_60d) ? `${number(ratio.percentile_60d, 0)}%` : "—";
       const updateTime = Number.isFinite(Date.parse(marginRisk.updated_at)) ? new Intl.DateTimeFormat("zh-TW", {timeZone:"Asia/Taipei",hour:"2-digit",minute:"2-digit",hour12:false}).format(new Date(marginRisk.updated_at)) : "—";
-      fomoCard.innerHTML = `<span>台股融資風險</span><span class="homeMarginRows"><b>本金 ${escapeHtml(balanceText)}</b><em>今日 ${escapeHtml(dailyText)}</em><small>擔保品 ${escapeHtml(collateralText)}｜20日 ${escapeHtml(change20Text)}｜60日 ${escapeHtml(balancePosition)}</small><b>推估維持率 ${escapeHtml(ratioValue)}</b><em>${escapeHtml(riskLabel)}</em><small>盤後 ${escapeHtml(marginValues.dataDate || "—")}｜20日均 ${escapeHtml(ratioAverage)}｜60日 ${escapeHtml(ratioPosition)}</small></span><small>${escapeHtml(marginRisk.interpretation?.summary || marginRisk.summary || "盤後資料待判讀")}<i class="sentimentFreshness">最後更新 ${escapeHtml(updateTime)}${marginRisk.stale ? "｜資料可能過期" : ""}</i></small>`;
+      const tone=marginRisk.interpretation?.tone||"neutral";
+      const verdict=["danger","orange"].includes(tone)||marginValues.maintenanceRatio<140
+        ? "偏危險｜若指數轉弱，去槓桿可能加劇賣壓"
+        : tone==="calm"&&marginValues.maintenanceRatio>=160
+          ? "偏安全｜市場槓桿壓力較低，可留意回檔佈局"
+          : "中性｜仍可分批，但不宜過度追價";
+      const method=marginRisk.methodology||"逐檔融資餘額搭配還原收盤價與滾動成本，推估市場整體擔保品市值與融資本金。";
+      fomoCard.innerHTML = `<header class="homeMarginHeader"><div><span>台股融資風險</span><small>最近交易日盤後｜${escapeHtml(marginValues.dataDate||"—")}</small></div><button type="button" data-open-margin>完整籌碼</button></header><div class="homeMarginKpiGrid"><div><span>融資餘額</span><b>${escapeHtml(balanceText)}</b><small>近20日 ${escapeHtml(change20Text)}</small></div><div><span>單日增減</span><b>${escapeHtml(dailyText)}</b><small>60日位置 ${escapeHtml(balancePosition)}</small></div><div><span>推估維持率</span><b>${escapeHtml(ratioValue)}</b><small>${escapeHtml(riskLabel)}</small></div><div><span>20日均／區間</span><b>${escapeHtml(ratioAverage)}</b><small>60日位置 ${escapeHtml(ratioPosition)}</small></div></div><p class="homeMarginVerdict tone-${escapeHtml(tone)}">${escapeHtml(verdict)}</p><details class="homeMarginDetails"><summary>展開融資風險明細</summary><div class="homeMarginDetailGrid"><span>擔保品估值 <b>${escapeHtml(collateralText)}</b></span><span>推估融資本金 <b>${escapeHtml(balanceText)}</b></span><span>資料覆蓋率 <b>${Number.isFinite(marginRisk.coverage?.coverage_ratio)?escapeHtml(`${number(marginRisk.coverage.coverage_ratio,2)}%`):"—"}</b></span><span>配對檔數 <b>${Number.isFinite(marginRisk.coverage?.matched_count)?escapeHtml(number(marginRisk.coverage.matched_count,0)):"—"}</b></span><span>維持率單日 <b>${escapeHtml(ratioDay)}</b></span><span>最後更新 <b>${escapeHtml(updateTime)}</b></span></div><p>${escapeHtml(method)}</p><small>市場推估融資維持率不代表個人帳戶維持率或追繳狀態。${marginRisk.stale?"｜資料可能過期":""}</small></details>`;
     } else {
-      fomoCard.innerHTML = "<span>台股融資風險</span><b>—</b><em>資料尚未更新</em><small>首頁與融資風險頁共用最後一筆有效快取，不以舊欄位或 0 代替</small>";
+      fomoCard.innerHTML = '<header class="homeMarginHeader"><div><span>台股融資風險</span><small>最近交易日盤後資料</small></div><button type="button" data-open-margin>完整籌碼</button></header><div class="newsEmpty">資料尚未更新；首頁與融資風險頁共用最後一筆有效快取，不以舊欄位或 0 代替。</div>';
     }
     if (cnn && Number.isFinite(cnn.score)) {
       const cnnTime = Number.isFinite(Date.parse(cnn.sourceUpdatedAt)) ? new Intl.DateTimeFormat("zh-TW", {timeZone: "Asia/Taipei", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false}).format(new Date(cnn.sourceUpdatedAt)) : "—";
@@ -714,7 +721,7 @@
       else showChartDetail(chartSelection < 0 ? 0 : chartSelection);
     });
     $v6("#homeCnnCard").addEventListener("click", () => { switchTab("sentiment"); if (typeof switchChipTab === "function") switchChipTab("mood", {scroll: false}); });
-    $v6("#homeFomoCard").addEventListener("click", () => { switchTab("sentiment"); if (typeof switchChipTab === "function") switchChipTab("margin", {scroll: false}); });
+    $v6("#homeFomoCard").addEventListener("click", event => { if (!event.target.closest("[data-open-margin]")) return; switchTab("sentiment"); if (typeof switchChipTab === "function") switchChipTab("margin", {scroll: false}); });
     document.querySelector('[data-tab="portfolio"]').addEventListener("click", () => {
       renderPortfolio();
       if ($v6("#portfolioAutoRefresh").checked) updateQuotes();

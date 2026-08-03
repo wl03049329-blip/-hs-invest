@@ -77,7 +77,7 @@ check("首頁情緒摘要位於市場摘要上方", () => {
   const marketIndex = html.indexOf('class="panel marketPanel"');
   const snapshotIndex = html.indexOf("<h2>其他快速資訊</h2>", marketIndex);
   assert.ok(overviewIndex > 0 && overviewIndex < sentimentIndex);
-  assert.ok(briefIndex < sentimentIndex && sentimentIndex < marketIndex);
+  assert.ok(sentimentIndex < briefIndex && briefIndex < marketIndex);
   assert.ok(marketIndex < snapshotIndex);
 });
 

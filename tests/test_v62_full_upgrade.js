@@ -11,10 +11,10 @@ const proxies = JSON.parse(read("valuation-proxy-map.json"));
 const commodities = JSON.parse(read("commodity-quotes.json"));
 
 assert.match(html, /class="brandLogo"/);
-assert.match(html, /assets\/icon-192\.png/);
-assert.match(html, /apple-touch-icon\.png/);
+assert.match(html, /assets\/icon-192-v2\.png/);
+assert.match(html, /apple-touch-icon-v2\.png/);
 assert.match(html, /site\.webmanifest/);
-for (const file of ["assets/hs-etf-radar-mark.svg", "assets/icon-192.png", "assets/icon-512.png", "assets/apple-touch-icon.png"]) {
+for (const file of ["assets/hs-etf-radar-mark.svg", "assets/icon-192-v2.png", "assets/icon-512-v2.png", "assets/apple-touch-icon-v2.png"]) {
   assert.ok(fs.statSync(path.join(root, file)).size > 200, `${file} missing`);
 }
 assert.match(tech, /--bg:#050609/);
@@ -39,7 +39,8 @@ assert.equal(proxies.items["00830"].primary_proxy, "SOXQ");
 assert.equal(proxies.items["00662"].primary_proxy, "QQQ");
 assert.match(strategy, /long_term_core/);
 assert.match(strategy, /swing/);
-assert.match(strategy, /stopConfirmation: 5/);
+assert.match(strategy, /weeklyKdj: 35/);
+assert.match(strategy, /weeklyBias: 25/);
 assert.match(strategy, /stopConfirmation: 30/);
 
 for (const key of ["gold", "brent"]) {
