@@ -13,6 +13,7 @@ const marketWorkflow = fs.readFileSync(path.join(root, ".github", "workflows", "
 const futuresWorkflow = fs.readFileSync(path.join(root, ".github", "workflows", "update-futures-position.yml"), "utf8");
 const overviewRaw = JSON.parse(fs.readFileSync(path.join(root, "market-overview.json"), "utf8"));
 const futuresRaw = JSON.parse(fs.readFileSync(path.join(root, "futures-position.json"), "utf8"));
+const txRaw = JSON.parse(fs.readFileSync(path.join(root, "tx-futures-quote.json"), "utf8"));
 
 function check(name, fn) {
   fn();
@@ -39,11 +40,14 @@ check("首頁行情 JSON 僅保留三項現貨且不以 0 代替", () => {
   assert.throws(() => core.validateOverview(invalid), /行情數值無效/);
 });
 
-check("首頁不載入或顯示台指期行情", () => {
-  assert.doesNotMatch(html, /tx_front|台指期近月/);
+check("首頁台指期僅以授權行情或官方收盤 fallback 顯示", () => {
+  assert.match(html, /tx_front|台指期近月/);
   assert.doesNotMatch(JSON.stringify(overviewRaw), /tx_front|台指期近月/);
   const mainBlock = quoteScript.slice(quoteScript.indexOf("def main()"));
-  assert.doesNotMatch(mainBlock, /fetch_taifex_futures|select_near_month_tx/);
+  assert.match(mainBlock, /TAIFEX_DAILY_URL|build_tx_fallback/);
+  assert.equal(txRaw.authorized_intraday,false);
+  assert.equal(txRaw.availability,"official_close_only");
+  assert.match(txRaw.message,/需串接授權來源/);
   assert.match(futuresScript, /外資/);
   assert.match(html, /id="futuresPositionContent"/);
 });
@@ -65,15 +69,16 @@ check("行情來源有逾時、驗證與失敗保留", () => {
   assert.match(quoteScript, /timeout=timeout/);
   assert.match(quoteScript, /fetch_mis_snapshot/);
   assert.match(quoteScript, /existing_overview/);
-  assert.match(html, /目前顯示最後成功行情/);
+  assert.match(html, /更新失敗，已保留最後資料/);
   assert.match(css, /\.marketQuoteCard\.isStale/);
 });
 
-check("前端 60 秒檢查且只在版本變動重繪", () => {
-  assert.match(html, /MARKET_OVERVIEW_POLL_INTERVAL=60\*1000/);
-  assert.match(quoteUi, /changed: false/);
-  assert.match(quoteUi, /if \(result\.changed\)/);
-  assert.match(quoteUi, /hs:quote-cache-checked/);
+check("前端單一動態輪詢器且快取版本未變不重抓大檔", () => {
+  assert.match(html, /scheduleLiveQuotePoll/);
+  assert.match(html, /metaTime!==liveMarketCacheVersion/);
+  assert.match(html, /cache:"no-store"/);
+  assert.match(html, /AbortController/);
+  assert.match(html, /hs:quote-cache-checked/);
 });
 
 check("ETF雷達自選與精選互相獨立", () => {
@@ -111,12 +116,12 @@ check("期貨部位 JSON 與推估公式維持有效", () => {
   assert.match(futuresScript, /if estimated_long < 0 or estimated_short < 0/);
 });
 
-check("期貨籌碼盤後補抓保留，首頁行情只跑現貨時段", () => {
+check("期貨籌碼盤後補抓保留，首頁正式 fallback 由同一 Actions 更新", () => {
   assert.match(futuresRaw.methodology, /相同交易日/);
   assert.match(futuresWorkflow, /cron: "20 10 \* \* 1-5"/);
   assert.match(futuresWorkflow, /cron: "0 11 \* \* 1-5"/);
   assert.match(marketWorkflow, /cron: "\*\/5 1-6 \* \* 1-5"/);
-  assert.doesNotMatch(marketWorkflow, /\*\/10 7-15|\*\/10 16-20|55 15|0 21/);
+  assert.match(marketWorkflow, /tx-futures-quote\.json/);
   assert.match(marketWorkflow, /cancel-in-progress: true/);
 });
 

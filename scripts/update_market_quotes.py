@@ -23,6 +23,7 @@ ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "market-quotes.json"
 META_OUTPUT = ROOT / "market-quotes-meta.json"
 OVERVIEW_OUTPUT = ROOT / "market-overview.json"
+FUTURES_OUTPUT = ROOT / "tx-futures-quote.json"
 
 TWSE_CLOSE_URL = "https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL"
 TPEX_CLOSE_URL = "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_quotes"
@@ -51,7 +52,7 @@ TAIPEI = ZoneInfo("Asia/Taipei")
 def fetch_json(url: str, *, timeout: int = 25) -> Any:
     request = urllib.request.Request(
         url,
-        headers={"Accept": "application/json", "User-Agent": "HS-ETF-Radar-V6.1/1.0"},
+        headers={"Accept": "application/json"},
     )
     with urllib.request.urlopen(request, timeout=timeout) as response:
         if response.status != 200:
@@ -182,6 +183,7 @@ def fetch_mis_snapshot() -> list[dict[str, Any]]:
         quote_time = str(row.get("t") or row.get("%") or "").strip()
         high = finite_number(row.get("h"), positive=True)
         low = finite_number(row.get("l"), positive=True)
+        open_price = finite_number(row.get("o"), positive=True)
         volume_lots = finite_number(row.get("v"))
         volume = volume_lots * 1000 if volume_lots is not None and volume_lots >= 0 else None
         if not code or price is None or previous_close is None or data_date is None:
@@ -199,6 +201,7 @@ def fetch_mis_snapshot() -> list[dict[str, Any]]:
                 "market": "TPEx" if row.get("ex") == "otc" else "TWSE",
                 "high": high,
                 "low": low,
+                "open": open_price,
                 "volume": volume,
             }
         )
@@ -276,6 +279,72 @@ def select_near_month_tx(rows: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def normalize_tx_session(row: dict[str, Any], contract_month: str) -> dict[str, Any]:
+    price = finite_number(row.get("Last"), positive=True)
+    change = finite_number(row.get("Change"))
+    pct = finite_number(row.get("%"))
+    data_date = iso_date(row.get("Date"))
+    session = "night" if row.get("TradingSession") == "盤後" else "day"
+    if price is None or change is None or pct is None or data_date is None:
+        raise ValueError("TAIFEX TX session row is invalid")
+    previous_close = price - change
+    if previous_close <= 0:
+        raise ValueError("TAIFEX TX previous close is invalid")
+    return {
+        "key": f"tx_{session}",
+        "name": "台指期夜盤" if session == "night" else "台指期日盤",
+        "value": price,
+        "previous_close": previous_close,
+        "change": change,
+        "change_pct": pct,
+        "open": finite_number(row.get("Open"), positive=True),
+        "high": finite_number(row.get("High"), positive=True),
+        "low": finite_number(row.get("Low"), positive=True),
+        "volume": finite_number(row.get("Volume")),
+        "data_date": data_date,
+        "data_time": "夜盤正式收盤" if session == "night" else "日盤正式收盤",
+        "quote_time": f"{data_date}T{'05:00:00' if session == 'night' else '13:45:00'}+08:00",
+        "quote_mode": "close",
+        "source_session": session,
+        "contract_month": contract_month,
+        "source_name": "臺灣期貨交易所每日行情",
+        "source_url": TAIFEX_DAILY_URL,
+        "source_status": "official_daily_close_only",
+    }
+
+
+def build_tx_fallback(rows: list[dict[str, Any]], now: datetime) -> dict[str, Any]:
+    selected = select_near_month_tx(rows)
+    contract_month = selected["contract_month"]
+    matching = [
+        row
+        for row in rows
+        if row.get("Contract") == "TX"
+        and str(row.get("ContractMonth(Week)", "")).strip() == contract_month
+        and row.get("TradingSession") in {"一般", "盤後"}
+        and iso_date(row.get("Date"))
+    ]
+    sessions: dict[str, dict[str, Any]] = {}
+    for source_name, key in (("一般", "day"), ("盤後", "night")):
+        candidates = [row for row in matching if row.get("TradingSession") == source_name]
+        if candidates:
+            row = max(candidates, key=lambda entry: iso_date(entry.get("Date")) or "")
+            sessions[key] = normalize_tx_session(row, contract_month)
+    return {
+        "version": 1,
+        "updated_at": now.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "availability": "official_close_only",
+        "authorized_intraday": False,
+        "message": "台指期盤中行情需串接授權來源",
+        "fallback_message": "目前顯示最近官方收盤資料",
+        "contract_month": contract_month,
+        "sessions": sessions,
+        "source_name": "臺灣期貨交易所每日行情",
+        "source_url": TAIFEX_DAILY_URL,
+        "source_status": "official_daily_close_only",
+    }
+
+
 def build_overview(mis_rows: list[dict[str, Any]], now: datetime) -> dict[str, Any]:
     instruments: dict[str, dict[str, Any]] = {}
     for row in mis_rows:
@@ -292,8 +361,13 @@ def build_overview(mis_rows: list[dict[str, Any]], now: datetime) -> dict[str, A
             "change": change,
             "change_pct": change / row["previous_close"] * 100,
             "previous_close": row["previous_close"],
+            "open": row.get("open"),
+            "high": row.get("high"),
+            "low": row.get("low"),
+            "volume": row.get("volume"),
             "data_date": row["date"],
             "data_time": row["quote_time"],
+            "quote_time": f"{row['date']}T{row['quote_time']}+08:00" if row["quote_time"] != "—" else None,
             "source_session": "spot",
             "quote_mode": mode,
             "source": TWSE_MIS_URL,
@@ -378,6 +452,7 @@ def main() -> None:
     now = datetime.now(TAIPEI)
     existing_quotes = existing_payload(OUTPUT)
     existing_overview = existing_payload(OVERVIEW_OUTPUT)
+    existing_futures = existing_payload(FUTURES_OUTPUT)
     items_by_market: dict[str, list[dict[str, Any]]] = {}
     statuses: dict[str, str] = {}
     for market, url in (("TWSE", TWSE_CLOSE_URL), ("TPEx", TPEX_CLOSE_URL)):
@@ -419,6 +494,7 @@ def main() -> None:
                 "market": row["market"],
                 "quote_mode": mode,
                 "quote_time": row["quote_time"],
+                "open": row.get("open"),
                 "high": row.get("high"),
                 "low": row.get("low"),
                 "volume": row.get("volume"),
@@ -446,6 +522,17 @@ def main() -> None:
     except Exception as exc:  # noqa: BLE001
         if existing_overview:
             print(f"Market overview kept after source failure: {exc}")
+        else:
+            raise
+
+    try:
+        taifex_payload = fetch_json(TAIFEX_DAILY_URL, timeout=30)
+        if not isinstance(taifex_payload, list):
+            raise ValueError("TAIFEX daily source is not an array")
+        write_atomic(FUTURES_OUTPUT, build_tx_fallback(taifex_payload, now))
+    except Exception as exc:  # noqa: BLE001
+        if existing_futures:
+            print(f"TX official close fallback kept after source failure: {exc}")
         else:
             raise
     print(f"Updated quote cache with {len(items)} symbols and validated market overview.")

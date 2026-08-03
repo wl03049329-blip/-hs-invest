@@ -123,7 +123,7 @@
   }
 
   function marketModeText() {
-    return core.isTaipeiMarketOpen() ? "盤中延遲｜快取約 5 分鐘" : "收盤資料模式";
+    return core.isTaipeiMarketOpen() ? "盤中動態延遲｜來源時間為準" : "收盤資料模式";
   }
 
   function renderQuoteStatus(message) {
@@ -562,13 +562,11 @@
   function scheduleNext(delayOverride) {
     clearTimeout(refreshTimer);
     refreshTimer = null;
-    if (document.hidden) return;
-    if (!core.isTaipeiMarketOpen()) return;
-    const delay = delayOverride ?? (failureCount ? Math.min(120000 * 2 ** (failureCount - 1), 900000) : 60000);
-    refreshTimer = setTimeout(() => updateQuotes({applyPortfolio: $v6("#portfolioAutoRefresh").checked}), delay);
+    // 行情輪詢由首頁 HSLiveMarket 的單一控制器負責，持股只消費同一批公開行情。
   }
 
   async function updateQuotes({force = false, applyPortfolio = $v6("#portfolioAutoRefresh").checked} = {}) {
+    if (window.HSLiveMarket) return window.HSLiveMarket.refresh();
     if (refreshInFlight) return refreshInFlight;
     const now = Date.now();
     if (!force && now - lastAttemptAt < 55000) {
@@ -671,6 +669,19 @@
     }
   }
 
+  function applySharedQuotes(event) {
+    const incoming=event?.detail?.quotes;
+    if(!(incoming instanceof Map))return;
+    publicQuoteMap=new Map(incoming);
+    lastSuccessAt=Date.parse(event.detail.sourceUpdatedAt||event.detail.checkedAt||new Date().toISOString());
+    if($v6("#portfolioAutoRefresh").checked&&holdings.length){
+      const heldCodes=new Set(holdings.map(item=>item.code));
+      for(const [code,quote] of publicQuoteMap)if(heldCodes.has(code))quoteMap.set(code,quote);
+      saveQuoteCache();renderPortfolio(true);
+    }
+    renderQuoteStatus(`${quoteTimeLabel()}｜${event.detail.source==="authorized_proxy"?"授權延遲行情":"公開快取"}`);
+  }
+
   function bindEvents() {
     $v6("#portfolioAddBtn").addEventListener("click", () => openPortfolioModal());
     $v6("#portfolioModalClose").addEventListener("click", closePortfolioModal);
@@ -708,12 +719,8 @@
       renderPortfolio();
       if ($v6("#portfolioAutoRefresh").checked) updateQuotes();
     });
-    document.addEventListener("visibilitychange", () => {
-      if (document.hidden) {
-        clearTimeout(refreshTimer);
-        refreshTimer = null;
-      } else updateQuotes({force: true, applyPortfolio: $v6("#portfolioAutoRefresh").checked});
-    });
+    window.addEventListener("hs:delayed-quotes",applySharedQuotes);
+    window.addEventListener("hs:delayed-quotes-error",()=>renderQuoteStatus("行情更新失敗，已保留最後資料"));
     window.addEventListener("resize", () => {
       cancelAnimationFrame(resizeFrame);
       resizeFrame = requestAnimationFrame(drawAllocation);
@@ -729,7 +736,8 @@
   bindEvents();
   renderPortfolio();
   renderHomeSentiment();
-  if (!document.hidden) updateQuotes({applyPortfolio: $v6("#portfolioAutoRefresh").checked});
+  const initialShared=window.HSLiveMarket?.latestQuotes?.();
+  if(initialShared instanceof Map&&initialShared.size)applySharedQuotes({detail:{quotes:initialShared,sourceUpdatedAt:new Date().toISOString(),source:"shared_cache"}});
 
   window.HSPortfolioV6 = Object.freeze({
     storageKey: HOLDINGS_KEY,

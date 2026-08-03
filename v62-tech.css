@@ -31,6 +31,10 @@ body{background:radial-gradient(circle at 50% -20%,#161b27 0,#08090d 32%,#050609
 .marketOverviewCards{grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
 .homeMarketOverview{overflow:hidden}
 .marketQuoteCard{min-height:104px;display:flex;flex-direction:column;justify-content:space-between}
+.marketQuoteCard>summary{list-style:none;display:flex;flex:1;min-width:0;flex-direction:column;justify-content:space-between;cursor:pointer}.marketQuoteCard>summary::-webkit-details-marker{display:none}
+.marketQuoteDetails{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;margin-top:7px;padding-top:7px;border-top:1px solid #272c36}.marketQuoteDetails span{display:flex;justify-content:space-between;gap:4px;color:#8f98a8;font-size:9px}.marketQuoteDetails b{color:#e8ecf5;font-variant-numeric:tabular-nums}
+.txQuoteCard{border-color:#39415a}.txSessionList{display:grid;gap:4px;margin-top:7px}.txSessionRow{display:grid;grid-template-columns:auto 1fr;gap:2px 6px;padding:5px 6px;border:1px solid #262c38;border-radius:8px;background:#080a0f}.txSessionRow span{font-size:9px;color:#9ba4b5}.txSessionRow b{font-size:9px;text-align:right}.txSessionRow small{grid-column:1/-1;text-align:right;color:#747d8e;font-size:8px}.txSessionRow.active{border-color:#526184}.txSourceNotice{display:block;margin-top:6px;color:#f2c96b;font-size:8px;line-height:1.3}
+.priceFlashUp{animation:quoteUpFlash .7s ease-out}.priceFlashDown{animation:quoteDownFlash .7s ease-out}@keyframes quoteUpFlash{0%{background:#4b1724}100%{background:#0a0c11}}@keyframes quoteDownFlash{0%{background:#0a4534}100%{background:#0a0c11}}
 .commodityQuoteCard .commoditySource{display:block;margin-top:5px;color:#7f8796;font-size:8px;line-height:1.25}
 .buyOpportunityCard{border-color:#424a67;background:linear-gradient(145deg,#111625,#0b0d13)}
 .buyOpportunityCard strong{font-size:16px}.buyOpportunityCard>span,.buyOpportunityCard>small{display:block;font-size:10px;color:#a8b1c2;line-height:1.3}
@@ -68,7 +72,7 @@ body{background:radial-gradient(circle at 50% -20%,#161b27 0,#08090d 32%,#050609
   .bottomNavButton svg{width:20px;height:20px}.bottomNavButton.active{color:#fff;background:#1a1e29}.bottomNavButton.active svg{stroke:#35d6ff}
   .tabIntro{margin:4px 2px 8px;font-size:11px}
   .panel{border-radius:16px;box-shadow:0 10px 30px #0008}
-  .marketOverviewCards{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}.marketQuoteCard{min-height:83px;padding:7px}.marketQuoteHead{gap:3px}.marketQuoteHead b{font-size:10px}.marketQuoteState{font-size:7px;padding:2px 4px}.marketQuoteValue strong{font-size:16px}.marketQuoteValue span{font-size:9px}.marketQuoteMeta{font-size:7px}.commodityQuoteCard .commoditySource{display:none}.buyOpportunityCard strong{font-size:12px}.buyOpportunityCard>span{font-size:8px}.buyOpportunityCard>small{display:none}
+  .marketOverviewCards{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.marketQuoteCard{min-height:83px;padding:7px}.marketQuoteHead{gap:3px}.marketQuoteHead b{font-size:10px}.marketQuoteState{font-size:7px;padding:2px 4px}.marketQuoteValue strong{font-size:16px}.marketQuoteValue span{font-size:8px}.marketQuoteMeta{font-size:7px}.commodityQuoteCard .commoditySource{display:none}.buyOpportunityCard{grid-column:1/-1;min-height:76px}.buyOpportunityCard strong{font-size:12px}.buyOpportunityCard>span{font-size:8px}.buyOpportunityCard>small{display:none}.marketQuoteDetails{grid-template-columns:1fr 1fr}.txSessionRow{grid-template-columns:1fr}.txSessionRow b{text-align:left}.txSessionRow small{grid-column:auto;text-align:left}
   .marketOneLine{font-size:11px;margin:7px 0}.marketQuickSignals{display:none}.marketOverviewLabel{margin:4px 0;font-size:9px}.homeQuoteStatus{font-size:9px;padding:5px 7px}
   .homeFastFacts{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin-top:5px}.homeFastFacts span{padding:5px 4px;text-align:center;font-size:8px}.homeFastFacts b{font-size:8px}.todayBuyDecision{grid-template-columns:1fr;gap:3px;margin-top:5px;padding:7px 8px}.todayBuyDecision p{font-size:9px;line-height:1.35}
   .homeEtfBrief{padding:10px}.homeEtfBrief .panelTitle small{display:none}.rankList{gap:5px;margin-top:7px}.homeOpportunityGroup{padding:7px;gap:4px}.homeOpportunityRow{padding:6px 7px!important}.homeOpportunityMetrics{font-size:8px}.homeOpportunityRow small{font-size:9px}.homeOpportunityTicker{font-size:10px}.homeOpportunityRow strong{font-size:10px}
@@ -77,4 +81,5 @@ body{background:radial-gradient(circle at 50% -20%,#161b27 0,#08090d 32%,#050609
   .chipSegments{top:0}.chipSegment{flex:0 0 auto;padding:8px 9px}
 }
 
-@media(max-width:430px){.app{padding-left:8px;padding-right:8px}.brandLogo{width:min(270px,77vw)}.brandWordmark b{font-size:16px}.panelTitle h2{font-size:17px}.titleIcon{width:17px;height:17px}}
+@media(max-width:430px){.app{padding-left:8px;padding-right:8px}.brandLogo{width:min(270px,77vw)}.brandWordmark b{font-size:16px}.panelTitle h2{font-size:17px}.titleIcon{width:17px;height:17px}.marketQuoteValue strong{font-size:15px}.marketQuoteCard{min-width:0;overflow:hidden}}
+@media(prefers-reduced-motion:reduce){.priceFlashUp,.priceFlashDown{animation:none!important}}

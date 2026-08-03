@@ -147,6 +147,7 @@
   }
 
   function finite(value) {
+    if (value === null || value === undefined || value === "") return null;
     const number = Number(value);
     return Number.isFinite(number) ? number : null;
   }
@@ -183,11 +184,17 @@
         changePct,
         dataDate,
         dataTime,
+        quoteTime: Number.isFinite(Date.parse(item.quote_time)) ? new Date(item.quote_time).toISOString() : "",
+        previousClose: finite(item.previous_close),
+        open: finite(item.open),
+        high: finite(item.high),
+        low: finite(item.low),
+        volume: finite(item.volume),
         quoteMode: item.quote_mode === "delayed" ? "delayed" : "close",
         contractMonth: /^\d{6}$/.test(String(item.contract_month || "")) ? String(item.contract_month) : "",
         sourceStatus: String(item.source_status || ""),
         sourceSession: ["day", "night"].includes(item.source_session) ? item.source_session : "",
-        quoteTimestamp: Number.isFinite(Date.parse(item.quote_timestamp)) ? new Date(item.quote_timestamp).toISOString() : "",
+        quoteTimestamp: Number.isFinite(Date.parse(item.quote_timestamp || item.quote_time)) ? new Date(item.quote_timestamp || item.quote_time).toISOString() : "",
         availability: String(item.availability || "")
       };
     }

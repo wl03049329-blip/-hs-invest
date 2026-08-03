@@ -23,6 +23,8 @@ jobs:
         with:
           python-version: "3.12"
       - name: Fetch structured delayed commodity quotes
+        env:
+          TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API_KEY }}
         run: python scripts/update_commodity_quotes.py
       - name: Commit changed commodity cache
         run: |

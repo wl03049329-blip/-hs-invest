@@ -4,6 +4,8 @@ on:
   schedule:
     # UTC 週一至週五 01:00～06:55 = 台北週一至週五 09:00～14:55（現貨，每 5 分鐘）。
     - cron: "*/5 1-6 * * 1-5"
+    # 台北 18:30、19:30 補抓臺期所正式日行情，供授權盤中來源失敗時使用。
+    - cron: "30 10,11 * * 1-5"
   workflow_dispatch:
 
 permissions:
@@ -27,6 +29,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add market-quotes.json market-quotes-meta.json market-overview.json
+          git add market-quotes.json market-quotes-meta.json market-overview.json tx-futures-quote.json
           git diff --cached --quiet || git commit -m "Update delayed Taiwan market quotes"
           git push

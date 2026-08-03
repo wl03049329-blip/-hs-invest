@@ -2,12 +2,14 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const core = require("../portfolio-core.js");
+const live = require("../live-market-core.js");
 
 const root = path.resolve(__dirname, "..");
 const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const quotes = fs.readFileSync(path.join(root, "portfolio-v6.js"), "utf8");
 const css = fs.readFileSync(path.join(root, "portfolio-v6.css"), "utf8");
-const production = html + quotes + css;
+const liveSource = fs.readFileSync(path.join(root, "live-market-core.js"), "utf8");
+const production = html + quotes + css + liveSource;
 
 function check(name, fn) {
   fn();
@@ -22,17 +24,18 @@ check("台北盤中時段邊界", () => {
 });
 
 check("首頁延遲行情標示完整", () => {
-  assert.match(html, /盤中延遲行情｜約每 5 分鐘更新｜僅供參考/);
-  assert.match(html, /快取更新 \$\{formatHomeQuoteTime\(detail\.sourceUpdatedAt\|\|checkedAt\)\}/);
+  assert.match(html, /動態行情｜盤中 15～30 秒檢查｜來源時間為準｜僅供參考/);
+  assert.match(html, /延遲行情｜最後成功更新/);
   assert.doesNotMatch(production, /即時行情/);
 });
 
-check("行情每 60 秒且只有單一請求與計時器", () => {
-  assert.match(quotes, /scheduleNext\(60000\)/);
-  assert.match(quotes, /if \(refreshInFlight\) return refreshInFlight/);
-  assert.match(quotes, /clearTimeout\(refreshTimer\)/);
+check("盤中 20 秒調度且只有首頁單一行情計時器", () => {
+  assert.equal(live.pollDelay({spotActive:true}),20000);
+  assert.match(html, /let liveQuoteTimer=null/);
+  assert.match(html, /if\(liveQuoteInFlight\)/);
+  assert.match(html, /liveQuoteAbortController\?\.abort\(\)/);
   const scheduler = quotes.slice(quotes.indexOf("function scheduleNext"), quotes.indexOf("async function updateQuotes"));
-  assert.doesNotMatch(scheduler, /holdings\.length/);
+  assert.doesNotMatch(scheduler, /setTimeout/);
 });
 
 check("首頁、買點與持股共用同一批行情", () => {
@@ -46,17 +49,16 @@ check("首頁、買點與持股共用同一批行情", () => {
 });
 
 check("失敗保留最後資料", () => {
-  assert.match(html, /目前顯示最後成功行情/);
+  assert.match(html, /更新失敗，已保留最後資料/);
   assert.match(quotes, /更新失敗，已保留最後資料/);
   assert.match(quotes, /hs:delayed-quotes-error/);
 });
 
 check("背景暫停並在前景強制更新", () => {
-  assert.match(quotes, /visibilitychange/);
-  assert.match(quotes, /document\.hidden/);
-  assert.match(quotes, /force: true/);
   assert.match(html, /visibilitychange/);
   assert.match(html, /clearTimeout\(cnnPollTimer\)/);
+  assert.match(html, /clearTimeout\(liveQuoteTimer\)/);
+  assert.match(html, /refreshLiveQuotes\(\{force:true\}\)/);
 });
 
 check("CNN 每 20 分鐘更新且失敗保留", () => {

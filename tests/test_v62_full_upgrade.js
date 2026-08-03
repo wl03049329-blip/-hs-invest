@@ -46,7 +46,7 @@ for (const key of ["gold", "brent"]) {
   const item = commodities.items[key];
   assert.ok(item && Number.isFinite(item.value) && item.value > 0);
   assert.ok(Number.isFinite(item.change_pct));
-  assert.match(item.source_name, /Yahoo Finance chart JSON/);
+  assert.match(item.source_name, /Twelve Data|舊版最後成功快取/);
 }
 for (const tab of ["overview", "mood", "margin", "institutions", "futures", "events"]) {
   assert.match(html, new RegExp(`data-chip-tab="${tab}"`));

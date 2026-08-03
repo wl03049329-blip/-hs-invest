@@ -10,6 +10,7 @@ const marketUi = fs.readFileSync(path.join(root, "market-ui-core.js"), "utf8");
 const workflow = fs.readFileSync(path.join(root, ".github", "workflows", "update-market-quotes.yml"), "utf8");
 const quoteJson = JSON.parse(fs.readFileSync(path.join(root, "market-quotes.json"), "utf8"));
 const quoteMeta = JSON.parse(fs.readFileSync(path.join(root, "market-quotes-meta.json"), "utf8"));
+const live = fs.readFileSync(path.join(root,"live-market-core.js"),"utf8");
 
 const checks = [];
 function check(name, fn) {
@@ -56,10 +57,9 @@ check("行情請求使用整批固定網址，不包含持股代號", () => {
 });
 
 check("延遲行情更新、節流、退避與背景頁處理", () => {
-  assert.match(ui, /60000/);
-  assert.match(ui, /900000/);
-  assert.match(ui, /visibilitychange/);
-  assert.match(ui, /refreshInFlight/);
+  assert.match(live, /15\*60\*1000/);
+  assert.match(html, /visibilitychange/);
+  assert.match(html, /liveQuoteInFlight/);
   assert.match(ui, /行情更新失敗，已保留最後資料/);
   assert.doesNotMatch(html + ui + css, /即時行情/);
 });
@@ -138,7 +138,7 @@ check("行情 JSON 結構與價格有效", () => {
 check("Actions 以固定排程更新同源行情", () => {
   assert.match(workflow, /cron: "\*\/5 1-6 \* \* 1-5"/);
   assert.match(workflow, /scripts\/update_market_quotes\.py/);
-  assert.match(workflow, /git add market-quotes\.json market-quotes-meta\.json market-overview\.json/);
+  assert.match(workflow, /git add market-quotes\.json market-quotes-meta\.json market-overview\.json tx-futures-quote\.json/);
 });
 
 process.stdout.write(`\n${checks.length} V6 integration tests passed.\n`);
