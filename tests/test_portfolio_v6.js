@@ -49,14 +49,63 @@ test("策略類型與目標配置只保存在本機持股資料", () => {
 });
 
 test("目標配置總和不可超過 100%", () => {
-  assert.equal(core.validateTargetAllocations([
+  const complete = core.validateTargetAllocations([
     {...holding("00733"), targetAllocation: 40},
     {...holding("006201"), targetAllocation: 60}
-  ]).ok, true);
+  ]);
+  assert.equal(complete.ok, true);
+  assert.equal(complete.complete, true);
+  const partial = core.validateTargetAllocations([
+    {...holding("00733"), targetAllocation: 40},
+    {...holding("006201"), targetAllocation: 50}
+  ]);
+  assert.equal(partial.ok, true);
+  assert.equal(partial.complete, false);
   assert.equal(core.validateTargetAllocations([
     {...holding("00733"), targetAllocation: 60},
     {...holding("006201"), targetAllocation: 50}
   ]).ok, false);
+});
+
+test("智慧再平衡只在目標配置合計 100% 時產生正式建議", () => {
+  const result = core.calculateRebalanceAdvice({rows: [
+    {code: "0050", marketValue: 60000, targetAllocation: 60, trend: "neutral"},
+    {code: "00830", marketValue: 40000, targetAllocation: 30, trend: "neutral"}
+  ], cash: 10000, profile: "trend"});
+  assert.equal(result.formal, false);
+  assert.equal(result.status, "target_incomplete");
+  assert.equal(result.gap, 10);
+});
+
+test("智慧再平衡使用新增現金優先補低配標的", () => {
+  const result = core.calculateRebalanceAdvice({rows: [
+    {code: "0050", marketValue: 80000, targetAllocation: 60, trend: "strong"},
+    {code: "00830", marketValue: 20000, targetAllocation: 40, trend: "neutral"}
+  ], cash: 20000, profile: "trend", cashFirst: true, trendProtection: true});
+  assert.equal(result.formal, true);
+  assert.equal(result.rows.find(row => row.code === "00830").suggestedAmount, 20000);
+  assert.equal(result.rows.find(row => row.code === "0050").suggestedAmount, 0);
+  assert.ok(result.health >= 0 && result.health <= 100);
+});
+
+test("高配強勢趨勢不急賣，高配轉弱才調回容忍區間", () => {
+  const strong = core.calculateRebalanceAdvice({rows: [
+    {code: "0050", marketValue: 80000, targetAllocation: 50, trend: "strong"},
+    {code: "00830", marketValue: 20000, targetAllocation: 50, trend: "neutral"}
+  ], profile: "trend", trendProtection: true});
+  assert.equal(strong.rows.find(row => row.code === "0050").suggestedAmount, 0);
+  assert.match(strong.rows.find(row => row.code === "0050").action, /暫不賣出/);
+  const weak = core.calculateRebalanceAdvice({rows: [
+    {code: "0050", marketValue: 80000, targetAllocation: 50, trend: "weak"},
+    {code: "00830", marketValue: 20000, targetAllocation: 50, trend: "neutral"}
+  ], profile: "trend", trendProtection: true});
+  const action = weak.rows.find(row => row.code === "0050");
+  assert.equal(action.level, "主動再平衡");
+  assert.ok(action.suggestedAmount < 0);
+  assert.equal(action.afterWeight, action.upper);
+  const recipient = weak.rows.find(row => row.code === "00830");
+  assert.ok(recipient.suggestedAmount > 0);
+  assert.equal(recipient.level, "主動再平衡");
 });
 
 test("強勢趨勢可啟用再平衡保護", () => {

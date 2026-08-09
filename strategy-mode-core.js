@@ -11,7 +11,7 @@
     user_selected: "預設模型"
   });
   const LONG_TERM_WEIGHTS = Object.freeze({
-    weeklyKdj: 35, weeklyBias: 25, drawdown: 20, marketFear: 10, valuation: 10
+    weeklyKdj: 45, drawdown: 20, weeklyBias: 15, marketFear: 15, valuation: 5
   });
   const SWING_WEIGHTS = Object.freeze({
     stopConfirmation: 30, trendStrength: 25, technicalLow: 15, momentum: 10,
@@ -76,12 +76,12 @@
     const value = finite(score);
     if (value === null) return {key:"unavailable", label:"模型資料不足", recommendation:"缺少必要資料，暫不提供長期加碼階段。", batchScale:0};
     let stage;
-    if (value <= 39) stage = {key:"hold", label:"正常持有", recommendation:"尚未進入明顯加碼區。", batchScale:0};
-    else if (value <= 54) stage = {key:"watch", label:"開始觀察", recommendation:"可預留資金，等待更明確的回檔或估值條件。", batchScale:.15};
-    else if (value <= 69) stage = {key:"first", label:"第一批加碼區", recommendation:"建議小額分批，保留後續資金。", batchScale:.3};
-    else if (value <= 84) stage = {key:"second", label:"第二批加碼區", recommendation:"市場已明顯回檔，但仍需保留後續資金。", batchScale:.45};
-    else stage = {key:"fear", label:"極端恐慌加碼區", recommendation:"僅適合長期策略，仍需分批，不可一次投入。", batchScale:.55};
-    if (finite(stopConfirmation) !== null && stopConfirmation < 40 && value >= 55) {
+    if (value < 30) stage = {key:"high", label:"偏高勿追", recommendation:"目前低檔條件不足，避免追高並保留資金。", batchScale:0};
+    else if (value < 45) stage = {key:"hold", label:"正常持有", recommendation:"尚未進入明顯加碼區。", batchScale:0};
+    else if (value < 60) stage = {key:"watch", label:"開始觀察", recommendation:"可預留資金，等待更明確的回檔或估值條件。", batchScale:.15};
+    else if (value < 75) stage = {key:"add", label:"分批加碼區", recommendation:"價格與情緒條件轉入低檔，可採小額分批並保留後續資金。", batchScale:.35};
+    else stage = {key:"strong", label:"強力加碼區", recommendation:"多項長期低檔條件同時出現，仍須分批且不可一次投入。", batchScale:.5};
+    if (finite(stopConfirmation) !== null && stopConfirmation < 40 && value >= 60) {
       return {...stage, recommendation:"仍在下跌，採較小批次加碼。", batchScale:Math.round(stage.batchScale * .5 * 100) / 100, stopAdjustment:true};
     }
     return stage;
@@ -111,9 +111,9 @@
       valuation: finite(input.valuation)
     };
     const requiredReady = metrics.weeklyKdj !== null && (metrics.weeklyBias !== null || metrics.drawdown !== null);
-    const result = weightedScore(metrics, LONG_TERM_WEIGHTS, 55);
+    const result = weightedScore(metrics, LONG_TERM_WEIGHTS, 50);
     if (!requiredReady) result.score = null;
-    const scoreStatus = result.score === null ? "unavailable" : result.coverage >= 70 ? "complete" : "provisional";
+    const scoreStatus = result.score === null ? "unavailable" : result.coverage >= 80 ? "complete" : "provisional";
     return {mode:"long_term_core", modeLabel:MODES.long_term_core, ...result, scoreStatus, metrics, stage:longTermStage(result.score, input.stopConfirmation)};
   }
 

@@ -179,6 +179,15 @@
 .summaryCard>small{display:block;margin-top:5px;color:#c6d8cd;font-size:11px;line-height:1.35}
 .twUp{color:#ff7480!important}.twDown{color:#67e59b!important}.twFlat{color:#d4e0d8!important}
 .dataPending{color:var(--muted)!important;font-size:15px!important}
+.rebalancePanel{display:grid;gap:11px}
+.rebalanceControls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.rebalanceControls label{display:grid;gap:5px;color:var(--muted);font-size:10px;font-weight:850}
+.rebalanceControls input,.rebalanceControls select{min-width:0;width:100%;box-sizing:border-box;border:1px solid #3d3524;border-radius:10px;background:#0b0c10;color:#f5f1e8;padding:9px}
+.rebalanceToggles{display:flex;gap:14px;flex-wrap:wrap;color:#d8d1c2;font-size:11px}.rebalanceToggles input{accent-color:#d8ae58}
+.rebalanceStatus{display:flex;justify-content:space-between;gap:8px;align-items:center;border:1px solid #4e4129;border-radius:12px;background:#12100c;padding:10px;color:#d8d1c2;font-size:11px}.rebalanceStatus b{color:#f4d58f;font-size:14px}.rebalanceStatus span{text-align:right}
+.rebalanceAdvice{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.rebalancePending{grid-column:1/-1;margin:0;color:var(--muted);font-size:11px}
+.rebalanceItem{border:1px solid #373a42;border-radius:12px;background:#0b0c10;padding:10px;min-width:0}.rebalanceItem header,.rebalanceItem>div{display:flex;justify-content:space-between;gap:6px}.rebalanceItem header b{font-size:15px}.rebalanceItem header span{font-size:9px;font-weight:900}.rebalanceItem>div{margin-top:6px;color:#aeb2bb;font-size:9px;flex-wrap:wrap}.rebalanceItem strong{display:block;margin-top:8px;color:#f0cf84;font-size:12px}.rebalanceItem small{display:block;margin-top:4px;color:#aeb2bb;font-size:9px;line-height:1.45}.rebalanceItem.active{border-color:#8d4a3c}.rebalanceItem.observe{border-color:#725d31}.rebalanceItem.normal{border-color:#2e6653}
+.rebalanceMethod summary{cursor:pointer;color:#d8bf86;font-size:11px;font-weight:900}.rebalanceMethod p{color:var(--muted);font-size:10px;line-height:1.6}
 
 .allocationPanel{overflow:hidden}
 .allocationLayout{display:grid;grid-template-columns:minmax(210px,360px) 1fr;gap:18px;align-items:center;margin-top:12px}
@@ -284,6 +293,7 @@
   .signalLegendGrid{grid-template-columns:1fr 1fr}
   .portfolioTopline{align-items:center}.portfolioTopline .btn{padding:9px 11px}
   .portfolioSummary{gap:6px}.summaryCard{padding:10px;border-radius:15px}.summaryCard>span{font-size:9px}.summaryCard>b{font-size:15px}.summaryCard>small{font-size:9px}
+  .rebalanceControls{grid-template-columns:1fr 1fr}.rebalanceAdvice{grid-template-columns:1fr}.rebalanceStatus{align-items:flex-start;flex-direction:column}.rebalanceStatus span{text-align:left}
   .allocationLayout{grid-template-columns:1fr}.allocationCanvasWrap{width:min(78vw,310px)}.chartDetail{min-height:0}
   .holdingMain{grid-template-columns:minmax(105px,1fr) repeat(3,minmax(62px,.65fr));gap:6px}
   .holdingMetric span{font-size:9px}.holdingMetric b{font-size:12px}.holdingActions{grid-column:1/-1}

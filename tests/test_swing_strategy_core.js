@@ -61,9 +61,22 @@ test("週 KD 保留當週暫定值、前值與方向", () => {
 
 test("四策略 router 保留長期與槓桿 adapter", () => {
   const long = core.runStrategy({strategyType:"longTerm",input:{id:"0050"},adapters:{longTerm: value => ({adapter:"long",id:value.id})}});
-  const leveraged = core.runStrategy({strategyType:"leveraged",input:{id:"00631L"},adapters:{leveraged: value => ({adapter:"leveraged",id:value.id})}});
   assert.deepStrictEqual(long,{adapter:"long",id:"0050"});
-  assert.deepStrictEqual(leveraged,{adapter:"leveraged",id:"00631L"});
+  const leveraged = core.runStrategy({strategyType:"leveraged",input:{id:"00631L",rows:marketRows(),benchmarkRows:benchmark,marketFear:70,marketBreadthFear:60,marginDeleveraging:65,valuation:55,liquidity:90}});
+  assert.strictEqual(leveraged.strategyType,"leveraged");
+  assert.ok(Object.hasOwn(leveraged,"panicOpportunity"));
+  assert.ok(Object.hasOwn(leveraged,"reversalConfirmation"));
+});
+
+test("00631L 使用 0050 恐慌與反轉雙分數且最高部位受限",()=>{
+  const result=core.engine00631L({rows:marketRows({dipDays:15,dip:-.012,reboundDays:4,rebound:.02}),benchmarkRows:marketRows({start:100,dipDays:20,dip:-.01,reboundDays:4,rebound:.012}),marketFear:85,marketBreadthFear:80,marginDeleveraging:75,valuation:60,liquidity:90});
+  assert.equal(result.symbol,"00631L");
+  assert.ok(result.panicOpportunity.score===null||result.panicOpportunity.score>=0&&result.panicOpportunity.score<=100);
+  assert.ok(result.reversalConfirmation.score===null||result.reversalConfirmation.score>=0&&result.reversalConfirmation.score<=100);
+  assert.ok(result.stage.number>=0&&result.stage.number<=3);
+  assert.ok(result.stage.targetPosition<=50);
+  assert.equal(result.underlying.symbol,"0050");
+  assert.notStrictEqual(result.buyScore,result.exitPressure.score);
 });
 
 test("00733 強勢回檔案例輸出 gates、buyScore 與獨立 exitPressure", () => {
@@ -207,7 +220,7 @@ test("回測訊號固定 20 日冷卻且指標只使用訊號當日以前資料"
 });
 
 test("所有引擎輸出不含 NaN、undefined 或 Infinity", () => {
-  for(const strategyType of ["swing00733","swing006201"]){
+  for(const strategyType of ["swing00733","swing006201","leveraged"]){
     const output=core.runStrategy({strategyType,input:{rows:marketRows(),benchmarkRows:benchmark,otcStrength:50}});
     const serialized=JSON.stringify(output);
     assert.doesNotMatch(serialized,/NaN|undefined|Infinity/);

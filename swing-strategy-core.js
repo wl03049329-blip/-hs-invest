@@ -16,6 +16,7 @@
   const TREND_STRUCTURE_PERIODS = Object.freeze([43, 87, 284]);
   const TRADE_STATES = Object.freeze(["ACCUMULATION", "HOLDING", "EXIT", "CLOSED"]);
   const SWING_006201_POSITION_CONFIG = Object.freeze({first: 15, highQuality: 35, breakout: 60});
+  const LEVERAGED_00631L_POSITION_CONFIG = Object.freeze({panicProbe:10, initialReversal:25, confirmedReversal:50});
 
   const finite = value => {
     if (value === null || value === undefined || value === "") return null;
@@ -234,6 +235,80 @@
       factors: definitions.map(item => ({...item, value: finite(item.value), contribution: finite(item.value) === null || !availableWeight ? null : round(item.value * item.weight / availableWeight, 2)})),
       missing: definitions.filter(item => finite(item.value) === null).map(item => item.key)
     };
+  }
+
+  function calculate00631LPanicScore(input = {}) {
+    const drawdown=finite(input.underlyingDrawdown);
+    const weeklyJ=finite(input.weeklyJ),weeklyBias=finite(input.weeklyBias);
+    const drawdownScore=drawdown===null?null:clamp(Math.abs(Math.min(0,drawdown))/25*100);
+    const jScore=weeklyJ===null?null:weeklyJ<=0?100:weeklyJ<=10?80+(10-weeklyJ)*2:weeklyJ<=20?55+(20-weeklyJ)*2.5:clamp(50-weeklyJ);
+    const biasScore=weeklyBias===null?null:clamp((5-weeklyBias)/20*100);
+    const weeklyLow=jScore===null?biasScore:biasScore===null?jScore:(jScore+biasScore)/2;
+    const weighted=weightedFactors([
+      {key:"underlyingDrawdown",weight:25,value:drawdownScore},
+      {key:"weeklyLow",weight:20,value:weeklyLow},
+      {key:"marketFear",weight:20,value:finite(input.marketFear)},
+      {key:"marketBreadthFear",weight:10,value:finite(input.marketBreadthFear)},
+      {key:"marginDeleveraging",weight:10,value:finite(input.marginDeleveraging)},
+      {key:"valuation",weight:10,value:finite(input.valuation)},
+      {key:"liquidity",weight:5,value:finite(input.liquidity)}
+    ]);
+    return{score:weighted.coverage>=55?weighted.rawScore:null,components:weighted.factors,coverage:weighted.coverage,status:weighted.coverage>=80?"complete":weighted.coverage>=55?"provisional":"insufficient",reasons:["0050／臺灣50 回檔決定恐慌深度","00631L 自身 daily reset 價格不作主要市場回檔依據"]};
+  }
+
+  function calculate00631LReversalScore(input = {}) {
+    const flags=[
+      ["lowStopped",15,input.lowStopped],["aboveMa5",15,input.aboveMa5],["previousHighRecovered",15,input.previousHighRecovered],
+      ["dailyJUp",10,input.dailyJUp],["weeklyJUp",15,input.weeklyJUp],["sellingPressureEased",10,input.sellingPressureEased],
+      ["breadthImproved",10,input.breadthImproved],["largeCapStable",5,input.largeCapStable],["basisConverged",5,input.basisConverged]
+    ];
+    const weighted=weightedFactors(flags.map(([key,weight,value])=>({key,weight,value:typeof value==="boolean"?(value?100:0):null})));
+    return{score:weighted.coverage>=50?weighted.rawScore:null,components:weighted.factors,coverage:weighted.coverage,status:weighted.coverage>=80?"complete":weighted.coverage>=50?"provisional":"insufficient",reasons:["反轉確認只使用當日以前與目前可取得資料","缺少的廣度或期貨資料不以 0 代替"]};
+  }
+
+  function stage00631L(panicScore,reversalScore,input={}) {
+    const panic=finite(panicScore),reversal=finite(reversalScore);
+    if(panic===null||reversal===null)return{number:0,key:"insufficient",label:"資料不足",targetPosition:0};
+    if(panic>=55&&reversal>=65&&input.aboveMa10===true&&input.ma20Up===true)return{number:3,key:"confirmed_reversal",label:"反轉確認",targetPosition:LEVERAGED_00631L_POSITION_CONFIG.confirmedReversal};
+    if(panic>=60&&reversal>=40&&(input.aboveMa5===true||input.previousHighRecovered===true))return{number:2,key:"initial_reversal",label:"初步止跌",targetPosition:LEVERAGED_00631L_POSITION_CONFIG.initialReversal};
+    if(panic>=70)return{number:1,key:"panic_probe",label:"恐慌試單",targetPosition:LEVERAGED_00631L_POSITION_CONFIG.panicProbe};
+    return{number:0,key:"wait",label:"等待恐慌與止跌條件",targetPosition:0};
+  }
+
+  function exitPressure00631L(indicators,underlying,tradeState={}) {
+    const trend=finite(underlying?.price)!==null&&finite(underlying?.core?.ma20)!==null&&finite(underlying?.core?.ma60)!==null?clamp((underlying.price<underlying.core.ma20?30:5)+(underlying.price<underlying.core.ma60?30:5)+((underlying.core.ma20Slope??0)<0?20:5)):null;
+    const momentum=indicators?.daily&&finite(indicators.daily.j)!==null&&finite(indicators.daily.previousJ)!==null?clamp(indicators.daily.j<indicators.daily.previousJ?75:25):null;
+    const entry=finite(tradeState.entryPrice),loss=entry!==null&&finite(indicators?.price)!==null?clamp(Math.max(0,-change(indicators.price,entry))*5):null;
+    const weighted=weightedFactors([{key:"underlyingTrend",weight:50,value:trend},{key:"dailyMomentum",weight:30,value:momentum},{key:"tradeLoss",weight:20,value:loss}]);
+    return{score:weighted.rawScore,coverage:weighted.coverage,factors:weighted.factors,label:weighted.rawScore===null?"資料不足":weighted.rawScore>=70?"高":weighted.rawScore>=40?"中":"低"};
+  }
+
+  function engine00631L(input={}) {
+    const indicators=buildIndicators(input.rows,input.benchmarkRows),underlying=buildIndicators(input.benchmarkRows,input.benchmarkRows);
+    const underlyingRows=underlying.rows,weekly=underlying.weekly,last=underlyingRows.at(-1),previous=underlyingRows.at(-2);
+    const high60=underlyingRows.length?Math.max(...underlyingRows.slice(-60).map(row=>row.high??row.close)):null;
+    const underlyingDrawdown=high60?change(underlying.price,high60):null;
+    const average13Week=simpleMovingAverage(underlyingRows.map(row=>row.close),65),weeklyBias=average13Week?change(underlying.price,average13Week):null;
+    const ma5=simpleMovingAverage(underlyingRows.map(row=>row.close),5),ma10=simpleMovingAverage(underlyingRows.map(row=>row.close),10);
+    const recentPriorLow=underlyingRows.length>=6?Math.min(...underlyingRows.slice(-6,-1).map(row=>row.low??row.close)):null;
+    const latestVolume=last?.volume,priorPanicVolume=underlyingRows.slice(-6,-1).map(row=>row.volume).filter(value=>finite(value)!==null);
+    const flags={
+      lowStopped:finite(last?.low??last?.close)!==null&&finite(recentPriorLow)!==null?(last.low??last.close)>=recentPriorLow:null,
+      aboveMa5:finite(underlying.price)!==null&&finite(ma5)!==null?underlying.price>=ma5:null,
+      aboveMa10:finite(underlying.price)!==null&&finite(ma10)!==null?underlying.price>=ma10:null,
+      previousHighRecovered:finite(underlying.price)!==null&&finite(previous?.high)!==null?underlying.price>=previous.high:null,
+      dailyJUp:underlying.daily?underlying.daily.j>underlying.daily.previousJ:null,
+      weeklyJUp:weekly?weekly.j>weekly.previousJ:null,
+      sellingPressureEased:finite(latestVolume)!==null&&priorPanicVolume.length?latestVolume<Math.max(...priorPanicVolume):null,
+      breadthImproved:typeof input.breadthImproved==="boolean"?input.breadthImproved:null,
+      largeCapStable:typeof input.largeCapStable==="boolean"?input.largeCapStable:null,
+      basisConverged:typeof input.basisConverged==="boolean"?input.basisConverged:null,
+      ma20Up:(underlying.core.ma20Slope??0)>0
+    };
+    const panic=calculate00631LPanicScore({underlyingDrawdown,weeklyJ:weekly?.j,weeklyBias,marketFear:input.marketFear,marketBreadthFear:input.marketBreadthFear,marginDeleveraging:input.marginDeleveraging,valuation:input.valuation,liquidity:input.liquidity});
+    const reversal=calculate00631LReversalScore(flags),stage=stage00631L(panic.score,reversal.score,flags),exitPressure=exitPressure00631L(indicators,underlying,input.tradeState||{});
+    const buyScore=panic.score===null||reversal.score===null?null:Math.round(clamp(panic.score*.45+reversal.score*.55));
+    return sanitizeResult({modelVersion:MODEL_VERSION,strategyType:STRATEGY_TYPES.LEVERAGED,symbol:"00631L",date:indicators.date,buyScore,rawBuyScore:buyScore,coverage:Math.min(panic.coverage,reversal.coverage),confidence:{label:panic.status==="complete"&&reversal.status==="complete"?"HIGH":buyScore===null?"INSUFFICIENT":"MEDIUM",missing:[...panic.components,...reversal.components].filter(item=>item.value===null).map(item=>item.key)},stage,exitPressure,panicOpportunity:panic,reversalConfirmation:reversal,coreIndicators:indicators.core,trendStructure:indicators.trendStructure,weeklyKd:weekly,dailyKd:indicators.daily,underlying:{symbol:"0050",drawdown60:round(underlyingDrawdown),weeklyBias:round(weeklyBias),price:underlying.price,ma5:round(ma5),ma10:round(ma10),ma20:underlying.core.ma20,ma60:underlying.core.ma60,ma200:underlying.core.ma200},gates:{underlyingData:{passed:underlyingRows.length>=200}},scoreFactors:[...panic.components,...reversal.components],recommendedAction:stage.label,reasons:[...panic.reasons,...reversal.reasons],indicators});
   }
 
   function trendFactor(indicators) {
@@ -457,6 +532,7 @@
   function runStrategy({strategyType,input={},adapters={}}={}) {
     if (strategyType===STRATEGY_TYPES.SWING_00733) return engine00733(input);
     if (strategyType===STRATEGY_TYPES.SWING_006201) return engine006201(input);
+    if (strategyType===STRATEGY_TYPES.LEVERAGED && String(input?.id||input?.symbol||"00631L").toUpperCase()==="00631L") return engine00631L(input);
     if (strategyType===STRATEGY_TYPES.LONG_TERM && typeof adapters.longTerm==="function") return adapters.longTerm(input);
     if (strategyType===STRATEGY_TYPES.LEVERAGED && typeof adapters.leveraged==="function") return adapters.leveraged(input);
     return {modelVersion:MODEL_VERSION,strategyType:String(strategyType||""),buyScore:null,confidence:{label:"INSUFFICIENT",missing:["strategy_adapter"]},stage:{number:0,key:"insufficient",label:"策略資料不足",targetPosition:0},exitPressure:{score:null},recommendedAction:"暫不提供策略訊號",reasons:["找不到對應策略引擎"]};
@@ -489,5 +565,5 @@
     return Object.fromEntries(Object.entries(value).map(([key,item])=>[key,sanitizeResult(item)]));
   }
 
-  return Object.freeze({MODEL_VERSION,STRATEGY_TYPES,CORE_MA_PERIODS,TREND_STRUCTURE_PERIODS,TRADE_STATES,SWING_006201_POSITION_CONFIG,normalizeOhlcv,simpleMovingAverage,movingAverageSnapshot,dailyKdj,weeklyKdj,relativeStrength,trendStructure,dataConfidence,buildIndicators,weightedFactors,stage00733,stage006201,consecutiveBelowMa,engine00733,engine006201,exitPressure00733,exitPressure006201,normalizeTradeState,transitionTradeState,runStrategy,backtestSignals,sanitizeResult});
+  return Object.freeze({MODEL_VERSION,STRATEGY_TYPES,CORE_MA_PERIODS,TREND_STRUCTURE_PERIODS,TRADE_STATES,SWING_006201_POSITION_CONFIG,LEVERAGED_00631L_POSITION_CONFIG,normalizeOhlcv,simpleMovingAverage,movingAverageSnapshot,dailyKdj,weeklyKdj,relativeStrength,trendStructure,dataConfidence,buildIndicators,weightedFactors,stage00733,stage006201,stage00631L,consecutiveBelowMa,calculate00631LPanicScore,calculate00631LReversalScore,engine00733,engine006201,engine00631L,exitPressure00733,exitPressure006201,exitPressure00631L,normalizeTradeState,transitionTradeState,runStrategy,backtestSignals,sanitizeResult});
 });

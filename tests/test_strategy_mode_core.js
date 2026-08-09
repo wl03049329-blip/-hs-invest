@@ -2,7 +2,7 @@ const assert = require("assert");
 const core = require("../strategy-mode-core.js");
 
 assert.deepStrictEqual(core.LONG_TERM_WEIGHTS, {
-  weeklyKdj:35, weeklyBias:25, drawdown:20, marketFear:10, valuation:10
+  weeklyKdj:45, drawdown:20, weeklyBias:15, marketFear:15, valuation:5
 });
 assert.deepStrictEqual(core.SWING_WEIGHTS, {
   stopConfirmation:30, trendStrength:25, technicalLow:15, momentum:10,
@@ -13,7 +13,7 @@ const long = core.longTermDecision({
   j:-5, k:12, d:16, weeklyBias:-12, fromHigh:-34, valuation:82, marketFear:88, stopConfirmation:25
 });
 assert(long.score >= 70, "large drawdown and reasonable valuation must remain an add opportunity");
-assert(["second","fear"].includes(long.stage.key));
+assert(["add","strong"].includes(long.stage.key));
 assert.strictEqual(long.stage.stopAdjustment, true);
 assert.strictEqual(long.stage.recommendation, "仍在下跌，採較小批次加碼。");
 
@@ -37,7 +37,7 @@ const missingValuation = core.longTermDecision({
 });
 assert(Number.isFinite(missingValuation.score));
 assert(missingValuation.missing.includes("valuation"));
-assert(missingValuation.coverage === 90);
+assert(missingValuation.coverage === 95);
 assert.strictEqual(missingValuation.scoreStatus,"complete");
 
 const provisional = core.longTermDecision({j:8,k:15,d:18,weeklyBias:-9,fromHigh:null,valuation:null,marketFear:null,stopConfirmation:20});

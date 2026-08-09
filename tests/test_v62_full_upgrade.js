@@ -10,8 +10,11 @@ const valuation = JSON.parse(read("etf-valuation.json"));
 const proxies = JSON.parse(read("valuation-proxy-map.json"));
 const commodities = JSON.parse(read("commodity-quotes.json"));
 
-assert.match(html, /class="brandLogo"/);
-assert.match(html, /assets\/icon-192-v2\.png/);
+assert.match(html, /class="brandLogo app-brand-lockup"/);
+assert.match(html, /HS_BRAND=Object\.freeze\(\{logo:"assets\/icon-192-v2\.png/);
+assert.match(html, /app-brand-header/);
+assert.match(html, /data-brand-logo/);
+assert.match(html, /data-brand-title>HS \| ETF股市雷達/);
 assert.match(html, /apple-touch-icon-v2\.png/);
 assert.match(html, /site\.webmanifest/);
 for (const file of ["assets/hs-etf-radar-mark.svg", "assets/icon-192-v2.png", "assets/icon-512-v2.png", "assets/apple-touch-icon-v2.png"]) {
@@ -20,6 +23,13 @@ for (const file of ["assets/hs-etf-radar-mark.svg", "assets/icon-192-v2.png", "a
 assert.match(tech, /--bg:#050609|--bg:#050505/);
 assert.doesNotMatch(`${tech}\n${html.slice(0, 2500)}`, /#06100c|#0c1a14/);
 assert.match(html, /bottomNavButton appNavButton/);
+for (const label of ["首頁", "ETF雷達", "個人持股", "籌碼", "更多"]) {
+  assert.match(html, new RegExp(`<span>${label}<\\/span>`));
+}
+assert.doesNotMatch(html, /data-tab="trump"/);
+assert.match(html, /id="trump-watch"[^>]+data-tab-section="sentiment"[^>]+data-chip-panel="events"/);
+assert.match(tech, /safe-area-inset-top/);
+assert.match(tech, /safe-area-inset-bottom/);
 assert.doesNotMatch(html, /id="homeMarketOverview"/);
 assert.match(html, /TODAY HIGHLIGHTS/);
 assert.match(html, /盤中長期加碼雷達/);
@@ -38,8 +48,8 @@ assert.equal(proxies.items["00830"].primary_proxy, "SOXQ");
 assert.equal(proxies.items["00662"].primary_proxy, "QQQ");
 assert.match(strategy, /long_term_core/);
 assert.match(strategy, /swing/);
-assert.match(strategy, /weeklyKdj: 35/);
-assert.match(strategy, /weeklyBias: 25/);
+assert.match(strategy, /weeklyKdj: 45/);
+assert.match(strategy, /weeklyBias: 15/);
 assert.match(strategy, /stopConfirmation: 30/);
 
 for (const key of ["gold", "brent"]) assert.ok(commodities.items[key], `${key} fallback data missing`);
@@ -50,6 +60,12 @@ assert.match(html, /tariff_rate/);
 assert.match(html, /affected_scope/);
 assert.match(html, /effective_date/);
 assert.match(html, /中性摘要/);
+assert.match(html, /id="hsStoryEntry"/);
+assert.match(html, /關於 HS｜ETF股市雷達/);
+assert.match(html, /使用<strong>智慧再平衡<\/strong>/);
+assert.match(html, /資料來源與使用說明/);
+assert.match(html, /id="rebalanceTitle">智慧再平衡/);
+assert.match(html, /新資金優先補低配/);
 assert.doesNotMatch(html, />\s*(?:NaN|undefined|Infinity)\s*</);
 for (const width of [375, 390, 430]) assert.match(tech, new RegExp(width === 430 ? "max-width:430px" : "max-width:760px"));
 

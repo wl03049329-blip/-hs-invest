@@ -9,6 +9,7 @@
   const QUOTES_KEY = storageKeys.quotes || "hsRadar.portfolio.quotes";
   const AUTO_KEY = storageKeys.portfolioAuto || "hsRadar.portfolio.autoRefresh";
   const MARKET_VERSION_KEY = storageKeys.portfolioMarketVersion || "hsRadar.portfolio.marketVersion";
+  const REBALANCE_SETTINGS_KEY = storageKeys.portfolioRebalanceSettings || "hsRadar.portfolio.rebalanceSettings";
   const TWSE_URL = "https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL";
   const TPEX_URL = "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_quotes";
   const MARKET_CACHE_URL = "market-quotes.json";
@@ -34,6 +35,29 @@
   let chartSegments = [];
   let chartSelection = -1;
   let resizeFrame = 0;
+  let rebalanceSettings = loadRebalanceSettings();
+
+  function loadRebalanceSettings() {
+    const fallback = {cash: 0, profile: "trend", customTolerance: 3, reminder: "90", customDays: 60, cashFirst: true, trendProtection: true};
+    try {
+      const raw = JSON.parse(localStorage.getItem(REBALANCE_SETTINGS_KEY) || "null");
+      if (!raw || typeof raw !== "object") return fallback;
+      const cash = Number(raw.cash), customTolerance = Number(raw.customTolerance), customDays = Number(raw.customDays);
+      return {
+        cash: Number.isFinite(cash) && cash >= 0 ? cash : 0,
+        profile: ["conservative", "balanced", "trend", "custom"].includes(raw.profile) ? raw.profile : "trend",
+        customTolerance: Number.isFinite(customTolerance) && customTolerance > 0 && customTolerance <= 20 ? customTolerance : 3,
+        reminder: ["30", "90", "custom"].includes(String(raw.reminder)) ? String(raw.reminder) : "90",
+        customDays: Number.isFinite(customDays) && customDays >= 7 && customDays <= 365 ? Math.round(customDays) : 60,
+        cashFirst: raw.cashFirst !== false,
+        trendProtection: raw.trendProtection !== false
+      };
+    } catch { return fallback; }
+  }
+
+  function saveRebalanceSettings() {
+    localStorage.setItem(REBALANCE_SETTINGS_KEY, JSON.stringify(rebalanceSettings));
+  }
 
   function loadHoldings() {
     try {
@@ -242,11 +266,43 @@
     list.querySelectorAll("[data-delete-holding]").forEach(button => button.addEventListener("click", () => deleteHolding(button.dataset.deleteHolding)));
   }
 
+  function rebalanceTrend(row) {
+    const radar = radarFor(row.code);
+    const label = `${radar?.trend || ""} ${radar?.action || ""}`;
+    if (radar?.swing?.stage?.number >= 3 || /強勢|多頭|轉強|回升|突破/.test(label)) return "strong";
+    if (/偏弱|空頭|轉弱|破底|下跌/.test(label)) return "weak";
+    return "neutral";
+  }
+
+  function renderRebalance() {
+    const status = $v6("#rebalanceStatus"), output = $v6("#rebalanceAdvice");
+    if (!status || !output) return;
+    const advice = core.calculateRebalanceAdvice({
+      rows: computed.rows.map(row => ({code: row.code, marketValue: row.marketValue, targetAllocation: row.targetAllocation, trend: rebalanceTrend(row)})),
+      ...rebalanceSettings
+    });
+    const total = core.validateTargetAllocations(holdings).total;
+    if (!advice.formal) {
+      if (advice.status === "target_over") status.textContent = `目標配置超出 ${number(Math.abs(advice.gap), 1)}%，請調整；目前合計 ${number(advice.totalTarget, 1)}%。`;
+      else if (advice.status === "target_incomplete") status.textContent = `尚有 ${number(Math.max(0, advice.gap), 1)}% 未配置；合計 100% 前不產生正式再平衡建議。`;
+      else status.textContent = holdings.length ? "行情完整後才能計算智慧再平衡。" : "新增持股並設定每檔目標配置後，即可產生建議。";
+      output.innerHTML = `<p class="rebalancePending">目標配置目前合計 ${number(total, 1)}%</p>`;
+      return;
+    }
+    status.innerHTML = `<b>再平衡健康度 ${advice.health} 分</b><span>${escapeHtml(advice.level)}｜${escapeHtml(advice.profileLabel)}容忍區間｜目標合計 100%</span>`;
+    output.innerHTML = advice.rows.map(row => {
+      const amount = row.suggestedAmount > 0 ? `建議投入 ${money(row.suggestedAmount)}` : row.suggestedAmount < 0 ? `可評估調整 ${money(Math.abs(row.suggestedAmount))}` : "本次不需交易";
+      const tone = row.level === "主動再平衡" ? "active" : row.level === "配置正常" ? "normal" : "observe";
+      return `<article class="rebalanceItem ${tone}"><header><b>${escapeHtml(row.code)}</b><span>${escapeHtml(row.level)}</span></header><div><span>目前 ${percent(row.actualWeight)}</span><span>目標 ${percent(row.targetAllocation)}</span><span>區間 ${number(row.lower,1)}–${number(row.upper,1)}%</span></div><strong>${escapeHtml(amount)}</strong><small>調整後 ${percent(row.afterWeight)}｜${escapeHtml(row.action)}</small></article>`;
+    }).join("");
+  }
+
   function renderPortfolio(animate = false) {
     computed = core.calculatePortfolio(holdings, quoteMap);
     renderSummary();
     renderList();
     drawAllocation();
+    renderRebalance();
     renderQuoteStatus();
     if (animate) {
       const page = $v6("#portfolio");
@@ -501,7 +557,7 @@
   }
 
   function exportHoldings() {
-    const payload = {version: 1, exportedAt: new Date().toISOString(), holdings: holdings.map(({code, shares, averageCost, customName, name}) => ({code, shares, averageCost, customName, name}))};
+    const payload = {version: 2, exportedAt: new Date().toISOString(), holdings: holdings.map(({code, shares, averageCost, customName, name, strategyType, targetAllocation}) => ({code, shares, averageCost, customName, name, strategyType, targetAllocation}))};
     const blob = new Blob([JSON.stringify(payload, null, 2)], {type: "application/json"});
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -654,18 +710,21 @@
       const cnn=typeof cnnFearGreed!=="undefined"?cnnFearGreed:null;
       const futures=typeof futuresPosition!=="undefined"?futuresPosition:null;
       const foreign=futures?.foreign_tx,tmf=futures?.estimated_non_institutional_tmf;
-      const card=(selector,title,value,status,date)=>{
+      const waitingSnapshot=typeof HSDataFreshnessCore!=="undefined"?HSDataFreshnessCore.normalize({}):{status:"WAITING"};
+      const freshnessLabel=snapshot=>typeof HSDataFreshnessCore!=="undefined"?HSDataFreshnessCore.label(snapshot?.status):"等待更新";
+      const card=(selector,title,value,status,date,snapshot=waitingSnapshot)=>{
         const node=$v6(selector);if(!node)return;
-        node.innerHTML=`<span>${escapeHtml(title)}</span><b>${escapeHtml(value)}</b><em>${escapeHtml(status)}</em><small>資料日期 ${escapeHtml(date||"—")}</small>`;
+        node.innerHTML=`<span>${escapeHtml(title)}</span><b>${escapeHtml(value)}</b><em>${escapeHtml(status)}</em><small>${escapeHtml(date||"資料日期待更新")}｜${escapeHtml(freshnessLabel(snapshot))}</small>`;
+        node.dataset.freshness=String(snapshot?.status||"WAITING").toLowerCase();
       };
       const marginDate=values?.dataDate||risk?.data_date||"—",futuresDate=futures?.dataDate||"—";
-      card("#homeMarginBalanceCard","台股融資餘額",Number.isFinite(values?.financingPrincipal)?`${number(values.financingPrincipal/1e8,2)}億`:"—",risk?.interpretation?.label||risk?.risk_state||"資料暫缺",marginDate);
-      card("#homeMaintenanceCard","市場推估融資維持率",Number.isFinite(values?.maintenanceRatio)?`${number(values.maintenanceRatio,2)}%`:"—",Number.isFinite(values?.maintenanceRatio)?HSMarginRiskCore.ratioBand(values.maintenanceRatio).label:"資料暫缺",marginDate);
-      card("#homeCnnCard","CNN Fear & Greed",Number.isFinite(cnn?.score)?number(cnn.score,0):"—",cnn?.label||"資料暫缺",cnn?.sourceUpdatedAt?String(cnn.sourceUpdatedAt).slice(0,10):"—");
-      card("#homeForeignFuturesCard","外資台指期",Number.isFinite(foreign?.net)?`${foreign.net<0?"淨空":"淨多"} ${number(Math.abs(foreign.net),0)}口`:"—",Number.isFinite(foreign?.net)?(foreign.net<0?"偏空":"偏多"):"資料暫缺",futuresDate);
+      card("#homeMarginBalanceCard","台股融資餘額",Number.isFinite(values?.financingPrincipal)?`${number(values.financingPrincipal/1e8,2)}億`:"—",risk?.interpretation?.label||risk?.risk_state||"資料暫缺",marginDate,risk?.snapshot);
+      card("#homeMaintenanceCard","市場推估融資維持率",Number.isFinite(values?.maintenanceRatio)?`${number(values.maintenanceRatio,2)}%`:"—",Number.isFinite(values?.maintenanceRatio)?HSMarginRiskCore.ratioBand(values.maintenanceRatio).label:"資料暫缺",marginDate,risk?.snapshot);
+      card("#homeCnnCard","CNN Fear & Greed",Number.isFinite(cnn?.score)?number(cnn.score,0):"—",cnn?.label||"資料暫缺",cnn?.snapshot?.data_date||"—",cnn?.snapshot);
+      card("#homeForeignFuturesCard","外資台指期",Number.isFinite(foreign?.net)?`${foreign.net<0?"淨空":"淨多"} ${number(Math.abs(foreign.net),0)}口`:"—",Number.isFinite(foreign?.net)?(foreign.net<0?"偏空":"偏多"):"資料暫缺",futuresDate,futures?.snapshot);
       const tmfRatio=Number.isFinite(tmf?.long)&&Number.isFinite(tmf?.short)&&tmf.short>0?tmf.long/tmf.short:null;
       const tmfState=Number.isFinite(tmfRatio)?(tmfRatio>1.1?"偏多":tmfRatio<.9?"偏空":"中性"):"資料暫缺";
-      card("#homeTmfRatioCard","微台散戶多空比",Number.isFinite(tmfRatio)?number(tmfRatio,2):"—",tmfState,futuresDate);
+      card("#homeTmfRatioCard","微台散戶多空比",Number.isFinite(tmfRatio)?number(tmfRatio,2):"—",tmfState,futuresDate,futures?.snapshot);
       let conclusion="市場情緒資料仍在更新，長期 ETF 維持分批原則。";
       if(Number.isFinite(cnn?.score)){
         if(cnn.score>=56&&tmfState==="偏多")conclusion="市場情緒偏熱且散戶偏多，避免追高，等待週線回檔。";
@@ -762,6 +821,29 @@
       if (event.target.checked) updateQuotes({force: true, applyPortfolio: true});
       else renderQuoteStatus(`${quoteTimeLabel()}；持股自動更新已關閉`);
     });
+    const rebalanceIds = ["rebalanceCash", "rebalanceProfile", "rebalanceCustomTolerance", "rebalanceReminder", "rebalanceCustomDays", "rebalanceCashFirst", "rebalanceTrendProtection"];
+    $v6("#rebalanceCash").value = rebalanceSettings.cash;
+    $v6("#rebalanceProfile").value = rebalanceSettings.profile;
+    $v6("#rebalanceCustomTolerance").value = rebalanceSettings.customTolerance;
+    $v6("#rebalanceReminder").value = rebalanceSettings.reminder;
+    $v6("#rebalanceCustomDays").value = rebalanceSettings.customDays;
+    $v6("#rebalanceCashFirst").checked = rebalanceSettings.cashFirst;
+    $v6("#rebalanceTrendProtection").checked = rebalanceSettings.trendProtection;
+    const syncRebalanceControls = () => {
+      $v6("#rebalanceCustomToleranceWrap").hidden = $v6("#rebalanceProfile").value !== "custom";
+      $v6("#rebalanceCustomDaysWrap").hidden = $v6("#rebalanceReminder").value !== "custom";
+    };
+    const updateRebalanceSettings = () => {
+      rebalanceSettings = {
+        cash: Number($v6("#rebalanceCash").value), profile: $v6("#rebalanceProfile").value,
+        customTolerance: Number($v6("#rebalanceCustomTolerance").value), reminder: $v6("#rebalanceReminder").value,
+        customDays: Number($v6("#rebalanceCustomDays").value), cashFirst: $v6("#rebalanceCashFirst").checked,
+        trendProtection: $v6("#rebalanceTrendProtection").checked
+      };
+      saveRebalanceSettings(); syncRebalanceControls(); renderRebalance();
+    };
+    rebalanceIds.forEach(id => $v6(`#${id}`).addEventListener("change", updateRebalanceSettings));
+    syncRebalanceControls();
     $v6("#portfolioChart").addEventListener("click", chartHit);
     $v6("#portfolioChart").addEventListener("touchstart", chartHit, {passive: true});
     $v6("#portfolioChart").addEventListener("keydown", event => {

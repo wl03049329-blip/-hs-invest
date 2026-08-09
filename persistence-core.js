@@ -8,6 +8,7 @@
   const MODEL_VERSION="HS Swing Radar V1.2.1 Beta Validated Frozen";
   const FORWARD_START_DATE="2026-08-08";
   const SCHEMA_VERSION=1;
+  const EVENT_TRIGGER_TYPES=Object.freeze(["longTermScoreCrossed70","weeklyJBelow10","rankUp2","marginRatioBelow140","marginRatioBelow130","rebalanceOutsideBand","00631LPanicAbove80","00631LReversalAbove60"]);
   const LEGACY_KEYS=Object.freeze({
     hs_etf_watchlist_v1:"watchlist",
     hs_etf_radar_mode_v1:"radarMode",
@@ -29,8 +30,8 @@
     longRank:PREFIX+"longRank",chipTab:PREFIX+"chipTab",customEvents:PREFIX+"customEvents",
     alerts:PREFIX+"alerts",etfUniverseCache:PREFIX+"etfUniverseCache",liveQuoteProxy:PREFIX+"liveQuoteProxy",
     holdings:PREFIX+"portfolio.holdings",quotes:PREFIX+"portfolio.quotes",portfolioAuto:PREFIX+"portfolio.autoRefresh",
-    portfolioMarketVersion:PREFIX+"portfolio.marketVersion",finmindToken:PREFIX+"finmindToken",
-    forwardTest:PREFIX+"forwardTest.v1.2.1",decisionLog:PREFIX+"decisionLog",events:PREFIX+"events",migration:PREFIX+"migrationVersion"
+    portfolioMarketVersion:PREFIX+"portfolio.marketVersion",portfolioRebalanceSettings:PREFIX+"portfolio.rebalanceSettings",finmindToken:PREFIX+"finmindToken",
+    forwardTest:PREFIX+"forwardTest.v1.2.1",decisionLog:PREFIX+"decisionLog",events:PREFIX+"events",eventTriggers:PREFIX+"eventTriggers",migration:PREFIX+"migrationVersion"
   });
   const safeStorage=storage&&typeof storage.getItem==="function"?storage:null;
   const finite=value=>{if(value===null||value===undefined||value==="")return null;const number=Number(value);return Number.isFinite(number)?number:null};
@@ -100,5 +101,5 @@
     return{ok:total<=100,total:Number(total.toFixed(2)),items:normalized};
   }
   migrateLegacy();
-  return Object.freeze({PREFIX,MODEL_VERSION,FORWARD_START_DATE,SCHEMA_VERSION,LEGACY_KEYS,keys,key,getRaw,setRaw,remove,getJson,setJson,migrateLegacy,tradeKey,loadTradeState,saveTradeState,forwardKey,validateForwardRecord,appendForwardRecord,listForwardRecords,validateEvent,appendEvent,validateDecisionLog,appendDecisionLog,validateAllocations});
+  return Object.freeze({PREFIX,MODEL_VERSION,FORWARD_START_DATE,SCHEMA_VERSION,EVENT_TRIGGER_TYPES,LEGACY_KEYS,keys,key,getRaw,setRaw,remove,getJson,setJson,migrateLegacy,tradeKey,loadTradeState,saveTradeState,forwardKey,validateForwardRecord,appendForwardRecord,listForwardRecords,validateEvent,appendEvent,validateDecisionLog,appendDecisionLog,validateAllocations});
 });

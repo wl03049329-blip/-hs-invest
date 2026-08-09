@@ -10,6 +10,8 @@ assert.match(html,/strategyMode:"swing006201"/);
 assert.match(html,/applyDedicatedSwingModels\(\)/);
 assert.match(html,/00733｜強勢趨勢拉回/);
 assert.match(html,/006201｜上櫃低檔轉折/);
+assert.match(html,/00631L 恐慌反轉專用模型/);
+for(const label of ["恐慌機會分","反轉確認分","0050 市場回撤"])assert.match(html,new RegExp(label));
 assert.match(html,/Raw／Final Score/);
 assert.match(html,/Exit Pressure/);
 assert.match(html,/MA20／60／200/);
@@ -32,7 +34,7 @@ for (const id of visibleHomeOrder) {
   cursor = next;
 }
 assert.match(html,/class="dashboard tabHidden" data-tab-section="more"/);
-assert.match(html,/data-tab="more"[\s\S]{0,120}<span>我的<\/span>/);
+assert.match(html,/data-tab="more"[\s\S]{0,120}<span>更多<\/span>/);
 assert.match(css,/strategy-swing00733/);
 assert.match(css,/strategy-swing006201/);
 assert.match(css,/todayHighlightsGrid/);

@@ -5,6 +5,9 @@ const core=require("../persistence-core");
 
 assert.strictEqual(core.key("watchlist"),"hsRadar.watchlist");
 assert.strictEqual(core.FORWARD_START_DATE,"2026-08-08");
+assert.strictEqual(core.keys.portfolioRebalanceSettings,"hsRadar.portfolio.rebalanceSettings");
+assert.ok(core.EVENT_TRIGGER_TYPES.includes("rebalanceOutsideBand"));
+assert.ok(core.EVENT_TRIGGER_TYPES.includes("00631LPanicAbove80"));
 
 const valid=core.validateForwardRecord({symbol:"00733",signalDate:"2026-08-08",stage:1,tradeId:"00733-20260808",strategyType:"swing00733",buyScore:75,rawScore:82,exitPressure:22,signalPrice:48.5,position:20,weeklyJ:9,relativeStrength:4.2,ma20:47,ma60:45,ma200:40,drawdown60:-8,gate:{setupGate:{passed:true}},marketStatus:"PASS",tradeState:"ACCUMULATION",confidence:"HIGH"});
 assert.ok(valid);

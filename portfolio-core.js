@@ -92,8 +92,167 @@
 
   function validateTargetAllocations(holdings) {
     const values = (Array.isArray(holdings) ? holdings : []).map(validateHolding);
+    const allSet = values.length > 0 && values.every(item => Number.isFinite(item.targetAllocation));
     const total = values.reduce((sum, item) => sum + (Number.isFinite(item.targetAllocation) ? item.targetAllocation : 0), 0);
-    return {ok: total <= 100 + 1e-9, total: Number(total.toFixed(2))};
+    const roundedTotal = Number(total.toFixed(2));
+    return {ok: total <= 100 + 1e-9, complete: allSet && Math.abs(total - 100) <= .01, total: roundedTotal};
+  }
+
+  const REBALANCE_PROFILES = Object.freeze({
+    conservative: Object.freeze({label: "保守型", relativeTolerance: .1, minimum: 1, maximum: 3}),
+    balanced: Object.freeze({label: "平衡型", relativeTolerance: .15, minimum: 1.5, maximum: 4}),
+    trend: Object.freeze({label: "趨勢型", relativeTolerance: .2, minimum: 2, maximum: 5}),
+    custom: Object.freeze({label: "自訂", relativeTolerance: null, minimum: null, maximum: null})
+  });
+
+  function clamp(value, minimum, maximum) {
+    return Math.min(maximum, Math.max(minimum, value));
+  }
+
+  function allocationBand(targetAllocation, profile = "trend", customTolerance = null) {
+    if (!Number.isFinite(targetAllocation) || targetAllocation < 0 || targetAllocation > 100) return null;
+    const selected = REBALANCE_PROFILES[profile] || REBALANCE_PROFILES.trend;
+    const custom = Number(customTolerance);
+    const tolerance = profile === "custom"
+      ? (Number.isFinite(custom) && custom > 0 && custom <= 20 ? custom : null)
+      : clamp(targetAllocation * selected.relativeTolerance, selected.minimum, selected.maximum);
+    if (!Number.isFinite(tolerance)) return null;
+    return {
+      tolerance: Number(tolerance.toFixed(2)),
+      lower: Number(Math.max(0, targetAllocation - tolerance).toFixed(2)),
+      upper: Number(Math.min(100, targetAllocation + tolerance).toFixed(2))
+    };
+  }
+
+  function calculateRebalanceAdvice(input = {}) {
+    const sourceRows = Array.isArray(input.rows) ? input.rows : [];
+    const profile = REBALANCE_PROFILES[input.profile] ? input.profile : "trend";
+    const cash = Number(input.cash ?? 0);
+    const cashFirst = input.cashFirst !== false;
+    const trendProtection = input.trendProtection !== false;
+    if (!Number.isFinite(cash) || cash < 0) return {status: "invalid_cash", formal: false, rows: [], health: null};
+    const rows = sourceRows.map(raw => ({
+      code: normalizeCode(raw?.code),
+      marketValue: Number(raw?.marketValue),
+      targetAllocation: raw?.targetAllocation === null || raw?.targetAllocation === undefined || raw?.targetAllocation === "" ? null : Number(raw.targetAllocation),
+      trend: ["strong", "weak", "neutral"].includes(raw?.trend) ? raw.trend : "neutral"
+    }));
+    if (!rows.length || rows.some(row => !CODE_PATTERN.test(row.code) || !Number.isFinite(row.marketValue) || row.marketValue < 0)) {
+      return {status: "quotes_pending", formal: false, rows: [], health: null};
+    }
+    const allocation = validateTargetAllocations(rows.map(row => ({code: row.code, shares: 1, averageCost: 1, targetAllocation: row.targetAllocation})));
+    if (!allocation.ok || !allocation.complete) {
+      return {
+        status: allocation.total > 100 ? "target_over" : "target_incomplete",
+        formal: false,
+        totalTarget: allocation.total,
+        gap: Number((100 - allocation.total).toFixed(2)),
+        rows: [],
+        health: null
+      };
+    }
+    const totalMarketValue = rows.reduce((sum, row) => sum + row.marketValue, 0);
+    const projectedTotal = totalMarketValue + cash;
+    if (!Number.isFinite(projectedTotal) || projectedTotal <= 0) return {status: "quotes_pending", formal: false, rows: [], health: null};
+    const working = rows.map(row => {
+      const band = allocationBand(row.targetAllocation, profile, input.customTolerance);
+      return {...row, band, cashAmount: 0, suggestedSell: 0, afterValue: row.marketValue};
+    });
+    if (working.some(row => !row.band)) return {status: "invalid_tolerance", formal: false, rows: [], health: null};
+    let remainingCash = cash;
+    if (cashFirst && remainingCash > 0) {
+      const needs = working.map(row => Math.max(0, projectedTotal * row.targetAllocation / 100 - row.marketValue));
+      const totalNeed = needs.reduce((sum, value) => sum + value, 0);
+      if (totalNeed > 0) {
+        working.forEach((row, index) => {
+          const amount = Math.min(needs[index], cash * needs[index] / totalNeed);
+          row.cashAmount = Number.isFinite(amount) ? amount : 0;
+          row.afterValue += row.cashAmount;
+          remainingCash -= row.cashAmount;
+        });
+      }
+    }
+    let activeCount = 0;
+    let observationCount = 0;
+    const outputRows = working.map(row => {
+      const actualWeight = totalMarketValue > 0 ? row.marketValue / totalMarketValue * 100 : null;
+      let afterWeight = row.afterValue / projectedTotal * 100;
+      let level = "配置正常";
+      let action = "維持目前配置";
+      let amount = row.cashAmount;
+      if (afterWeight < row.band.lower - 1e-9) {
+        level = row.cashAmount > 0 ? "現金流再平衡" : "觀察性再平衡";
+        action = row.cashAmount > 0 ? `新增資金優先補入` : "低於容忍區間，等待新增資金補足";
+        observationCount += row.cashAmount > 0 ? 0 : 1;
+      } else if (afterWeight > row.band.upper + 1e-9) {
+        if (trendProtection && row.trend === "strong") {
+          level = "觀察性再平衡";
+          action = "暫停加碼，暫不賣出；優先用新增資金補其他低配標的";
+          observationCount += 1;
+        } else if (row.trend === "weak") {
+          level = "主動再平衡";
+          row.suggestedSell = Math.max(0, row.afterValue - projectedTotal * row.band.upper / 100);
+          amount = -row.suggestedSell;
+          afterWeight = (row.afterValue - row.suggestedSell) / projectedTotal * 100;
+          action = "配置偏離明顯且趨勢轉弱，可部分調回容忍區間";
+          activeCount += 1;
+        } else {
+          level = "觀察性再平衡";
+          action = "配置偏高，先暫停新增並觀察趨勢";
+          observationCount += 1;
+        }
+      } else if (row.cashAmount > 0) {
+        level = "現金流再平衡";
+        action = "使用新增資金補足低配部位";
+      }
+      return {
+        code: row.code,
+        targetAllocation: row.targetAllocation,
+        actualWeight: Number.isFinite(actualWeight) ? Number(actualWeight.toFixed(2)) : null,
+        difference: Number((afterWeight - row.targetAllocation).toFixed(2)),
+        lower: row.band.lower,
+        upper: row.band.upper,
+        trend: row.trend,
+        level,
+        action,
+        suggestedAmount: Number.isFinite(amount) ? Number(amount.toFixed(0)) : null,
+        afterWeight: Number(afterWeight.toFixed(2))
+      };
+    });
+    let transferPool = outputRows.reduce((sum, row) => sum + Math.max(0, -(row.suggestedAmount ?? 0)), 0);
+    if (transferPool > 0) {
+      const recipients = outputRows.filter(row => row.afterWeight < row.lower - 1e-9);
+      const needs = recipients.map(row => Math.max(0, projectedTotal * (row.lower - row.afterWeight) / 100));
+      const totalNeed = needs.reduce((sum, value) => sum + value, 0);
+      const transferAvailable = transferPool;
+      recipients.forEach((row, index) => {
+        if (transferPool <= 0 || totalNeed <= 0) return;
+        const amount = Math.min(needs[index], transferAvailable * needs[index] / totalNeed);
+        if (!Number.isFinite(amount) || amount <= 0) return;
+        row.suggestedAmount = Number(((row.suggestedAmount ?? 0) + amount).toFixed(0));
+        row.afterWeight = Number((row.afterWeight + amount / projectedTotal * 100).toFixed(2));
+        row.difference = Number((row.afterWeight - row.targetAllocation).toFixed(2));
+        row.level = "主動再平衡";
+        row.action = "承接高配弱勢部位的調整資金，補至容忍區間";
+        transferPool -= amount;
+      });
+    }
+    const meanRelativeDeviation = outputRows.reduce((sum, row) => sum + Math.abs(row.difference) / Math.max(row.targetAllocation, 5), 0) / outputRows.length;
+    const health = Number(clamp(100 - meanRelativeDeviation * 100, 0, 100).toFixed(0));
+    return {
+      status: "ready",
+      formal: true,
+      profile,
+      profileLabel: REBALANCE_PROFILES[profile].label,
+      totalTarget: allocation.total,
+      totalMarketValue,
+      cash,
+      cashUsed: Number((cash - Math.max(0, remainingCash)).toFixed(0)),
+      cashRemaining: Number(Math.max(0, remainingCash).toFixed(0)),
+      health,
+      level: activeCount ? "主動再平衡" : observationCount ? "觀察性再平衡" : cash > 0 ? "現金流再平衡" : "配置正常",
+      rows: outputRows
+    };
   }
 
   function rebalanceDecision({actualWeight, targetAllocation, trendProtected = false} = {}) {
@@ -311,6 +470,9 @@
     validateImportPayload,
     mergeHolding,
     validateTargetAllocations,
+    REBALANCE_PROFILES,
+    allocationBand,
+    calculateRebalanceAdvice,
     rebalanceDecision,
     calculatePortfolio,
     buildAllocation,
