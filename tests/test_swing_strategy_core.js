@@ -1,4 +1,5 @@
 const assert = require("assert");
+const fs = require("fs");
 const core = require("../swing-strategy-core");
 
 let passed = 0;
@@ -44,6 +45,11 @@ test("核心均線與趨勢結構均線分層輸出", () => {
   for (const key of ["ma20","ma60","ma200"]) assert.ok(Number.isFinite(indicators.core[key]));
   for (const key of ["ma43","ma87","ma284"]) assert.ok(Number.isFinite(indicators.trendStructure.values[key]));
   assert.ok(["full","partial","unavailable"].includes(indicators.trendStructure.status));
+  assert.deepStrictEqual(core.CORE_MA_PERIODS,[20,60,200]);
+  assert.deepStrictEqual(core.TREND_STRUCTURE_PERIODS,[43,87,284]);
+  const source=fs.readFileSync(require.resolve("../swing-strategy-core"),"utf8");
+  const executionBlocks=[source.slice(source.indexOf("function stage00733"),source.indexOf("function exitPressure00733")),source.slice(source.indexOf("function engine00733"),source.indexOf("function stage006201")),source.slice(source.indexOf("function stage006201"),source.indexOf("function exitPressure006201")),source.slice(source.indexOf("function engine006201"),source.indexOf("function buildReasons")),source.slice(source.indexOf("function backtestSignals"),source.indexOf("function sanitizeResult"))].join("\n");
+  assert.doesNotMatch(executionBlocks,/ma(?:43|87|284)/i);
 });
 
 test("週 KD 保留當週暫定值、前值與方向", () => {
@@ -88,6 +94,16 @@ test("00733 固定分數案例 75/85 與突破分別對應 Stage 1/2/4", () => {
   breakout.rows[breakout.rows.length-1].volume = 120;
   breakout.core.ma20Slope = .01;
   assert.strictEqual(core.stage00733(85,breakout,passed).number,4);
+  assert.match(core.stage00733(95,indicators,passed).label,/趨勢重新發動/);
+  assert.match(core.stage00733(95,breakout,passed).label,/趨勢重新發動/);
+  assert.doesNotMatch(core.stage00733(95,indicators,passed).label,/極佳低檔/);
+  const noPriceBreak=JSON.parse(JSON.stringify(breakout));noPriceBreak.previous20DayHighestClose=noPriceBreak.price+1;
+  const noVolumeBreak=JSON.parse(JSON.stringify(breakout));noVolumeBreak.rows[noVolumeBreak.rows.length-1].volume=119;
+  const noSlopeBreak=JSON.parse(JSON.stringify(breakout));noSlopeBreak.core.ma20Slope=0;
+  assert.strictEqual(core.stage00733(85,noPriceBreak,passed).number,2);
+  assert.strictEqual(core.stage00733(85,noVolumeBreak,passed).number,2);
+  assert.strictEqual(core.stage00733(85,noSlopeBreak,passed).number,2);
+  assert.strictEqual(core.stage00733(99,indicators,{...passed,setupGate:{passed:false}}).targetPosition,0);
 });
 
 test("00733 浮盈逾 20% 後回吐 10% 觸發 50% 保護且 EXIT 不得加碼", () => {
@@ -99,6 +115,18 @@ test("00733 浮盈逾 20% 後回吐 10% 觸發 50% 保護且 EXIT 不得加碼",
   const addAfterExit = core.transitionTradeState(protectedTrade,{nextState:"EXIT",action:"ADD",stage:4,position:100});
   assert.strictEqual(addAfterExit.position,50);
   assert.strictEqual(addAfterExit.error,"exit_mode_no_add");
+  const emergency = core.engine00733({rows:marketRows({drift:-.001,dipDays:30,dip:-.008,reboundDays:0}),benchmarkRows:benchmark,tradeState:{belowMa200Days:2,entryPrice:indicators.price/.92}});
+  assert.strictEqual(emergency.emergencyExit,true);
+});
+
+test("缺少核心均線不會被當成低出場壓力或止跌確認", () => {
+  const indicators=core.buildIndicators(marketRows(),benchmark);
+  const incomplete=JSON.parse(JSON.stringify(indicators));
+  incomplete.core.ma20=null;incomplete.core.ma60=null;incomplete.core.ma200=null;
+  const exit733=core.exitPressure00733(incomplete,{});
+  const exit6201=core.exitPressure006201(incomplete,{});
+  assert.strictEqual(exit733.factors.find(item=>item.key==="structure").value,null);
+  assert.strictEqual(exit6201.factors.find(item=>item.key==="trend").value,null);
 });
 
 test("006201 70 至 79 分僅等待，80 分以上才可建立第一批", () => {
@@ -113,8 +141,11 @@ test("006201 固定分數案例 75 不買、85 為第一買點", () => {
   const gates={hardFail:{triggered:false},setupGate:{passed:true}};
   const setup={breakoutConfirmed:false};
   assert.strictEqual(core.stage006201(75,setup,gates).number,0);
-  assert.match(core.stage006201(75,setup,gates).label,/等待/);
+  assert.strictEqual(core.stage006201(75,setup,gates).label,"Setup成立／等待止跌");
   assert.strictEqual(core.stage006201(85,setup,gates).number,1);
+  assert.strictEqual(core.stage006201(85,setup,gates).label,"第一買點");
+  assert.strictEqual(core.stage006201(95,{breakoutConfirmed:true},gates).label,"高品質強買點");
+  assert.strictEqual(core.stage006201(85,setup,gates).targetPosition,15);
 });
 
 test("006201 長期趨勢失敗會阻止買進", () => {
@@ -176,9 +207,12 @@ test("回測訊號固定 20 日冷卻且指標只使用訊號當日以前資料"
 });
 
 test("所有引擎輸出不含 NaN、undefined 或 Infinity", () => {
-  const output = core.runStrategy({strategyType:"swing00733",input:{rows:marketRows(),benchmarkRows:benchmark}});
-  const serialized = JSON.stringify(output);
-  assert.doesNotMatch(serialized,/NaN|undefined|Infinity/);
+  for(const strategyType of ["swing00733","swing006201"]){
+    const output=core.runStrategy({strategyType,input:{rows:marketRows(),benchmarkRows:benchmark,otcStrength:50}});
+    const serialized=JSON.stringify(output);
+    assert.doesNotMatch(serialized,/NaN|undefined|Infinity/);
+    for(const value of [output.buyScore,output.exitPressure?.score,output.stage?.targetPosition])if(value!==null)assert.ok(Number.isFinite(value)&&value>=0&&value<=100);
+  }
 });
 
 console.log(`\n${passed} swing strategy core tests passed.`);

@@ -54,20 +54,25 @@
   function tradeKey(symbol){return key(`tradeState.${String(symbol||"").toUpperCase()}`)}
   function loadTradeState(symbol){return getJson(tradeKey(symbol),{symbol:String(symbol||"").toUpperCase(),state:"CLOSED",position:0})}
   function saveTradeState(symbol,state){
-    const normalized={...state,symbol:String(symbol||state?.symbol||"").toUpperCase()};
-    if(!/^[0-9A-Z]{2,10}$/.test(normalized.symbol))return false;
-    if(!["ACCUMULATION","HOLDING","EXIT","CLOSED"].includes(normalized.state))return false;
-    const position=finite(normalized.position);
+    const normalizedSymbol=String(symbol||state?.symbol||"").toUpperCase(),tradeState=String(state?.state||"");
+    if(!/^[0-9A-Z]{2,10}$/.test(normalizedSymbol))return false;
+    if(!["ACCUMULATION","HOLDING","EXIT","CLOSED"].includes(tradeState))return false;
+    const position=finite(state?.position);
     if(position===null||position<0||position>100)return false;
+    const nonNegativeInteger=value=>Math.max(0,Math.floor(finite(value)??0));
+    const normalized={tradeId:String(state?.tradeId||""),symbol:normalizedSymbol,state:tradeState,position,
+      entryPrice:finite(state?.entryPrice),peakPrice:finite(state?.peakPrice),entryDate:safeDate(state?.entryDate),exitDate:safeDate(state?.exitDate),
+      highestStage:nonNegativeInteger(state?.highestStage),lastExecutedStage:nonNegativeInteger(state?.lastExecutedStage),lastStageDate:safeDate(state?.lastStageDate),lastEntryPrice:finite(state?.lastEntryPrice),
+      holdingDays:nonNegativeInteger(state?.holdingDays),belowMa200Days:nonNegativeInteger(state?.belowMa200Days),cooldownRemaining:nonNegativeInteger(state?.cooldownRemaining)};
     return setJson(tradeKey(normalized.symbol),normalized);
   }
   function forwardKey(record){return`${record.symbol}|${record.signalDate}|${record.stage}|${record.tradeId}`}
   function validateForwardRecord(raw){
     const symbol=String(raw?.symbol||"").toUpperCase(),signalDate=safeDate(raw?.signalDate),stage=Math.floor(finite(raw?.stage)??0),tradeId=String(raw?.tradeId||"");
     if(!/^[0-9A-Z]{2,10}$/.test(symbol)||!signalDate||signalDate<FORWARD_START_DATE||stage<1||!tradeId||raw?.provisional===true)return null;
-    const score=finite(raw?.buyScore),exit=finite(raw?.exitPressure),price=finite(raw?.signalPrice);
-    if(score===null||score<0||score>100||price===null||price<=0)return null;
-    return{key:`${symbol}|${signalDate}|${stage}|${tradeId}`,symbol,signalDate,stage,tradeId,strategyType:String(raw.strategyType||""),modelVersion:MODEL_VERSION,buyScore:score,rawScore:finite(raw.rawScore),exitPressure:exit,signalPrice:price,position:finite(raw.position),weeklyJ:finite(raw.weeklyJ),relativeStrength:finite(raw.relativeStrength),ma20:finite(raw.ma20),ma60:finite(raw.ma60),ma200:finite(raw.ma200),drawdown60:finite(raw.drawdown60),gate:raw.gate&&typeof raw.gate==="object"?raw.gate:{},marketStatus:String(raw.marketStatus||""),tradeState:String(raw.tradeState||"ACCUMULATION"),confidence:String(raw.confidence||"INSUFFICIENT"),outcomes:raw.outcomes&&typeof raw.outcomes==="object"?raw.outcomes:{},createdAt:String(raw.createdAt||new Date().toISOString())};
+    const score=finite(raw?.buyScore),rawScore=finite(raw?.rawScore),exit=finite(raw?.exitPressure),price=finite(raw?.signalPrice),position=finite(raw?.position);
+    if(score===null||score<0||score>100||rawScore===null||rawScore<0||rawScore>100||exit===null||exit<0||exit>100||price===null||price<=0||position===null||position<0||position>100)return null;
+    return{key:`${symbol}|${signalDate}|${stage}|${tradeId}`,symbol,signalDate,stage,tradeId,strategyType:String(raw.strategyType||""),modelVersion:MODEL_VERSION,buyScore:score,rawScore,exitPressure:exit,signalPrice:price,position,weeklyJ:finite(raw.weeklyJ),relativeStrength:finite(raw.relativeStrength),ma20:finite(raw.ma20),ma60:finite(raw.ma60),ma200:finite(raw.ma200),drawdown60:finite(raw.drawdown60),gate:raw.gate&&typeof raw.gate==="object"?raw.gate:{},marketStatus:String(raw.marketStatus||""),tradeState:String(raw.tradeState||"ACCUMULATION"),confidence:String(raw.confidence||"INSUFFICIENT"),outcomes:raw.outcomes&&typeof raw.outcomes==="object"?raw.outcomes:{},createdAt:String(raw.createdAt||new Date().toISOString())};
   }
   function appendForwardRecord(raw){
     const record=validateForwardRecord(raw);if(!record)return{ok:false,reason:"invalid_or_provisional"};

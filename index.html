@@ -10,10 +10,10 @@
 <meta name="application-name" content="HS ETF雷達" />
 <meta name="apple-mobile-web-app-title" content="HS ETF雷達" />
 <meta name="description" content="台股延遲行情、ETF買點、估值、籌碼與個人持股雷達" />
-<link rel="icon" type="image/svg+xml" href="assets/hs-etf-radar-mark.svg?v=3" />
-<link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192-v2.png" />
-<link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon-v2.png" />
-<link rel="manifest" href="site.webmanifest?v=3" />
+<link rel="icon" type="image/svg+xml" href="assets/hs-etf-radar-mark.svg?v=4" />
+<link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192-v2.png?v=4" />
+<link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon-v2.png?v=4" />
+<link rel="manifest" href="site.webmanifest?v=4" />
 <style>
 :root{
   --bg:#050609;--panel:#0c0e13;--panel2:#12151c;--panel3:#08090d;
@@ -319,7 +319,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
   <section id="home" class="hero">
     <div class="brandBlock">
       <div class="brandLogo" aria-label="HS | ETF股市雷達">
-        <img class="brandMark" src="assets/icon-192-v2.png" alt="" width="64" height="64" />
+        <img class="brandMark" src="assets/icon-192-v2.png?v=4" alt="" width="64" height="64" />
         <div class="brandWordmark"><b>HS | ETF股市雷達</b><span>ETF MARKET SIGNAL SYSTEM</span></div>
       </div>
       <div class="brandLine"><p class="eyebrow">ETF MARKET SIGNAL SYSTEM</p><span class="version">VERSION 6.2</span></div>
@@ -410,7 +410,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 
   <section id="myProfile" class="panel myProfile tabHidden" data-tab-section="more" aria-labelledby="myProfileTitle">
     <div class="myProfileBrand">
-      <img src="assets/hs-etf-radar-mark.svg?v=2" alt="HS ETF股市雷達正式標誌" width="72" height="72">
+      <img src="assets/icon-192-v2.png?v=4" alt="HS ETF股市雷達正式標誌" width="72" height="72">
       <div><p class="eyebrow">MY RADAR</p><h2 id="myProfileTitle">HS｜ETF股市雷達</h2><b>HS Swing Radar V1.2.1 Beta Validated Frozen</b></div>
     </div>
     <div id="myProfileStatus" class="myProfileStatus"><span>價格資料：載入中</span><span>週 KD：載入中</span><span>估值資料：載入中</span></div>
@@ -975,11 +975,15 @@ function kdjSeries(ws){
     const out={...w,k,d,j,previousJ:prevJ};prevJ=j;return out;
   });
 }
-function weekState(date){
-  const d=new Date(date+"T00:00:00+08:00"),today=new Date(),day=d.getDay();
-  const start=x=>{const z=new Date(x),wd=z.getDay()||7;z.setHours(0,0,0,0);z.setDate(z.getDate()-wd+1);return z};
-  const same=start(d).getTime()===start(today).getTime();
-  if(same&&day===5)return{label:"本週正式",short:"正式"};
+function weekState(date,now=new Date()){
+  const dateKey=String(date||"");
+  const parts=Object.fromEntries(new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Taipei",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false}).formatToParts(now).map(part=>[part.type,part.value]));
+  const todayKey=`${parts.year}-${parts.month}-${parts.day}`;
+  const weekStart=key=>{const [year,month,day]=key.split("-").map(Number),value=new Date(Date.UTC(year,month-1,day)),weekday=value.getUTCDay()||7;value.setUTCDate(value.getUTCDate()-weekday+1);return value.toISOString().slice(0,10)};
+  const same=/^\d{4}-\d{2}-\d{2}$/.test(dateKey)&&weekStart(dateKey)===weekStart(todayKey);
+  const dataDate=new Date(`${dateKey}T00:00:00Z`),weekday=dataDate.getUTCDay()||7;
+  const fridayClosed=weekday===5&&(todayKey>dateKey||(todayKey===dateKey&&(Number(parts.hour)*60+Number(parts.minute)>=13*60+30)));
+  if(same&&fridayClosed)return{label:"本週正式",short:"正式"};
   if(same)return{label:"本週暫定",short:"暫定"};
   return{label:"最近完成週",short:"正式"};
 }
@@ -1951,7 +1955,7 @@ function applyHomeDelayedQuotes(detail){
     if(!Number.isFinite(price)||price<=0)continue;
     const quoteDate=String(quote?.date||"");
     if(/^\d{4}-\d{2}-\d{2}$/.test(quoteDate)&&/^\d{4}-\d{2}-\d{2}$/.test(String(x.formalState?.date||""))&&quoteDate<x.formalState.date)continue;
-    const isIntraday=quote.quoteMode==="delayed";
+    const isIntraday=quote.quoteMode==="delayed"&&quoteDate===taipeiToday()&&HSPortfolioCore.isTaipeiMarketOpen(new Date());
     if(isIntraday){
       if(!applyIntradayEstimate(x,quote))continue;
     }else{
@@ -2183,7 +2187,8 @@ function renderTop(){
   if(version&&version!==lastRankSnapshotVersion){localStorage.setItem(LONG_RANK_STORAGE_KEY,JSON.stringify({version,ranks:Object.fromEntries(longs.map((x,index)=>[x.id,index+1]))}));lastRankSnapshotVersion=version}
   const radar=activeRadarItems(),sorted=[...radar].sort((a,b)=>(displayScore(b)??-1)-(displayScore(a)??-1)),low=[...radar].sort((a,b)=>a.j-b.j)[0],best=sorted.find(x=>Number.isFinite(displayScore(x)));
   $("#snapshotGrid").innerHTML=(best||low)?`<div class="snapshot"><span>最高策略分數</span><b>${best?`${best.id}｜${displayScore(best)} 分`:"資料不足"}</b></div><div class="snapshot"><span>最低週 J 值</span><b>${low?`${low.id}｜${fmt(low.j)}`:"—"}</b></div><div class="snapshot"><span>長期加碼區</span><b>${longCount} 檔</b></div><div class="snapshot"><span>波段已確認</span><b>${swingCount} 檔</b></div>`:'<div class="newsEmpty">尚無 ETF 資料。</div>';
-  $("#updatedTop").textContent=`盤中試算｜最後分數 ${formatHomeQuoteTime(liveMarketCacheVersion||all[0]?.date)}｜週 KD 以目前週線試算`;
+  const hasIntraday=longs.some(item=>item.scoreMode==="intraday");
+  $("#updatedTop").textContent=hasIntraday?`盤中試算｜最後分數 ${formatHomeQuoteTime(liveMarketCacheVersion||all[0]?.date)}｜週 KD 以目前週線試算`:`盤後正式｜資料日期 ${esc(all[0]?.date||"—")}｜週 KD 依最近完成週線`;
   renderTodayHighlights(longs,swings);
 }
 function renderCards(){

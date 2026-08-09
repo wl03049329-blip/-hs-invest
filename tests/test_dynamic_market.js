@@ -79,6 +79,14 @@ check("Proxy URL 不接受金鑰 query、帳密或非 HTTPS",()=>{
   assert.equal(live.validProxyUrl("https://quotes.example.com/feed"),"https://quotes.example.com/feed");
 });
 
+check("單一 ETF 行情失敗不會拖垮其他 ETF",()=>{
+  const quote={price:60,previous_close:59,quote_time:"2026-08-03T02:30:00Z",data_date:"2026-08-03",data_time:"10:30:00"};
+  const normalized=live.normalizeAuthorizedPayload({source_name:"acceptance",source_url:"https://example.com/quotes",etfs:{"0050":quote,"00733":{...quote,price:0}}});
+  assert.ok(normalized.etfs["0050"]);
+  assert.equal(normalized.etfs["00733"],undefined);
+  assert.equal(Object.keys(normalized.etfs).length,1);
+});
+
 check("首頁市場脈動已移除且保留 ETF 延遲行情重算",()=>{
   assert.doesNotMatch(html,/id="homeMarketOverview"|id="marketOverviewCards"/);
   assert.match(html,/applyIntradayEstimate/);

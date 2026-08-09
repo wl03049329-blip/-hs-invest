@@ -273,8 +273,8 @@
     if (!gates.setupGate.passed) return {number: 0, key: "wait", label: "等待強勢回檔條件", targetPosition: 0};
     const breakout = indicators.previous20DayHighestClose !== null && indicators.price > indicators.previous20DayHighestClose &&
       indicators.rows.at(-1)?.volume !== null && indicators.volumeMa20 !== null && indicators.rows.at(-1).volume >= indicators.volumeMa20 * 1.2 && (indicators.core.ma20Slope ?? -1) > 0;
-    if (breakout && score >= 80) return {number: 4, key: "stage4", label: "Stage 4 突破確認", targetPosition: 100};
-    if (score >= 90) return {number: 3, key: "stage3", label: "Stage 3 趨勢確認", targetPosition: 80};
+    if (breakout && score >= 80) return {number: 4, key: "stage4", label: "Stage 4 趨勢重新發動｜突破確認", targetPosition: 100};
+    if (score >= 90) return {number: 3, key: "stage3", label: "Stage 3 趨勢重新發動", targetPosition: 80};
     if (score >= 80) return {number: 2, key: "stage2", label: "Stage 2 轉強加碼", targetPosition: 50};
     if (score >= 70) return {number: 1, key: "stage1", label: "Stage 1 第一批試單", targetPosition: 20};
     return {number: 0, key: score >= 55 ? "near" : "wait", label: score >= 55 ? "接近買點" : "等待", targetPosition: 0};
@@ -286,9 +286,12 @@
     const price = indicators.price;
     const below200 = price !== null && indicators.core.ma200 !== null && price < indicators.core.ma200;
     const falling200 = (indicators.core.ma200Slope ?? 0) < 0;
+    const structureRisk = price !== null && indicators.core.ma200 !== null && indicators.core.ma60 !== null
+      ? (below200 ? (falling200 ? 100 : 80) : price < indicators.core.ma60 ? 65 : 20)
+      : null;
     const factors = [
       {key: "relativeStrength", weight: 25, value: rs.return20 === null ? null : clamp(50 - rs.return20 * 8)},
-      {key: "structure", weight: 25, value: below200 ? (falling200 ? 100 : 80) : price < indicators.core.ma60 ? 65 : 20},
+      {key: "structure", weight: 25, value: structureRisk},
       {key: "weeklyReversal", weight: 20, value: weekly ? clamp((weekly.j > 80 ? 35 : 5) + (weekly.direction === "down" ? 55 : 0) + (weekly.k < weekly.d ? 10 : 0)) : null},
       {key: "overextension", weight: 15, value: price !== null && indicators.core.ma20 !== null ? clamp((price / indicators.core.ma20 - 1) * 500) : null},
       {key: "volume", weight: 10, value: volumeFactor(indicators) === null ? null : clamp(100 - volumeFactor(indicators))},
@@ -340,10 +343,10 @@
   function stage006201(score, input, gates) {
     if (score === null) return {number:0,key:"insufficient",label:"資料不足",targetPosition:0};
     if (gates.hardFail.triggered) return {number:0,key:"wait",label:"長期趨勢未通過",targetPosition:0};
-    if (!gates.setupGate.passed || score < 80) return {number:0,key:score >= 70?"wait_confirm":"wait",label:score >= 70?"70–79 分：等待確認":"等待",targetPosition:0};
-    if (score >= 90 && input.breakoutConfirmed) return {number:2,key:"quality",label:"高品質反轉確認",targetPosition:SWING_006201_POSITION_CONFIG.breakout};
+    if (!gates.setupGate.passed || score < 80) return {number:0,key:score >= 70?"wait_confirm":"wait",label:score >= 70?"Setup成立／等待止跌":"等待",targetPosition:0};
+    if (score >= 90 && input.breakoutConfirmed) return {number:2,key:"quality",label:"高品質強買點",targetPosition:SWING_006201_POSITION_CONFIG.breakout};
     if (score >= 90) return {number:1,key:"quality_wait",label:"高分但等待突破",targetPosition:SWING_006201_POSITION_CONFIG.highQuality};
-    return {number:1,key:"first",label:"80–89 分：第一批試單",targetPosition:SWING_006201_POSITION_CONFIG.first};
+    return {number:1,key:"first",label:"第一買點",targetPosition:SWING_006201_POSITION_CONFIG.first};
   }
 
   function consecutiveBelowMa(rows, period, maximumDays) {
@@ -360,10 +363,13 @@
     const weekly = indicators.weekly;
     const breakout = input.breakoutConfirmed === true;
     const positionRisk = breakout ? 25 : indicators.price !== null && indicators.core.ma20 !== null ? clamp((indicators.price / indicators.core.ma20 - 1) * 450) : null;
+    const trendRisk = indicators.price !== null && indicators.core.ma200 !== null && indicators.core.ma60 !== null
+      ? (indicators.price < indicators.core.ma200 ? 90 : indicators.price < indicators.core.ma60 ? 65 : 20)
+      : null;
     const weighted = weightedFactors([
       {key:"pricePosition",label:"價格位置",weight:25,value:positionRisk},
       {key:"weeklyReversal",label:"週 KD/J 反轉",weight:25,value:weekly ? clamp((weekly.j > 80 ? 30 : 5)+(weekly.direction === "down" ? 55 : 0)+(weekly.k < weekly.d ? 15 : 0)) : null},
-      {key:"trend",label:"核心趨勢",weight:20,value:indicators.price < indicators.core.ma200 ? 90 : indicators.price < indicators.core.ma60 ? 65 : 20},
+      {key:"trend",label:"核心趨勢",weight:20,value:trendRisk},
       {key:"otc",label:"櫃買市場",weight:15,value:finite(input.otcRisk)},
       {key:"volume",label:"量能",weight:15,value:volumeFactor(indicators) === null ? null : clamp(100-volumeFactor(indicators))}
     ]);
@@ -379,8 +385,10 @@
     const benchmark = buildIndicators(input.benchmarkRows || []);
     const bearGateTriggered = Boolean(benchmark.price !== null && benchmark.core.ma200 !== null && benchmark.price < benchmark.core.ma200 && (benchmark.core.ma60Slope ?? 0) < 0);
     const relativeWeaknessGate = {triggered:rs.return60 !== null && rs.return60 < 0 && rs.recovery20 !== null && rs.recovery20 < 0,cap:69};
-    const stopConfirmationConfirmed = Boolean(weekly?.direction==="up"&&indicators.price>=core.ma20&&(core.ma20Slope??-1)>=0);
-    const stopConfirmation = clamp((weekly?.direction === "up" ? 35 : 0)+(weekly?.k >= weekly?.d ? 20 : 0)+(indicators.price >= core.ma20 ? 20 : 0)+(indicators.lowStopped ? 15 : 0)+((indicators.return10 ?? -99)>0?10:0));
+    const priceAboveMa20 = indicators.price !== null && core.ma20 !== null && indicators.price >= core.ma20;
+    const weeklyKAboveD = finite(weekly?.k) !== null && finite(weekly?.d) !== null && weekly.k >= weekly.d;
+    const stopConfirmationConfirmed = Boolean(weekly?.direction==="up"&&priceAboveMa20&&(core.ma20Slope??-1)>=0);
+    const stopConfirmation = clamp((weekly?.direction === "up" ? 35 : 0)+(weeklyKAboveD ? 20 : 0)+(priceAboveMa20 ? 20 : 0)+(indicators.lowStopped ? 15 : 0)+((indicators.return10 ?? -99)>0?10:0));
     const breakoutConfirmed = Boolean(!bearGateTriggered&&indicators.previous20DayHighestClose !== null && indicators.price > indicators.previous20DayHighestClose && indicators.rows.at(-1)?.volume !== null && indicators.volumeMa20 !== null && indicators.rows.at(-1).volume >= indicators.volumeMa20 * 1.2);
     const weighted = weightedFactors([
       {key:"bottom",label:"底部位置",weight:25,value:pullbackFactor(indicators.drawdown60,-20,-8)},

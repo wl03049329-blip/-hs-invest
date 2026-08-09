@@ -2,23 +2,23 @@
   <title id="title">HS ETF股市雷達</title>
   <desc id="desc">幾何HS字首結合雷達掃描、K線與行情脈衝</desc>
   <defs>
-    <radialGradient id="bg" cx="50%" cy="38%" r="72%"><stop offset="0" stop-color="#17243a"/><stop offset=".48" stop-color="#090d16"/><stop offset="1" stop-color="#030407"/></radialGradient>
-    <linearGradient id="beam" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#22d3ee"/><stop offset=".5" stop-color="#3b82f6"/><stop offset="1" stop-color="#7c3aed"/></linearGradient>
+    <radialGradient id="bg" cx="50%" cy="38%" r="72%"><stop offset="0" stop-color="#1b1710"/><stop offset=".48" stop-color="#0a0907"/><stop offset="1" stop-color="#030303"/></radialGradient>
+    <linearGradient id="beam" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#f1d58a"/><stop offset=".5" stop-color="#d2b36d"/><stop offset="1" stop-color="#8e6e35"/></linearGradient>
     <filter id="glow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
   </defs>
   <rect width="512" height="512" rx="116" fill="url(#bg)"/>
-  <rect x="18" y="18" width="476" height="476" rx="100" fill="none" stroke="#26334a" stroke-width="4"/>
-  <circle cx="256" cy="252" r="166" fill="none" stroke="#1e2b40" stroke-width="3"/>
-  <circle cx="256" cy="252" r="116" fill="none" stroke="#263750" stroke-width="3" stroke-dasharray="10 12"/>
-  <path d="M256 252 398 112A188 188 0 0 1 438 252Z" fill="#2563eb" opacity=".1"/>
+  <rect x="18" y="18" width="476" height="476" rx="100" fill="none" stroke="#3b3223" stroke-width="4"/>
+  <circle cx="256" cy="252" r="166" fill="none" stroke="#2b251a" stroke-width="3"/>
+  <circle cx="256" cy="252" r="116" fill="none" stroke="#3a3121" stroke-width="3" stroke-dasharray="10 12"/>
+  <path d="M256 252 398 112A188 188 0 0 1 438 252Z" fill="#d2b36d" opacity=".1"/>
   <path d="M256 252 398 112" stroke="url(#beam)" stroke-width="8" stroke-linecap="round" filter="url(#glow)"/>
-  <circle cx="398" cy="112" r="8" fill="#67e8f9" filter="url(#glow)"/>
+  <circle cx="398" cy="112" r="8" fill="#f4dda0" filter="url(#glow)"/>
   <g fill="none" stroke="url(#beam)" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)">
     <path d="M120 177v154M218 177v154M120 252h98"/>
     <path d="M376 190c-18-15-39-23-63-23-36 0-61 18-61 43 0 28 25 37 62 43 39 7 61 17 61 47 0 29-29 48-68 48-28 0-51-8-70-26"/>
   </g>
-  <g stroke="#9bdcf9" stroke-width="5" stroke-linecap="round"><path d="M97 205h46M194 295h48M286 150v46M271 173h30M338 320v51M321 343h34"/></g>
-  <path d="M91 388h330" stroke="#27364e" stroke-width="4" stroke-linecap="round"/>
+  <g stroke="#d9c28c" stroke-width="5" stroke-linecap="round"><path d="M97 205h46M194 295h48M286 150v46M271 173h30M338 320v51M321 343h34"/></g>
+  <path d="M91 388h330" stroke="#403522" stroke-width="4" stroke-linecap="round"/>
   <path d="m102 409 58-27 47 15 61-38 51 16 91-57" fill="none" stroke="url(#beam)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="410" cy="318" r="7" fill="#22d3ee" filter="url(#glow)"/>
+  <circle cx="410" cy="318" r="7" fill="#f1d58a" filter="url(#glow)"/>
 </svg>

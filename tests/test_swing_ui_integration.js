@@ -40,4 +40,13 @@ assert.match(css,/@media\(max-width:760px\)[\s\S]*todayHighlightsGrid\{grid-temp
 const inlineScripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(match => match[1]);
 for (const script of inlineScripts) new Function(script);
 
+const weekStateSource=html.match(/function weekState\(date,now=new Date\(\)\)\{[\s\S]*?\n\}/)?.[0];
+assert.ok(weekStateSource,"weekState helper must exist");
+const weekState=new Function(`${weekStateSource};return weekState;`)();
+assert.strictEqual(weekState("2026-08-03",new Date("2026-08-03T02:30:00Z")).short,"暫定");
+assert.strictEqual(weekState("2026-08-06",new Date("2026-08-06T02:30:00Z")).short,"暫定");
+assert.strictEqual(weekState("2026-08-07",new Date("2026-08-07T02:30:00Z")).short,"暫定");
+assert.strictEqual(weekState("2026-08-07",new Date("2026-08-07T05:30:00Z")).short,"正式");
+assert.strictEqual(weekState("2026-08-07",new Date("2026-08-08T02:30:00Z")).short,"正式");
+
 console.log("PASS dedicated swing UI integration and four-section homepage");

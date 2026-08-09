@@ -27,6 +27,8 @@ check("首頁 ETF 盤中試算標示完整", () => {
   assert.match(html, /盤中試算｜最後分數/);
   assert.match(html, /週 KD 以目前週線試算/);
   assert.doesNotMatch(production, /即時行情/);
+  assert.match(html, /quoteDate===taipeiToday\(\)&&HSPortfolioCore\.isTaipeiMarketOpen\(new Date\(\)\)/);
+  assert.match(html, /hasIntraday\?`盤中試算[ㅋ-鿿\s\S]*:`盤後正式/);
 });
 
 check("五個盤中時點調度且只有單一排名計時器", () => {
