@@ -36,6 +36,7 @@
   let chartSelection = -1;
   let resizeFrame = 0;
   let rebalanceSettings = loadRebalanceSettings();
+  let latestRebalanceAdvice = null;
 
   function loadRebalanceSettings() {
     const fallback = {cash: 0, profile: "trend", customTolerance: 3, reminder: "90", customDays: 60, cashFirst: true, trendProtection: true};
@@ -244,7 +245,7 @@
             <div><span>平均成本</span><b>${money(row.averageCost)}</b></div>
             <div><span>總成本</span><b>${money(row.totalCost)}</b></div>
             <div><span>目前股價</span><b>${quoteMissing ? "行情暫缺" : money(row.quote.price)}</b></div>
-            <div><span>目前市值</span><b>${money(row.marketValue)}</b></div>
+            <div><span>目前市值</span><b>${quoteMissing ? `${money(row.allocationValue)}（成本暫估）` : money(row.marketValue)}</b></div>
             <div><span>市值占比</span><b>${percent(row.weight)}</b></div>
             <div><span>累積報酬率</span><b class="${valueClass(row.returnRate)}">${percent(row.returnRate)}</b></div>
             <div><span>行情日期</span><b>${escapeHtml(row.quote?.date || "行情暫缺")}</b></div>
@@ -274,35 +275,90 @@
     return "neutral";
   }
 
-  function renderRebalance() {
-    const status = $v6("#rebalanceStatus"), output = $v6("#rebalanceAdvice");
-    if (!status || !output) return;
-    const advice = core.calculateRebalanceAdvice({
-      rows: computed.rows.map(row => ({code: row.code, marketValue: row.marketValue, targetAllocation: row.targetAllocation, trend: rebalanceTrend(row)})),
-      ...rebalanceSettings
-    });
-    const total = core.validateTargetAllocations(holdings).total;
-    if (!advice.formal) {
-      if (advice.status === "target_over") status.textContent = `目標配置超出 ${number(Math.abs(advice.gap), 1)}%，請調整；目前合計 ${number(advice.totalTarget, 1)}%。`;
-      else if (advice.status === "target_incomplete") status.textContent = `尚有 ${number(Math.max(0, advice.gap), 1)}% 未配置；合計 100% 前不產生正式再平衡建議。`;
-      else status.textContent = holdings.length ? "行情完整後才能計算智慧再平衡。" : "新增持股並設定每檔目標配置後，即可產生建議。";
-      output.innerHTML = `<p class="rebalancePending">目標配置目前合計 ${number(total, 1)}%</p>`;
-      return;
-    }
-    status.innerHTML = `<b>再平衡健康度 ${advice.health} 分</b><span>${escapeHtml(advice.level)}｜${escapeHtml(advice.profileLabel)}容忍區間｜目標合計 100%</span>`;
-    output.innerHTML = advice.rows.map(row => {
-      const amount = row.suggestedAmount > 0 ? `建議投入 ${money(row.suggestedAmount)}` : row.suggestedAmount < 0 ? `可評估調整 ${money(Math.abs(row.suggestedAmount))}` : "本次不需交易";
-      const tone = row.level === "主動再平衡" ? "active" : row.level === "配置正常" ? "normal" : "observe";
-      return `<article class="rebalanceItem ${tone}"><header><b>${escapeHtml(row.code)}</b><span>${escapeHtml(row.level)}</span></header><div><span>目前 ${percent(row.actualWeight)}</span><span>目標 ${percent(row.targetAllocation)}</span><span>區間 ${number(row.lower,1)}–${number(row.upper,1)}%</span></div><strong>${escapeHtml(amount)}</strong><small>調整後 ${percent(row.afterWeight)}｜${escapeHtml(row.action)}</small></article>`;
-    }).join("");
+  function targetTotalMessage(total, complete) {
+    if (Math.abs(total - 100) <= .01 && complete) return {text: `目標配置目前合計 ${number(total, 1)}%｜正常`, className: "valid"};
+    if (Math.abs(total - 100) <= .01) return {text: `目標配置目前合計 ${number(total, 1)}%｜尚有持股未設定`, className: ""};
+    if (total < 100) return {text: `目標配置目前合計 ${number(total, 1)}%｜尚有 ${number(100 - total, 1)}% 未配置`, className: ""};
+    return {text: `目標配置目前合計 ${number(total, 1)}%｜超額配置 ${number(total - 100, 1)}%`, className: "invalid"};
   }
 
-  function renderPortfolio(animate = false) {
+  function recommendationText(adviceRow) {
+    if (!adviceRow) return {label: "請先完成目標配置", amount: "", detail: "目標合計 100% 後才產生正式建議"};
+    if (adviceRow.suggestedAmount > 0) return {label: "建議投入", amount: money(adviceRow.suggestedAmount), detail: adviceRow.action};
+    if (adviceRow.suggestedAmount < 0) return {label: "部分調整", amount: money(Math.abs(adviceRow.suggestedAmount)), detail: adviceRow.action};
+    if (/暫停/.test(adviceRow.action)) return {label: "暫停加碼", amount: "", detail: adviceRow.action};
+    if (adviceRow.level === "配置正常") return {label: "維持", amount: "", detail: adviceRow.action};
+    return {label: "先觀察", amount: "", detail: adviceRow.action};
+  }
+
+  function renderRebalance(focusTarget = "") {
+    const status = $v6("#rebalanceStatus"), output = $v6("#rebalanceAdvice"), targetRows = $v6("#rebalanceTargetRows");
+    if (!status || !output || !targetRows) return;
+    const advice = core.calculateRebalanceAdvice({
+      rows: computed.rows.map(row => ({code: row.code, marketValue: row.allocationValue, targetAllocation: row.targetAllocation, trend: rebalanceTrend(row)})),
+      ...rebalanceSettings
+    });
+    latestRebalanceAdvice = advice;
+    const allocationState = core.validateTargetAllocations(holdings);
+    const total = allocationState.total;
+    const totalMessage = targetTotalMessage(total, allocationState.complete);
+    const cash = Number.isFinite(rebalanceSettings.cash) && rebalanceSettings.cash >= 0 ? rebalanceSettings.cash : 0;
+    const allocationTotal = Number.isFinite(computed.allocationTotal) ? computed.allocationTotal : 0;
+    const estimated = Boolean(computed.allocationEstimated);
+    const totalAssets = allocationTotal + cash;
+    $v6("#rebalanceTotalAssets").textContent = holdings.length ? money(totalAssets) : "—";
+    $v6("#rebalanceValueMode").textContent = holdings.length ? (estimated ? "依成本暫估" : "依目前市值") : "等待持股資料";
+    $v6("#rebalanceCashSummary").textContent = money(cash);
+    $v6("#rebalanceEstimateNote").hidden = !estimated || !holdings.length;
+    $v6("#rebalanceTargetTotal").textContent = totalMessage.text;
+    $v6("#rebalanceTargetTotal").className = `rebalanceTargetTotal ${totalMessage.className}`.trim();
+    targetRows.innerHTML = computed.rows.length ? computed.rows.map(row => `<label class="rebalanceTargetRow"><span class="rebalanceTargetIdentity"><b>${escapeHtml(row.code)}</b><span>${escapeHtml(holdingName(row))}</span></span><span class="rebalanceTargetInput"><input type="number" min="0" max="100" step="0.1" inputmode="decimal" value="${Number.isFinite(row.targetAllocation) ? row.targetAllocation : ""}" data-rebalance-target="${escapeHtml(row.code)}" aria-label="${escapeHtml(row.code)} 目標配置">%</span></label>`).join("") : '<p class="rebalancePending">新增持股後即可設定目標配置。</p>';
+
+    const currentDeviations = computed.rows.map(row => Number.isFinite(row.targetAllocation) && Number.isFinite(row.weight) ? Math.abs(row.weight - row.targetAllocation) : null).filter(Number.isFinite);
+    const meanDeviation = currentDeviations.length ? currentDeviations.reduce((sum, value) => sum + value, 0) / currentDeviations.length : null;
+    if (advice.formal) {
+      const healthLabel = advice.health >= 80 ? "良好" : advice.health >= 60 ? "注意" : "失衡";
+      $v6("#rebalanceHealth").textContent = `${healthLabel} ${advice.health}`;
+      $v6("#rebalanceDeviation").textContent = `偏離度 ${number(meanDeviation, 1)}%`;
+      status.innerHTML = `<b>${escapeHtml(advice.level)}</b><span>${escapeHtml(advice.profileLabel)}容忍區間｜目標合計 100%${estimated ? "｜暫估" : ""}</span>`;
+    } else {
+      $v6("#rebalanceHealth").textContent = "待完成";
+      $v6("#rebalanceDeviation").textContent = Number.isFinite(meanDeviation) ? `偏離度 ${number(meanDeviation, 1)}%` : "偏離度 —";
+      if (advice.status === "target_over") status.textContent = `超額配置 ${number(Math.abs(advice.gap), 1)}%；表格保留，但暫不產生正式建議。`;
+      else if (advice.status === "target_incomplete") status.textContent = Math.abs(advice.gap) <= .01 ? "尚有持股未設定目標；表格保留，但暫不產生正式建議。" : `尚有 ${number(Math.max(0, advice.gap), 1)}% 未配置；表格保留，但暫不產生正式建議。`;
+      else status.textContent = holdings.length ? "目前依可用持股價值暫估配置。" : "新增持股並設定每檔目標配置後，即可產生建議。";
+    }
+
+    output.innerHTML = computed.rows.length ? computed.rows.map(row => {
+      const adviceRow = advice.formal ? advice.rows.find(item => item.code === row.code) : null;
+      const currentWeight = Number.isFinite(row.weight) ? row.weight : null;
+      const difference = Number.isFinite(currentWeight) && Number.isFinite(row.targetAllocation) ? currentWeight - row.targetAllocation : null;
+      const differenceClass = !Number.isFinite(difference) || Math.abs(difference) <= .1 ? "even" : difference > 0 ? "over" : "under";
+      const recommendation = recommendationText(adviceRow);
+      const tone = adviceRow?.level === "主動再平衡" ? "active" : adviceRow?.level === "配置正常" ? "normal" : "observe";
+      return `<article class="rebalanceItem ${tone}" role="row"><div class="rebalanceItemIdentity" role="cell"><b>${escapeHtml(row.code)}</b><small>${escapeHtml(holdingName(row))}</small></div><div class="rebalanceItemMetric" role="cell"><span>目前</span><b>${percent(currentWeight)}</b></div><div class="rebalanceItemMetric" role="cell"><span>目標</span><b>${Number.isFinite(row.targetAllocation) ? percent(row.targetAllocation) : "未設定"}</b></div><div class="rebalanceItemMetric rebalanceDifference ${differenceClass}" role="cell"><span>偏離</span><b>${percent(difference)}</b></div><div class="rebalanceAction" role="cell"><span>建議</span><b>${escapeHtml(recommendation.label)}</b>${recommendation.amount ? `<strong>${escapeHtml(recommendation.amount)}</strong>` : ""}<small>${escapeHtml(recommendation.detail)}${estimated ? "｜暫估" : ""}</small></div></article>`;
+    }).join("") : '<p class="rebalancePending">尚未新增持股。</p>';
+
+    const suggestedTotal = advice.formal ? advice.rows.reduce((sum, row) => sum + Math.max(0, Number(row.suggestedAmount) || 0), 0) : 0;
+    $v6("#rebalanceSuggestedTotal").textContent = advice.formal ? money(suggestedTotal) : "—";
+    $v6("#rebalanceApplyBtn").disabled = !advice.formal;
+    targetRows.querySelectorAll("[data-rebalance-target]").forEach(input => input.addEventListener("input", updateTargetAllocation));
+    if (focusTarget) {
+      const input = targetRows.querySelector(`[data-rebalance-target="${CSS.escape(focusTarget)}"]`);
+      if (input) {
+        input.focus({preventScroll: true});
+      }
+    }
+  }
+
+  function refreshPortfolio(animate = false, {focusTarget = ""} = {}) {
     computed = core.calculatePortfolio(holdings, quoteMap);
+    const simulation = $v6("#rebalanceSimulation");
+    if (simulation) simulation.hidden = true;
     renderSummary();
     renderList();
     drawAllocation();
-    renderRebalance();
+    renderRebalance(focusTarget);
     renderQuoteStatus();
     if (animate) {
       const page = $v6("#portfolio");
@@ -326,6 +382,8 @@
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
     ctx.clearRect(0, 0, size, size);
     const allocation = core.buildAllocation(computed.rows);
+    const allocationEstimated = Boolean(computed.allocationEstimated);
+    $v6("#portfolioAllocationMode").textContent = allocationEstimated ? "依成本暫估" : "依目前市值";
     chartSegments = [];
     if (!allocation.length) {
       ctx.strokeStyle = "#244332";
@@ -333,8 +391,8 @@
       ctx.beginPath();
       ctx.arc(size / 2, size / 2, size * .32, 0, Math.PI * 2);
       ctx.stroke();
-      $v6("#portfolioChartCenter").innerHTML = `<b>${holdings.length ? "資料更新中" : "尚無持股"}</b><span>${holdings.length} 檔持股</span>`;
-      $v6("#portfolioChartDetail").textContent = holdings.length ? "行情載入後會顯示市值配置。" : "新增持股後會在此顯示資產配置。";
+      $v6("#portfolioChartCenter").innerHTML = `<b>${holdings.length ? "資料暫缺" : "尚無持股"}</b><span>${holdings.length} 檔持股</span>`;
+      $v6("#portfolioChartDetail").textContent = holdings.length ? "持股資料不完整，暫時無法計算配置。" : "新增持股後會在此顯示資產配置。";
       return;
     }
     const center = size / 2;
@@ -366,14 +424,14 @@
       ctx.arc(center + Math.cos(mid) * (radius + lineWidth / 2 + 4), center + Math.sin(mid) * (radius + lineWidth / 2 + 4), 3, 0, Math.PI * 2);
       ctx.fill();
     }
-    $v6("#portfolioChartCenter").innerHTML = `<b>${computed.complete ? money(computed.totalMarketValue) : "部分行情"}</b><span>${holdings.length} 檔持股</span>`;
+    $v6("#portfolioChartCenter").innerHTML = `<b>${money(computed.allocationTotal)}</b><span>${holdings.length} 檔持股${allocationEstimated ? "｜成本暫估" : ""}</span>`;
   }
 
   function showChartDetail(index) {
     if (!chartSegments.length) return;
     chartSelection = (index + chartSegments.length) % chartSegments.length;
     const item = chartSegments[chartSelection];
-    $v6("#portfolioChartDetail").innerHTML = `<b><i style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${item.color};margin-right:6px"></i>${escapeHtml(item.code)} · ${escapeHtml(item.name)}</b>市值 ${money(item.value)}｜占比 ${percent(item.weight)}<br>累積損益 <span class="${valueClass(item.pnl)}">${money(item.pnl)}</span>${item.code === "其他" ? `<br><small>包含 ${escapeHtml(item.members.join("、"))}</small>` : ""}`;
+    $v6("#portfolioChartDetail").innerHTML = `<b><i style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${item.color};margin-right:6px"></i>${escapeHtml(item.code)} · ${escapeHtml(item.name)}</b>${item.estimated ? "成本暫估" : "市值"} ${money(item.value)}｜占比 ${percent(item.weight)}<br>${item.estimated ? "累積損益待行情" : `累積損益 <span class="${valueClass(item.pnl)}">${money(item.pnl)}</span>`}${item.code === "其他" ? `<br><small>包含 ${escapeHtml(item.members.join("、"))}</small>` : ""}`;
     drawAllocation();
   }
 
@@ -494,7 +552,7 @@
     saveHoldings();
     marketCacheVersion = "";
     closePortfolioModal();
-    renderPortfolio();
+    refreshPortfolio();
     updateQuotes({force: true});
   }
 
@@ -542,7 +600,7 @@
     quoteMap.delete(code);
     saveHoldings();
     saveQuoteCache();
-    renderPortfolio();
+    refreshPortfolio();
     scheduleNext();
   }
 
@@ -552,7 +610,7 @@
     quoteMap.clear();
     localStorage.removeItem(HOLDINGS_KEY);
     localStorage.removeItem(QUOTES_KEY);
-    renderPortfolio();
+    refreshPortfolio();
     scheduleNext();
   }
 
@@ -580,7 +638,7 @@
       quoteMap = new Map([...quoteMap].filter(([code]) => holdings.some(item => item.code === code)));
       saveHoldings();
       saveQuoteCache();
-      renderPortfolio();
+      refreshPortfolio();
       updateQuotes({force: true});
       alert(`已匯入 ${holdings.length} 檔持股，資料只儲存在此裝置。`);
     } catch (error) {
@@ -681,7 +739,7 @@
             if (heldCodes.has(code)) quoteMap.set(code, quote);
           }
           saveQuoteCache();
-          renderPortfolio(true);
+          refreshPortfolio(true);
         }
         const missing = holdings.filter(item => !quoteMap.has(item.code)).length;
         const suffix = result.partial ? "；部分市場來源暫時無法取得" : "";
@@ -691,7 +749,7 @@
         scheduleNext(60000);
       } catch {
         failureCount += 1;
-        if (applyPortfolio && holdings.length) renderPortfolio();
+        if (applyPortfolio && holdings.length) refreshPortfolio();
         window.dispatchEvent(new CustomEvent("hs:delayed-quotes-error"));
         renderQuoteStatus("行情更新失敗，已保留最後資料");
         scheduleNext();
@@ -794,9 +852,48 @@
     if($v6("#portfolioAutoRefresh").checked&&holdings.length){
       const heldCodes=new Set(holdings.map(item=>item.code));
       for(const [code,quote] of publicQuoteMap)if(heldCodes.has(code))quoteMap.set(code,quote);
-      saveQuoteCache();renderPortfolio(true);
+      saveQuoteCache();refreshPortfolio(true);
     }
     renderQuoteStatus(`${quoteTimeLabel()}｜${event.detail.source==="authorized_proxy"?"授權延遲行情":"公開快取"}`);
+  }
+
+  function updateTargetAllocation(event) {
+    const input = event.currentTarget;
+    const code = core.normalizeCode(input.dataset.rebalanceTarget);
+    const raw = String(input.value || "").trim();
+    const targetAllocation = raw === "" ? null : Number(raw);
+    if (targetAllocation !== null && (!Number.isFinite(targetAllocation) || targetAllocation < 0 || targetAllocation > 100)) {
+      input.setCustomValidity("目標配置必須介於 0 到 100%。");
+      return;
+    }
+    input.setCustomValidity("");
+    holdings = holdings.map(item => item.code === code ? core.validateHolding({...item, targetAllocation}) : item);
+    saveHoldings();
+    refreshPortfolio(false, {focusTarget: code});
+  }
+
+  function useCurrentAllocationAsTargets() {
+    const targets = core.targetsFromAllocation(computed.rows);
+    if (!targets.length) return;
+    const targetMap = new Map(targets.map(item => [item.code, item.targetAllocation]));
+    holdings = holdings.map(item => core.validateHolding({...item, targetAllocation: targetMap.get(item.code) ?? item.targetAllocation}));
+    saveHoldings();
+    refreshPortfolio();
+  }
+
+  function showRebalanceSimulation() {
+    const simulation = $v6("#rebalanceSimulation");
+    if (!latestRebalanceAdvice?.formal) {
+      simulation.hidden = false;
+      simulation.textContent = "請先將目標配置完成至 100%，再查看模擬後配置。";
+      return;
+    }
+    const actions = latestRebalanceAdvice.rows.filter(row => Number(row.suggestedAmount) !== 0).map(row => {
+      const action = row.suggestedAmount > 0 ? `模擬投入 ${money(row.suggestedAmount)}` : `模擬部分調整 ${money(Math.abs(row.suggestedAmount))}`;
+      return `${row.code}：${action}，調整後約 ${number(row.afterWeight, 1)}%`;
+    });
+    simulation.hidden = false;
+    simulation.innerHTML = `<b>本次建議摘要（僅模擬，不會改變持股）</b><br>${escapeHtml(actions.length ? actions.join("；") : "目前配置位於容忍區間，本次不需調整。")}`;
   }
 
   function bindEvents() {
@@ -835,14 +932,17 @@
     };
     const updateRebalanceSettings = () => {
       rebalanceSettings = {
-        cash: Number($v6("#rebalanceCash").value), profile: $v6("#rebalanceProfile").value,
+        cash: Math.max(0, Number($v6("#rebalanceCash").value) || 0), profile: $v6("#rebalanceProfile").value,
         customTolerance: Number($v6("#rebalanceCustomTolerance").value), reminder: $v6("#rebalanceReminder").value,
         customDays: Number($v6("#rebalanceCustomDays").value), cashFirst: $v6("#rebalanceCashFirst").checked,
         trendProtection: $v6("#rebalanceTrendProtection").checked
       };
-      saveRebalanceSettings(); syncRebalanceControls(); renderRebalance();
+      saveRebalanceSettings(); syncRebalanceControls(); refreshPortfolio();
     };
-    rebalanceIds.forEach(id => $v6(`#${id}`).addEventListener("change", updateRebalanceSettings));
+    $v6("#rebalanceCash").addEventListener("input", updateRebalanceSettings);
+    rebalanceIds.filter(id => id !== "rebalanceCash").forEach(id => $v6(`#${id}`).addEventListener("change", updateRebalanceSettings));
+    $v6("#rebalanceUseCurrentBtn").addEventListener("click", useCurrentAllocationAsTargets);
+    $v6("#rebalanceApplyBtn").addEventListener("click", showRebalanceSimulation);
     syncRebalanceControls();
     $v6("#portfolioChart").addEventListener("click", chartHit);
     $v6("#portfolioChart").addEventListener("touchstart", chartHit, {passive: true});
@@ -855,7 +955,7 @@
     });
     $v6("#homeSentimentCards").addEventListener("click", event => { const card=event.target.closest("[data-home-chip]");if(!card)return;switchTab("sentiment");if(typeof switchChipTab==="function")switchChipTab(card.dataset.homeChip,{scroll:false}); });
     document.querySelector('[data-tab="portfolio"]').addEventListener("click", () => {
-      renderPortfolio();
+      refreshPortfolio();
       if ($v6("#portfolioAutoRefresh").checked) updateQuotes();
     });
     window.addEventListener("hs:delayed-quotes",applySharedQuotes);
@@ -873,7 +973,7 @@
   }
 
   bindEvents();
-  renderPortfolio();
+  refreshPortfolio();
   renderHomeSentiment();
   const initialShared=window.HSLiveMarket?.latestQuotes?.();
   if(initialShared instanceof Map&&initialShared.size)applySharedQuotes({detail:{quotes:initialShared,sourceUpdatedAt:new Date().toISOString(),source:"shared_cache"}});

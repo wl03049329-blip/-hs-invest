@@ -161,6 +161,35 @@ test("缺少個別行情不會被誤算為 0", () => {
   assert.equal(result.totalMarketValue, null);
   assert.equal(result.rows[1].marketValue, null);
   assert.equal(result.rows[1].todayPnl, null);
+  assert.equal(result.rows[1].allocationValue, result.rows[1].totalCost);
+  assert.equal(result.rows[1].valueSource, "cost");
+});
+
+test("行情缺失時圓餅圖依成本暫估配置", () => {
+  const result = core.calculatePortfolio([
+    holding("00830", 2300, 82),
+    holding("0050", 1000, 60)
+  ], new Map());
+  const allocation = core.buildAllocation(result.rows);
+  assert.equal(result.allocationEstimated, true);
+  assert.equal(result.allocationTotal, 248600);
+  assert.equal(allocation.length, 2);
+  assert.ok(allocation.every(item => item.estimated));
+  assert.ok(Math.abs(allocation.reduce((sum, item) => sum + item.weight, 0) - 100) < 1e-9);
+});
+
+test("可依目前配置正規化目標至 100%", () => {
+  const result = core.calculatePortfolio([
+    holding("00830", 2300, 82),
+    holding("0050", 1000, 60)
+  ], new Map());
+  const targets = core.targetsFromAllocation(result.rows);
+  assert.equal(targets.length, 2);
+  assert.equal(Number(targets.reduce((sum, item) => sum + item.targetAllocation, 0).toFixed(1)), 100);
+  assert.ok(targets.find(item => item.code === "00830").targetAllocation > targets.find(item => item.code === "0050").targetAllocation);
+  const manyTargets = core.targetsFromAllocation(Array.from({length: 30}, (_, index) => ({code: String(1000 + index), weight: index + 1})));
+  assert.equal(Number(manyTargets.reduce((sum, item) => sum + item.targetAllocation, 0).toFixed(1)), 100);
+  assert.ok(manyTargets.every(item => item.targetAllocation >= 0));
 });
 
 test("缺少前收不會產生錯誤今日損益", () => {

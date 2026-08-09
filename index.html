@@ -297,7 +297,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 .homeOpportunityGroup{display:grid;gap:7px;background:#07130e;border:1px solid var(--line);border-radius:15px;padding:10px}.homeOpportunityGroup h3{font-size:13px;margin:0;color:#dffff0}.homeOpportunityRow{display:grid;grid-template-columns:1fr auto;gap:3px 8px;width:100%;text-align:left;color:inherit;background:#102219;border:1px solid #244332;border-radius:11px;padding:9px}.homeOpportunityRow span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.homeOpportunityRow strong{color:#dffff0}.homeOpportunityRow small{grid-column:1/-1;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.strategyBadge{font-size:11px;font-weight:900;color:#dffff0;background:#173126;border-radius:999px;padding:6px 9px}.watchStrategy label{display:grid;gap:3px;color:var(--muted);font-size:10px}.watchStrategy select,.drawdownReference select,.drawdownReference input{background:#07130e;border:1px solid var(--line);color:#fff;border-radius:9px;padding:7px;max-width:150px}.drawdownTool{margin:12px 0}.drawdownForm{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin:12px 0}.drawdownForm label{display:grid;gap:5px;color:var(--muted);font-size:12px}.drawdownForm input{width:100%;background:#07130e;border:1px solid var(--line);color:#fff;border-radius:12px;padding:11px}.drawdownSummary{margin-top:12px}.drawdownTitle,.drawdownReference,.drawdownHeadline{display:flex;gap:10px;align-items:center;justify-content:space-between}.drawdownTitle h3{margin:0}.drawdownTitle span{font-size:11px;color:#dffff0;background:#173126;border-radius:999px;padding:6px 9px}.drawdownReference{justify-content:flex-start;margin:12px 0;flex-wrap:wrap}.drawdownReference label{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:12px}.drawdownHeadline{display:grid;grid-template-columns:repeat(3,1fr)}.drawdownHeadline>div{background:#07130e;border:1px solid var(--line);border-radius:13px;padding:10px}.drawdownHeadline span,.drawdownHeadline small{display:block;color:var(--muted);font-size:10px}.drawdownHeadline b{display:block;font-size:20px;margin:4px 0}.drawdownTableWrap{overflow:auto;margin-top:12px;border:1px solid var(--line);border-radius:13px}.drawdownTable{min-width:0}.drawdownTable th,.drawdownTable td{padding:10px;text-align:left}.drawdownTable tr.current{background:#453c10;color:#ffe46f}.drawdownTable th:first-child,.drawdownTable td:first-child{position:static;background:transparent}.strategyBreakdown small{display:block;margin-top:8px;color:var(--muted)}
 @media(max-width:620px){.watchRow{grid-template-columns:minmax(0,1fr) auto}.watchStrategy{grid-column:1/-1}.watchStrategy select{max-width:none;width:100%}.homeOpportunityRow{font-size:12px}.drawdownHeadline{gap:6px}.drawdownHeadline>div{padding:8px}.drawdownHeadline b{font-size:16px}.drawdownForm{grid-template-columns:1fr}.drawdownForm .btn{width:100%}}
 </style>
-<link rel="stylesheet" href="portfolio-v6.css?v=20260809-hotfix1" />
+<link rel="stylesheet" href="portfolio-v6.css?v=20260810-rebalance1" />
 <link rel="stylesheet" href="v62-tech.css?v=20260809b" />
 <link rel="stylesheet" href="formal-black-gold.css?v=20260809e" />
 </head>
@@ -466,7 +466,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 
     <div id="portfolioSummary" class="portfolioSummary" aria-live="polite"></div>
 
-    <details class="panel rebalancePanel" aria-labelledby="rebalanceTitle">
+    <details class="panel rebalancePanel" aria-labelledby="rebalanceTitle" open>
       <summary class="rebalanceEntry">
         <span><small>SMART REBALANCE</small><b id="rebalanceTitle">智慧再平衡</b><em>設定目標配置，檢查低配、高配與新增資金。</em></span>
         <strong>開啟</strong>
@@ -476,16 +476,38 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
         <div><p class="eyebrow">SMART REBALANCE</p><h2>智慧再平衡</h2></div>
         <small>設定只儲存在此裝置</small>
       </div>
-      <div class="rebalanceControls">
-        <label>可投入現金<input id="rebalanceCash" type="number" min="0" step="1000" inputmode="decimal" value="0" aria-label="可投入現金"></label>
-        <label>容忍區間<select id="rebalanceProfile" aria-label="再平衡容忍區間"><option value="trend">趨勢型（推薦）</option><option value="balanced">平衡型</option><option value="conservative">保守型</option><option value="custom">自訂</option></select></label>
-        <label id="rebalanceCustomToleranceWrap" hidden>自訂正負百分點<input id="rebalanceCustomTolerance" type="number" min="0.1" max="20" step="0.1" inputmode="decimal" value="3"></label>
-        <label>提醒頻率<select id="rebalanceReminder" aria-label="再平衡提醒頻率"><option value="30">30 天</option><option value="90" selected>90 天</option><option value="custom">自訂</option></select></label>
-        <label id="rebalanceCustomDaysWrap" hidden>自訂天數<input id="rebalanceCustomDays" type="number" min="7" max="365" step="1" inputmode="numeric" value="60"></label>
+      <div class="rebalanceSummary" aria-live="polite">
+        <article><span>總資產</span><b id="rebalanceTotalAssets">—</b><small id="rebalanceValueMode">等待持股資料</small></article>
+        <article><span>現金</span><b id="rebalanceCashSummary">NT$0</b><small>可投入現金</small></article>
+        <article><span>再平衡健康度</span><b id="rebalanceHealth">—</b><small id="rebalanceDeviation">偏離度 —</small></article>
       </div>
-      <div class="rebalanceToggles"><label><input id="rebalanceCashFirst" type="checkbox" checked> 新資金優先補低配</label><label><input id="rebalanceTrendProtection" type="checkbox" checked> 強勢趨勢保護</label></div>
+      <p id="rebalanceEstimateNote" class="rebalanceEstimateNote" hidden>行情尚未取得，目前依持有成本暫估配置。</p>
+      <section class="rebalanceTargets" aria-labelledby="rebalanceTargetsTitle">
+        <header><div><b id="rebalanceTargetsTitle">目標配置</b><small>每檔比例可直接編輯</small></div><button id="rebalanceUseCurrentBtn" class="miniBtn" type="button">依目前配置帶入目標</button></header>
+        <div id="rebalanceTargetRows" class="rebalanceTargetRows"></div>
+        <p id="rebalanceTargetTotal" class="rebalanceTargetTotal" role="status" aria-live="polite">目標配置目前合計 0%</p>
+      </section>
       <div id="rebalanceStatus" class="rebalanceStatus" role="status" aria-live="polite">設定每檔目標配置後，即可產生建議。</div>
-      <div id="rebalanceAdvice" class="rebalanceAdvice"></div>
+      <div class="rebalanceTable" role="table" aria-label="持股智慧再平衡結果">
+        <div class="rebalanceTableHead" role="row"><span>ETF</span><span>目前占比</span><span>目標占比</span><span>偏離</span><span>建議行動</span></div>
+        <div id="rebalanceAdvice" class="rebalanceAdvice" role="rowgroup"></div>
+      </div>
+      <div class="rebalanceFooter">
+        <label>可投入現金<input id="rebalanceCash" type="number" min="0" step="1000" inputmode="decimal" value="0" aria-label="可投入現金"></label>
+        <div><span>建議投入總額</span><b id="rebalanceSuggestedTotal">NT$0</b></div>
+        <button id="rebalanceApplyBtn" class="btn" type="button">依建議調整</button>
+      </div>
+      <div id="rebalanceSimulation" class="rebalanceSimulation" hidden></div>
+      <details class="rebalanceSettings">
+        <summary>再平衡設定</summary>
+        <div class="rebalanceControls">
+          <label>容忍區間<select id="rebalanceProfile" aria-label="再平衡容忍區間"><option value="trend">趨勢型（推薦）</option><option value="balanced">平衡型</option><option value="conservative">保守型</option><option value="custom">自訂</option></select></label>
+          <label id="rebalanceCustomToleranceWrap" hidden>自訂正負百分點<input id="rebalanceCustomTolerance" type="number" min="0.1" max="20" step="0.1" inputmode="decimal" value="3"></label>
+          <label>提醒頻率<select id="rebalanceReminder" aria-label="再平衡提醒頻率"><option value="30">30 天</option><option value="90" selected>90 天</option><option value="custom">自訂</option></select></label>
+          <label id="rebalanceCustomDaysWrap" hidden>自訂天數<input id="rebalanceCustomDays" type="number" min="7" max="365" step="1" inputmode="numeric" value="60"></label>
+        </div>
+        <div class="rebalanceToggles"><label><input id="rebalanceCashFirst" type="checkbox" checked> 新資金優先補低配</label><label><input id="rebalanceTrendProtection" type="checkbox" checked> 強勢趨勢保護</label></div>
+      </details>
       <details class="rebalanceMethod"><summary>方法說明</summary><p>目標配置需完整合計 100% 才產生正式建議。系統採容忍區間，不要求每天回到精準比例；先用新增現金補低配，部位高配但趨勢仍強時只暫停新增，只有偏離明顯且趨勢轉弱才提示部分調整至容忍區間。</p></details>
       </div>
     </details>
@@ -493,7 +515,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
     <article class="panel allocationPanel">
       <div class="panelTitle compactTitle">
         <div><p class="eyebrow">ALLOCATION</p><h2><span class="headingEmoji" aria-hidden="true">🥧</span>資產配置</h2></div>
-        <small>依目前市值</small>
+        <small id="portfolioAllocationMode">依目前市值</small>
       </div>
       <div class="allocationLayout">
         <div class="allocationCanvasWrap">
@@ -2939,7 +2961,7 @@ window.HSLiveMarket=Object.freeze({
 loadAlerts();renderWatchlist();renderEvents();renderTrump();switchChipTab(localStorage.getItem(CHIP_TAB_STORAGE_KEY)||"overview",{scroll:false});switchTab(sessionStorage.getItem("hsRadar.activeTab")||"today",{scroll:false});scheduleCnnPoll();refreshLiveQuotes({force:true});scheduleLongRankRefresh();ensureStockCatalog().finally(load);
 
 </script>
-<script src="portfolio-core.js"></script>
-<script src="portfolio-v6.js?v=20260804a"></script>
+<script src="portfolio-core.js?v=20260810-rebalance1"></script>
+<script src="portfolio-v6.js?v=20260810-rebalance1"></script>
 </body>
 </html>

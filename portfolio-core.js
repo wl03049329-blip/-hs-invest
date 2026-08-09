@@ -286,22 +286,24 @@
       const item = validateHolding(raw);
       const quote = validQuote(quoteLookup.get(item.code));
       const totalCost = item.shares * item.averageCost;
-      if (!quote) return {...item, quote: null, totalCost, marketValue: null, totalPnl: null, returnRate: null, todayPnl: null, changeRate: null, weight: null};
+      if (!quote) return {...item, quote: null, totalCost, marketValue: null, allocationValue: totalCost, valueSource: "cost", totalPnl: null, returnRate: null, todayPnl: null, changeRate: null, weight: null};
       const marketValue = item.shares * quote.price;
       const totalPnl = marketValue - totalCost;
       const returnRate = totalCost > 0 ? totalPnl / totalCost * 100 : null;
       const todayPnl = quote.previousClose ? item.shares * (quote.price - quote.previousClose) : null;
       const changeRate = quote.previousClose ? (quote.price / quote.previousClose - 1) * 100 : null;
-      return {...item, quote, totalCost, marketValue, totalPnl, returnRate, todayPnl, changeRate, weight: null};
+      return {...item, quote, totalCost, marketValue, allocationValue: marketValue, valueSource: "market", totalPnl, returnRate, todayPnl, changeRate, weight: null};
     });
     const complete = rows.length > 0 && rows.every(row => row.quote && Number.isFinite(row.todayPnl));
     const quotedRows = rows.filter(row => Number.isFinite(row.marketValue));
     const totalMarketValue = quotedRows.reduce((sum, row) => sum + row.marketValue, 0);
+    const allocationTotal = rows.reduce((sum, row) => sum + (Number.isFinite(row.allocationValue) && row.allocationValue > 0 ? row.allocationValue : 0), 0);
+    const allocationEstimated = rows.some(row => row.valueSource === "cost");
     for (const row of rows) {
-      row.weight = Number.isFinite(row.marketValue) && totalMarketValue > 0 ? row.marketValue / totalMarketValue * 100 : null;
+      row.weight = Number.isFinite(row.allocationValue) && allocationTotal > 0 ? row.allocationValue / allocationTotal * 100 : null;
     }
     if (!complete) {
-      return {rows, complete: false, totalMarketValue: null, totalCost: null, totalPnl: null, returnRate: null, todayPnl: null, todayRate: null};
+      return {rows, complete: false, totalMarketValue: null, allocationTotal, allocationEstimated, totalCost: null, totalPnl: null, returnRate: null, todayPnl: null, todayRate: null};
     }
     const totalCost = rows.reduce((sum, row) => sum + row.totalCost, 0);
     const totalPnl = totalMarketValue - totalCost;
@@ -311,6 +313,8 @@
       rows,
       complete: true,
       totalMarketValue,
+      allocationTotal,
+      allocationEstimated,
       totalCost,
       totalPnl,
       returnRate: totalCost > 0 ? totalPnl / totalCost * 100 : null,
@@ -320,32 +324,52 @@
   }
 
   function buildAllocation(rows) {
-    const validRows = rows.filter(row => Number.isFinite(row.marketValue) && row.marketValue > 0)
-      .sort((a, b) => b.marketValue - a.marketValue);
-    const total = validRows.reduce((sum, row) => sum + row.marketValue, 0);
+    const validRows = rows.map(row => ({...row, allocationValue: Number.isFinite(row.allocationValue) && row.allocationValue > 0 ? row.allocationValue : row.marketValue}))
+      .filter(row => Number.isFinite(row.allocationValue) && row.allocationValue > 0)
+      .sort((a, b) => b.allocationValue - a.allocationValue);
+    const total = validRows.reduce((sum, row) => sum + row.allocationValue, 0);
     if (!total) return [];
     const direct = validRows.length > 8 ? validRows.slice(0, 7) : validRows;
     const result = direct.map(row => ({
       code: row.code,
       name: row.customName || row.quote?.name || row.name || row.code,
-      value: row.marketValue,
-      weight: row.marketValue / total * 100,
+      value: row.allocationValue,
+      weight: row.allocationValue / total * 100,
       pnl: row.totalPnl,
+      estimated: row.valueSource === "cost",
       members: [row.code]
     }));
     if (validRows.length > 8) {
       const others = validRows.slice(7);
-      const value = others.reduce((sum, row) => sum + row.marketValue, 0);
+      const value = others.reduce((sum, row) => sum + row.allocationValue, 0);
       result.push({
         code: "其他",
         name: `${others.length} 檔較小部位`,
         value,
         weight: value / total * 100,
-        pnl: others.reduce((sum, row) => sum + row.totalPnl, 0),
+        pnl: others.every(row => Number.isFinite(row.totalPnl)) ? others.reduce((sum, row) => sum + row.totalPnl, 0) : null,
+        estimated: others.some(row => row.valueSource === "cost"),
         members: others.map(row => row.code)
       });
     }
     return result;
+  }
+
+  function targetsFromAllocation(rows) {
+    const validRows = (Array.isArray(rows) ? rows : []).filter(row => CODE_PATTERN.test(normalizeCode(row?.code)) && Number.isFinite(row?.weight) && row.weight >= 0);
+    const total = validRows.reduce((sum, row) => sum + row.weight, 0);
+    if (!validRows.length || !Number.isFinite(total) || total <= 0) return [];
+    const normalized = validRows.map((row, index) => {
+      const rawTenths = row.weight / total * 1000;
+      return {index, code: normalizeCode(row.code), tenths: Math.floor(rawTenths), remainder: rawTenths - Math.floor(rawTenths)};
+    });
+    let remaining = 1000 - normalized.reduce((sum, row) => sum + row.tenths, 0);
+    [...normalized].sort((a, b) => b.remainder - a.remainder || a.code.localeCompare(b.code)).forEach(row => {
+      if (remaining <= 0) return;
+      row.tenths += 1;
+      remaining -= 1;
+    });
+    return normalized.sort((a, b) => a.index - b.index).map(row => ({code: row.code, targetAllocation: row.tenths / 10}));
   }
 
   function parseNumber(value) {
@@ -476,6 +500,7 @@
     rebalanceDecision,
     calculatePortfolio,
     buildAllocation,
+    targetsFromAllocation,
     parseTwseRows,
     parseTpexRows,
     parseCachedQuotes,
