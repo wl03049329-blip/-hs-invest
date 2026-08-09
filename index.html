@@ -10,10 +10,11 @@
 <meta name="application-name" content="HS ETF雷達" />
 <meta name="apple-mobile-web-app-title" content="HS ETF雷達" />
 <meta name="description" content="台股延遲行情、ETF買點、估值、籌碼與個人持股雷達" />
-<link rel="icon" type="image/svg+xml" href="assets/hs-etf-radar-mark.svg?v=4" />
-<link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192-v2.png?v=4" />
-<link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon-v2.png?v=4" />
-<link rel="manifest" href="site.webmanifest?v=4" />
+<link rel="icon" type="image/png" sizes="64x64" href="assets/favicon-v3.png?v=5" />
+<link rel="shortcut icon" href="assets/favicon-v3.ico?v=5" />
+<link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon-v3.png?v=5" />
+<link rel="manifest" href="site.webmanifest?v=5" />
+<meta property="og:image" content="assets/hs-etf-radar-final.png?v=5" />
 <style>
 :root{
   --bg:#050609;--panel:#0c0e13;--panel2:#12151c;--panel3:#08090d;
@@ -298,6 +299,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 </style>
 <link rel="stylesheet" href="portfolio-v6.css" />
 <link rel="stylesheet" href="v62-tech.css?v=20260809b" />
+<link rel="stylesheet" href="formal-black-gold.css?v=20260809e" />
 </head>
 <body>
 <svg class="iconSprite" aria-hidden="true" width="0" height="0">
@@ -314,20 +316,24 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
   <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M19 7V3l-2 2a8 8 0 1 0 2.3 9M19 3h-4"/></symbol>
   <symbol id="i-commodity" viewBox="0 0 24 24"><path d="M4 17 9 7h6l5 10zM7 17h10M10 7l2-3 2 3"/></symbol>
   <symbol id="i-fund" viewBox="0 0 24 24"><path d="M4 8h16M6 8v10m4-10v10m4-10v10m4-10v10M3 19h18M5 5h14l-7-3z"/></symbol>
+  <symbol id="i-risk-shield" viewBox="0 0 24 24"><path d="M12 3 19 6v5c0 4.8-2.8 8.1-7 10-4.2-1.9-7-5.2-7-10V6z"/><path d="M12 7v6m0 3h.01"/></symbol>
+  <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M4 17a8 8 0 1 1 16 0M7 17h10M12 14l4-5"/><circle cx="12" cy="17" r="1.5"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.3 2.5 3.5 5.5 3.5 9S14.3 18.5 12 21M12 3c-2.3 2.5-3.5 5.5-3.5 9S9.7 18.5 12 21"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.3"/><path d="M3.5 19c.4-3.7 2.3-5.5 5.5-5.5s5.1 1.8 5.5 5.5M14 14.3c3.7-.8 6.1.8 6.5 4.7"/></symbol>
 </svg>
 <div class="app">
-  <section id="home" class="hero app-brand-header">
+  <header id="home" class="hero app-header app-brand-header">
     <div class="brandBlock">
-      <div class="brandLogo app-brand-lockup" aria-label="HS | ETF股市雷達">
-        <img class="brandMark app-brand-logo" data-brand-logo alt="" width="64" height="64" />
-        <div class="brandWordmark"><b class="app-brand-title" data-brand-title>HS | ETF股市雷達</b><span class="app-brand-subtitle" data-brand-subtitle>ETF MARKET SIGNAL SYSTEM</span></div>
+      <div class="brandLogo app-header__lockup app-brand-lockup" aria-label="HS | ETF股市雷達">
+        <img class="brandMark app-header__logo app-brand-logo" data-brand-logo alt="HS ETF股市雷達正式標誌" width="64" height="64" />
+        <div class="brandWordmark app-header__wordmark"><b class="app-header__title app-brand-title" data-brand-title>HS | ETF股市雷達</b><span class="app-header__subtitle app-brand-subtitle" data-brand-subtitle>ETF MARKET SIGNAL SYSTEM</span></div>
       </div>
       <div class="brandLine"><p class="eyebrow">ETF MARKET SIGNAL SYSTEM</p><span class="version">VERSION 6.2</span></div>
       <h1 class="srOnly">HS | ETF股市雷達</h1>
       <p class="subtitle">打開先看懂今天市場，再決定要不要加碼。週 KD 每日試算；0050、00631L 歷史價格已還原分割。</p>
     </div>
     <button class="btn refreshBtn" id="reload" aria-label="重新整理全部資料"><svg aria-hidden="true"><use href="#i-refresh"/></svg><span>更新</span></button>
-  </section>
+  </header>
 
   <div id="message" class="message info">正在取得最新資料…</div>
 
@@ -342,7 +348,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
   <p class="tabIntro" data-tab-intro="signals">切換自己的自選清單與弘昇精選，再查看買點細節。</p>
   <p class="tabIntro" data-tab-intro="portfolio">只在此裝置管理個人持股，使用免費延遲行情估算損益與配置。</p>
   <p class="tabIntro" data-tab-intro="sentiment">查看融資 FOMO、CNN 恐懼貪婪、三大法人與重大事件。</p>
-  <p class="tabIntro" data-tab-intro="more">模型版本、資料狀態、ETF 比較與個人設定集中在這裡。</p>
+  <p class="tabIntro" data-tab-intro="more">品牌理念、買點方法、資料透明與必要設定集中在這裡。</p>
 
   <section id="todayHighlights" class="panel todayHighlights" data-tab-section="today" aria-labelledby="todayHighlightsTitle">
     <div class="panelTitle compactTitle">
@@ -359,11 +365,11 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       <small>點卡片看完整籌碼</small>
     </div>
     <div id="homeSentimentCards" class="homeSentimentCards">
-      <button id="homeMarginBalanceCard" class="homeSentimentCard" type="button" data-home-chip="margin"><span>台股融資餘額</span><b>—</b><em>載入中</em><small>盤後資料</small></button>
-      <button id="homeMaintenanceCard" class="homeSentimentCard" type="button" data-home-chip="margin"><span>市場推估融資維持率</span><b>—</b><em>載入中</em><small>盤後資料</small></button>
-      <button id="homeCnnCard" class="homeSentimentCard" type="button" data-home-chip="mood"><span>CNN Fear &amp; Greed</span><b>—</b><em>載入中</em><small>更新中</small></button>
-      <button id="homeForeignFuturesCard" class="homeSentimentCard" type="button" data-home-chip="futures"><span>外資台指期</span><b>—</b><em>載入中</em><small>盤後資料</small></button>
-      <button id="homeTmfRatioCard" class="homeSentimentCard homeSentimentWide" type="button" data-home-chip="futures"><span>微台散戶多空比</span><b>—</b><em>載入中</em><small>非三大法人部位推估</small></button>
+      <button id="homeMarginBalanceCard" class="homeSentimentCard" type="button" data-home-chip="margin"><span>台股融資餘額</span><svg class="sentimentCardIcon" aria-hidden="true"><use href="#i-market"/></svg><b>—</b><em>載入中</em><small>盤後資料</small></button>
+      <button id="homeMaintenanceCard" class="homeSentimentCard" type="button" data-home-chip="margin"><span>市場推估融資維持率</span><svg class="sentimentCardIcon" aria-hidden="true"><use href="#i-risk-shield"/></svg><b>—</b><em>載入中</em><small>盤後資料</small></button>
+      <button id="homeCnnCard" class="homeSentimentCard" type="button" data-home-chip="mood"><span>CNN Fear &amp; Greed</span><svg class="sentimentCardIcon" aria-hidden="true"><use href="#i-gauge"/></svg><b>—</b><em>載入中</em><small>更新中</small></button>
+      <button id="homeForeignFuturesCard" class="homeSentimentCard" type="button" data-home-chip="futures"><span>外資台指期</span><svg class="sentimentCardIcon" aria-hidden="true"><use href="#i-globe"/></svg><b>—</b><em>載入中</em><small>盤後資料</small></button>
+      <button id="homeTmfRatioCard" class="homeSentimentCard homeSentimentWide" type="button" data-home-chip="futures"><span>微台散戶多空比</span><svg class="sentimentCardIcon" aria-hidden="true"><use href="#i-users"/></svg><b>—</b><em>載入中</em><small>非三大法人部位推估</small></button>
     </div>
     <p id="homeSentimentConclusion" class="homeSentimentConclusion">情緒資料彙整中…</p>
     <details id="homeSentimentDetails" class="homeSentimentDetails"><summary>展開資料方法與日期</summary><div>資料載入中…</div></details>
@@ -375,18 +381,28 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       <small id="updatedTop">載入最新排名</small>
     </div>
     <div id="homeEtfBriefSummary" class="homeEtfBriefSummary">買點資料載入中…</div>
+    <div class="radarSchedule" aria-label="盤中長期加碼雷達更新時段"><span id="radarCurrentSlot">本次更新時段 —</span><span id="radarNextSlot">下一次更新 —</span><span>固定更新｜<b>09:30・10:30・11:30・12:30・13:30</b></span></div>
     <div id="rankList" class="rankList"><div class="skeleton">載入排名中…</div></div>
   </section>
 
   <section id="hsStoryEntry" class="hsStoryEntry tabHidden" data-tab-section="more" aria-labelledby="hsStoryEntryTitle">
     <button id="openHsStory" class="hsStoryCard" type="button" aria-haspopup="dialog" aria-controls="hsStoryModal">
       <img data-brand-logo class="app-brand-logo" alt="HS ETF股市雷達正式標誌" width="76" height="76">
-      <span class="hsStoryCardCopy"><small>THE HS STORY</small><b id="hsStoryEntryTitle">關於 HS｜ETF股市雷達</b><em>從市場情緒、技術低檔到加碼邏輯，帶你看懂這套買點雷達怎麼誕生。</em></span>
-      <span class="hsStoryCardAction">了解 HS 的故事與方法 <span aria-hidden="true">›</span></span>
+      <span class="hsStoryCardCopy"><small>THE HS STORY</small><b id="hsStoryEntryTitle">關於 HS｜ETF股市雷達</b><em>從我的投資困擾出發，整理出一套能看懂市場情緒、掌握 ETF 加碼時機的方法。</em></span>
+      <span class="hsStoryCardAction">查看 HS 的故事與買點邏輯 <span aria-hidden="true">›</span></span>
+      <span class="hsStoryCardFlow">看市場情緒 → 看買點排名 → 看 ETF 細節 → 持股智慧再平衡</span>
     </button>
   </section>
 
-  <section class="dashboard tabHidden" data-tab-section="more">
+  <section id="moreHub" class="moreHub tabHidden" data-tab-section="more" aria-label="HS 方法與設定中心">
+    <details class="moreHubCard"><summary><span>買點評分方法</span><small>價格、情緒、估值與止跌分開評估</small></summary><p>HS 不把「跌很多」直接解讀成買進；長期 ETF 與波段 ETF 使用各自既有模型，分數、資料完整度與風險提醒皆清楚呈現。</p></details>
+    <details class="moreHubCard"><summary><span>資料來源與使用說明</span><small>盤中試算、盤後資料與估值代理</small></summary><p>盤中價格可能延遲；週 KD、融資、法人、期貨籌碼與估值各自標示資料日期。缺少資料不以 0 代替。</p></details>
+    <details class="moreHubCard"><summary><span>HS 投資原則</span><small>分批、紀律，不把評分當成保證</small></summary><p>長期持有仍要重視買點；恐慌時比亢奮時更值得注意；不用單一訊號 All in，也不以模型預言市場。</p></details>
+    <details class="moreHubCard"><summary><span>必要設定</span><small>提醒、行情與裝置內資料</small></summary><p>持股、自選、提醒與策略狀態只儲存在目前瀏覽器。下方保留既有資料、提醒與行情來源設定。</p></details>
+    <details class="moreHubCard"><summary><span>版本資訊</span><small>Version 6.2</small></summary><p>HS｜ETF股市雷達 · 正式黑金介面。投資評分與歷史資料僅供資訊整理，不構成投資建議。</p></details>
+  </section>
+
+  <section class="dashboard tabHidden" data-tab-section="more" hidden aria-hidden="true">
     <article class="panel marketPanel">
       <div class="panelTitle">
         <div><p class="eyebrow">TODAY'S MARKET</p><h2><span class="headingEmoji" aria-hidden="true">🧠</span>今天市場摘要</h2></div>
@@ -401,20 +417,23 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       </details>
     </article>
 
-    <article class="panel">
-      <div class="panelTitle">
-        <div><p class="eyebrow">AT A GLANCE</p><h2>其他快速資訊</h2></div>
-      </div>
-      <div id="snapshotGrid" class="snapshotGrid"><div class="skeleton">載入中…</div></div>
-    </article>
+    <div id="snapshotGrid" hidden aria-hidden="true"></div>
   </section>
 
   <section id="homeSwingBrief" class="panel homeEtfBrief" data-tab-section="today" aria-labelledby="homeSwingBriefTitle">
-    <div class="panelTitle compactTitle"><div><p class="eyebrow">SWING SIGNALS</p><h2 id="homeSwingBriefTitle">波段買點</h2></div><small>沿用既有模型</small></div>
+    <div class="panelTitle compactTitle"><div><p class="eyebrow">SWING HOLDING RADAR</p><h2 id="homeSwingBriefTitle">波段持有雷達</h2></div><small>沿用既有模型</small></div>
     <div id="homeSwingList" class="rankList"><div class="skeleton">載入波段資料中…</div></div>
   </section>
 
-  <section id="myProfile" class="panel myProfile tabHidden" data-tab-section="more" aria-labelledby="myProfileTitle">
+  <section id="homeStoryEntry" class="homeStoryEntry" data-tab-section="today" aria-labelledby="homeStoryEntryTitle">
+    <button id="openHsStoryHome" class="homeStoryCard" type="button" aria-haspopup="dialog" aria-controls="hsStoryModal">
+      <img data-brand-logo alt="HS ETF股市雷達正式標誌" width="48" height="48">
+      <span><small>THE HS STORY</small><b id="homeStoryEntryTitle">為什麼做 HS ETF 股市雷達？</b><em>把市場情緒與買點紀律整理成每天看得懂的雷達。</em></span>
+      <strong>了解更多</strong>
+    </button>
+  </section>
+
+  <section id="myProfile" class="panel myProfile tabHidden uiDormant" data-tab-section="more" aria-labelledby="myProfileTitle" hidden aria-hidden="true">
     <div class="myProfileBrand app-brand-lockup">
       <img class="app-brand-logo" data-brand-logo alt="HS ETF股市雷達正式標誌" width="72" height="72">
       <div><p class="eyebrow app-brand-subtitle">MY RADAR</p><h2 id="myProfileTitle" class="app-brand-title" data-brand-title>HS | ETF股市雷達</h2><b>HS Swing Radar V1.2.1 Beta Validated Frozen</b></div>
@@ -447,9 +466,14 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 
     <div id="portfolioSummary" class="portfolioSummary" aria-live="polite"></div>
 
-    <article class="panel rebalancePanel" aria-labelledby="rebalanceTitle">
-      <div class="panelTitle compactTitle">
-        <div><p class="eyebrow">SMART REBALANCE</p><h2 id="rebalanceTitle">智慧再平衡</h2></div>
+    <details class="panel rebalancePanel" aria-labelledby="rebalanceTitle">
+      <summary class="rebalanceEntry">
+        <span><small>SMART REBALANCE</small><b id="rebalanceTitle">智慧再平衡</b><em>設定目標配置，檢查低配、高配與新增資金。</em></span>
+        <strong>開啟</strong>
+      </summary>
+      <div class="rebalancePanelBody">
+      <div class="panelTitle compactTitle rebalanceExpandedTitle">
+        <div><p class="eyebrow">SMART REBALANCE</p><h2>智慧再平衡</h2></div>
         <small>設定只儲存在此裝置</small>
       </div>
       <div class="rebalanceControls">
@@ -463,7 +487,8 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       <div id="rebalanceStatus" class="rebalanceStatus" role="status" aria-live="polite">設定每檔目標配置後，即可產生建議。</div>
       <div id="rebalanceAdvice" class="rebalanceAdvice"></div>
       <details class="rebalanceMethod"><summary>方法說明</summary><p>目標配置需完整合計 100% 才產生正式建議。系統採容忍區間，不要求每天回到精準比例；先用新增現金補低配，部位高配但趨勢仍強時只暫停新增，只有偏離明顯且趨勢轉弱才提示部分調整至容忍區間。</p></details>
-    </article>
+      </div>
+    </details>
 
     <article class="panel allocationPanel">
       <div class="panelTitle compactTitle">
@@ -599,6 +624,23 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
   </details>
 
   <section id="signals" class="section tabHidden" data-tab-section="signals">
+    <section id="radarOverview" class="radarOverview" aria-labelledby="radarOverviewTitle">
+      <div class="sectionHead radarOverviewHead"><div><p class="eyebrow">ETF RADAR OVERVIEW</p><h2 id="radarOverviewTitle">ETF 加碼與波段總覽</h2></div><small>點擊標的查看完整評分與風險資料</small></div>
+      <div class="radarUpdateStrip"><span id="radarOverviewCurrent">本次更新時段：—</span><span id="radarOverviewNext">下一次更新：—</span></div>
+      <div class="radarViewTabs" role="tablist" aria-label="ETF 雷達檢視方式">
+        <button class="active" type="button" role="tab" aria-selected="true" data-radar-view="overview">總覽</button>
+        <button type="button" role="tab" aria-selected="false" data-radar-view="explain">分數解釋</button>
+      </div>
+      <div id="radarOverviewPane" data-radar-view-panel="overview">
+        <article class="panel radarOverviewPanel"><div class="radarOverviewTitle"><span>LONG TERM</span><h3>長期 ETF 買點判讀中心</h3></div><div id="radarOverviewLong" class="radarOverviewLong"><div class="skeleton">載入排名中…</div></div></article>
+        <article class="panel radarOverviewPanel"><div class="radarOverviewTitle"><span>SWING</span><h3>波段 ETF 判讀</h3></div><div id="radarOverviewSwingTabs" class="radarOverviewSwingTabs" role="tablist" aria-label="波段 ETF 切換"></div><div id="radarOverviewSwing" class="radarOverviewSwing"><div class="skeleton">載入波段訊號中…</div></div></article>
+        <button id="radarSentimentShortcut" class="radarSentimentShortcut" type="button"><span><small>MARKET SENTIMENT</small><b id="radarSentimentText">市場情緒資料彙整中…</b></span><strong>查看完整市場情緒</strong></button>
+      </div>
+      <section id="radarScoreExplainPane" class="panel radarScoreExplainPane" data-radar-view-panel="explain" hidden>
+        <p class="eyebrow">HOW TO READ</p><h3>分數怎麼看？</h3>
+        <div class="radarExplainGrid"><div><b>先看總分與階段</b><span>分數與加碼階段完全沿用既有正式模型。</span></div><div><b>再看主要因子</b><span>進入個別 ETF 後，可查看當下引擎實際使用的因子、權重與得分。</span></div><div><b>最後看風險</b><span>長期與波段是不同任務；波段仍需確認 Gate、Stage 與 Exit Pressure。</span></div></div>
+      </section>
+    </section>
     <article class="panel watchPanel">
       <div class="radarSegments" role="group" aria-label="ETF 雷達清單切換">
         <button class="radarSegment" type="button" data-radar-mode="my" aria-pressed="false">我的自選</button>
@@ -634,27 +676,13 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
         <p>外框顏色代表週 KD 的 J 值超賣程度，不等於直接買進訊號。仍需搭配買點分數、J 值是否回升、長期趨勢、事件風險與建議投入比例。</p>
       </div>
     </details>
-    <div class="sectionHead">
-      <div><p class="eyebrow">ALL SIGNALS</p><h2>全部買點</h2></div>
-      <small>週 KD 依最近完成資料或目前週線試算</small>
+    <div class="sectionHead radarDetailHeading">
+      <div><p class="eyebrow">STRATEGY RADAR</p><h2>ETF 策略雷達</h2></div>
+      <small>長期加碼｜波段持有｜週 KD 依最近完成資料或目前週線試算</small>
     </div>
-    <div id="cards" class="cards"><div class="skeleton">資料載入中…</div></div>
+    <button id="radarDetailBack" class="radarDetailBack" type="button">← 返回 ETF 雷達總覽</button>
+    <div id="cards" class="cards radarDetailDeck"><div class="skeleton">資料載入中…</div></div>
   </section>
-
-  <details id="compare" class="fold panel tabHidden" data-tab-section="more">
-    <summary>
-      <span class="foldTitle"><span>ETF 比較器</span><span class="foldHint">點擊展開</span></span>
-    </summary>
-    <div class="sectionHead">
-      <div><p class="eyebrow">ETF COMPARATOR</p><h2>報酬、回檔與波動</h2></div>
-      <small id="updated">最後更新：—</small>
-    </div>
-    <div id="checks" class="checks"></div>
-    <div class="tableWrap"><table><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
-    <div id="mobileCompare" class="mobileCompare"></div>
-    <div class="splitNote"><b>價格還原：</b>依 FinMind 除權息結果、分割與面額變更資料，將歷史 OHLC 換算為一致基準；若公開資料暫缺，0050 與 00631L 保留已知分割事件作備援。</div>
-    <div class="riskBox"><b>00631L 風險提醒：</b>正向 2 倍槓桿 ETF 每日重設，長期報酬不等於指數漲跌的固定兩倍，震盪市場可能產生波動耗損。請勿只依 J 值做決策。</div>
-  </details>
 
   <details id="alerts" class="fold panel tabHidden" data-tab-section="more">
     <summary>
@@ -788,16 +816,21 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 
 <div id="hsStoryModal" class="modal hsStoryModal" role="dialog" aria-modal="true" aria-labelledby="hsStoryTitle" aria-hidden="true">
   <article class="sheet hsStorySheet">
-    <div class="hsStoryHeader app-brand-header app-brand-lockup">
-      <img class="app-brand-logo" data-brand-logo alt="HS ETF股市雷達正式標誌" width="64" height="64">
-      <div><b class="app-brand-title" data-brand-title>HS | ETF股市雷達</b><span class="app-brand-subtitle" data-brand-subtitle>ETF MARKET SIGNAL SYSTEM</span></div>
+    <div class="hsStoryHeader app-header app-brand-header">
+      <div class="app-header__lockup app-brand-lockup">
+        <img class="app-header__logo app-brand-logo" data-brand-logo alt="HS ETF股市雷達正式標誌" width="64" height="64">
+        <div class="app-header__wordmark"><b class="app-header__title app-brand-title" data-brand-title>HS | ETF股市雷達</b><span class="app-header__subtitle app-brand-subtitle" data-brand-subtitle>ETF MARKET SIGNAL SYSTEM</span></div>
+      </div>
       <button id="closeHsStory" class="close" type="button" aria-label="關閉 HS 品牌故事">關閉</button>
     </div>
-    <div class="hsStoryHero"><p class="eyebrow">ABOUT HS</p><h2 id="hsStoryTitle">關於 HS｜ETF股市雷達</h2><p>看懂市場情緒，掌握 ETF 分批加碼時機</p></div>
-    <section class="hsStorySection"><h3>從自己的投資困擾開始</h3><p>我長期投資 ETF，但真正困難的從來不是「要買哪一檔」，而是市場大跌時，現在到底是不是值得加碼的位置；市場上漲時，是趨勢剛開始，還是已經不適合追高。</p><p>技術指標、融資、法人籌碼、恐慌情緒與估值散落在不同地方，也很難快速轉化成實際行動。因此開始打造 HS｜ETF股市雷達：它不預測明天一定漲或跌，也不提供單一買賣指令，而是把資料轉成容易理解的分數與分批建議。</p><blockquote>在市場恐慌時，不要因情緒錯過長期機會；在市場過熱時，也不要因追漲承擔不必要的風險。</blockquote></section>
-    <section class="hsStorySection"><h3>HS 是什麼</h3><p>HS ETF 股市雷達是一套以 ETF 為核心的市場判讀工具，整合市場情緒與融資壓力、週線低檔、距高點回落、估值與趨勢、盤中買點排名、波段持有、持股配置與智慧再平衡。</p></section>
-    <section class="hsStorySection"><h3>怎麼使用</h3><ol><li>先看首頁市場情緒，了解整體市場背景。</li><li>看盤中長期加碼雷達，找出目前買點分數較高的 ETF。</li><li>進入 ETF 詳細頁，看分數拆解、週 J、回落幅度與買點位置，再決定分批節奏。</li><li>進入「個人持股」，使用<strong>智慧再平衡</strong>，設定目標配置，管理低配、高配與新增資金。</li></ol></section>
-    <section class="hsStorySection hsDataGuide"><h3>資料來源與使用說明</h3><div class="hsDataGuideGrid"><div><b>盤中免費行情</b><span>ETF 價格與盤中試算；依來源可能延遲，頁面標示資料時間。</span></div><div><b>盤後資料</b><span>融資、法人與期貨籌碼沿用最近交易日盤後資料。</span></div><div><b>估值代理</b><span>無直接估值時使用追蹤指數或合理代理，並標示 proxy、來源及 data_date。</span></div><div><b>更新排程</b><span>長期雷達於交易日 09:30、10:30、11:30、12:30、13:30 檢查快取並重算。</span></div></div><p class="hsDisclaimer">HS ETF股市雷達提供市場資訊整理與量化判讀，不構成投資建議；評分無法保證未來報酬。請依自身風險承受能力、資金規劃與投資期限自行判斷並分批執行。</p></section>
+    <div class="hsStoryHero"><img class="hsStoryHeroLogo" data-brand-logo alt="HS ETF股市雷達正式標誌" width="104" height="104"><p class="eyebrow">ABOUT HS</p><h2 id="hsStoryTitle">關於 HS｜ETF股市雷達</h2><p>看懂市場情緒，掌握 ETF 分批加碼時機</p></div>
+    <section class="hsStorySection"><h3>為什麼我會做 HS ETF 股市雷達</h3><p>長期投資 ETF 並不難，真正困難的是市場大跌時敢不敢買、上漲時會不會因為害怕錯過而追高。</p><p>HS 不是用來預測明天的漲跌，而是幫助我在市場最混亂、情緒最強烈的時候，仍然能按照資料與紀律做決定。</p><blockquote>在市場恐慌時，不要因情緒錯過長期機會；在市場過熱時，也不要因追漲承擔不必要的風險。</blockquote></section>
+    <section class="hsStorySection"><h3>我想解決的問題</h3><p>市場資料很多，卻散落在技術、情緒、籌碼、估值與不同網站之間。資訊越多，不一定越容易做決定。</p><p>HS 的目的，是把複雜資訊整理成容易理解的買點雷達：先看市場背景，再看 ETF 排名，最後回到個別標的與自己的資金配置。</p></section>
+    <section class="hsStorySection"><h3>我的投資原則</h3><ul class="hsPrinciples"><li>長期持有，但要有買點紀律</li><li>恐慌時比亢奮時更值得注意</li><li>分批，不 All in</li><li>投資不是預言，而是紀律</li></ul></section>
+    <section class="hsStorySection hsTechBelief"><h3>我是科技樂觀者</h3><p>我對科技的長期發展是樂觀的。</p><p>我相信未來十年，AI、半導體、雲端運算、資料中心、自動化與大型科技平台，仍會持續改變產業與生活。</p><p>所以我的核心配置，不是追逐短期題材，而是把資金放在我認為長期仍有成長趨勢的市場與企業。</p><div class="hsEtfRoles"><div><b>0050</b><strong>台灣大型權值核心</strong><span>參與台灣市值最大的企業，作為台股長期配置基礎。</span></div><div><b>00935</b><strong>台灣科技動能</strong><span>增加對台灣科技成長與動能型公司的曝險。</span></div><div><b>00830</b><strong>美國半導體／科技硬體核心</strong><span>參與 AI、晶片、運算與科技硬體基礎建設的長期發展。</span></div><div><b>00662</b><strong>NASDAQ-100 科技成長</strong><span>參與美國大型科技與創新企業。</span></div><div><b>009815</b><strong>美國大型科技巨頭</strong><span>更集中參與美國大型科技龍頭與七巨頭。</span></div></div><p>我知道科技股的波動通常比保守型 ETF 更大。市場修正時，它們可能跌得更深，也更考驗心理素質。</p><p>但我願意承受較大的短期波動，去交換我所相信的長期成長機會。這也是為什麼 HS 雷達特別重視買點——既然選擇高成長、高波動的資產，我更不希望在市場最亢奮的時候追高。</p><blockquote>我願意用較大的短期波動，交換我所相信的長期成長機會。</blockquote></section>
+    <section class="hsStorySection"><h3>不同工具，不同任務</h3><div class="hsToolRoles"><div><b>00631L｜極端機會時的超車工具</b><p>槓桿正二不是長期無限加槓桿，也不是一路攤平到失去風險控制。只有在市場大幅回檔、極端恐慌，並開始確認止跌反轉後，才考慮用它提高一段行情的資金效率。</p><strong>在好的風險報酬位置，提高一段行情的資金效率，而不是永遠維持兩倍風險。</strong></div><div><b>00733｜強勢趨勢拉回型</b><p>波段使用，尋找強勢趨勢中的拉回與重新發動。</p></div><div><b>006201｜低檔止跌轉折型</b><p>波段使用，尋找上櫃市場修正後的止跌與轉折。</p></div></div><blockquote>核心 ETF 負責長期成長，00631L 負責極端機會時超車，00733／006201 負責波段增加效率。</blockquote></section>
+    <section class="hsStorySection hsStoryHow"><h3>HS 怎麼使用</h3><ol class="hsStorySteps" aria-label="HS ETF股市雷達四步驟"><li><b>01</b><span>看市場情緒</span></li><li><b>02</b><span>看買點排名</span></li><li><b>03</b><span>看個別 ETF 細節</span></li><li><b>04</b><span>持股頁<br>智慧再平衡</span></li></ol></section>
+    <section class="hsStoryFinal"><p>投資不是預測市場，<br>而是在情緒混亂時，依然有紀律地做對的事。</p><small>HS ETF股市雷達提供市場資訊整理與量化判讀，不構成投資建議。</small></section>
   </article>
 </div>
 
@@ -818,7 +851,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 <script src="market-events-core.js"></script>
 <script src="data-freshness-core.js"></script>
 <script>
-const HS_BRAND=Object.freeze({logo:"assets/icon-192-v2.png?v=4",title:"HS | ETF股市雷達",subtitle:"ETF MARKET SIGNAL SYSTEM"});
+const HS_BRAND=Object.freeze({logo:"assets/icon-192-v3.png?v=5",title:"HS | ETF股市雷達",subtitle:"ETF MARKET SIGNAL SYSTEM"});
 function applyBrandIdentity(){
   document.querySelectorAll("[data-brand-logo]").forEach(image=>{image.src=HS_BRAND.logo});
   document.querySelectorAll("[data-brand-title]").forEach(node=>{node.textContent=HS_BRAND.title});
@@ -2147,7 +2180,7 @@ function renderCards(){
     return `<details class="card signalCard ${x.signal.className}" data-signal-level="${esc(x.signal.label)}"><summary class="signalCardSummary" aria-label="${esc(x.id)} ${esc(x.name)}，${esc(scoreLabel)}，技術低檔 ${metricScore(x.technicalLow?.score)}，止跌確認 ${metricScore(x.stopConfirmation?.score)}，買點階段 ${esc(x.buyStage.label)}，點擊展開詳細資料"><div class="signalCompactIdentity"><div class="signalTickerLine"><b>${x.id}</b><span>${esc(x.name)}</span></div><div class="signalPriceLine">$${fmt(x.price)} <small class="${x.changePct>=0?"up":"down"}">${signed(x.changePct)}</small></div><div class="modelMeta"><span>${esc(typeLabel)}</span></div></div><div class="signalCompactMetrics">${scoreLayersHtml(x)}</div><div class="signalCompactAction"><span class="signalLevel ${x.signal.className}" aria-label="外框分類：${esc(x.signal.label)}">${esc(x.signal.label)}</span><p>${esc(x.environment)}｜${esc(x.buyStage.conclusion)}</p><span class="signalExpandMark" aria-hidden="true"></span></div></summary><div class="signalCardDetails">${detailGrid}${specialWarning?`<div class="modelWarning">${esc(specialWarning)}</div>`:""}${valuationDetailsHtml(x)}${legacyComparisonHtml(x)}<section class="detailSection"><h4>模型權重與分數拆解</h4>${scoreBreakdownHtml(x)}</section>${historyBlock}${stopBlock}${similarStatsHtml(x.historyStats.sameEnvironment,`歷史相似訊號統計｜相同環境：${x.environment}`)}${similarStatsHtml(x.historyStats.allEnvironments,"歷史相似訊號統計｜全部環境")}${buyPlanHtml(x)}${highVolatility}${freshness}<div class="signalDetailActions"><button class="miniBtn" type="button" data-detail="${x.id}">走勢／歷史資料</button><button class="miniBtn" type="button" data-compare="${x.id}">加入比較</button></div></div></details>`;
   }).join(""):'<div class="watchEmpty">我的自選尚未加入 ETF。自選資料只儲存在此瀏覽器。</div>';
   document.querySelectorAll("[data-detail]").forEach(btn=>btn.addEventListener("click",()=>openDetail(btn.dataset.detail)));
-  document.querySelectorAll("[data-compare]").forEach(btn=>btn.addEventListener("click",()=>scrollToCompare(btn.dataset.compare)));
+  document.querySelectorAll("[data-compare]").forEach(btn=>btn.remove());
 }
 function strategyModeLabel(mode){
   if(mode==="leveraged")return"槓桿獨立模型";
@@ -2183,7 +2216,7 @@ function strategyBreakdownHtml(x,mode){
   const decision=strategyDecisionFor(x,mode);
   if(!decision)return'<section class="detailSection"><h4>策略模型</h4><p>模型資料不足。</p></section>';
   const labels={weeklyKdj:"週 KD／週 J 低檔",weeklyBias:"週乖離低檔",drawdown:"高點回檔幅度",valuation:"估值吸引力",technicalLow:"技術低檔程度",marketFear:"市場恐慌程度",longTermFundamental:"長期趨勢與基本面",historicalStats:"歷史相似訊號",stopConfirmation:"止跌確認度",trendStrength:"趨勢轉強",momentum:"動能改善",valuationBackground:"估值背景",marketLiquidity:"市場環境與流動性",relativeStrength:"RS vs 0050",relativeStrengthRecovery:"RS Recovery",trend:"核心趨勢",pullback:"拉回品質",weeklyKd:"週 KD／J",dailyKd:"日 KD",priceVolume:"量價",market:"市場 Gate",bottom:"底部位置",volume:"成交量",otc:"櫃買環境",underlyingDrawdown:"0050 回檔",weeklyLow:"0050 週線低檔",marketBreadthFear:"市場急殺／廣度",marginDeleveraging:"融資去槓桿",liquidity:"00631L 流動性",lowStopped:"不再創低",aboveMa5:"站回 MA5",previousHighRecovered:"收回前高",dailyJUp:"日 J 翻揚",weeklyJUp:"週 J 翻揚",sellingPressureEased:"賣壓下降",breadthImproved:"廣度改善",largeCapStable:"權值止穩",basisConverged:"逆價差收斂"};
-  const rows=(decision.breakdown||[]).map(item=>`<div><span>${esc(labels[item.key]||item.key)}｜權重 ${item.weight}%</span><b>${metricScore(item.value)}</b></div>`).join("");
+  const rows=(decision.breakdown||[]).map(item=>{const width=Number.isFinite(item.value)?Math.max(0,Math.min(100,item.value)):0;return`<div><span>${esc(labels[item.key]||item.key)}｜權重 ${item.weight}%</span><b>${metricScore(item.value)}</b><i class="metricProgress" aria-hidden="true"><span style="width:${width}%"></span></i></div>`}).join("");
   const method=mode==="long_term_core"?"週 KD／J 低檔 45%（J＜20、＜10、＜0 分段加速）＋52 週高點回檔 20%＋週乖離低檔 15%（現價相對約13週均線）＋市場恐慌 15%＋估值 5%。止跌確認不改分數，只調整投入批次。":mode==="leveraged"?"00631L 採 0050 恐慌深度與反轉確認雙分數；恐慌只決定是否值得小額試單，反轉確認才決定可投入部位，最高建議 50%。":mode==="swing00733"?"00733 使用強勢趨勢拉回引擎；Setup 與 0050 Market Shock Gate 在 Raw Score 後套用。":mode==="swing006201"?"006201 使用低檔止跌轉折引擎；70–79 分不建立部位，0050 與 RS Gate 在 Raw Score 後套用。":"波段模式重視止跌、均線、趨勢與動能確認。";
   return `<section class="detailSection strategyBreakdown"><h4>${esc(decision.modeLabel)}分數拆解</h4><div class="modelBreakdown">${rows}</div><p>${esc(method)}</p><small>可用資料覆蓋率 ${Math.round(decision.coverage||0)}%；缺失因子不以 0 分代替，依剩餘權重正規化。</small></section>`;
 }
@@ -2199,9 +2232,8 @@ function valuationDetailsHtml(x){
 }
 function compactOpportunityRow(x,mode){
   const d=strategyDecisionFor(x,mode),score=d?.score,stage=d?.stage;
-  const valuation=valuationScoreLabel(x),ma=homeMovingAverageStates(x);
-  const exit=x.swingDecision?.exitPressure?.score,dual=mode==="leveraged"?`恐慌 ${metricScore(x.swingDecision?.panicOpportunity?.score)}｜反轉 ${metricScore(x.swingDecision?.reversalConfirmation?.score)}`:`技術 ${metricScore(x.technicalLow?.score)}｜止跌 ${metricScore(x.stopConfirmation?.score)}｜估值 ${esc(valuation)}`;
-  return `<button class="homeOpportunityRow" type="button" data-open-etf-radar="true"><span class="homeOpportunityTicker"><b>${esc(x.id)}</b> ${esc(x.name)} <em>$${fmt(x.price)} ${signed(x.changePct)}</em></span><strong>${Number.isFinite(score)?score:"—"}分｜${esc(stage?.label||"資料不足")}</strong><span class="homeOpportunityMetrics">${esc(ma)}｜距高 ${Number.isFinite(x.fromHigh)?fmt(x.fromHigh)+"%":"—"}${Number.isFinite(exit)?`｜Exit ${metricScore(exit)}`:""}</span><span class="homeOpportunityMetrics">${dual}</span><small>${esc(stage?.recommendation||"等待資料更新")}</small></button>`;
+  const exit=x.swingDecision?.exitPressure?.score;
+  return `<button class="homeOpportunityRow" type="button" data-open-etf-radar="true"><span class="homeOpportunityTicker"><b>${esc(x.id)}</b> ${esc(x.name)} <em>$${fmt(x.price)} ${signed(x.changePct)}</em></span><strong class="swingRadarScore">${Number.isFinite(score)?score:"—"}分</strong><span class="swingRadarStage">${esc(stage?.label||"資料不足")}</span><span class="swingRadarExit">出場壓力 ${Number.isFinite(exit)?metricScore(exit):"—"}</span><small>${esc(stage?.recommendation||"等待資料更新")}</small></button>`;
 }
 function longRankComparator(a,b){
   const scoreA=displayScore(a,"long_term_core"),scoreB=displayScore(b,"long_term_core");
@@ -2232,22 +2264,25 @@ function longRankSnapshot(longs,previous,version){
 function longRankRow(x,index,previous){
   const decision=strategyDecisionFor(x,"long_term_core"),score=decision?.score,stage=decision?.stage;
   const previousItem=previous?.items?.[x.id],oldRank=Number(previousItem?.current_rank??previous?.ranks?.[x.id]),change=Number.isFinite(oldRank)?oldRank-(index+1):0;
-  const movement=change>0?`↑${change}`:change<0?`↓${Math.abs(change)}`:"—",moveClass=change>0?"rank-up":change<0?"rank-down":"";
+  const movement=change>0?`↑${change}`:change<0?`↓${Math.abs(change)}`:"不變",moveClass=change>0?"rank-up":change<0?"rank-down":"";
   const scoreDelta=Number.isFinite(previousItem?.current_score)&&Number.isFinite(score)?score-previousItem.current_score:null;
   const scoreState=decision?.scoreStatus==="complete"?"完整分數":decision?.scoreStatus==="provisional"?"暫定分數｜部分資料未納入":"資料不足";
-  return `<details class="homeLongRankCard ${moveClass}"><summary><span class="longRankNo">第${index+1}名</span><span class="longRankTicker"><b>${esc(x.id)}</b><small>${esc(x.name)}</small></span><span class="longRankScore"><b>${Number.isFinite(score)?score:"—"}</b><small>長期加碼分${Number.isFinite(scoreDelta)?`｜${scoreDelta>=0?"+":""}${scoreDelta}`:""}</small></span><span class="longRankMove">${movement}</span><span class="longRankCore">週J ${fmt(x.j)}｜${esc(stage?.label||"資料不足")}</span></summary><div class="longRankDetails"><span>週乖離 <b>${Number.isFinite(x.weekBias)?fmt(x.weekBias)+"%":"—"}</b></span><span>距52週高點 <b>${Number.isFinite(x.fromHigh)?fmt(x.fromHigh)+"%":"—"}</b></span><span>資料覆蓋率 <b>${Number.isFinite(decision?.coverage)?Math.round(decision.coverage)+"%":"—"}｜${esc(scoreState)}</b></span><p>${esc(stage?.recommendation||"等待資料更新")}</p></div></details>`;
+  const rankTone=change>0?"is-up":change<0?"is-down":"is-flat",scoreTone=scoreDelta>0?"is-up":scoreDelta<0?"is-down":"is-flat";
+  const scoreMovement=Number.isFinite(scoreDelta)?scoreDelta===0?"不變":`${scoreDelta>0?"+":""}${scoreDelta}`:"首次";
+  const stageLabel=stage?.label||"資料不足",stageTone=/加碼|留意|觀察/.test(stageLabel)?"stage-watch":/勿追|過熱|暫停/.test(stageLabel)?"stage-hot":"stage-hold";
+  const medal=["🥇","🥈","🥉"][index];
+  const rankBadge=medal
+    ?`<span class="longRankNo medalEmoji" aria-label="第${index+1}名">${medal}</span>`
+    :`<span class="longRankNo numericRank" aria-label="第${index+1}名"><i>${index+1}</i></span>`;
+  return `<details class="homeLongRankCard ${moveClass}"><summary>${rankBadge}<span class="longRankTicker"><b>${esc(x.id)}</b><small>${esc(x.name)}</small><span class="longRankCore"><span class="longRankJ"><b>週J</b> ${fmt(x.j)}</span><span class="longRankStage ${stageTone}">${esc(stageLabel)}</span></span></span><span class="longRankScore"><b>${Number.isFinite(score)?score:"—"}</b><small>長期加碼分</small></span><span class="longRankChanges"><span class="rankMovement ${rankTone}">${movement==="不變"?"排名不變":movement}</span><span class="scoreMovement ${scoreTone}">${scoreMovement==="不變"?"0":scoreMovement}</span></span></summary><div class="longRankDetails"><span>週乖離 <b>${Number.isFinite(x.weekBias)?fmt(x.weekBias)+"%":"—"}</b></span><span>距52週高點 <b>${Number.isFinite(x.fromHigh)?fmt(x.fromHigh)+"%":"—"}</b></span><span>資料覆蓋率 <b>${Number.isFinite(decision?.coverage)?Math.round(decision.coverage)+"%":"—"}｜${esc(scoreState)}</b></span><p>${esc(stage?.recommendation||"等待資料更新")}</p></div></details>`;
 }
 function renderTodayHighlights(longs,swings){
   const bestLong=longs.find(item=>Number.isFinite(displayScore(item,"long_term_core")));
   const swingRows=swings.map(item=>({item,mode:strategyModeFor(item),score:displayScore(item,strategyModeFor(item))})).filter(row=>Number.isFinite(row.score)).sort((a,b)=>b.score-a.score);
-  const bestSwing=swingRows[0],event=allMarketEvents().find(item=>item.status==="scheduled"&&dayDiff(item.date)>=0),risk=marketChip.marginRisk?.interpretation?.label||marketChip.margin?.label||"籌碼資料更新中";
-  const cards=[
-    {label:"長期優先",value:bestLong?`${bestLong.id}｜${displayScore(bestLong,"long_term_core")} 分`:"資料更新中",note:bestLong?displayStage(bestLong,"long_term_core")?.label:"—"},
-    {label:"波段訊號",value:bestSwing?`${bestSwing.item.id}｜${bestSwing.score} 分`:"尚無有效訊號",note:bestSwing?displayStage(bestSwing.item,bestSwing.mode)?.label:"保持等待"},
-    {label:"市場風險",value:risk,note:cnnFearGreed?.label?`CNN ${cnnFearGreed.label}`:"CNN 更新中"},
-    {label:"近期事件",value:event?.title||event?.name||"無已知重大事件",note:event?.date||"—"}
-  ];
-  $("#todayHighlightsContent").innerHTML=cards.map(card=>`<div><span>${esc(card.label)}</span><b>${esc(card.value)}</b><small>${esc(card.note||"—")}</small></div>`).join("");
+  const bestSwing=swingRows[0],risk=marketChip.marginRisk?.interpretation?.label||marketChip.margin?.label||"籌碼資料更新中";
+  const lead=bestLong?`${bestLong.id} 目前長期加碼分最高，${displayStage(bestLong,"long_term_core")?.label||"等待資料更新"}。`:"長期 ETF 排名資料更新中。";
+  const context=`市場情緒 ${cnnFearGreed?.label||"更新中"}，融資壓力 ${risk}${bestSwing?`；波段以 ${bestSwing.item.id} 的 ${displayStage(bestSwing.item,bestSwing.mode)?.label||"狀態"} 優先觀察。`:"。"}`;
+  $("#todayHighlightsContent").innerHTML=`<div><span>今日策略摘要</span><b>${esc(lead)}</b><small>${esc(context)}</small></div>`;
   $("#todayHighlightsDate").textContent=`資料基準 ${esc(all[0]?.date||"—")}`;
   $("#todayHighlightsConclusion").textContent=bestLong?`長期 ETF 目前以 ${bestLong.id} 優先；波段仍依各自 Setup、Market Gate 與止跌確認，不把高分解讀為保證。`:"等待 ETF 與籌碼資料完成後再形成判斷。";
   const profile=$("#myProfileStatus");
@@ -2270,14 +2305,82 @@ function renderTop(){
   const radar=activeRadarItems(),sorted=[...radar].sort((a,b)=>(displayScore(b)??-1)-(displayScore(a)??-1)),low=[...radar].sort((a,b)=>a.j-b.j)[0],best=sorted.find(x=>Number.isFinite(displayScore(x)));
   $("#snapshotGrid").innerHTML=(best||low)?`<div class="snapshot"><span>最高策略分數</span><b>${best?`${best.id}｜${displayScore(best)} 分`:"資料不足"}</b></div><div class="snapshot"><span>最低週 J 值</span><b>${low?`${low.id}｜${fmt(low.j)}`:"—"}</b></div><div class="snapshot"><span>長期加碼區</span><b>${longCount} 檔</b></div><div class="snapshot"><span>波段已確認</span><b>${swingCount} 檔</b></div>`:'<div class="newsEmpty">尚無 ETF 資料。</div>';
   const hasIntraday=longs.some(item=>item.scoreMode==="intraday"),schedule=longRankScheduleStatus();
-  $("#updatedTop").textContent=hasIntraday?`盤中試算 ${schedule.current}｜${schedule.next}｜週 KD 暫定`:`盤後正式 ${esc(all[0]?.date||"—")}｜${schedule.next}｜完成週 KD`;
+  $("#updatedTop").textContent=hasIntraday?`盤中試算 ${schedule.current}｜週 KD 暫定`:`盤後正式 ${esc(all[0]?.date||"—")}｜完成週 KD`;
+  $("#radarCurrentSlot").textContent=`本次更新時段 ${schedule.current}`;
+  $("#radarNextSlot").textContent=schedule.next.startsWith("下一次 ")?`下一次更新 ${schedule.next.slice(4)}`:schedule.next;
+  if($("#radarOverviewCurrent"))$("#radarOverviewCurrent").textContent=`本次更新時段：${schedule.current}`;
+  if($("#radarOverviewNext"))$("#radarOverviewNext").textContent=schedule.next.startsWith("下一次 ")?`下一次更新：${schedule.next.slice(4)}`:`下一次更新：${schedule.next}`;
   renderTodayHighlights(longs,swings);
 }
+function uiMetricStatus(kind,value){
+  if(!Number.isFinite(value))return"資料暫缺";
+  if(kind==="j")return value<0?"極端低檔":value<10?"低檔":value<20?"偏低":value<50?"中性":"偏高";
+  if(kind==="bias")return value<=-10?"深度低檔":value<=-5?"明顯偏低":value<0?"低於均線":"均線上方";
+  if(kind==="drawdown")return value<=-20?"深度回落":value<=-10?"中幅回落":value<=-5?"一般回落":"高檔附近";
+  if(kind==="change")return value>0?"上漲":value<0?"下跌":"平盤";
+  return"已更新";
+}
+function rankBadgeHtml(rank){
+  const metals={1:["gold","冠軍"],2:["silver","亞軍"],3:["bronze","季軍"]},item=metals[rank];
+  return item?`<span class="rankBadge ${item[0]}" aria-label="第${rank}名"><i aria-hidden="true">${rank}</i><small>${item[1]}</small></span>`:`<span class="rankBadge regular" aria-label="第${rank}名"><i>${rank}</i><small>名次</small></span>`;
+}
+function uiRankMovement(change){return change>0?`▲ ${change}`:change<0?`▼ ${Math.abs(change)}`:"排名不變"}
+function uiScoreMovement(change){return Number.isFinite(change)?change>0?`+${change}`:change<0?`${change}`:"0":"首次"}
+function radarRangeBar(score,stage){const value=Number.isFinite(score)?Math.max(0,Math.min(100,score)):0;return`<div class="radarRange"><div class="radarRangeTrack"><i style="left:${value}%"></i></div><div class="radarRangeLabels"><span>偏高勿追</span><span>觀察</span><span>分批</span><span>強力區</span></div><b>${esc(stage?.label||"資料不足")}</b></div>`}
+function longOverviewCardHtml(x,index,previous){
+  const rank=index+1,decision=strategyDecisionFor(x,"long_term_core"),score=displayScore(x,"long_term_core"),stage=decision?.stage,old=previous?.items?.[x.id],oldRank=Number(old?.current_rank??previous?.ranks?.[x.id]),rankChange=Number.isFinite(oldRank)?oldRank-rank:0,scoreChange=Number.isFinite(old?.current_score)&&Number.isFinite(score)?score-old.current_score:null;
+  return`<button class="radarLongCard" type="button" data-open-radar-detail="${esc(x.id)}"><div class="radarLongTop">${rankBadgeHtml(rank)}<span class="radarLongIdentity"><b>${esc(x.id)}</b><small>${esc(x.name)}</small></span><span class="radarLongScore"><b>${Number.isFinite(score)?score:"—"}</b><small>長期加碼分</small></span><span class="radarLongMoves"><em class="${rankChange>0?"is-up":rankChange<0?"is-down":"is-flat"}">${uiRankMovement(rankChange)}</em><em class="${scoreChange>0?"is-up":scoreChange<0?"is-down":"is-flat"}">分數 ${uiScoreMovement(scoreChange)}</em></span></div><div class="radarCoreMetrics"><span><small>週 J</small><b>${fmt(x.j)}</b><em>${uiMetricStatus("j",x.j)}</em></span><span><small>週乖離</small><b>${Number.isFinite(x.weekBias)?fmt(x.weekBias)+"%":"—"}</b><em>${uiMetricStatus("bias",x.weekBias)}</em></span><span><small>距高點</small><b>${Number.isFinite(x.fromHigh)?fmt(x.fromHigh)+"%":"—"}</b><em>${uiMetricStatus("drawdown",x.fromHigh)}</em></span><span><small>當日漲跌</small><b class="${x.changePct>=0?"up":"down"}">${signed(x.changePct)}</b><em>${uiMetricStatus("change",x.changePct)}</em></span></div><div class="radarLongDecision"><strong>${esc(stage?.recommendation||stage?.conclusion||"等待資料更新")}</strong>${radarRangeBar(score,stage)}</div></button>`;
+}
+function scoreFactorValue(swing,...keys){for(const key of keys){const item=swing?.scoreFactors?.find(part=>part.key===key);if(Number.isFinite(item?.value))return item.value}return null}
+function scoreGaugeHtml(label,value){const safe=Number.isFinite(value)?Math.max(0,Math.min(100,value)):0;return`<div class="scoreGauge" style="--gauge:${safe}"><div><b>${Number.isFinite(value)?Math.round(value):"—"}</b><small>/100</small></div><span>${esc(label)}</span></div>`}
+function swingUiMeta(x){
+  const s=x.swingDecision||{},mode=strategyModeFor(x);
+  if(mode==="leveraged")return{title:"00631L｜極端機會時的超車工具",subtitle:"市場極端恐慌並確認止跌後，才考慮提高一段行情的資金效率。",left:["恐慌機會分",s.panicOpportunity?.score],right:["反轉確認分",s.reversalConfirmation?.score]};
+  if(mode==="swing00733")return{title:"00733｜強勢趨勢拉回型",subtitle:"我要買強者的休息，不買弱者的便宜。",left:["趨勢強度分",scoreFactorValue(s,"trend","relativeStrength")],right:["拉回修復分",scoreFactorValue(s,"pullback","weeklyKd","priceVolume")]};
+  return{title:"006201｜低檔止跌轉折型",subtitle:"我要買修正後的止跌，不接還在掉的刀。",left:["低檔機會分",scoreFactorValue(s,"bottom")],right:["止跌確認分",s.stopConfirmation]};
+}
+function swingChecklistHtml(x){
+  const s=x.swingDecision||{},mode=strategyModeFor(x),items=[];
+  const add=(label,value,tone="")=>items.push(`<span class="${tone}"><small>${esc(label)}</small><b>${esc(String(value??"資料暫缺"))}</b></span>`);
+  if(mode==="leveraged"){
+    add("0050 回落幅度",Number.isFinite(s.underlying?.drawdown60)?fmt(s.underlying.drawdown60)+"%":"—");add("0050 週 J",Number.isFinite(s.weeklyKd?.j)?fmt(s.weeklyKd.j):"—");add("0050 週乖離",Number.isFinite(s.underlying?.weeklyBias)?fmt(s.underlying.weeklyBias)+"%":"—");add("大盤年線",Number.isFinite(s.underlying?.price)&&Number.isFinite(s.underlying?.ma200)?(s.underlying.price>=s.underlying.ma200?"年線上":"年線下"):"—");
+  }else{
+    add("Setup Gate",s.gates?.setupGate?.passed?"PASS":"WAIT",s.gates?.setupGate?.passed?"is-pass":"is-wait");add("市場 Gate",s.gates?.marketShockGate?.triggered||s.gates?.bearGate?.triggered?"CAP 69":"PASS",s.gates?.marketShockGate?.triggered||s.gates?.bearGate?.triggered?"is-wait":"is-pass");add("MA20／60／200",`${metricScore(s.coreIndicators?.ma20)}／${metricScore(s.coreIndicators?.ma60)}／${metricScore(s.coreIndicators?.ma200)}`);add("RS 20／60",`${Number.isFinite(s.relativeStrength?.return20)?fmt(s.relativeStrength.return20)+"%":"—"}／${Number.isFinite(s.relativeStrength?.return60)?fmt(s.relativeStrength.return60)+"%":"—"}`);add("近期高點回落",Number.isFinite(s.drawdown60)?fmt(s.drawdown60)+"%":"—");add("週 J",Number.isFinite(s.weeklyKd?.j)?fmt(s.weeklyKd.j):"—");
+    if(mode==="swing006201"){add("止跌確認",s.stopConfirmationConfirmed?"已確認":"等待",s.stopConfirmationConfirmed?"is-pass":"is-wait");add("20日突破",s.breakoutConfirmed?"已確認":"等待",s.breakoutConfirmed?"is-pass":"is-wait")}
+  }
+  return`<div class="swingChecklist">${items.join("")}</div>`;
+}
+function swingOverviewHtml(x){
+  const s=x.swingDecision||{},meta=swingUiMeta(x),score=s.buyScore,stage=s.stage||strategyDecisionFor(x,strategyModeFor(x))?.stage,mode=strategyModeFor(x),note=mode==="swing006201"?'<p class="swingSetupNotice">70–79 分代表 Setup 成立／等待止跌，不等於正式買點。</p>':"";
+  return`<section class="swingDashboard"><div class="swingDashboardHead"><div><p class="eyebrow">SWING STRATEGY</p><h3>${esc(meta.title)}</h3><small>${esc(meta.subtitle)}</small></div><span>${esc(stage?.label||"資料不足")}</span></div><div class="dualGauge">${scoreGaugeHtml(meta.left[0],meta.left[1])}${scoreGaugeHtml(meta.right[0],meta.right[1])}</div><div class="swingTotalScore"><span>綜合波段買點分</span><b>${Number.isFinite(score)?Math.round(score):"—"}<small>／100</small></b><i><em style="width:${Number.isFinite(score)?Math.max(0,Math.min(100,score)):0}%"></em></i><small>觀望　／　低　／　中　／　中高　／　高</small></div><article class="swingStageCard"><small>目前階段</small><b>${esc(stage?.label||"資料不足")}</b><p>${esc(dedicatedSwingStageRecommendation(s)||s.recommendedAction||stage?.recommendation||"等待資料更新")}</p></article>${note}<h4 class="checklistTitle">條件檢核</h4>${swingChecklistHtml(x)}</section>`;
+}
+function longScoreChangeReason(x,scoreChange){
+  const delta=Number.isFinite(scoreChange)?scoreChange>0?`較上一時段上升 ${scoreChange} 分`:scoreChange<0?`較上一時段下降 ${Math.abs(scoreChange)} 分`:"與上一時段相同":"目前為首次顯示";
+  return`${delta}。目前週 J 為 ${fmt(x.j)}、週乖離 ${Number.isFinite(x.weekBias)?fmt(x.weekBias)+"%":"資料暫缺"}、距 52 週高點 ${Number.isFinite(x.fromHigh)?fmt(x.fromHigh)+"%":"資料暫缺"}；總分仍完全由既有正式引擎產生。`;
+}
+function detailAdvancedHtml(x){return`<details class="detailAdvanced"><summary>估值、歷史統計與其他詳細資料</summary>${valuationDetailsHtml(x)}${legacyComparisonHtml(x)}<section class="detailSection"><h4>歷史相似訊號統計</h4>${similarStatsHtml(x.historyStats.sameEnvironment,`相同市場環境｜${x.environment}`)}${similarStatsHtml(x.historyStats.allEnvironments,"全部市場環境")}</section>${buyPlanHtml(x)}</details>`}
+function buildRadarV2Card({x,mode,decision,stage,score,longRank,longRankChange,longScoreChange,formal,detailScoreState,tradeState}){
+  const cardClass=`card signalCard radarV2Card ${x.signal.className} strategy-${mode}`,scoreText=Number.isFinite(score)?score:"—";
+  if(mode==="long_term_core")return`<details class="${cardClass}" data-etf-id="${esc(x.id)}"><summary class="radarDetailSummary">${rankBadgeHtml(longRank)}<span><b>${esc(x.id)} ${esc(x.name)}</b><small>${esc(stage?.label||"資料不足")}｜週 J ${fmt(x.j)}</small></span><strong>${scoreText}<small>分</small></strong></summary><div class="signalCardDetails"><div class="detailTabs" role="tablist"><button class="active" type="button" data-detail-view="score" aria-selected="true">評分拆解</button><button type="button" data-detail-view="drawdown" aria-selected="false">高點回落</button></div><div data-detail-panel="score"><div class="signalDetailHero"><span>長期核心模式</span><b>${scoreText}<small>／100</small></b><strong>${esc(stage?.label||"資料不足")}</strong><em>${esc(detailScoreState)}｜${esc(x.quoteTime||x.date||"資料時間待更新")}</em></div><div class="radarCoreMetrics detailCoreMetrics"><span><small>週 J</small><b>${fmt(x.j)}</b><em>${uiMetricStatus("j",x.j)}</em></span><span><small>週乖離</small><b>${Number.isFinite(x.weekBias)?fmt(x.weekBias)+"%":"—"}</b><em>${uiMetricStatus("bias",x.weekBias)}</em></span><span><small>距高點</small><b>${Number.isFinite(x.fromHigh)?fmt(x.fromHigh)+"%":"—"}</b><em>${uiMetricStatus("drawdown",x.fromHigh)}</em></span><span><small>當日漲跌</small><b class="${x.changePct>=0?"up":"down"}">${signed(x.changePct)}</b><em>${uiMetricStatus("change",x.changePct)}</em></span></div>${strategyBreakdownHtml(x,mode)}<section class="detailSection scoreReason"><h4>分數變化原因</h4><p>${esc(longScoreChangeReason(x,longScoreChange))}</p></section><div class="detailGrandTotal"><span>總分</span><b>${scoreText}<small>／100</small></b></div>${detailAdvancedHtml(x)}</div><div data-detail-panel="drawdown" hidden>${longTermDrawdownTableHtml(x)}<div class="drawdownConclusion"><span>目前跌幅</span><b>${Number.isFinite(x.fromHigh)?fmt(x.fromHigh)+"%":"—"}</b><p>${esc(uiMetricStatus("drawdown",x.fromHigh))}；亮金框標示目前所在區間。</p></div></div></div></details>`;
+  const s=x.swingDecision||{},exit=s.exitPressure?.score;
+  return`<details class="${cardClass}" data-etf-id="${esc(x.id)}"><summary class="radarDetailSummary swingSummary"><span class="strategyBadge">${esc(strategyModeLabel(mode))}</span><span><b>${esc(x.id)} ${esc(x.name)}</b><small>${esc(stage?.label||"資料不足")}｜Exit Pressure ${metricScore(exit)}</small></span><strong>${scoreText}<small>分</small></strong></summary><div class="signalCardDetails"><div class="detailTabs swingDetailTabs" role="tablist"><button class="active" type="button" data-detail-view="overview" aria-selected="true">總覽</button><button type="button" data-detail-view="breakdown" aria-selected="false">分數拆解</button><button type="button" data-detail-view="action" aria-selected="false">操作分層</button></div><div data-detail-panel="overview">${swingOverviewHtml(x)}</div><div data-detail-panel="breakdown" hidden>${strategyBreakdownHtml(x,mode)}<div class="detailGrandTotal"><span>綜合波段買點分</span><b>${scoreText}<small>／100</small></b></div></div><div data-detail-panel="action" hidden><section class="swingActionLayer"><div><small>目前位置</small><b>${esc(stage?.label||"資料不足")}</b></div><div><small>建議行動</small><b>${esc(s.recommendedAction||stage?.recommendation||"等待資料更新")}</b></div><div><small>下一個確認條件</small><b>${mode==="leveraged"?"等待恐慌與反轉條件同步改善":mode==="swing00733"?"依既有 Setup／Stage 等待拉回修復或重新加速":"依既有止跌與突破條件等待確認"}</b></div><div><small>主要風險</small><b>Exit Pressure ${metricScore(exit)}｜建議部位 ${Number.isFinite(stage?.targetPosition)?stage.targetPosition+"%":"—"}</b></div></section></div>${detailAdvancedHtml(x)}</div></details>`;
+}
+function switchRadarDetailView(button){const card=button.closest(".radarV2Card");if(!card)return;const name=button.dataset.detailView;card.querySelectorAll("[data-detail-view]").forEach(item=>{const active=item.dataset.detailView===name;item.classList.toggle("active",active);item.setAttribute("aria-selected",String(active))});card.querySelectorAll("[data-detail-panel]").forEach(panel=>{panel.hidden=panel.dataset.detailPanel!==name})}
+function switchSwingOverview(id){document.querySelectorAll("[data-swing-overview]").forEach(button=>{const active=button.dataset.swingOverview===id;button.classList.toggle("active",active);button.setAttribute("aria-selected",String(active))});document.querySelectorAll("[data-swing-overview-panel]").forEach(panel=>{panel.hidden=panel.dataset.swingOverviewPanel!==id})}
+function switchRadarOverviewView(name){const active=name==="explain"?"explain":"overview";document.querySelectorAll("[data-radar-view]").forEach(button=>{const selected=button.dataset.radarView===active;button.classList.toggle("active",selected);button.setAttribute("aria-selected",String(selected))});document.querySelectorAll("[data-radar-view-panel]").forEach(panel=>{panel.hidden=panel.dataset.radarViewPanel!==active})}
 function renderCards(){
   const modeOrder={long_term_core:0,leveraged:1,swing00733:2,swing006201:3,swing:4,user_selected:5};
-  const radar=[...activeRadarItems()].sort((a,b)=>(modeOrder[strategyModeFor(a)]??9)-(modeOrder[strategyModeFor(b)]??9)||(displayScore(b)??-1)-(displayScore(a)??-1));
+  const radar=[...activeRadarItems()].sort((a,b)=>{const modeA=strategyModeFor(a),modeB=strategyModeFor(b),group=(modeOrder[modeA]??9)-(modeOrder[modeB]??9);if(group)return group;if(modeA==="long_term_core"&&modeB==="long_term_core")return longRankComparator(a,b);return(displayScore(b,modeB)??-1)-(displayScore(a,modeA)??-1)});
+  const longPrevious=previousLongRanks();
+  let longRankIndex=0;
   $("#cards").innerHTML=radar.length?radar.map((x,index)=>{
     const mode=strategyModeFor(x),decision=strategyDecisionFor(x,mode),stage=decision?.stage||x.buyStage,score=displayScore(x,mode);
+    const longRank=mode==="long_term_core"?++longRankIndex:null;
+    const previousLongItem=longRank?longPrevious?.items?.[x.id]:null;
+    const oldLongRank=Number(previousLongItem?.current_rank??longPrevious?.ranks?.[x.id]);
+    const longRankChange=longRank&&Number.isFinite(oldLongRank)?oldLongRank-longRank:0;
+    const longScoreChange=Number.isFinite(previousLongItem?.current_score)&&Number.isFinite(score)?score-previousLongItem.current_score:null;
+    const radarRankUi=longRank?`<div class="signalRadarRank"><b>第${longRank}名</b><span class="${longRankChange>0?"is-up":longRankChange<0?"is-down":"is-flat"}">排名 ${longRankChange>0?`↑${longRankChange}`:longRankChange<0?`↓${Math.abs(longRankChange)}`:"不變"}</span><span class="${longScoreChange>0?"is-up":longScoreChange<0?"is-down":"is-flat"}">分數 ${Number.isFinite(longScoreChange)?longScoreChange===0?"不變":`${longScoreChange>0?"+":""}${longScoreChange}`:"首次"}</span></div>`:"";
     const previousMode=index?strategyModeFor(radar[index-1]):null;
     const groupTitle=mode==="long_term_core"?"長期 ETF":mode==="leveraged"?"槓桿":mode==="swing00733"?"00733｜強勢趨勢拉回":mode==="swing006201"?"006201｜上櫃低檔轉折":mode==="swing"?"一般波段":"使用者自訂策略";
     const groupIntro=mode==="long_term_core"?"既有長期加碼引擎維持不變。":mode==="leveraged"?"既有 00631L 高波動與每日重設防護維持不變。":mode==="swing00733"?"買強者的休息；RS、拉回品質、週 KD 與 Market Gate。":mode==="swing006201"?"買修正後的止跌；70–79 分仍等待確認。":mode==="swing"?"止跌、均線、趨勢與動能確認優先。":"依自選策略呈現決策層。";
@@ -2285,15 +2388,34 @@ function renderCards(){
     const next=mode==="long_term_core"?nextDrawdownSummary(x):"";
     const proxy=x.valuation?.isProxy?`${x.valuation.primaryProxy} 代理`:x.valuation?.benchmark||"估值資料建立中";
     const formal=["swing00733","swing006201","leveraged"].includes(mode)?x.formalSwingDecision?.buyScore:mode==="user_selected"?x.formalScore:x.formalStrategyDecisions?.[mode]?.score;
+    const detailScoreState=decision?.scoreStatus==="complete"?"正式評分":decision?.scoreStatus==="provisional"?"暫定評分｜部分資料未納入":"資料不足";
     const swing=x.swingDecision;
     const tradeState=swing?window.HSPersistenceCore?.loadTradeState?.(x.id):null;
+    return buildRadarV2Card({x,mode,decision,stage,score,longRank,longRankChange,longScoreChange,formal,detailScoreState,tradeState});
     const swingDetails=swing?(mode==="leveraged"?`<section class="detailSection swingQuantDetail"><h4>00631L 恐慌反轉專用模型</h4><div class="signalDetailGrid"><div><span>恐慌機會分</span><b>${metricScore(swing.panicOpportunity?.score)}</b></div><div><span>反轉確認分</span><b>${metricScore(swing.reversalConfirmation?.score)}</b></div><div><span>波段買點分</span><b>${metricScore(swing.buyScore)}</b></div><div><span>Exit Pressure</span><b>${metricScore(swing.exitPressure?.score)}</b></div><div><span>Stage</span><b>${esc(swing.stage?.label||"資料不足")}</b></div><div><span>建議部位</span><b>${Number.isFinite(swing.stage?.targetPosition)?`${swing.stage.targetPosition}%`:"—"}</b></div><div><span>0050 市場回撤</span><b>${Number.isFinite(swing.underlying?.drawdown60)?fmt(swing.underlying.drawdown60)+"%":"—"}</b></div><div><span>0050 週 J</span><b>${metricScore(swing.weeklyKd?.j)}</b></div><div><span>0050 週乖離</span><b>${Number.isFinite(swing.underlying?.weeklyBias)?fmt(swing.underlying.weeklyBias)+"%":"—"}</b></div><div><span>大盤趨勢</span><b>${Number.isFinite(swing.underlying?.price)&&Number.isFinite(swing.underlying?.ma200)?(swing.underlying.price>=swing.underlying.ma200?"年線上":"年線下"):"資料不足"}</b></div><div><span>HS 判斷</span><b>${esc(dedicatedSwingStageRecommendation(swing))}</b></div></div><p>每日重設與波動耗損仍存在；恐慌深度只決定是否試單，反轉確認才決定部位。</p></section>`:`<section class="detailSection swingQuantDetail"><h4>Quant Core／Trend Structure</h4><div class="signalDetailGrid"><div><span>Raw／Final Score</span><b>${metricScore(swing.rawBuyScore)}／${metricScore(swing.buyScore)}</b></div><div><span>Exit Pressure</span><b>${metricScore(swing.exitPressure?.score)}</b></div><div><span>Setup Gate</span><b>${swing.gates?.setupGate?.passed?"PASS":"FAIL"}</b></div><div><span>市場 Gate</span><b>${swing.gates?.marketShockGate?.triggered||swing.gates?.bearGate?.triggered?"CAP 69":"PASS"}</b></div><div><span>MA20／60／200</span><b>${metricScore(swing.coreIndicators?.ma20)}／${metricScore(swing.coreIndicators?.ma60)}／${metricScore(swing.coreIndicators?.ma200)}</b></div><div><span>MA43／87／284</span><b>${esc(swing.trendStructure?.label||"資料不足")}</b></div><div><span>RS 20／60</span><b>${Number.isFinite(swing.relativeStrength?.return20)?fmt(swing.relativeStrength.return20)+"%":"—"}／${Number.isFinite(swing.relativeStrength?.return60)?fmt(swing.relativeStrength.return60)+"%":"—"}</b></div><div><span>資料信心</span><b>${esc(swing.confidence?.label||"INSUFFICIENT")}</b></div><div><span>目前部位</span><b>${Number.isFinite(tradeState?.position)?`${tradeState.position}%`:"0%"}</b></div><div><span>建議部位</span><b>${Number.isFinite(swing.stage?.targetPosition)?`${swing.stage.targetPosition}%`:"—"}</b></div><div><span>HS 判斷</span><b>${esc(swing.recommendedAction||swing.stage?.label||"資料不足")}</b></div></div><p>MA43／87／284 僅為 Trend Structure 顯示層，不參與買點核心 Gate、分數或出場條件。</p></section>`):"";
-    return `${groupHead}<details class="card signalCard ${x.signal.className} strategy-${mode}" data-signal-level="${esc(x.signal.label)}"><summary class="signalCardSummary" aria-label="${esc(x.id)} ${esc(x.name)}，${esc(strategyModeLabel(mode))}，${Number.isFinite(score)?score+"分":"資料不足"}，${esc(stage?.label||"資料不足")}"><div class="signalCompactIdentity"><div class="signalTickerLine"><b>${x.id}</b><span>${esc(x.name)}</span></div><div class="signalPriceLine">$${fmt(x.price)} <small class="${x.changePct>=0?"up":"down"}">${signed(x.changePct)}</small></div><div class="modelMeta"><span>${esc(strategyModeLabel(mode))}</span></div></div><div class="signalCompactMetrics"><b class="radarPrimaryScore ${Number.isFinite(score)?"":"scoreUnavailable"}">${esc(strategyScoreLabel(x,mode))}</b><span>週 J ${fmt(x.j)}｜週乖離 ${Number.isFinite(x.weekBias)?`${fmt(x.weekBias)}%`:"—"}｜估值 ${esc(valuationScoreLabel(x))}</span><span>${swing?`Raw ${metricScore(swing.rawBuyScore)}｜Exit ${metricScore(swing.exitPressure?.score)}｜`:""}距高點 ${Number.isFinite(x.fromHigh)?fmt(x.fromHigh)+"%":"—"}</span><span>${swing?`Trend Structure ${esc(swing.trendStructure?.label||"—")}`:esc(homeMovingAverageStates(x))}${next?`｜${esc(next)}`:""}</span></div><div class="signalCompactAction"><span class="signalLevel ${x.signal.className}">${esc(stage?.label||"資料不足")}</span><p>${esc(stage?.recommendation||stage?.conclusion||"等待資料更新")}</p><span class="signalExpandMark" aria-hidden="true"></span></div></summary><div class="signalCardDetails"><div class="signalDetailGrid"><div><span>買點分數</span><b>${Number.isFinite(score)?score:"資料不足"}</b></div><div><span>盤後正式分數</span><b>${Number.isFinite(formal)?formal:"—"}</b></div><div><span>週乖離（約13週均線）</span><b>${Number.isFinite(x.weekBias)?fmt(x.weekBias)+"%":"—"}</b></div><div><span>估值吸引力</span><b>${esc(valuationScoreLabel(x))}</b></div><div><span>止跌確認度</span><b>${metricScore(x.stopConfirmation?.score)}｜${esc(x.stopConfirmation?.label||"—")}</b></div><div><span>高點回檔幅度</span><b>${Number.isFinite(x.fromHigh)?fmt(x.fromHigh)+"%":"—"}</b></div><div><span>均線狀態</span><b>${esc(homeMovingAverageStates(x))}</b></div><div><span>週 K／D／J</span><b>${fmt(x.k)}／${fmt(x.d)}／${fmt(x.j)}｜${esc(x.direction)}</b></div><div><span>估值標的</span><b>${esc(proxy)}</b></div></div>${x.id==="00935"?'<div class="modelWarning">臺灣科技主題 ETF｜產業集中、波動較高；長期加碼仍需分批並控管單一產業曝險。</div>':""}${x.intradayProvisionalHigh?'<div class="modelWarning">盤中暫定新高；正式 52 週高點待收盤後確認。</div>':""}${swingDetails}${strategyBreakdownHtml(x,mode)}${mode==="long_term_core"?longTermDrawdownTableHtml(x):""}${valuationDetailsHtml(x)}${legacyComparisonHtml(x)}<section class="detailSection"><h4>歷史相似訊號統計</h4>${similarStatsHtml(x.historyStats.sameEnvironment,`相同市場環境｜${x.environment}`)}${similarStatsHtml(x.historyStats.allEnvironments,"全部市場環境")}</section>${buyPlanHtml(x)}<div class="dataFreshnessGrid"><span>價格：${esc(x.quoteTime?`${x.date} ${x.quoteTime}`:`${x.date} 收盤`)}</span><span>週 KD：${esc(x.kdDataDate)}｜${esc(x.weekDataLabel)}</span><span>估值：${esc(x.valuation?.sourceDate||"資料建立中")}</span><span>歷史統計截止：${esc(x.historyCutoff)}</span></div>${isHighVolatilityType(x.strategyType)?'<section class="leverageWarning"><b>槓桿型 ETF｜高波動模型</b><p>估值僅作標的市場背景；每日重設與波動耗損可能使長期結果偏離標的倍數。</p></section>':""}<div class="signalDetailActions"><button class="miniBtn" type="button" data-detail="${x.id}">查看走勢</button><button class="miniBtn" type="button" data-compare="${x.id}">加入比較</button><button class="miniBtn" type="button" data-drawdown="${x.id}">查看回檔價位</button></div></div></details>`;
+    return `${groupHead}<details class="card signalCard ${x.signal.className} strategy-${mode}" data-signal-level="${esc(x.signal.label)}" data-etf-id="${esc(x.id)}"><summary class="signalCardSummary" aria-label="${esc(x.id)} ${esc(x.name)}，${esc(strategyModeLabel(mode))}，${Number.isFinite(score)?score+"分":"資料不足"}，${esc(stage?.label||"資料不足")}"><div class="signalCompactIdentity">${radarRankUi}<div class="signalTickerLine"><b>${x.id}</b><span>${esc(x.name)}</span></div><div class="signalPriceLine">$${fmt(x.price)} <small class="${x.changePct>=0?"up":"down"}">${signed(x.changePct)}</small></div><div class="modelMeta"><span>${esc(strategyModeLabel(mode))}</span></div></div><div class="signalCompactMetrics"><b class="radarPrimaryScore ${Number.isFinite(score)?"":"scoreUnavailable"}">${esc(strategyScoreLabel(x,mode))}</b><span>週 J ${fmt(x.j)}｜週乖離 ${Number.isFinite(x.weekBias)?`${fmt(x.weekBias)}%`:"—"}｜估值 ${esc(valuationScoreLabel(x))}</span><span>${swing?`Raw ${metricScore(swing.rawBuyScore)}｜Exit ${metricScore(swing.exitPressure?.score)}｜`:""}距高點 ${Number.isFinite(x.fromHigh)?fmt(x.fromHigh)+"%":"—"}</span><span>${swing?`Trend Structure ${esc(swing.trendStructure?.label||"—")}`:`${esc(homeMovingAverageStates(x))}｜資料完整度 ${Number.isFinite(decision?.coverage)?Math.round(decision.coverage)+"%":"—"}`}${next?`｜${esc(next)}`:""}</span></div><div class="signalCompactAction"><span class="signalLevel ${x.signal.className}">${esc(stage?.label||"資料不足")}</span><p>${esc(stage?.recommendation||stage?.conclusion||"等待資料更新")}</p><span class="signalExpandMark" aria-hidden="true"></span></div></summary><div class="signalCardDetails"><div class="signalDetailHero"><span>${esc(strategyModeLabel(mode))}</span><b>${Number.isFinite(score)?score:"—"}<small>／100</small></b><strong>${esc(stage?.label||"資料不足")}</strong><em>${esc(detailScoreState)}｜資料完整度 ${Number.isFinite(decision?.coverage)?Math.round(decision.coverage)+"%":"—"}</em></div><div class="signalDetailGrid"><div><span>買點分數</span><b>${Number.isFinite(score)?score:"資料不足"}</b></div><div><span>盤後正式分數</span><b>${Number.isFinite(formal)?formal:"—"}</b></div><div><span>週乖離（約13週均線）</span><b>${Number.isFinite(x.weekBias)?fmt(x.weekBias)+"%":"—"}</b></div><div><span>估值吸引力</span><b>${esc(valuationScoreLabel(x))}</b></div><div><span>止跌確認度</span><b>${metricScore(x.stopConfirmation?.score)}｜${esc(x.stopConfirmation?.label||"—")}</b></div><div><span>高點回檔幅度</span><b>${Number.isFinite(x.fromHigh)?fmt(x.fromHigh)+"%":"—"}</b></div><div><span>均線狀態</span><b>${esc(homeMovingAverageStates(x))}</b></div><div><span>週 K／D／J</span><b>${fmt(x.k)}／${fmt(x.d)}／${fmt(x.j)}｜${esc(x.direction)}</b></div><div><span>估值標的</span><b>${esc(proxy)}</b></div></div>${x.id==="00935"?'<div class="modelWarning">臺灣科技主題 ETF｜產業集中、波動較高；長期加碼仍需分批並控管單一產業曝險。</div>':""}${x.intradayProvisionalHigh?'<div class="modelWarning">盤中暫定新高；正式 52 週高點待收盤後確認。</div>':""}${swingDetails}${strategyBreakdownHtml(x,mode)}${mode==="long_term_core"?longTermDrawdownTableHtml(x):""}${valuationDetailsHtml(x)}${legacyComparisonHtml(x)}<section class="detailSection"><h4>歷史相似訊號統計</h4>${similarStatsHtml(x.historyStats.sameEnvironment,`相同市場環境｜${x.environment}`)}${similarStatsHtml(x.historyStats.allEnvironments,"全部市場環境")}</section>${buyPlanHtml(x)}<div class="dataFreshnessGrid"><span>價格：${esc(x.quoteTime?`${x.date} ${x.quoteTime}`:`${x.date} 收盤`)}</span><span>週 KD：${esc(x.kdDataDate)}｜${esc(x.weekDataLabel)}</span><span>估值：${esc(x.valuation?.sourceDate||"資料建立中")}</span><span>歷史統計截止：${esc(x.historyCutoff)}</span></div>${isHighVolatilityType(x.strategyType)?'<section class="leverageWarning"><b>槓桿型 ETF｜高波動模型</b><p>估值僅作標的市場背景；每日重設與波動耗損可能使長期結果偏離標的倍數。</p></section>':""}<div class="signalDetailActions"><button class="miniBtn" type="button" data-detail="${x.id}">查看走勢</button><button class="miniBtn" type="button" data-compare="${x.id}">加入比較</button><button class="miniBtn" type="button" data-drawdown="${x.id}">查看回檔價位</button></div></div></details>`;
   }).join(""):'<div class="watchEmpty">我的自選尚未加入 ETF。</div>';
+  const longOverview=radar.filter(item=>strategyModeFor(item)==="long_term_core").sort(longRankComparator);
+  const overviewRow=(x,index)=>{const decision=strategyDecisionFor(x,"long_term_core"),score=displayScore(x,"long_term_core"),old=longPrevious?.items?.[x.id],oldRank=Number(old?.current_rank??longPrevious?.ranks?.[x.id]),rankChange=Number.isFinite(oldRank)?oldRank-(index+1):0,scoreChange=Number.isFinite(old?.current_score)&&Number.isFinite(score)?score-old.current_score:null;return`<button class="radarOverviewRankRow" type="button" data-open-radar-detail="${esc(x.id)}"><span class="radarOverviewRank">第${index+1}名</span><span class="radarOverviewTicker"><b>${esc(x.id)}</b><small>${esc(x.name)}</small></span><span class="radarOverviewScore"><b>${Number.isFinite(score)?score:"—"}</b><small>分</small></span><span class="radarOverviewChange">排名 ${rankChange>0?`↑${rankChange}`:rankChange<0?`↓${Math.abs(rankChange)}`:"不變"}<br>分數 ${Number.isFinite(scoreChange)?scoreChange===0?"不變":`${scoreChange>0?"+":""}${scoreChange}`:"首次"}</span><span class="radarOverviewStage">${esc(decision?.stage?.label||"資料不足")}</span></button>`};
+  $("#radarOverviewLong").innerHTML=longOverview.map((item,index)=>longOverviewCardHtml(item,index,longPrevious)).join("")||'<div class="newsEmpty">長期 ETF 資料載入中</div>';
+  const swingRoles={"00631L":"恐慌反轉型","00733":"強勢趨勢拉回型","006201":"低檔止跌轉折型"};
+  const swingOverviewItems=["00631L","00733","006201"].map(id=>radar.find(item=>item.id===id)).filter(Boolean);
+  $("#radarOverviewSwingTabs").innerHTML=swingOverviewItems.map((x,index)=>`<button class="${index===0?"active":""}" type="button" role="tab" aria-selected="${index===0}" data-swing-overview="${esc(x.id)}">${x.id} ${esc(swingRoles[x.id])}</button>`).join("");
+  $("#radarOverviewSwing").innerHTML=swingOverviewItems.map((x,index)=>`<div class="swingOverviewPane" data-swing-overview-panel="${esc(x.id)}" ${index===0?"":"hidden"}>${swingOverviewHtml(x)}<button class="swingDetailEntry" type="button" data-open-radar-detail="${esc(x.id)}">查看 ${esc(x.id)} 完整詳情</button></div>`).join("")||'<div class="newsEmpty">波段 ETF 資料載入中</div>';
+  $("#radarSentimentText").textContent=combinedSentimentConclusion();
   document.querySelectorAll("[data-detail]").forEach(btn=>btn.addEventListener("click",()=>openDetail(btn.dataset.detail)));
-  document.querySelectorAll("[data-compare]").forEach(btn=>btn.addEventListener("click",()=>scrollToCompare(btn.dataset.compare)));
+  document.querySelectorAll("[data-compare]").forEach(btn=>btn.remove());
   document.querySelectorAll("[data-drawdown]").forEach(btn=>btn.addEventListener("click",()=>openDrawdownTool(btn.dataset.drawdown)));
+  document.querySelectorAll("[data-open-radar-detail]").forEach(btn=>btn.addEventListener("click",()=>showRadarDetail(btn.dataset.openRadarDetail)));
+  document.querySelectorAll("[data-detail-view]").forEach(btn=>btn.addEventListener("click",()=>switchRadarDetailView(btn)));
+  document.querySelectorAll("[data-swing-overview]").forEach(btn=>btn.addEventListener("click",()=>switchSwingOverview(btn.dataset.swingOverview)));
+  const selectedId=$("#cards").dataset.selectedId;if(selectedId)showRadarDetail(selectedId,false);
 }
+function showRadarDetail(id,scroll=true){
+  const deck=$("#cards"),target=deck?[...deck.querySelectorAll(".signalCard")].find(card=>card.dataset.etfId===String(id||"")):null;if(!deck||!target)return;
+  deck.dataset.selectedId=String(id);deck.classList.add("is-open");deck.querySelectorAll(".signalCard").forEach(card=>card.classList.toggle("is-selected",card===target));target.open=true;$("#radarDetailBack")?.classList.add("is-visible");$("#radarOverview")?.classList.add("detail-active");if(scroll)target.scrollIntoView({behavior:"smooth",block:"start"});
+}
+function closeRadarDetail(){const deck=$("#cards");if(!deck)return;deck.classList.remove("is-open");delete deck.dataset.selectedId;deck.querySelectorAll(".signalCard").forEach(card=>{card.classList.remove("is-selected");card.open=false});$("#radarDetailBack")?.classList.remove("is-visible");$("#radarOverview")?.classList.remove("detail-active");$("#radarOverview")?.scrollIntoView({behavior:"smooth",block:"start"})}
 function formatYi(n){return `${fmt(n/1e8)} 億`}
 function signedYi(n){
   if(!Number.isFinite(n))return"—";
@@ -2321,13 +2443,14 @@ function ratioChangeText(value){return Number.isFinite(value)?`${value>0?"+":""}
 function marginRiskTone(risk){return`marginRiskTone-${esc(risk?.interpretation?.tone||"neutral")}`}
 function marginNumberTone(value,positiveClass="marginIncrease",negativeClass="marginDecrease"){return Number.isFinite(value)?value>0?positiveClass:value<0?negativeClass:"marginNeutral":"marginNeutral"}
 function maintenanceTone(value){if(!Number.isFinite(value))return"marginNeutral";if(value>=160)return"marginSafe";if(value>=150)return"marginCaution";if(value>=140)return"marginWarning";if(value>=130)return"marginDangerOrange";return"marginDanger"}
+function maintenanceDisplayLabel(value){if(!Number.isFinite(value))return"資料尚未更新";if(value>=160)return"市場槓桿壓力低";if(value>=150)return"中性偏穩";if(value>=140)return"融資壓力升高";return"斷頭潮風險升高"}
 function marginRiskCompactHtml(risk){
   if(!risk)return'<div class="newsEmpty sentimentUnavailable">台股融資風險資料尚未更新</div>';
   const balance=risk.margin_balance,ratio=risk.maintenance_ratio,short=risk.short_balance||{},coverage=risk.coverage||{};
   const values=HSMarginRiskCore.displayValues(risk),interpretation=risk.interpretation||{};
   const stale=risk.stale?'<span class="marginStale">資料可能過期</span>':"";
-  const band=HSMarginRiskCore.ratioBand(values.maintenanceRatio),dayPct=Number.isFinite(balance.daily_change_pct)?` (${balance.daily_change_pct>0?"+":""}${fmt(balance.daily_change_pct)}%)`:"";
-  return `<article class="marginBalanceCard"><header><h3><span aria-hidden="true">💰</span> 融資融券餘額</h3><time>收盤 ${esc(values.dataDate||"—")}</time></header><div class="marginBalanceSection"><div class="marginBalanceRow"><span>推估融資本金</span><b>${Number.isFinite(values.financingPrincipal)?formatYi(values.financingPrincipal):"資料暫缺"}</b></div><div class="marginBalanceRow marginSubRow"><span>較前日增減</span><strong class="${marginNumberTone(balance.daily_change)}">${signedYi(balance.daily_change)}${esc(dayPct)}</strong></div></div><div class="marginBalanceSection"><div class="marginBalanceRow"><span>市場推估融資維持率</span><b class="${maintenanceTone(values.maintenanceRatio)}">${ratioText(values.maintenanceRatio)}</b></div><div class="marginFormula">擔保品市值 ${Number.isFinite(values.collateralMarketValue)?formatYi(values.collateralMarketValue):"—"} ÷ 推估融資本金 ${Number.isFinite(values.financingPrincipal)?formatYi(values.financingPrincipal):"—"}。<br>新部位初始約 166.7%（融資成數 6 成）；130% 僅為個別信用帳戶法規參考。</div><div class="marginBandText ${maintenanceTone(values.maintenanceRatio)}">${esc(band.label)}</div></div><div class="marginBalanceSection"><div class="marginBalanceRow"><span>融券餘額</span><b>${Number.isFinite(short.shares)?`${fmt(short.shares/1000)} 張`:"資料暫缺"}</b></div><div class="marginBalanceRow marginSubRow"><span>融券較前日增減</span><strong class="${marginNumberTone(short.daily_change)}">${Number.isFinite(short.daily_change)?`${short.daily_change>0?"+":""}${fmt(short.daily_change/1000)} 張`:"—"}</strong></div><p class="marginCompactNote">融資餘額 ${Number.isFinite(balance.balance_shares)?`${fmt(balance.balance_shares/1000)} 張`:"—"}，億元金額依逐檔滾動成本模型推估。融資減少常見於停損或降槓桿；融券增加代表空方部位增加。</p></div><footer><span>使用最近交易日盤後資料｜資料日期 ${esc(values.dataDate||"—")}</span><span>最後更新 ${esc(formatTaipeiDateTime(risk.updated_at))}</span>${stale}</footer></article>`;
+  const bandLabel=maintenanceDisplayLabel(values.maintenanceRatio),marker=Number.isFinite(values.maintenanceRatio)?Math.max(0,Math.min(100,(values.maintenanceRatio-120)/50*100)):null,dayPct=Number.isFinite(balance.daily_change_pct)?` (${balance.daily_change_pct>0?"+":""}${fmt(balance.daily_change_pct)}%)`:"";
+  return `<article class="marginBalanceCard"><header><h3><span aria-hidden="true">💰</span> 融資融券餘額</h3><time>收盤 ${esc(values.dataDate||"—")}</time></header><div class="marginBalanceSection"><div class="marginBalanceRow"><span>推估融資本金</span><b>${Number.isFinite(values.financingPrincipal)?formatYi(values.financingPrincipal):"資料暫缺"}</b></div><div class="marginBalanceRow marginSubRow"><span>較前日增減</span><strong class="${marginNumberTone(balance.daily_change)}">${signedYi(balance.daily_change)}${esc(dayPct)}</strong></div></div><div class="marginBalanceSection"><div class="marginBalanceRow"><span>市場推估融資維持率</span><b class="${maintenanceTone(values.maintenanceRatio)}">${ratioText(values.maintenanceRatio)}</b></div><div class="marginFormula">擔保品市值 ${Number.isFinite(values.collateralMarketValue)?formatYi(values.collateralMarketValue):"—"} ÷ 推估融資本金 ${Number.isFinite(values.financingPrincipal)?formatYi(values.financingPrincipal):"—"}。<br>新部位初始約 166.7%（融資成數 6 成）；130% 僅為個別信用帳戶法規參考。</div><div class="marginRiskScale" aria-label="融資維持率色帶 120 至 170"><span>120</span><span>130</span><span>140</span><span>150</span><span>160</span><span>170</span>${Number.isFinite(marker)?`<i style="left:${marker}%" aria-hidden="true"></i>`:""}</div><div class="marginBandText ${maintenanceTone(values.maintenanceRatio)}">${esc(bandLabel)}</div></div><div class="marginBalanceSection"><div class="marginBalanceRow"><span>融券餘額</span><b>${Number.isFinite(short.shares)?`${fmt(short.shares/1000)} 張`:"資料暫缺"}</b></div><div class="marginBalanceRow marginSubRow"><span>融券較前日增減</span><strong class="${marginNumberTone(short.daily_change)}">${Number.isFinite(short.daily_change)?`${short.daily_change>0?"+":""}${fmt(short.daily_change/1000)} 張`:"—"}</strong></div><p class="marginCompactNote">融資餘額 ${Number.isFinite(balance.balance_shares)?`${fmt(balance.balance_shares/1000)} 張`:"—"}，億元金額依逐檔滾動成本模型推估。融資減少常見於停損或降槓桿；融券增加代表空方部位增加。</p></div><footer><span>使用最近交易日盤後資料｜資料日期 ${esc(values.dataDate||"—")}</span><span>最後更新 ${esc(formatTaipeiDateTime(risk.updated_at))}</span>${stale}</footer></article>`;
 }
 function flowTone(value){return !Number.isFinite(value)||Math.abs(value)<1e6?"moodFlat":value>0?"up":"down"}
 function flowPeriod(value){return Number.isFinite(value)?`${value>0?"+":""}${formatYi(value)}｜${value>0?"買超":value<0?"賣超":"近乎持平"}`:"資料暫缺"}
@@ -2348,9 +2471,9 @@ function renderHomeSentimentCards(){
   const cnnSnapshot=cnn?.snapshot||HSDataFreshnessCore.normalize({});
   const futuresSnapshot=futuresPosition?.snapshot||HSDataFreshnessCore.normalize({});
   setHomeSentimentCard("#homeMarginBalanceCard",{value:Number.isFinite(values.financingPrincipal)?formatYi(values.financingPrincipal):"—",status:risk?.interpretation?.label||"資料尚未更新",date:values.dataDate,snapshot:marginSnapshot});
-  setHomeSentimentCard("#homeMaintenanceCard",{value:Number.isFinite(values.maintenanceRatio)?`${fmt(values.maintenanceRatio)}%`:"—",status:Number.isFinite(values.maintenanceRatio)?HSMarginRiskCore.ratioBand(values.maintenanceRatio).label:"資料尚未更新",date:values.dataDate,snapshot:marginSnapshot});
+  setHomeSentimentCard("#homeMaintenanceCard",{value:Number.isFinite(values.maintenanceRatio)?`${fmt(values.maintenanceRatio)}%`:"—",status:maintenanceDisplayLabel(values.maintenanceRatio),date:values.dataDate,snapshot:marginSnapshot});
   setHomeSentimentCard("#homeCnnCard",{value:Number.isFinite(cnn?.score)?fmt(cnn.score):"—",status:cnn?.label||"資料尚未更新",date:cnnSnapshot.data_date,snapshot:cnnSnapshot});
-  setHomeSentimentCard("#homeForeignFuturesCard",{value:Number.isFinite(foreign?.net)?`${foreign.net>=0?"+":""}${fmt(foreign.net)} 口`:"—",status:Number.isFinite(foreign?.net)?foreign.net>0?"淨多":"淨空":"資料尚未更新",date:futuresPosition?.dataDate,snapshot:futuresSnapshot});
+  setHomeSentimentCard("#homeForeignFuturesCard",{value:Number.isFinite(foreign?.net)?`${foreign.net<0?"淨空":"淨多"} ${fmt(Math.abs(foreign.net))} 口`:"—",status:Number.isFinite(foreign?.net)?foreign.net>0?"偏多":"偏空":"資料尚未更新",date:futuresPosition?.dataDate,snapshot:futuresSnapshot});
   const ratio=Number.isFinite(tmf?.long)&&Number.isFinite(tmf?.short)&&tmf.short>0?tmf.long/tmf.short:null;
   setHomeSentimentCard("#homeTmfRatioCard",{value:Number.isFinite(ratio)?ratio.toFixed(2):"—",status:Number.isFinite(ratio)?ratio>1.1?"偏多":ratio<.9?"偏空":"中性":"資料尚未更新",date:futuresPosition?.dataDate,snapshot:futuresSnapshot});
 }
@@ -2390,11 +2513,10 @@ function renderSentiment(){
 }
 function renderChipOverview(){
   const target=$("#chipOverviewContent");if(!target)return;
-  const margin=marketChip.margin,cnn=cnnFearGreed,inst=marketChip.institutional,foreign=futuresPosition?.foreign_tx;
-  const total=inst?inst.foreign.today+inst.trust.today+inst.dealer.today:null;
+  const cnn=cnnFearGreed,foreign=futuresPosition?.foreign_tx,tmf=futuresPosition?.estimated_non_institutional_tmf;
   const card=(tab,title,value,status)=>`<button class="chipOverviewCard" type="button" data-chip-jump="${tab}" aria-label="查看${esc(title)}詳細資料"><span>${esc(title)}</span><b>${esc(value)}</b><small>${esc(status)}</small></button>`;
-  const risk=marketChip.marginRisk,ratio=risk?.maintenance_ratio;
-  target.innerHTML=`<div class="chipOverviewGrid">${card("mood","😨 CNN Fear & Greed",cnn?`${fmt(cnn.score)} 分`:"資料暫缺",cnn?.label||"不以 0 代替")}${card("margin","🛡️ 市場推估融資維持率",risk?ratioText(ratio?.value):"資料尚未更新",risk?`${risk.interpretation?.label||risk.risk_state}｜盤後 ${risk.data_date}`:"不以 0 代替")}${card("institutions","🏛️ 三大法人近月",inst&&Number.isFinite(inst.total.twenty)?`${inst.total.twenty>=0?"+":""}${formatYi(inst.total.twenty)}`:"資料暫缺",inst?`${inst.periods.twenty}個交易日｜${inst.date}`:"今日盤後更新")}${card("futures","📑 外資台指期淨部位",foreign?`${foreign.net>=0?"+":""}${fmt(foreign.net)} 口`:"資料暫缺",futuresPosition?`資料日期 ${futuresPosition.dataDate}`:"盤後更新")}</div><p class="chipOverviewConclusion">${esc(combinedSentimentConclusion())}</p>`;
+  const risk=marketChip.marginRisk,values=HSMarginRiskCore.displayValues(risk),tmfRatio=Number.isFinite(tmf?.long)&&Number.isFinite(tmf?.short)&&tmf.short>0?tmf.long/tmf.short:null;
+  target.innerHTML=`<div class="chipOverviewGrid">${card("margin","台股融資餘額",Number.isFinite(values.financingPrincipal)?formatYi(values.financingPrincipal):"資料暫缺",risk?`盤後 ${values.dataDate}`:"不以 0 代替")}${card("margin","市場推估融資維持率",Number.isFinite(values.maintenanceRatio)?`${fmt(values.maintenanceRatio)}%`:"資料暫缺",`${maintenanceDisplayLabel(values.maintenanceRatio)}｜${values.dataDate||"待更新"}`)}${card("mood","CNN Fear & Greed",cnn?`${fmt(cnn.score)} 分`:"資料暫缺",cnn?.label||"不以 0 代替")}${card("futures","外資台指期淨空單",Number.isFinite(foreign?.net)?`${foreign.net<0?"淨空":"淨多"} ${fmt(Math.abs(foreign.net))} 口`:"資料暫缺",futuresPosition?`資料日期 ${futuresPosition.dataDate}`:"盤後更新")}${card("futures","微台散戶多空比",Number.isFinite(tmfRatio)?tmfRatio.toFixed(2):"資料暫缺",Number.isFinite(tmfRatio)?`${tmfRatio>1.1?"偏多":tmfRatio<.9?"偏空":"中性"}｜${futuresPosition?.dataDate||"待更新"}`:"不以 0 代替")}</div><p class="chipOverviewConclusion">${esc(combinedSentimentConclusion())}</p><div class="freshnessLegend" aria-label="資料狀態圖例"><span><i class="latest"></i>最新</span><span><i class="stale"></i>沿用舊資料</span><span><i class="waiting"></i>待更新</span><span><i class="failed"></i>更新失敗</span></div>`;
   document.querySelectorAll("[data-chip-jump]").forEach(button=>button.addEventListener("click",()=>switchChipTab(button.dataset.chipJump)));
 }
 function switchChipTab(name,{scroll=true}={}){
@@ -2610,15 +2732,17 @@ function bestClass(values,v,mode="max"){
   const valid=values.filter(Number.isFinite);const best=mode==="max"?Math.max(...valid):Math.min(...valid);return Math.abs(v-best)<1e-9?"best":"";
 }
 function renderChecks(){
-  $("#checks").innerHTML=all.map(x=>`<label><input type="checkbox" data-id="${x.id}" checked>${x.id}</label>`).join("");
+  const checks=$("#checks");if(!checks)return;
+  checks.innerHTML=all.map(x=>`<label><input type="checkbox" data-id="${x.id}" checked>${x.id}</label>`).join("");
   document.querySelectorAll("#checks input").forEach(el=>el.addEventListener("change",()=>{el.checked?selected.add(el.dataset.id):selected.delete(el.dataset.id);renderTable()}));
 }
 function renderTable(){
+  const thead=$("#thead"),tbody=$("#tbody"),mobileCompare=$("#mobileCompare");if(!thead||!tbody||!mobileCompare)return;
   const c=all.filter(x=>selected.has(x.id));
-  $("#thead").innerHTML="<tr><th>項目</th>"+c.map(x=>`<th>${x.id}</th>`).join("")+"</tr>";
+  thead.innerHTML="<tr><th>項目</th>"+c.map(x=>`<th>${x.id}</th>`).join("")+"</tr>";
   const row=(n,f)=>`<tr><td>${n}</td>${c.map(f).join("")}</tr>`,vals={score:c.map(x=>x.score),j:c.map(x=>x.j),y:c.map(x=>x.ytd),r1:c.map(x=>x.r1y),m:c.map(x=>x.mdd),v:c.map(x=>x.vol),h:c.map(x=>x.fromHigh)};
-  $("#tbody").innerHTML=row("買點分數",x=>`<td class="${bestClass(vals.score,x.score,"max")}"><b>${scoreText(x)}</b><br><small>${x.action}</small></td>`)+row("名稱",x=>`<td>${x.name}</td>`)+row("ETF 類型",x=>`<td>${esc(HSEtfModelCore.categoryLabel(x.category))}</td>`)+row("最新價",x=>`<td>$${fmt(x.price)}</td>`)+row("今日漲跌",x=>`<td class="${x.changePct>=0?"up":"down"}">${signed(x.changePct)}</td>`)+row("週 J 值",x=>`<td class="${bestClass(vals.j,x.j,"min")}"><b>${fmt(x.j)}</b><br><small>${x.weekState.short}</small></td>`)+row("歷史 J＜10 後 4 週勝率",x=>`<td>${fmt(x.backtest.four.hit)}%<br><small>${x.backtest.four.count} 次</small></td>`)+row("今年報酬",x=>`<td class="${bestClass(vals.y,x.ytd,"max")} ${x.ytd>=0?"up":"down"}">${fmt(x.ytd)}%</td>`)+row("近一年報酬",x=>`<td class="${bestClass(vals.r1,x.r1y,"max")} ${x.r1y>=0?"up":"down"}">${fmt(x.r1y)}%</td>`)+row("近三年累積",x=>`<td class="${x.r3y>=0?"up":"down"}">${fmt(x.r3y)}%</td>`)+row("距 52 週高點",x=>`<td class="${bestClass(vals.h,x.fromHigh,"min")}">${fmt(x.fromHigh)}%</td>`)+row("一年最大回檔",x=>`<td class="${bestClass(vals.m,x.mdd,"max")}">${fmt(x.mdd)}%</td>`)+row("一年年化波動",x=>`<td class="${bestClass(vals.v,x.vol,"min")}">${fmt(x.vol)}%</td>`)+row("風險",x=>`<td>${x.risk}</td>`);
-  $("#mobileCompare").innerHTML=c.map(x=>`<article class="mobileEtf ${x.signal.className}"><div class="mobileEtfHead"><div><b>${x.id}</b><small>${x.name}</small></div><span class="pill ${scoreTone(x.score)}">${scoreText(x)}</span></div><div class="splitNote"><b>${x.action}</b></div><div class="mobileMetrics"><div class="mobileMetric"><span>ETF 類型</span><strong>${esc(HSEtfModelCore.categoryLabel(x.category))}</strong></div><div class="mobileMetric"><span>最新價</span><strong>$${fmt(x.price)}</strong></div><div class="mobileMetric"><span>週 J 值</span><strong>${fmt(x.j)} · ${x.weekState.short}</strong></div><div class="mobileMetric"><span>4 週歷史勝率</span><strong>${fmt(x.backtest.four.hit)}%</strong></div><div class="mobileMetric"><span>今年報酬</span><strong class="${x.ytd>=0?"up":"down"}">${fmt(x.ytd)}%</strong></div><div class="mobileMetric"><span>距 52 週高點</span><strong>${fmt(x.fromHigh)}%</strong></div></div></article>`).join("")||'<div class="skeleton">請至少勾選一檔 ETF</div>';
+  tbody.innerHTML=row("買點分數",x=>`<td class="${bestClass(vals.score,x.score,"max")}"><b>${scoreText(x)}</b><br><small>${x.action}</small></td>`)+row("名稱",x=>`<td>${x.name}</td>`)+row("ETF 類型",x=>`<td>${esc(HSEtfModelCore.categoryLabel(x.category))}</td>`)+row("最新價",x=>`<td>$${fmt(x.price)}</td>`)+row("今日漲跌",x=>`<td class="${x.changePct>=0?"up":"down"}">${signed(x.changePct)}</td>`)+row("週 J 值",x=>`<td class="${bestClass(vals.j,x.j,"min")}"><b>${fmt(x.j)}</b><br><small>${x.weekState.short}</small></td>`)+row("歷史 J＜10 後 4 週勝率",x=>`<td>${fmt(x.backtest.four.hit)}%<br><small>${x.backtest.four.count} 次</small></td>`)+row("今年報酬",x=>`<td class="${bestClass(vals.y,x.ytd,"max")} ${x.ytd>=0?"up":"down"}">${fmt(x.ytd)}%</td>`)+row("近一年報酬",x=>`<td class="${bestClass(vals.r1,x.r1y,"max")} ${x.r1y>=0?"up":"down"}">${fmt(x.r1y)}%</td>`)+row("近三年累積",x=>`<td class="${x.r3y>=0?"up":"down"}">${fmt(x.r3y)}%</td>`)+row("距 52 週高點",x=>`<td class="${bestClass(vals.h,x.fromHigh,"min")}">${fmt(x.fromHigh)}%</td>`)+row("一年最大回檔",x=>`<td class="${bestClass(vals.m,x.mdd,"max")}">${fmt(x.mdd)}%</td>`)+row("一年年化波動",x=>`<td class="${bestClass(vals.v,x.vol,"min")}">${fmt(x.vol)}%</td>`)+row("風險",x=>`<td>${x.risk}</td>`);
+  mobileCompare.innerHTML=c.map(x=>`<article class="mobileEtf ${x.signal.className}"><div class="mobileEtfHead"><div><b>${x.id}</b><small>${x.name}</small></div><span class="pill ${scoreTone(x.score)}">${scoreText(x)}</span></div><div class="splitNote"><b>${x.action}</b></div><div class="mobileMetrics"><div class="mobileMetric"><span>ETF 類型</span><strong>${esc(HSEtfModelCore.categoryLabel(x.category))}</strong></div><div class="mobileMetric"><span>最新價</span><strong>$${fmt(x.price)}</strong></div><div class="mobileMetric"><span>週 J 值</span><strong>${fmt(x.j)} · ${x.weekState.short}</strong></div><div class="mobileMetric"><span>4 週歷史勝率</span><strong>${fmt(x.backtest.four.hit)}%</strong></div><div class="mobileMetric"><span>今年報酬</span><strong class="${x.ytd>=0?"up":"down"}">${fmt(x.ytd)}%</strong></div><div class="mobileMetric"><span>距 52 週高點</span><strong>${fmt(x.fromHigh)}%</strong></div></div></article>`).join("")||'<div class="skeleton">請至少勾選一檔 ETF</div>';
 }
 function scrollToCompare(id){
   selected.add(id);switchTab("more");$("#compare").open=true;document.querySelectorAll("#checks input").forEach(x=>{if(x.dataset.id===id)x.checked=true});renderTable();setTimeout(()=>$("#compare").scrollIntoView({behavior:"smooth",block:"start"}),120);
@@ -2639,9 +2763,11 @@ function openDetail(id){
 }
 $("#closeModal").addEventListener("click",()=>$("#modal").classList.remove("show"));
 $("#modal").addEventListener("click",e=>{if(e.target===$("#modal"))$("#modal").classList.remove("show")});
-function openHsStory(){const modal=$("#hsStoryModal");modal.classList.add("show");modal.setAttribute("aria-hidden","false");setTimeout(()=>$("#closeHsStory").focus(),30)}
-function closeHsStory(){const modal=$("#hsStoryModal");modal.classList.remove("show");modal.setAttribute("aria-hidden","true");$("#openHsStory").focus()}
+let lastHsStoryTrigger=$("#openHsStory");
+function openHsStory(event){lastHsStoryTrigger=event?.currentTarget||lastHsStoryTrigger;const modal=$("#hsStoryModal");modal.classList.add("show");modal.setAttribute("aria-hidden","false");setTimeout(()=>$("#closeHsStory").focus(),30)}
+function closeHsStory(){const modal=$("#hsStoryModal");modal.classList.remove("show");modal.setAttribute("aria-hidden","true");lastHsStoryTrigger?.focus()}
 $("#openHsStory").addEventListener("click",openHsStory);
+$("#openHsStoryHome").addEventListener("click",openHsStory);
 $("#closeHsStory").addEventListener("click",closeHsStory);
 $("#hsStoryModal").addEventListener("click",event=>{if(event.target===$("#hsStoryModal"))closeHsStory()});
 document.addEventListener("keydown",event=>{if(event.key==="Escape"&&$("#hsStoryModal").classList.contains("show"))closeHsStory()});
@@ -2739,7 +2865,10 @@ document.querySelectorAll("[data-radar-mode]").forEach(button=>button.addEventLi
   refreshAllDecisionModels();renderWatchlist();renderTop();renderCards();
 }));
 document.querySelectorAll("[data-chip-tab]").forEach(button=>button.addEventListener("click",()=>switchChipTab(button.dataset.chipTab)));
+document.querySelectorAll("[data-radar-view]").forEach(button=>button.addEventListener("click",()=>switchRadarOverviewView(button.dataset.radarView)));
 $("#homeSwingBrief").addEventListener("click",event=>{if(event.target.closest("[data-open-etf-radar]"))switchTab("signals")});
+$("#radarDetailBack").addEventListener("click",closeRadarDetail);
+$("#radarSentimentShortcut").addEventListener("click",()=>switchTab("sentiment"));
 document.querySelectorAll("[data-buy-plan-mode]").forEach(button=>button.addEventListener("click",()=>{
   buyPlanMode=["conservative","balanced","aggressive"].includes(button.dataset.buyPlanMode)?button.dataset.buyPlanMode:"balanced";
   localStorage.setItem(BUY_PLAN_STORAGE_KEY,buyPlanMode);
@@ -2754,7 +2883,7 @@ $("#drawdownForm").addEventListener("submit",async event=>{
   try{await lookupDrawdown($("#drawdownCode").value)}catch(error){$("#drawdownStatus").textContent=error.message||"查詢失敗，請稍後再試。";$("#drawdownResult").innerHTML=""}
 });
 async function load(){
-  const m=$("#message"),b=$("#reload"),buttonLabel=b.querySelector("span");syncWatchlistState();renderWatchlist();m.className="message info";m.textContent=`正在更新 ${ids.length} 檔 ETF、川普動態、融資風險與三大法人…`;b.disabled=true;b.setAttribute("aria-busy","true");if(buttonLabel)buttonLabel.textContent="更新中…";
+  const m=$("#message"),b=$("#reload"),buttonLabel=b.querySelector("span");syncWatchlistState();renderWatchlist();m.className="message info";m.textContent="正在更新最新資料…";b.disabled=true;b.setAttribute("aria-busy","true");if(buttonLabel)buttonLabel.textContent="更新中…";
   try{
     await Promise.all([loadCorporateActionTables(),loadEtfValuation()]);
     const settled=await Promise.allSettled(ids.map(one));
@@ -2766,8 +2895,8 @@ async function load(){
     refreshAllDecisionModels();all.forEach(captureFormalState);renderMarket();renderTrump();renderSentiment();renderEvents();renderTop();renderCards();renderTable();
     if(pendingDelayedQuotes)applyHomeDelayedQuotes(pendingDelayedQuotes);
     const chipStatus=marketChip.marginRisk&&marketChip.institutional&&cnnFearGreed?"融資風險、法人與 CNN 情緒已更新":"部分籌碼或情緒資料尚未更新";
-    m.textContent=`更新成功：${all.length} 檔價格至 ${all[0].date} 收盤；${chipStatus}${failed.length?`；${failed.join("、")} 暫時讀取失敗`:""}。`;
-    $("#updated").textContent="資料至 "+all[0].date+" 收盤｜"+all[0].weekState.label;maybeNotify();
+    m.textContent=`資料更新｜${all[0].date}${all[0].quoteTime?` ${all[0].quoteTime}`:" 收盤"}${failed.length?`｜${failed.length} 檔沿用最後資料`:""}`;
+    if($("#updated"))$("#updated").textContent="資料至 "+all[0].date+" 收盤｜"+all[0].weekState.label;maybeNotify();
   }catch(e){m.className="message error";m.innerHTML="更新失敗："+esc(e.message)+"<br>若 API 額度不足，請填入 FinMind Token 後重新更新。"}
   finally{b.disabled=false;b.removeAttribute("aria-busy");if(buttonLabel)buttonLabel.textContent="更新"}
 }
