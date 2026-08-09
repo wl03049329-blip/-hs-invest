@@ -64,28 +64,27 @@ check("延遲行情更新、節流、退避與背景頁處理", () => {
   assert.doesNotMatch(html + ui + css, /即時行情/);
 });
 
-check("首頁 CNN 與 FOMO 精簡卡片可切換籌碼頁", () => {
+check("首頁五項情緒精簡卡片可切換籌碼頁", () => {
   assert.match(html, /id="homeCnnCard"/);
-  assert.match(html, /id="homeFomoCard"/);
-  assert.match(ui, /switchTab\("sentiment"\)/);
+  for (const id of ["homeMarginBalanceCard", "homeMaintenanceCard", "homeForeignFuturesCard", "homeTmfRatioCard"]) assert.match(html, new RegExp(`id="${id}"`));
+  assert.match(html, /data-home-chip/);
 });
 
-check("首頁情緒摘要位於市場摘要上方", () => {
-  const overviewIndex = html.indexOf('id="homeMarketOverview"');
+check("首頁固定四區順序且市場摘要移至我的頁", () => {
+  const highlightsIndex = html.indexOf('id="todayHighlights"');
   const sentimentIndex = html.indexOf('id="homeSentiment"');
   const briefIndex = html.indexOf('id="homeEtfBrief"');
-  const marketIndex = html.indexOf('class="panel marketPanel"');
-  const snapshotIndex = html.indexOf("<h2>其他快速資訊</h2>", marketIndex);
-  assert.ok(overviewIndex > 0 && overviewIndex < sentimentIndex);
-  assert.ok(sentimentIndex < briefIndex && briefIndex < marketIndex);
-  assert.ok(marketIndex < snapshotIndex);
+  const swingIndex = html.indexOf('id="homeSwingBrief"');
+  assert.ok(highlightsIndex > 0 && highlightsIndex < sentimentIndex);
+  assert.ok(sentimentIndex < briefIndex && briefIndex < swingIndex);
+  assert.match(html, /class="dashboard tabHidden" data-tab-section="more"/);
 });
 
 check("市場摘要預設精簡且完整內容可展開", () => {
   assert.match(html, /<summary>展開完整摘要<\/summary>/);
   assert.match(html, /id="marketFullSummary"/);
   assert.match(html, /id="newsList"/);
-  assert.match(html, /id="marketPulse"/);
+  assert.doesNotMatch(html, /id="homeMarketOverview"/);
   assert.match(html, /上漲檔數/);
   assert.match(html, /下跌檔數/);
 });
@@ -136,7 +135,7 @@ check("行情 JSON 結構與價格有效", () => {
 });
 
 check("Actions 以固定排程更新同源行情", () => {
-  assert.match(workflow, /cron: "\*\/5 1-6 \* \* 1-5"/);
+  assert.match(workflow, /cron: "30 1,2,3,4,5 \* \* 1-5"/);
   assert.match(workflow, /scripts\/update_market_quotes\.py/);
   assert.match(workflow, /git add market-quotes\.json market-quotes-meta\.json market-overview\.json tx-futures-quote\.json/);
 });

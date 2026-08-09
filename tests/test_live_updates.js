@@ -23,15 +23,15 @@ check("台北盤中時段邊界", () => {
   assert.equal(core.isTaipeiMarketOpen(new Date("2026-08-01T02:00:00Z")), false);
 });
 
-check("首頁延遲行情標示完整", () => {
-  assert.match(html, /動態行情｜盤中 15～30 秒檢查｜來源時間為準｜僅供參考/);
-  assert.match(html, /延遲行情｜最後成功更新/);
+check("首頁 ETF 盤中試算標示完整", () => {
+  assert.match(html, /盤中試算｜最後分數/);
+  assert.match(html, /週 KD 以目前週線試算/);
   assert.doesNotMatch(production, /即時行情/);
 });
 
-check("盤中 20 秒調度且只有首頁單一行情計時器", () => {
-  assert.equal(live.pollDelay({spotActive:true}),20000);
-  assert.match(html, /let liveQuoteTimer=null/);
+check("五個盤中時點調度且只有單一排名計時器", () => {
+  assert.match(html, /LONG_RANK_HOURS=new Set\(\[9,10,11,12,13\]\)/);
+  assert.match(html, /let longRankTimer=null/);
   assert.match(html, /if\(liveQuoteInFlight\)/);
   assert.match(html, /liveQuoteAbortController\?\.abort\(\)/);
   const scheduler = quotes.slice(quotes.indexOf("function scheduleNext"), quotes.indexOf("async function updateQuotes"));
@@ -42,7 +42,6 @@ check("首頁、買點與持股共用同一批行情", () => {
   assert.match(quotes, /publicQuoteMap/);
   assert.match(quotes, /hs:delayed-quotes/);
   assert.match(html, /applyHomeDelayedQuotes/);
-  assert.match(html, /renderMarket\(\)/);
   assert.match(html, /renderTop\(\)/);
   assert.match(html, /renderCards\(\)/);
   assert.match(quotes, /renderPortfolio\(true\)/);
@@ -57,7 +56,7 @@ check("失敗保留最後資料", () => {
 check("背景暫停並在前景強制更新", () => {
   assert.match(html, /visibilitychange/);
   assert.match(html, /clearTimeout\(cnnPollTimer\)/);
-  assert.match(html, /clearTimeout\(liveQuoteTimer\)/);
+  assert.match(html, /clearTimeout\(longRankTimer\)/);
   assert.match(html, /refreshLiveQuotes\(\{force:true\}\)/);
 });
 

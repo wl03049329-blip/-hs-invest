@@ -6,6 +6,7 @@ const core = require("../market-v61-core.js");
 const root = path.resolve(__dirname, "..");
 const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const css = fs.readFileSync(path.join(root, "portfolio-v6.css"), "utf8");
+const tech = fs.readFileSync(path.join(root, "v62-tech.css"), "utf8");
 const quoteUi = fs.readFileSync(path.join(root, "portfolio-v6.js"), "utf8");
 const quoteScript = fs.readFileSync(path.join(root, "scripts", "update_market_quotes.py"), "utf8");
 const futuresScript = fs.readFileSync(path.join(root, "scripts", "update_futures_position.py"), "utf8");
@@ -40,8 +41,8 @@ check("首頁行情 JSON 僅保留三項現貨且不以 0 代替", () => {
   assert.throws(() => core.validateOverview(invalid), /行情數值無效/);
 });
 
-check("首頁台指期僅以授權行情或官方收盤 fallback 顯示", () => {
-  assert.match(html, /tx_front|台指期近月/);
+check("台指期僅保留於正式資料與籌碼，不在首頁冒充盤中行情", () => {
+  assert.doesNotMatch(html, /id="homeMarketOverview"/);
   assert.doesNotMatch(JSON.stringify(overviewRaw), /tx_front|台指期近月/);
   const mainBlock = quoteScript.slice(quoteScript.indexOf("def main()"));
   assert.match(mainBlock, /TAIFEX_DAILY_URL|build_tx_fallback/);
@@ -52,16 +53,15 @@ check("首頁台指期僅以授權行情或官方收盤 fallback 顯示", () => 
   assert.match(html, /id="futuresPositionContent"/);
 });
 
-check("三項行情加今日買點機會與首頁順序", () => {
+check("三項正式行情資料保留，首頁改以四個決策區塊呈現", () => {
   for (const key of ["taiex", "otc", "tsmc"]) assert.match(JSON.stringify(overviewRaw), new RegExp(key));
-  assert.match(html, /今日買點機會/);
-  assert.match(html, /data-open-etf-radar/);
-  assert.match(html, /function homeOpportunityData/);
-  const overview = html.indexOf('id="homeMarketOverview"');
+  assert.match(html, /id="todayHighlights"/);
+  assert.match(html, /id="homeEtfBrief"/);
+  const highlights = html.indexOf('id="todayHighlights"');
   const brief = html.indexOf('id="homeEtfBrief"');
   const sentiment = html.indexOf('id="homeSentiment"');
   const summary = html.indexOf('class="panel marketPanel"');
-  assert.ok(overview < sentiment && sentiment < brief && brief < summary);
+  assert.ok(highlights < sentiment && sentiment < brief && brief < summary);
   assert.doesNotMatch(html + css + quoteUi, /即時行情|即時報價|零延遲/);
 });
 
@@ -73,20 +73,20 @@ check("行情來源有逾時、驗證與失敗保留", () => {
   assert.match(css, /\.marketQuoteCard\.isStale/);
 });
 
-check("前端單一動態輪詢器且快取版本未變不重抓大檔", () => {
-  assert.match(html, /scheduleLiveQuotePoll/);
+check("前端單一 ETF 排名輪詢器且快取版本未變不重抓大檔", () => {
+  assert.match(html, /scheduleLongRankRefresh/);
   assert.match(html, /metaTime!==liveMarketCacheVersion/);
   assert.match(html, /cache:"no-store"/);
   assert.match(html, /AbortController/);
   assert.match(html, /hs:quote-cache-checked/);
 });
 
-check("ETF雷達自選與精選互相獨立", () => {
+check("ETF雷達自選與精選互相獨立且使用 namespaced localStorage", () => {
   assert.match(html, /data-radar-mode="my"/);
   assert.match(html, /data-radar-mode="featured"/);
   assert.match(html, /function radarList\(\)/);
-  assert.match(html, /hs_etf_watchlist_v1/);
-  assert.match(html, /localStorage\.setItem\("hs_etf_radar_mode_v1"/);
+  assert.match(html, /HSStorage\.keys\.watchlist/);
+  assert.match(html, /localStorage\.setItem\(RADAR_MODE_STORAGE_KEY/);
   assert.match(html, /弘昇精選固定追蹤 8 檔 ETF/);
 });
 
@@ -120,22 +120,20 @@ check("期貨籌碼盤後補抓保留，首頁正式 fallback 由同一 Actions 
   assert.match(futuresRaw.methodology, /相同交易日/);
   assert.match(futuresWorkflow, /cron: "20 10 \* \* 1-5"/);
   assert.match(futuresWorkflow, /cron: "0 11 \* \* 1-5"/);
-  assert.match(marketWorkflow, /cron: "\*\/5 1-6 \* \* 1-5"/);
+  assert.match(marketWorkflow, /cron: "30 1,2,3,4,5 \* \* 1-5"/);
   assert.match(marketWorkflow, /tx-futures-quote\.json/);
   assert.match(marketWorkflow, /cancel-in-progress: true/);
 });
 
 check("市場一句話與額外快速資訊存在", () => {
-  assert.match(html, /id="marketOneLine"/);
-  assert.match(html, /市場廣度/);
-  assert.match(html, /大型／中小型/);
-  assert.match(html, /台積電同步/);
-  assert.match(html, /marketInterpretation/);
+  assert.match(html, /id="todayHighlightsConclusion"/);
+  assert.match(html, /id="homeSentimentConclusion"/);
+  assert.match(html, /市場風險/);
+  assert.match(html, /近期事件/);
 });
 
-check("手機 375、390、430 使用雙欄四格與精簡買點", () => {
-  assert.match(css, /\.marketOverviewCards\{grid-template-columns:repeat\(2/);
-  assert.match(css, /\.buyOpportunityCard/);
+check("手機 375、390、430 使用雙欄決策摘要與精簡買點", () => {
+  assert.match(tech, /\.todayHighlightsGrid\{grid-template-columns:repeat\(2/);
   assert.match(css, /\.signalCardSummary/);
   for (const width of [375, 390, 430]) assert.ok(width <= 760);
 });

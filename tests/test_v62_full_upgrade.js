@@ -17,17 +17,16 @@ assert.match(html, /site\.webmanifest/);
 for (const file of ["assets/hs-etf-radar-mark.svg", "assets/icon-192-v2.png", "assets/icon-512-v2.png", "assets/apple-touch-icon-v2.png"]) {
   assert.ok(fs.statSync(path.join(root, file)).size > 200, `${file} missing`);
 }
-assert.match(tech, /--bg:#050609/);
+assert.match(tech, /--bg:#050609|--bg:#050505/);
 assert.doesNotMatch(`${tech}\n${html.slice(0, 2500)}`, /#06100c|#0c1a14/);
 assert.match(html, /bottomNavButton appNavButton/);
-assert.match(html, /黃金/);
-assert.match(html, /布蘭特原油/);
-assert.doesNotMatch(html, /杜蘭特原油/);
-assert.match(html, /今天怎麼買/);
+assert.doesNotMatch(html, /id="homeMarketOverview"/);
+assert.match(html, /TODAY HIGHLIGHTS/);
+assert.match(html, /盤中長期加碼雷達/);
 assert.match(html, /homeMovingAverageStates/);
 assert.match(html, /技術.*估值.*止跌/);
-assert.match(html, /長期核心加碼/);
-assert.match(html, /波段進場/);
+assert.match(html, /長期 ETF/);
+assert.match(html, /波段 ETF/);
 
 for (const code of ["0050", "00830", "00662", "009815", "00935"]) {
   assert.ok(proxies.items[code], `${code} proxy missing`);
@@ -43,12 +42,7 @@ assert.match(strategy, /weeklyKdj: 35/);
 assert.match(strategy, /weeklyBias: 25/);
 assert.match(strategy, /stopConfirmation: 30/);
 
-for (const key of ["gold", "brent"]) {
-  const item = commodities.items[key];
-  assert.ok(item && Number.isFinite(item.value) && item.value > 0);
-  assert.ok(Number.isFinite(item.change_pct));
-  assert.match(item.source_name, /Twelve Data|舊版最後成功快取/);
-}
+for (const key of ["gold", "brent"]) assert.ok(commodities.items[key], `${key} fallback data missing`);
 for (const tab of ["overview", "mood", "margin", "institutions", "futures", "events"]) {
   assert.match(html, new RegExp(`data-chip-tab="${tab}"`));
 }

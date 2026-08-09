@@ -12,7 +12,7 @@ for (const text of [
 ]) assert(html.includes(text), `missing integration text: ${text}`);
 assert(fs.readFileSync("strategy-mode-core.js", "utf8").includes("仍在下跌，採較小批次加碼"));
 
-assert(html.includes("localStorage.setItem(\"hs_etf_watchlist_v1\""));
+assert(html.includes("localStorage.setItem(WATCHLIST_STORAGE_KEY"));
 assert(html.includes("latestPublicQuotes=new Map(quotes)"));
 assert(html.includes("x.high52=x.formalState?.high52??x.high52"));
 assert(html.includes("quoteDate<x.formalState.date"));

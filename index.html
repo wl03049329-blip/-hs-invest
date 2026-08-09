@@ -2639,7 +2639,7 @@ $("#drawdownForm").addEventListener("submit",async event=>{
   try{await lookupDrawdown($("#drawdownCode").value)}catch(error){$("#drawdownStatus").textContent=error.message||"查詢失敗，請稍後再試。";$("#drawdownResult").innerHTML=""}
 });
 async function load(){
-  const m=$("#message"),b=$("#reload");syncWatchlistState();renderWatchlist();m.className="message info";m.textContent=`正在更新 ${ids.length} 檔 ETF、川普動態、融資風險與三大法人…`;b.disabled=true;b.textContent="更新中…";
+  const m=$("#message"),b=$("#reload"),buttonLabel=b.querySelector("span");syncWatchlistState();renderWatchlist();m.className="message info";m.textContent=`正在更新 ${ids.length} 檔 ETF、川普動態、融資風險與三大法人…`;b.disabled=true;b.setAttribute("aria-busy","true");if(buttonLabel)buttonLabel.textContent="更新中…";
   try{
     await Promise.all([loadCorporateActionTables(),loadEtfValuation()]);
     const settled=await Promise.allSettled(ids.map(one));
@@ -2654,7 +2654,7 @@ async function load(){
     m.textContent=`更新成功：${all.length} 檔價格至 ${all[0].date} 收盤；${chipStatus}${failed.length?`；${failed.join("、")} 暫時讀取失敗`:""}。`;
     $("#updated").textContent="資料至 "+all[0].date+" 收盤｜"+all[0].weekState.label;maybeNotify();
   }catch(e){m.className="message error";m.innerHTML="更新失敗："+esc(e.message)+"<br>若 API 額度不足，請填入 FinMind Token 後重新更新。"}
-  finally{b.disabled=false;b.textContent="更新"}
+  finally{b.disabled=false;b.removeAttribute("aria-busy");if(buttonLabel)buttonLabel.textContent="更新"}
 }
 $("#token").value=localStorage.getItem(FINMIND_TOKEN_STORAGE_KEY)||"";
 $("#saveToken").addEventListener("click",()=>{localStorage.setItem(FINMIND_TOKEN_STORAGE_KEY,$("#token").value.trim());load()});

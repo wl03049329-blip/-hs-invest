@@ -10,7 +10,7 @@ const events = JSON.parse(fs.readFileSync(path.join(root, "market-events.json"),
 assert.match(html, /id:"00935",name:"野村臺灣新科技50"/);
 assert.match(html, /弘昇精選固定追蹤 8 檔 ETF/);
 assert.match(html, /slice\(0,20\)/);
-assert.match(html, /hs_etf_universe_cache_v1/);
+assert.match(html, /HSStorage\.keys\.etfUniverseCache/);
 assert.match(html, /ETF清單資料可能過期/);
 assert.match(html, /\^\[0-9A-Z\]\{4,10\}\$/);
 assert.match(html, /模型可用資料/);
@@ -29,7 +29,7 @@ for (const tab of ["overview", "mood", "institutions", "futures", "events"]) {
   assert.match(html, new RegExp(`data-chip-tab="${tab}"`));
   assert.match(html, new RegExp(`data-chip-panel="${tab}"`));
 }
-assert.match(html, /hs_chip_tab_v1/);
+assert.match(html, /HSStorage\.keys\.chipTab/);
 assert.match(html, /scrollIntoView\(\{behavior:"smooth",block:"start"\}\)/);
 assert.match(html, /即將公布/);
 assert.match(html, /已公布結果/);

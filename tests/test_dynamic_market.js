@@ -55,10 +55,10 @@ check("官方台指期 fallback 不冒充盤中",()=>{
   assert.match(html,/目前顯示最近官方收盤資料/);
 });
 
-check("單一輪詢、AbortController、背景暫停與前景強制更新",()=>{
-  assert.match(html,/let liveQuoteTimer=null/);
-  assert.equal((html.match(/let liveQuoteTimer=/g)||[]).length,1);
-  assert.match(html,/timerCount:liveQuoteTimer===null\?0:1/);
+check("首頁不再建立市場脈動 timer，ETF 排名只有單一輪詢",()=>{
+  assert.doesNotMatch(html,/let liveQuoteTimer=null|scheduleLiveQuotePoll/);
+  assert.equal((html.match(/let longRankTimer=null/g)||[]).length,1);
+  assert.match(html,/rankTimerCount:longRankTimer===null\?0:1/);
   assert.match(html,/liveQuoteAbortController\?\.abort\(\)/);
   assert.match(html,/document\.hidden/);
   assert.match(html,/refreshLiveQuotes\(\{force:true\}\)/);
@@ -66,12 +66,10 @@ check("單一輪詢、AbortController、背景暫停與前景強制更新",()=>{
   assert.doesNotMatch(portfolioScheduler,/setTimeout/);
 });
 
-check("20 秒盤中、45 秒商品與 429 退避",()=>{
-  assert.equal(live.pollDelay({spotActive:true}),20000);
-  assert.equal(live.pollDelay({commodityActive:true}),45000);
+check("舊行情核心仍保留限流算法，但首頁僅依五個時點重查 ETF 快取",()=>{
   assert.ok(live.pollDelay({spotActive:true,failures:2,httpStatus:429})>=480000);
-  assert.match(html,/now-liveCommodityLastAttemptAt>=45000/);
-  assert.match(html,/includeCommodities:commodityDue/);
+  assert.match(html,/LONG_RANK_HOURS=new Set\(\[9,10,11,12,13\]\)/);
+  assert.match(html,/scheduleLongRankRefresh/);
 });
 
 check("Proxy URL 不接受金鑰 query、帳密或非 HTTPS",()=>{
@@ -81,10 +79,9 @@ check("Proxy URL 不接受金鑰 query、帳密或非 HTTPS",()=>{
   assert.equal(live.validProxyUrl("https://quotes.example.com/feed"),"https://quotes.example.com/feed");
 });
 
-check("首頁三現貨、台指期、黃金、布蘭特與可展開 OHLCV",()=>{
-  for(const text of ["台股加權指數","上櫃指數","台積電 2330","台指期近月","黃金","布蘭特原油","開盤","最高","最低","成交量"])assert.match(html,new RegExp(text));
-  assert.match(html,/<details class="marketQuoteCard/);
-  assert.doesNotMatch(html,/杜蘭特原油/);
+check("首頁市場脈動已移除且保留 ETF 延遲行情重算",()=>{
+  assert.doesNotMatch(html,/id="homeMarketOverview"|id="marketOverviewCards"/);
+  assert.match(html,/applyIntradayEstimate/);
 });
 
 check("快取請求 no-store、時間戳且沒有 Service Worker cache-first",()=>{
