@@ -243,7 +243,17 @@
 .portfolioFlash{animation:portfolioFlash .35s ease-out}
 @keyframes portfolioFlash{from{opacity:.72}to{opacity:1}}
 
-.portfolioSheet{padding-bottom:calc(20px + env(safe-area-inset-bottom))}
+.portfolioModal{z-index:2000}
+.portfolioModal .portfolioSheet{
+  max-height:calc(100vh - 24px);
+  max-height:calc(100dvh - 24px);
+  overflow-y:auto;
+  overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+  touch-action:pan-y;
+  padding-bottom:calc(env(safe-area-inset-bottom) + 24px)
+}
 #portfolioForm{display:grid;gap:12px;margin-top:14px}
 .portfolioField{display:grid;gap:6px;color:#dffff0;font-size:12px;font-weight:850}
 .portfolioField input{
@@ -265,7 +275,13 @@
 .duplicateActions{padding:11px;background:#3a2a0e;border-radius:13px}
 .duplicateActions p{margin:0 0 8px;color:#ffe2a1;font-size:12px}
 .duplicateActions button{border:1px solid #74531d;background:#211807;color:#ffe2a1;border-radius:9px;padding:8px;margin:3px;font-weight:850}
-.portfolioSaveBtn{width:100%}
+.portfolioSaveBtn{
+  position:sticky;
+  bottom:0;
+  z-index:2;
+  width:100%;
+  box-shadow:0 -10px 18px #0a1710,0 8px 0 #0a1710
+}
 
 @media(max-width:760px){
   .marketOverviewCards{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.marketQuoteCard{padding:8px}.marketQuoteValue strong{font-size:19px}
