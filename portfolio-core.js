@@ -9,6 +9,7 @@
   const MAX_HOLDINGS = 30;
   const MAX_SHARES = 1e12;
   const MAX_COST = 1e9;
+  const STRATEGY_TYPES = new Set(["longTerm", "leveraged", "swing00733", "swing006201", "userSelected", ""]);
 
   function finitePositive(value, max) {
     const number = Number(value);
@@ -37,12 +38,22 @@
     if (!CODE_PATTERN.test(code)) throw new Error("股票代號需為 4～10 碼英數字。");
     if (shares === null) throw new Error("股數必須大於 0，且不可超過 1 兆股。");
     if (averageCost === null) throw new Error("平均成本必須大於 0，且不可超過 10 億元。");
+    const strategyType = STRATEGY_TYPES.has(String(input.strategyType || "")) ? String(input.strategyType || "") : "";
+    const rawTarget = input.targetAllocation;
+    const targetAllocation = rawTarget === null || rawTarget === undefined || String(rawTarget).trim() === ""
+      ? null
+      : Number(rawTarget);
+    if (targetAllocation !== null && (!Number.isFinite(targetAllocation) || targetAllocation < 0 || targetAllocation > 100)) {
+      throw new Error("目標配置必須介於 0 到 100%。");
+    }
     return {
       code,
       shares,
       averageCost,
       customName: sanitizeName(input.customName),
       name: sanitizeName(input.name),
+      strategyType,
+      targetAllocation,
       updatedAt: new Date().toISOString()
     };
   }
@@ -73,8 +84,26 @@
       averageCost: totalCost / shares,
       customName: newItem.customName || oldItem.customName,
       name: newItem.name || oldItem.name,
+      strategyType: newItem.strategyType || oldItem.strategyType,
+      targetAllocation: newItem.targetAllocation ?? oldItem.targetAllocation,
       updatedAt: new Date().toISOString()
     };
+  }
+
+  function validateTargetAllocations(holdings) {
+    const values = (Array.isArray(holdings) ? holdings : []).map(validateHolding);
+    const total = values.reduce((sum, item) => sum + (Number.isFinite(item.targetAllocation) ? item.targetAllocation : 0), 0);
+    return {ok: total <= 100 + 1e-9, total: Number(total.toFixed(2))};
+  }
+
+  function rebalanceDecision({actualWeight, targetAllocation, trendProtected = false} = {}) {
+    if (!Number.isFinite(targetAllocation)) return {state: "unset", label: "尚未設定目標配置"};
+    if (!Number.isFinite(actualWeight)) return {state: "pending", label: "行情更新後計算配置差異"};
+    const difference = actualWeight - targetAllocation;
+    if (difference > 1 && trendProtected) return {state: "trend_protected", difference, label: "趨勢保護中，暫緩單純因漲幅超標減碼"};
+    if (difference > 1) return {state: "overweight", difference, label: "高於目標配置，可依策略檢視部位"};
+    if (difference < -1) return {state: "underweight", difference, label: "低於目標配置，可搭配買點與風險評估"};
+    return {state: "balanced", difference, label: "配置接近目標"};
   }
 
   function validQuote(quote) {
@@ -281,6 +310,8 @@
     validateHolding,
     validateImportPayload,
     mergeHolding,
+    validateTargetAllocations,
+    rebalanceDecision,
     calculatePortfolio,
     buildAllocation,
     parseTwseRows,

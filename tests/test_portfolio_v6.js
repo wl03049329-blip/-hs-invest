@@ -41,6 +41,30 @@ test("覆蓋資料可通過驗證", () => {
   assert.equal(overwritten.averageCost, 72);
 });
 
+test("策略類型與目標配置只保存在本機持股資料", () => {
+  const item = core.validateHolding({...holding("00733"), strategyType: "swing00733", targetAllocation: 25});
+  assert.equal(item.strategyType, "swing00733");
+  assert.equal(item.targetAllocation, 25);
+  assert.throws(() => core.validateHolding({...holding("00733"), targetAllocation: 101}), /目標配置/);
+});
+
+test("目標配置總和不可超過 100%", () => {
+  assert.equal(core.validateTargetAllocations([
+    {...holding("00733"), targetAllocation: 40},
+    {...holding("006201"), targetAllocation: 60}
+  ]).ok, true);
+  assert.equal(core.validateTargetAllocations([
+    {...holding("00733"), targetAllocation: 60},
+    {...holding("006201"), targetAllocation: 50}
+  ]).ok, false);
+});
+
+test("強勢趨勢可啟用再平衡保護", () => {
+  const result = core.rebalanceDecision({actualWeight: 35, targetAllocation: 25, trendProtected: true});
+  assert.equal(result.state, "trend_protected");
+  assert.match(result.label, /趨勢保護/);
+});
+
 test("匯入拒絕重複代號", () => {
   assert.throws(() => core.validateImportPayload({holdings: [holding("0050"), holding("0050")]}), /重複/);
 });

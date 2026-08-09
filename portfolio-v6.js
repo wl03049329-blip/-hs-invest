@@ -4,10 +4,11 @@
   const core = window.HSPortfolioCore;
   if (!core) return;
 
-  const HOLDINGS_KEY = "hs_portfolio_v6";
-  const QUOTES_KEY = "hs_portfolio_quotes_v1";
-  const AUTO_KEY = "hs_portfolio_auto_v1";
-  const MARKET_VERSION_KEY = "hs_portfolio_market_version_v1";
+  const storageKeys = window.HSPersistenceCore?.keys || {};
+  const HOLDINGS_KEY = storageKeys.holdings || "hsRadar.portfolio.holdings";
+  const QUOTES_KEY = storageKeys.quotes || "hsRadar.portfolio.quotes";
+  const AUTO_KEY = storageKeys.portfolioAuto || "hsRadar.portfolio.autoRefresh";
+  const MARKET_VERSION_KEY = storageKeys.portfolioMarketVersion || "hsRadar.portfolio.marketVersion";
   const TWSE_URL = "https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL";
   const TPEX_URL = "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_quotes";
   const MARKET_CACHE_URL = "market-quotes.json";
@@ -163,7 +164,7 @@
     try {
       const item = Array.isArray(all) ? all.find(entry => entry.id === code) : null;
       if (!item) return null;
-      return {score: Number.isFinite(item.score) ? item.score : null, trend: item.trend?.label || "趨勢資料暫缺", action: item.action || "買點資料暫缺"};
+      return {score: Number.isFinite(item.score) ? item.score : null, trend: item.trend?.label || "趨勢資料暫缺", action: item.action || "買點資料暫缺", strategyType: item.activeStrategyMode || "", swing: item.swingDecision || null};
     } catch {
       return null;
     }
@@ -198,6 +199,9 @@
       const radarHtml = radar
         ? `<span class="radarPill">買點 ${radar.score === null ? "—" : radar.score} 分</span><b>${escapeHtml(radar.trend)}</b><span>${escapeHtml(radar.action)}</span>`
         : '<span class="radarPill">買點 —</span><span>尚未加入「ETF雷達」，無買點資料</span>';
+      const tradeLabel = radar?.strategyType === "swing00733" ? "00733 強勢趨勢拉回" : radar?.strategyType === "swing006201" ? "006201 上櫃低檔轉折" : "";
+      const trendProtected = radar?.swing?.strategyType === "swing00733" && radar.swing.stage?.number >= 3;
+      const rebalance = core.rebalanceDecision({actualWeight: row.weight, targetAllocation: row.targetAllocation, trendProtected});
       return `<article class="holdingCard" data-holding-code="${escapeHtml(row.code)}">
         <div class="holdingMain">
           <div class="holdingIdentity"><b>${escapeHtml(row.code)}</b><span>${escapeHtml(name)}</span></div>
@@ -218,7 +222,10 @@
             <div><span>市值占比</span><b>${percent(row.weight)}</b></div>
             <div><span>累積報酬率</span><b class="${valueClass(row.returnRate)}">${percent(row.returnRate)}</b></div>
             <div><span>行情日期</span><b>${escapeHtml(row.quote?.date || "行情暫缺")}</b></div>
+            <div><span>策略類型</span><b>${escapeHtml(tradeLabel || row.strategyType || "使用預設模型")}</b></div>
+            <div><span>目標配置</span><b>${Number.isFinite(row.targetAllocation) ? percent(row.targetAllocation) : "未設定"}</b></div>
           </div>
+          <p class="holdingNote">${escapeHtml(rebalance.label)}</p>
           ${lossNote(row) ? `<p class="holdingNote">${escapeHtml(lossNote(row))}</p>` : ""}
         </details>
       </article>`;
@@ -373,6 +380,8 @@
     $v6("#portfolioShares").value = item?.shares || "";
     $v6("#portfolioAverageCost").value = item?.averageCost || "";
     $v6("#portfolioCustomName").value = item?.customName || "";
+    $v6("#portfolioStrategyType").value = item?.strategyType || "";
+    $v6("#portfolioTargetAllocation").value = Number.isFinite(item?.targetAllocation) ? item.targetAllocation : "";
     $v6("#portfolioFormError").textContent = "";
     $v6("#portfolioSearchResults").innerHTML = "";
     $v6("#portfolioDuplicateActions").hidden = true;
@@ -396,22 +405,28 @@
       shares: $v6("#portfolioShares").value,
       averageCost: $v6("#portfolioAverageCost").value,
       customName: $v6("#portfolioCustomName").value,
+      strategyType: $v6("#portfolioStrategyType").value,
+      targetAllocation: $v6("#portfolioTargetAllocation").value,
       name: catalogItem?.name || holdings.find(item => item.code === code)?.name || ""
     });
   }
 
   function commitHolding(item, mode = "add") {
     const index = holdings.findIndex(entry => entry.code === item.code);
+    const nextHoldings = [...holdings];
     if (mode === "edit" || mode === "overwrite") {
       if (index < 0) throw new Error("找不到要更新的持股。");
-      holdings[index] = item;
+      nextHoldings[index] = item;
     } else if (mode === "merge") {
       if (index < 0) throw new Error("找不到要合併的持股。");
-      holdings[index] = core.mergeHolding(holdings[index], item);
+      nextHoldings[index] = core.mergeHolding(holdings[index], item);
     } else {
       if (holdings.length >= core.MAX_HOLDINGS) throw new Error("為避免手機載入過慢，最多只能有 30 檔持股。");
-      holdings.push(item);
+      nextHoldings.push(item);
     }
+    const allocation = core.validateTargetAllocations(nextHoldings);
+    if (!allocation.ok) throw new Error(`目標配置合計不可超過 100%（目前 ${allocation.total}%）。`);
+    holdings = nextHoldings;
     saveHoldings();
     marketCacheVersion = "";
     closePortfolioModal();

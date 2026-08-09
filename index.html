@@ -735,6 +735,21 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       <label class="portfolioField">自訂名稱（選填）
         <input id="portfolioCustomName" name="customName" maxlength="40" autocomplete="off" placeholder="例如 長期核心部位" />
       </label>
+      <div class="portfolioFieldGrid">
+        <label class="portfolioField">策略類型
+          <select id="portfolioStrategyType" name="strategyType">
+            <option value="">使用預設模型</option>
+            <option value="longTerm">長期 ETF</option>
+            <option value="leveraged">槓桿 ETF</option>
+            <option value="swing00733">00733 強勢趨勢拉回</option>
+            <option value="swing006201">006201 上櫃低檔轉折</option>
+            <option value="userSelected">自行判斷</option>
+          </select>
+        </label>
+        <label class="portfolioField">目標配置（%）
+          <input id="portfolioTargetAllocation" name="targetAllocation" type="number" inputmode="decimal" min="0" max="100" step="0.1" placeholder="選填，總和不超過100" />
+        </label>
+      </div>
       <div id="portfolioFormError" class="formError" role="alert"></div>
       <div id="portfolioDuplicateActions" class="duplicateActions" hidden>
         <p>此代號已存在，請選擇處理方式：</p>
@@ -757,11 +772,20 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 <script src="etf-model-core.js"></script>
 <script src="strategy-mode-core.js?v=20260804a"></script>
 <script src="swing-strategy-core.js?v=20260809a"></script>
+<script src="persistence-core.js?v=20260809a"></script>
 <script src="drawdown-price-core.js"></script>
 <script src="margin-risk-core.js"></script>
 <script src="institutional-flow-core.js"></script>
 <script src="market-events-core.js"></script>
 <script>
+const HSStorage=window.HSPersistenceCore;
+const WATCHLIST_STORAGE_KEY=HSStorage.keys.watchlist;
+const RADAR_MODE_STORAGE_KEY=HSStorage.keys.radarMode;
+const BUY_PLAN_STORAGE_KEY=HSStorage.keys.buyPlanMode;
+const CUSTOM_EVENTS_STORAGE_KEY=HSStorage.keys.customEvents;
+const ALERTS_STORAGE_KEY=HSStorage.keys.alerts;
+const CHIP_TAB_STORAGE_KEY=HSStorage.keys.chipTab;
+const FINMIND_TOKEN_STORAGE_KEY=HSStorage.keys.finmindToken;
 const DEFAULT_WATCHLIST=[
   {id:"0050",name:"元大台灣50",type:"台灣股票",risk:"中高",market:"台灣大型股",strategyType:"equity",category:"equity_broad",classificationConfidence:"medium",strategyMode:"long_term_core"},
   {id:"00830",name:"國泰費城半導體",type:"海外股票",risk:"高",market:"美國半導體",strategyType:"equity",category:"equity_sector",classificationConfidence:"high",strategyMode:"long_term_core"},
@@ -773,7 +797,7 @@ const DEFAULT_WATCHLIST=[
   {id:"006201",name:"元大富櫃50",type:"台灣股票",risk:"高",market:"上櫃中小型股",strategyType:"equity",category:"equity_broad",classificationConfidence:"medium",strategyMode:"swing006201"}
 ];
 let watchlist=loadWatchlist();
-let radarMode=localStorage.getItem("hs_etf_radar_mode_v1")==="my"?"my":"featured";
+let radarMode=localStorage.getItem(RADAR_MODE_STORAGE_KEY)==="my"?"my":"featured";
 let META={};
 let ids=[];
 let selected=new Set();
@@ -782,7 +806,7 @@ let etfUniverseMeta=null;
 let marketEventsPayload={items:[]};
 let latestPublicQuotes=new Map();
 let drawdownLookupState=null;
-const ETF_UNIVERSE_CACHE_KEY="hs_etf_universe_cache_v1";
+const ETF_UNIVERSE_CACHE_KEY=HSStorage.keys.etfUniverseCache;
 const STRATEGY_MODES=new Set(["long_term_core","leveraged","swing","swing00733","swing006201","user_selected"]);
 function radarList(){return radarMode==="my"?watchlist:DEFAULT_WATCHLIST}
 function catalogItem(id){return stockCatalog.find(item=>item.id===id)}
@@ -796,12 +820,12 @@ function syncWatchlistState(){
 }
 function loadWatchlist(){
   try{
-    const saved=JSON.parse(localStorage.getItem("hs_etf_watchlist_v1")||"null");
+    const saved=JSON.parse(localStorage.getItem(WATCHLIST_STORAGE_KEY)||"null");
     if(Array.isArray(saved)&&saved.length)return saved.filter(x=>x&&x.id&&x.name).slice(0,20).map(item=>({...item,strategyMode:STRATEGY_MODES.has(item.strategyMode)?item.strategyMode:"user_selected"}));
   }catch{}
   return [];
 }
-function saveWatchlist(){localStorage.setItem("hs_etf_watchlist_v1",JSON.stringify(watchlist));syncWatchlistState()}
+function saveWatchlist(){localStorage.setItem(WATCHLIST_STORAGE_KEY,JSON.stringify(watchlist));syncWatchlistState()}
 syncWatchlistState();
 const FALLBACK_CORPORATE_ACTIONS={
   "0050":[{date:"2025-06-18",before_price:4,after_price:1,kind:"split",type:"分割"}],
@@ -809,7 +833,7 @@ const FALLBACK_CORPORATE_ACTIONS={
 };
 let splitActionRows=[];
 let parValueActionRows=[];
-let buyPlanMode=localStorage.getItem("hs_buy_plan_mode_v1")||"balanced";
+let buyPlanMode=localStorage.getItem(BUY_PLAN_STORAGE_KEY)||"balanced";
 const NEWS_IDS=["0050","2330","00830","00662"];
 const MARKET_EVENTS=[
   {date:"2026-07-29",name:"FOMC 利率決策",type:"聯準會",risk:"高"},
@@ -846,7 +870,7 @@ let liveQuoteLastAttemptAt=0;
 let liveQuoteHttpStatus=0;
 let liveQuotePreviousValues=new Map();
 let lastRankSnapshotVersion="";
-const LONG_RANK_STORAGE_KEY="hs_long_rank_v1";
+const LONG_RANK_STORAGE_KEY=HSStorage.keys.longRank;
 const LONG_RANK_HOURS=new Set([9,10,11,12,13]);
 let futuresPosition=null;
 let etfValuationItems={};
@@ -856,7 +880,7 @@ let cnnPollTimer=null;
 let cnnPollInFlight=null;
 let cnnLastAttemptAt=0;
 const CNN_POLL_INTERVAL=20*60*1000;
-const LIVE_QUOTE_PROXY_KEY="hs_live_quote_proxy_v1";
+const LIVE_QUOTE_PROXY_KEY=HSStorage.keys.liveQuoteProxy;
 const LIVE_QUOTE_PUBLIC_CODES=new Set(["0050","00830","00662","009815","00935","00631L","00733","006201","2330"]);
 
 const $=s=>document.querySelector(s);
@@ -892,7 +916,7 @@ function dateBefore(days){
 }
 function startDate(){return dateBefore(1900)}
 function apiHeaders(){
-  const token=localStorage.getItem("finmind_token")?.trim();
+  const token=localStorage.getItem(FINMIND_TOKEN_STORAGE_KEY)?.trim();
   return token?{Authorization:`Bearer ${token}`}:{ };
 }
 async function apiGet(params,{soft=false}={}){
@@ -1218,6 +1242,20 @@ function dedicatedSwingStageRecommendation(result){
   if(result.stage?.number>0)return"買修正後的止跌，依確認度分批建立部位。";
   return result.gates?.setupGate?.passed?"Setup 成立，等待站回 MA20。":"買修正後的止跌，不接還在掉的刀。";
 }
+function recordForwardSwingSignal(item,result){
+  if(!window.HSPersistenceCore||item.scoreMode==="intraday"||!result?.date||result.date<HSPersistenceCore.FORWARD_START_DATE||!Number.isFinite(result.buyScore)||result.stage?.number<1)return;
+  const price=Number(result.indicators?.price);
+  if(!Number.isFinite(price)||price<=0)return;
+  let state=HSPersistenceCore.loadTradeState(item.id);
+  if(state.state==="CLOSED"){
+    state=HSSwingStrategyCore.transitionTradeState(state,{action:"OPEN",nextState:"ACCUMULATION",tradeId:`${item.id}-${result.date}`,symbol:item.id,date:result.date,price,position:result.stage.targetPosition,stage:result.stage.number});
+  }else if(result.stage.number>Number(state.highestStage||0)){
+    state=HSSwingStrategyCore.transitionTradeState(state,{action:"ADD",nextState:state.state,position:Math.max(Number(state.position||0),Number(result.stage.targetPosition||0)),stage:result.stage.number});
+  }
+  if(state.error)return;
+  HSPersistenceCore.saveTradeState(item.id,state);
+  HSPersistenceCore.appendForwardRecord({symbol:item.id,signalDate:result.date,stage:result.stage.number,tradeId:state.tradeId,strategyType:result.strategyType,buyScore:result.buyScore,exitPressure:result.exitPressure?.score,signalPrice:price,tradeState:state.state,confidence:result.confidence?.label,provisional:false});
+}
 function applyDedicatedSwingModels(){
   if(!window.HSSwingStrategyCore)return;
   const benchmark=all.find(item=>item.id==="0050"),benchmarkRows=benchmark?.intradayRows||benchmark?.officialRows||[];
@@ -1229,6 +1267,7 @@ function applyDedicatedSwingModels(){
     const decision={mode,modeLabel:mode==="swing00733"?"00733 強勢拉回模型":"006201 低檔轉折模型",score:result.buyScore,rawScore:result.rawBuyScore,coverage:result.coverage,scoreStatus:result.confidence?.label==="HIGH"?"complete":result.buyScore===null?"unavailable":"provisional",stage:{...result.stage,recommendation},breakdown:result.scoreFactors||[],metrics:{},result};
     x.swingDecision=result;x.strategyDecisions=x.strategyDecisions||{};x.strategyDecisions[mode]=decision;x.activeStrategyMode=mode;x.activeDecision=decision;
     x.action=recommendation;x.modelLabel=decision.modeLabel;
+    recordForwardSwingSignal(x,result);
   }
 }
 function refreshDecisionModel(x){
@@ -2126,7 +2165,10 @@ function renderTodayHighlights(longs,swings){
   $("#todayHighlightsDate").textContent=`資料基準 ${esc(all[0]?.date||"—")}`;
   $("#todayHighlightsConclusion").textContent=bestLong?`長期 ETF 目前以 ${bestLong.id} 優先；波段仍依各自 Setup、Market Gate 與止跌確認，不把高分解讀為保證。`:"等待 ETF 與籌碼資料完成後再形成判斷。";
   const profile=$("#myProfileStatus");
-  if(profile)profile.innerHTML=`<span>價格資料：${esc(all[0]?.date||"尚未更新")}</span><span>週 KD：${esc(all[0]?.kdDataDate||"尚未更新")}</span><span>估值資料：${esc(etfValuationUpdatedAt?formatTaipeiDateTime(etfValuationUpdatedAt):"尚未更新")}</span>`;
+  if(profile){
+    const forwardCount=window.HSPersistenceCore?.listForwardRecords?.().length||0;
+    profile.innerHTML=`<span>價格資料：${esc(all[0]?.date||"尚未更新")}</span><span>週 KD：${esc(all[0]?.kdDataDate||"尚未更新")}</span><span>估值資料：${esc(etfValuationUpdatedAt?formatTaipeiDateTime(etfValuationUpdatedAt):"尚未更新")}</span><span>Forward Test：${forwardCount} 筆｜僅記錄 2026/08/08 起正式訊號</span>`;
+  }
 }
 function renderTop(){
   const longIds=new Set(["0050","00830","00662","009815","00935"]),swingIds=new Set(["00631L","00733","006201"]);
@@ -2252,7 +2294,7 @@ function switchChipTab(name,{scroll=true}={}){
   document.querySelectorAll("[data-chip-tab]").forEach(button=>{
     const selected=button.dataset.chipTab===active;button.classList.toggle("active",selected);button.setAttribute("aria-selected",String(selected));
   });
-  localStorage.setItem("hs_chip_tab_v1",active);
+  localStorage.setItem(CHIP_TAB_STORAGE_KEY,active);
   if(scroll)$("#chipPageTop")?.scrollIntoView({behavior:"smooth",block:"start"});
 }
 async function loadMarketEvents(){
@@ -2268,7 +2310,7 @@ async function loadMarketEvents(){
 }
 function customEvents(){
   try{
-    const rows=JSON.parse(localStorage.getItem("hs_custom_events")||"[]");
+    const rows=JSON.parse(localStorage.getItem(CUSTOM_EVENTS_STORAGE_KEY)||"[]");
     return Array.isArray(rows)?rows.map((event,index)=>HSMarketEventsCore.validateEvent({...event,id:event.id||`custom-${index}`,title:event.title||event.name,custom:true},{custom:true})):[];
   }catch{return[]}
 }
@@ -2317,9 +2359,9 @@ function renderEvents(){
   document.querySelectorAll("[data-save-event]").forEach(button=>button.addEventListener("click",()=>{
     const index=+button.dataset.saveEvent,items=customEvents(),input=document.querySelector(`[data-custom-result="${index}"]`),result=String(input?.value||"").replace(/[<>]/g,"").trim().slice(0,300);
     items[index]={...items[index],status:result?"announced":"scheduled",result_summary:result,verified_at:result?new Date().toISOString():""};
-    localStorage.setItem("hs_custom_events",JSON.stringify(items));renderEvents();
+    localStorage.setItem(CUSTOM_EVENTS_STORAGE_KEY,JSON.stringify(items));renderEvents();
   }));
-  document.querySelectorAll("[data-remove-event]").forEach(b=>b.addEventListener("click",()=>{const a=customEvents();a.splice(+b.dataset.removeEvent,1);localStorage.setItem("hs_custom_events",JSON.stringify(a));renderEvents();refreshAllDecisionModels();renderTop();renderCards()}));
+  document.querySelectorAll("[data-remove-event]").forEach(b=>b.addEventListener("click",()=>{const a=customEvents();a.splice(+b.dataset.removeEvent,1);localStorage.setItem(CUSTOM_EVENTS_STORAGE_KEY,JSON.stringify(a));renderEvents();refreshAllDecisionModels();renderTop();renderCards()}));
 }
 function strategyLabel(type){return({equity:"股票型",leveraged:"槓桿型",inverse:"反向型",bond:"債券型",active:"主動式",other:"特殊型"})[type]||"ETF"}
 function categoryStrategy(category){
@@ -2453,7 +2495,7 @@ async function addWatch(id){
   if(watchlist.length>=20){alert("為避免手機載入過慢，每台裝置最多加入 20 檔。");return}
   const item=stockCatalog.find(x=>x.id===id);if(!item||watchlist.some(x=>x.id===id))return;
   const strategyMode=STRATEGY_MODES.has($("#watchStrategyMode").value)?$("#watchStrategyMode").value:"user_selected";
-  watchlist.push({...item,strategyMode});radarMode="my";localStorage.setItem("hs_etf_radar_mode_v1","my");saveWatchlist();renderWatchlist();closeWatchModal();switchTab("signals",{scroll:false});await load();
+  watchlist.push({...item,strategyMode});radarMode="my";localStorage.setItem(RADAR_MODE_STORAGE_KEY,"my");saveWatchlist();renderWatchlist();closeWatchModal();switchTab("signals",{scroll:false});await load();
 }
 function bestClass(values,v,mode="max"){
   const valid=values.filter(Number.isFinite);const best=mode==="max"?Math.max(...valid):Math.min(...valid);return Math.abs(v-best)<1e-9?"best":"";
@@ -2555,37 +2597,37 @@ function switchTab(name,{scroll=true}={}){
   document.querySelectorAll("[data-tab-section]").forEach(el=>el.classList.toggle("tabHidden",el.dataset.tabSection!==name));
   document.querySelectorAll(".appNavButton").forEach(btn=>{const active=btn.dataset.tab===name;btn.classList.toggle("active",active);btn.setAttribute("aria-current",active?"page":"false")});
   document.querySelectorAll("[data-tab-intro]").forEach(el=>el.classList.toggle("active",el.dataset.tabIntro===name));
-  sessionStorage.setItem("hs_active_tab",name);
+  sessionStorage.setItem("hsRadar.activeTab",name);
   if(scroll)document.querySelector(".topTabs")?.scrollIntoView({behavior:"smooth",block:"start"});
 }
 document.querySelectorAll(".appNavButton").forEach(btn=>btn.addEventListener("click",()=>switchTab(btn.dataset.tab)));
-function loadAlerts(){const a=JSON.parse(localStorage.getItem("hs_alerts")||"[20,10,0,-10]");["#alert1","#alert2","#alert3","#alert4"].forEach((s,i)=>$(s).value=a[i])}
+function loadAlerts(){const a=JSON.parse(localStorage.getItem(ALERTS_STORAGE_KEY)||"[20,10,0,-10]");["#alert1","#alert2","#alert3","#alert4"].forEach((s,i)=>$(s).value=a[i])}
 function getAlerts(){return["#alert1","#alert2","#alert3","#alert4"].map(s=>+$(s).value)}
 function maybeNotify(){
   if(!("Notification" in window)||Notification.permission!=="granted")return;
   const [a1,,,a4]=getAlerts(),hits=all.filter(x=>x.j<a1);if(!hits.length)return;
   const text=hits.map(x=>`${x.id} ${scoreText(x)}／J=${fmt(x.j)}`).join("、");new Notification("HS | ETF股市雷達 買點提醒",{body:text+(hits.some(x=>x.j<a4)?"｜出現極度超賣":"")});
 }
-$("#saveAlerts").addEventListener("click",()=>{localStorage.setItem("hs_alerts",JSON.stringify(getAlerts()));$("#message").className="message info";$("#message").textContent="提醒門檻已儲存在這台裝置。"});
+$("#saveAlerts").addEventListener("click",()=>{localStorage.setItem(ALERTS_STORAGE_KEY,JSON.stringify(getAlerts()));$("#message").className="message info";$("#message").textContent="提醒門檻已儲存在這台裝置。"});
 $("#testAlert").addEventListener("click",()=>{if("Notification" in window&&Notification.permission==="granted")new Notification("HS | ETF股市雷達 測試提醒",{body:"提醒功能已啟用。"});else alert("請先按『開啟提醒』並允許通知。")});
 $("#notifyBtn").addEventListener("click",async()=>{if(!("Notification" in window)){alert("此瀏覽器不支援網頁通知。");return}const p=await Notification.requestPermission();$("#notifyBtn").textContent=p==="granted"?"提醒已開啟":"提醒未開啟"});
 $("#addEvent").addEventListener("click",()=>{
   const date=$("#customEventDate").value,name=$("#customEventName").value.trim();
   if(!date||!name){alert("請填寫事件日期與名稱。");return}
-  const a=customEvents();a.push({id:`custom-${Date.now()}`,date,name,title:name,type:"自訂",risk:"自訂",status:"scheduled",custom:true,result_summary:""});localStorage.setItem("hs_custom_events",JSON.stringify(a));$("#customEventName").value="";renderEvents();refreshAllDecisionModels();renderTop();renderCards();
+  const a=customEvents();a.push({id:`custom-${Date.now()}`,date,name,title:name,type:"自訂",risk:"自訂",status:"scheduled",custom:true,result_summary:""});localStorage.setItem(CUSTOM_EVENTS_STORAGE_KEY,JSON.stringify(a));$("#customEventName").value="";renderEvents();refreshAllDecisionModels();renderTop();renderCards();
 });
 $("#addEtfBtn").addEventListener("click",openWatchModal);
 $("#resetEtfBtn").addEventListener("click",async()=>{if(!confirm("清除這台裝置上的全部 ETF 自選？"))return;watchlist=[];saveWatchlist();renderWatchlist();renderTop();renderCards()});
 document.querySelectorAll("[data-radar-mode]").forEach(button=>button.addEventListener("click",()=>{
   radarMode=button.dataset.radarMode==="my"?"my":"featured";
-  localStorage.setItem("hs_etf_radar_mode_v1",radarMode);
+  localStorage.setItem(RADAR_MODE_STORAGE_KEY,radarMode);
   refreshAllDecisionModels();renderWatchlist();renderTop();renderCards();
 }));
 document.querySelectorAll("[data-chip-tab]").forEach(button=>button.addEventListener("click",()=>switchChipTab(button.dataset.chipTab)));
 $("#homeSwingBrief").addEventListener("click",event=>{if(event.target.closest("[data-open-etf-radar]"))switchTab("signals")});
 document.querySelectorAll("[data-buy-plan-mode]").forEach(button=>button.addEventListener("click",()=>{
   buyPlanMode=["conservative","balanced","aggressive"].includes(button.dataset.buyPlanMode)?button.dataset.buyPlanMode:"balanced";
-  localStorage.setItem("hs_buy_plan_mode_v1",buyPlanMode);
+  localStorage.setItem(BUY_PLAN_STORAGE_KEY,buyPlanMode);
   refreshAllDecisionModels();
   renderWatchlist();renderCards();
 }));
@@ -2614,8 +2656,8 @@ async function load(){
   }catch(e){m.className="message error";m.innerHTML="更新失敗："+esc(e.message)+"<br>若 API 額度不足，請填入 FinMind Token 後重新更新。"}
   finally{b.disabled=false;b.textContent="更新"}
 }
-$("#token").value=localStorage.getItem("finmind_token")||"";
-$("#saveToken").addEventListener("click",()=>{localStorage.setItem("finmind_token",$("#token").value.trim());load()});
+$("#token").value=localStorage.getItem(FINMIND_TOKEN_STORAGE_KEY)||"";
+$("#saveToken").addEventListener("click",()=>{localStorage.setItem(FINMIND_TOKEN_STORAGE_KEY,$("#token").value.trim());load()});
 $("#reload").addEventListener("click",load);
 $("#liveQuoteProxyUrl").value=localStorage.getItem(LIVE_QUOTE_PROXY_KEY)||"";
 $("#saveLiveQuoteProxy").addEventListener("click",async()=>{
@@ -2650,7 +2692,7 @@ window.HSLiveMarket=Object.freeze({
   proxyConfigured:()=>Boolean(HSLiveMarketCore.validProxyUrl(localStorage.getItem(LIVE_QUOTE_PROXY_KEY)||"",location.href)),
   state:()=>Object.freeze({rankTimerCount:longRankTimer===null?0:1,inFlight:Boolean(liveQuoteInFlight),failures:liveQuoteFailures,lastAttemptAt:liveQuoteLastAttemptAt})
 });
-loadAlerts();renderWatchlist();renderEvents();renderTrump();switchChipTab(localStorage.getItem("hs_chip_tab_v1")||"overview",{scroll:false});switchTab(sessionStorage.getItem("hs_active_tab")||"today",{scroll:false});scheduleCnnPoll();refreshLiveQuotes({force:true});scheduleLongRankRefresh();ensureStockCatalog().finally(load);
+loadAlerts();renderWatchlist();renderEvents();renderTrump();switchChipTab(localStorage.getItem(CHIP_TAB_STORAGE_KEY)||"overview",{scroll:false});switchTab(sessionStorage.getItem("hsRadar.activeTab")||"today",{scroll:false});scheduleCnnPoll();refreshLiveQuotes({force:true});scheduleLongRankRefresh();ensureStockCatalog().finally(load);
 
 </script>
 <script src="portfolio-core.js"></script>
