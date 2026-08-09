@@ -413,6 +413,8 @@
     const current=normalizeTradeState(rawState), action=String(event.action||"");
     const allowed={ACCUMULATION:["HOLDING","EXIT"],HOLDING:["EXIT"],EXIT:["CLOSED"],CLOSED:["ACCUMULATION"]};
     const next=String(event.nextState||current.state);
+    if (action==="ADD" && current.state==="EXIT") return {...current,error:"exit_mode_no_add"};
+    if (action==="OPEN" && current.state==="CLOSED" && (Number(event.cooldownRemaining)||0)>0) return {...current,error:"cooldown_active"};
     if (next!==current.state && !allowed[current.state].includes(next)) return {...current,error:"invalid_transition"};
     const output={...current,state:next};
     if (action==="OPEN"&&current.state==="CLOSED"&&next==="ACCUMULATION") {
@@ -464,5 +466,5 @@
     return Object.fromEntries(Object.entries(value).map(([key,item])=>[key,sanitizeResult(item)]));
   }
 
-  return Object.freeze({MODEL_VERSION,STRATEGY_TYPES,CORE_MA_PERIODS,TREND_STRUCTURE_PERIODS,TRADE_STATES,normalizeOhlcv,simpleMovingAverage,movingAverageSnapshot,dailyKdj,weeklyKdj,relativeStrength,trendStructure,dataConfidence,buildIndicators,weightedFactors,engine00733,engine006201,exitPressure00733,exitPressure006201,normalizeTradeState,transitionTradeState,runStrategy,backtestSignals,sanitizeResult});
+  return Object.freeze({MODEL_VERSION,STRATEGY_TYPES,CORE_MA_PERIODS,TREND_STRUCTURE_PERIODS,TRADE_STATES,normalizeOhlcv,simpleMovingAverage,movingAverageSnapshot,dailyKdj,weeklyKdj,relativeStrength,trendStructure,dataConfidence,buildIndicators,weightedFactors,stage00733,stage006201,engine00733,engine006201,exitPressure00733,exitPressure006201,normalizeTradeState,transitionTradeState,runStrategy,backtestSignals,sanitizeResult});
 });

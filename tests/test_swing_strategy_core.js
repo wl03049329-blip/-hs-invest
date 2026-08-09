@@ -77,12 +77,44 @@ test("00733 的 0050 市場風險上限會在 raw score 後套用", () => {
   assert.ok(result.caps.every(cap => [54,69].includes(cap.value)));
 });
 
+test("00733 固定分數案例 75/85 與突破分別對應 Stage 1/2/4", () => {
+  const indicators = core.buildIndicators(marketRows(), benchmark);
+  const passed = {setupGate:{passed:true},marketShockGate:{triggered:false}};
+  assert.strictEqual(core.stage00733(75,indicators,passed).number,1);
+  assert.strictEqual(core.stage00733(85,indicators,passed).number,2);
+  const breakout = JSON.parse(JSON.stringify(indicators));
+  breakout.previous20DayHighestClose = breakout.price - 1;
+  breakout.volumeMa20 = 100;
+  breakout.rows[breakout.rows.length-1].volume = 120;
+  breakout.core.ma20Slope = .01;
+  assert.strictEqual(core.stage00733(85,breakout,passed).number,4);
+});
+
+test("00733 浮盈逾 20% 後回吐 10% 觸發 50% 保護且 EXIT 不得加碼", () => {
+  const indicators = core.buildIndicators(marketRows(), benchmark);
+  const protection = core.exitPressure00733(indicators,{entryPrice:indicators.price/1.17,peakPrice:indicators.price/.9,marketRisk:40});
+  assert.strictEqual(protection.profitProtection,true);
+  const protectedTrade = core.transitionTradeState({state:"HOLDING",position:100},{nextState:"EXIT",action:"PROTECT"});
+  assert.strictEqual(protectedTrade.position,50);
+  const addAfterExit = core.transitionTradeState(protectedTrade,{nextState:"EXIT",action:"ADD",stage:4,position:100});
+  assert.strictEqual(addAfterExit.position,50);
+  assert.strictEqual(addAfterExit.error,"exit_mode_no_add");
+});
+
 test("006201 70 至 79 分僅等待，80 分以上才可建立第一批", () => {
   const result = core.engine006201({rows:marketRows({dipDays:23,dip:-.008,reboundDays:5,rebound:.014}),benchmarkRows:benchmark,otcStrength:70});
   assert.strictEqual(result.strategyType,"swing006201");
   if (result.buyScore >= 70 && result.buyScore < 80) assert.strictEqual(result.stage.number,0);
   if (result.buyScore >= 80 && result.gates.setupGate.passed && !result.gates.hardFail.triggered) assert.ok(result.stage.number >= 1);
   assert.ok(Object.prototype.hasOwnProperty.call(result,"breakoutConfirmed"));
+});
+
+test("006201 固定分數案例 75 不買、85 為第一買點", () => {
+  const gates={hardFail:{triggered:false},setupGate:{passed:true}};
+  const setup={breakoutConfirmed:false};
+  assert.strictEqual(core.stage006201(75,setup,gates).number,0);
+  assert.match(core.stage006201(75,setup,gates).label,/等待/);
+  assert.strictEqual(core.stage006201(85,setup,gates).number,1);
 });
 
 test("006201 長期趨勢失敗會阻止買進", () => {
@@ -101,6 +133,20 @@ test("交易生命週期禁止 EXIT 回到 ACCUMULATION 並禁止重複 stage", 
   const repeated = core.transitionTradeState({state:"ACCUMULATION",position:20,highestStage:2},{nextState:"ACCUMULATION",action:"ADD",stage:2,position:45});
   assert.strictEqual(repeated.position,20);
   assert.strictEqual(repeated.error,"stage_already_executed");
+});
+
+test("006201 退出後 20 日 cooling 期間不得建立新 Trade", () => {
+  const blocked=core.transitionTradeState({state:"CLOSED",position:0},{nextState:"ACCUMULATION",action:"OPEN",symbol:"006201",date:"2026-08-09",price:20,position:25,cooldownRemaining:12});
+  assert.strictEqual(blocked.state,"CLOSED");
+  assert.strictEqual(blocked.error,"cooldown_active");
+});
+
+test("006201 120 日與連十日 MA200 下風險會結束 Trade", () => {
+  const rows=marketRows({drift:-.001,dipDays:40,dip:-.008,reboundDays:2,rebound:.001});
+  const preview=core.buildIndicators(rows,benchmark);
+  const result=core.engine006201({rows,benchmarkRows:benchmark,otcStrength:40,tradeState:{holdingDays:120,belowMa200Days:10,entryPrice:preview.price/.9}});
+  assert.strictEqual(result.timeExit,true);
+  if((result.coreIndicators.ma60Slope??0)<0)assert.strictEqual(result.emergencyExit,true);
 });
 
 test("回測訊號固定 20 日冷卻且指標只使用訊號當日以前資料", () => {
