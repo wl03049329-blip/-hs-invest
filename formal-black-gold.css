@@ -934,3 +934,265 @@ footer{color:#746f67}
     padding-right: 3px !important;
   }
 }
+/* =========================================================
+   HS Manual UI Hotfix V2 — 2026-08-10
+   Force override for:
+   1. Home sentiment centering
+   2. Home ETF radar width usage
+   3. Chip tabs readability
+   ========================================================= */
+
+
+/* 1. 首頁｜市場情緒快覽：真正四層置中 */
+#homeSentiment .homeSentimentCard,
+#homeSentiment .homeSentimentWide{
+  display:grid!important;
+  grid-template-rows:
+    minmax(22px,auto)
+    26px
+    minmax(26px,auto)
+    minmax(18px,auto)!important;
+  justify-items:center!important;
+  align-items:center!important;
+  text-align:center!important;
+  row-gap:5px!important;
+  padding:10px 4px!important;
+}
+
+#homeSentiment .homeSentimentCard>span,
+#homeSentiment .homeSentimentCard>b,
+#homeSentiment .homeSentimentCard>em{
+  width:100%!important;
+  margin:0!important;
+  padding:0!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  text-align:center!important;
+}
+
+#homeSentiment .homeSentimentCard>span{
+  grid-row:1!important;
+  font-size:7.4px!important;
+  line-height:1.15!important;
+}
+
+#homeSentiment .sentimentCardIcon{
+  display:block!important;
+  grid-row:2!important;
+  width:21px!important;
+  height:21px!important;
+  margin:0 auto!important;
+  justify-self:center!important;
+  align-self:center!important;
+  color:#e6c465!important;
+}
+
+#homeSentiment .homeSentimentCard:before{
+  display:none!important;
+  content:none!important;
+}
+
+#homeSentiment .homeSentimentCard>b{
+  grid-row:3!important;
+  font-size:13px!important;
+  line-height:1!important;
+  justify-content:center!important;
+}
+
+#homeSentiment #homeMarginBalanceCard>b{
+  font-size:11px!important;
+  letter-spacing:-.04em!important;
+}
+
+#homeSentiment #homeMaintenanceCard>b{
+  font-size:11.8px!important;
+  letter-spacing:-.04em!important;
+}
+
+#homeSentiment .homeSentimentCard>em{
+  grid-row:4!important;
+  font-size:7.2px!important;
+  line-height:1.1!important;
+  justify-content:center!important;
+}
+
+
+/* 2. 首頁｜盤中長期加碼雷達：移除中央無效空白 */
+#homeEtfBrief .homeLongRankCard summary{
+  display:grid!important;
+  grid-template-columns:
+    42px
+    minmax(180px,1fr)
+    58px
+    64px!important;
+  column-gap:8px!important;
+  align-items:center!important;
+  width:100%!important;
+  min-height:72px!important;
+  padding:9px 10px!important;
+}
+
+#homeEtfBrief .longRankTicker{
+  min-width:0!important;
+  width:100%!important;
+}
+
+#homeEtfBrief .longRankTicker>b{
+  font-size:16.5px!important;
+  line-height:1.1!important;
+}
+
+#homeEtfBrief .longRankTicker>small{
+  font-size:9.5px!important;
+  margin-left:5px!important;
+  line-height:1.1!important;
+  white-space:normal!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+}
+
+#homeEtfBrief .longRankCore{
+  width:100%!important;
+  margin-top:6px!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:8px!important;
+  font-size:10px!important;
+}
+
+#homeEtfBrief .longRankJ,
+#homeEtfBrief .longRankJ b{
+  font-size:10.5px!important;
+}
+
+#homeEtfBrief .longRankStage{
+  font-size:9.3px!important;
+  padding:4px 8px!important;
+  max-width:none!important;
+  white-space:nowrap!important;
+}
+
+#homeEtfBrief .longRankScore{
+  justify-self:center!important;
+  align-self:center!important;
+}
+
+#homeEtfBrief .longRankScore b{
+  font-size:36px!important;
+  line-height:.95!important;
+}
+
+#homeEtfBrief .longRankChanges{
+  justify-self:start!important;
+  align-self:center!important;
+  padding-left:0!important;
+  font-size:9.4px!important;
+  line-height:1.25!important;
+  gap:6px!important;
+}
+
+#homeEtfBrief .longRankChanges span{
+  white-space:nowrap!important;
+}
+
+
+/* 3. 籌碼｜六大分類 tab 明顯放大 */
+.chipSegments{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:8px!important;
+}
+
+.chipSegment{
+  width:100%!important;
+  min-width:0!important;
+  min-height:48px!important;
+  padding:10px 6px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  text-align:center!important;
+  font-size:13.5px!important;
+  font-weight:900!important;
+  line-height:1.1!important;
+  white-space:nowrap!important;
+}
+
+.chipSegment.active{
+  font-size:14px!important;
+  font-weight:950!important;
+}
+
+
+/* iPhone 430px 保護 */
+@media(max-width:430px){
+
+  #homeSentiment .homeSentimentCard,
+  #homeSentiment .homeSentimentWide{
+    row-gap:4px!important;
+    padding:9px 3px!important;
+  }
+
+  #homeSentiment .homeSentimentCard>span{
+    font-size:7px!important;
+  }
+
+  #homeSentiment .sentimentCardIcon{
+    width:20px!important;
+    height:20px!important;
+  }
+
+  #homeSentiment .homeSentimentCard>b{
+    font-size:12.5px!important;
+  }
+
+  #homeSentiment #homeMarginBalanceCard>b{
+    font-size:10.4px!important;
+  }
+
+  #homeSentiment #homeMaintenanceCard>b{
+    font-size:11.2px!important;
+  }
+
+  #homeSentiment .homeSentimentCard>em{
+    font-size:6.9px!important;
+  }
+
+  #homeEtfBrief .homeLongRankCard summary{
+    grid-template-columns:
+      40px
+      minmax(150px,1fr)
+      54px
+      60px!important;
+    column-gap:6px!important;
+    padding:8px!important;
+  }
+
+  #homeEtfBrief .longRankTicker>b{
+    font-size:16px!important;
+  }
+
+  #homeEtfBrief .longRankTicker>small{
+    font-size:9px!important;
+  }
+
+  #homeEtfBrief .longRankStage{
+    font-size:8.8px!important;
+    padding:4px 7px!important;
+  }
+
+  #homeEtfBrief .longRankChanges{
+    font-size:8.8px!important;
+  }
+
+  .chipSegment{
+    min-height:46px!important;
+    font-size:12.6px!important;
+    padding:9px 4px!important;
+  }
+
+  .chipSegment.active{
+    font-size:13px!important;
+  }
+}
