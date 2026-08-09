@@ -14,6 +14,7 @@ assert.match(html,/Raw／Final Score/);
 assert.match(html,/Exit Pressure/);
 assert.match(html,/MA20／60／200/);
 assert.match(html,/MA43／87／284/);
+for(const label of ["目前部位","建議部位","HS 判斷"])assert.match(html,new RegExp(label));
 assert.match(html,/HS Swing Radar V1\.2\.1 Beta Validated Frozen/);
 assert.match(html,/recordForwardSwingSignal/);
 assert.match(html,/rawScore:result\.rawBuyScore/);
