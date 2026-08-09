@@ -386,7 +386,7 @@
     if ((bearGateTriggered || relativeWeaknessGate.triggered) && score !== null) {score=Math.min(score,69);caps.push({reason:bearGateTriggered?"0050_bear_gate":"relative_weakness",value:69});}
     if (hardFail.triggered && score !== null) {score=Math.min(score,49);caps.push({reason:"hard_fail",value:49});}
     if (confidence.label === "INSUFFICIENT") score=null;
-    const stage=stage006201(score,{breakoutConfirmed},{hardFail});
+    const stage=stage006201(score,{breakoutConfirmed},{hardFail,setupGate});
     const exitPressure=exitPressure006201(indicators,{...input,breakoutConfirmed});
     const below200Days=Number(input.tradeState?.belowMa200Days)||0;
     const pnl=finite(input.tradeState?.entryPrice)&&indicators.price?change(indicators.price,input.tradeState.entryPrice):null;
