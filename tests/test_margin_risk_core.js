@@ -13,8 +13,8 @@ for(const [input,key,label] of cases){
   assert.doesNotMatch(result.summary,/必然|斷頭|保證/);
 }
 
-assert.equal(core.ratioBand(160).label,"安全墊一般");
-assert.equal(core.ratioBand(150).label,"安全墊縮小");
+assert.equal(core.ratioBand(160).label,"市場槓桿壓力一般");
+assert.equal(core.ratioBand(150).label,"維持率轉弱");
 assert.equal(core.ratioBand(140).label,"壓力升高");
 assert.equal(core.ratioBand(130).label,"接近法規參考區");
 assert.equal(core.ratioBand(129.9).label,"極端壓力區");

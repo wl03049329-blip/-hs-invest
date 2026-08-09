@@ -104,7 +104,7 @@ check("盤中 ETF 試算與持股共用公開行情事件",()=>{
   assert.match(html,/formalScore/);
   assert.match(html,/hs:delayed-quotes/);
   assert.match(portfolio,/applySharedQuotes/);
-  assert.match(portfolio,/renderPortfolio\(true\)/);
+  assert.match(portfolio,/refreshPortfolio\(true\)/);
 });
 
 check("價格閃動遵守 reduced motion 且台股紅漲綠跌",()=>{

@@ -7,7 +7,7 @@ const portfolio = fs.readFileSync(path.join(root, "portfolio-v6.js"), "utf8");
 const css = fs.readFileSync(path.join(root, "portfolio-v6.css"), "utf8");
 const updater = fs.readFileSync(path.join(root, "scripts", "update_margin_data.py"), "utf8");
 
-assert.match(html, /HS \| ETF股市雷達 v6\.2/);
+assert.match(html, /HS｜ETF股市雷達 v6\.2/);
 assert.match(html, /marginBalanceCard/);
 assert.match(html, /融資融券餘額/);
 assert.match(html, /HSMarginRiskCore\.displayValues\(risk\)/);

@@ -10,14 +10,14 @@ const valuation = JSON.parse(read("etf-valuation.json"));
 const proxies = JSON.parse(read("valuation-proxy-map.json"));
 const commodities = JSON.parse(read("commodity-quotes.json"));
 
-assert.match(html, /class="brandLogo app-brand-lockup"/);
-assert.match(html, /HS_BRAND=Object\.freeze\(\{logo:"assets\/icon-192-v2\.png/);
+assert.match(html, /class="brandLogo app-header__lockup app-brand-lockup"/);
+assert.match(html, /HS_BRAND=Object\.freeze\(\{logo:"assets\/icon-192-v3\.png/);
 assert.match(html, /app-brand-header/);
 assert.match(html, /data-brand-logo/);
-assert.match(html, /data-brand-title>HS \| ETF股市雷達/);
-assert.match(html, /apple-touch-icon-v2\.png/);
+assert.match(html, /data-brand-title>HS｜ETF股市雷達/);
+assert.match(html, /apple-touch-icon-v3\.png/);
 assert.match(html, /site\.webmanifest/);
-for (const file of ["assets/hs-etf-radar-mark.svg", "assets/icon-192-v2.png", "assets/icon-512-v2.png", "assets/apple-touch-icon-v2.png"]) {
+for (const file of ["assets/hs-etf-radar-final.png", "assets/icon-192-v3.png", "assets/icon-512-v3.png", "assets/apple-touch-icon-v3.png"]) {
   assert.ok(fs.statSync(path.join(root, file)).size > 200, `${file} missing`);
 }
 assert.match(tech, /--bg:#050609|--bg:#050505/);
@@ -62,7 +62,7 @@ assert.match(html, /effective_date/);
 assert.match(html, /中性摘要/);
 assert.match(html, /id="hsStoryEntry"/);
 assert.match(html, /關於 HS｜ETF股市雷達/);
-assert.match(html, /使用<strong>智慧再平衡<\/strong>/);
+assert.match(html, /持股智慧再平衡/);
 assert.match(html, /資料來源與使用說明/);
 assert.match(html, /id="rebalanceTitle">智慧再平衡/);
 assert.match(html, /新資金優先補低配/);

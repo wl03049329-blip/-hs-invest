@@ -284,7 +284,7 @@
 
   function recommendationText(adviceRow) {
     if (!adviceRow) return {label: "請先完成目標配置", amount: "", detail: "目標合計 100% 後才產生正式建議"};
-    if (adviceRow.suggestedAmount > 0) return {label: "建議投入", amount: money(adviceRow.suggestedAmount), detail: adviceRow.action};
+    if (adviceRow.suggestedAmount > 0) return {label: "建議買入", amount: money(adviceRow.suggestedAmount), detail: adviceRow.action};
     if (adviceRow.suggestedAmount < 0) return {label: "部分調整", amount: money(Math.abs(adviceRow.suggestedAmount)), detail: adviceRow.action};
     if (/暫停/.test(adviceRow.action)) return {label: "暫停加碼", amount: "", detail: adviceRow.action};
     if (adviceRow.level === "配置正常") return {label: "維持", amount: "", detail: adviceRow.action};
@@ -317,7 +317,7 @@
     const currentDeviations = computed.rows.map(row => Number.isFinite(row.targetAllocation) && Number.isFinite(row.weight) ? Math.abs(row.weight - row.targetAllocation) : null).filter(Number.isFinite);
     const meanDeviation = currentDeviations.length ? currentDeviations.reduce((sum, value) => sum + value, 0) / currentDeviations.length : null;
     if (advice.formal) {
-      const healthLabel = advice.health >= 80 ? "良好" : advice.health >= 60 ? "注意" : "失衡";
+      const healthLabel = advice.health >= 80 ? "良好" : advice.health >= 60 ? "普通" : "偏離較大";
       $v6("#rebalanceHealth").textContent = `${healthLabel} ${advice.health}`;
       $v6("#rebalanceDeviation").textContent = `偏離度 ${number(meanDeviation, 1)}%`;
       status.innerHTML = `<b>${escapeHtml(advice.level)}</b><span>${escapeHtml(advice.profileLabel)}容忍區間｜目標合計 100%${estimated ? "｜暫估" : ""}</span>`;
@@ -336,7 +336,7 @@
       const differenceClass = !Number.isFinite(difference) || Math.abs(difference) <= .1 ? "even" : difference > 0 ? "over" : "under";
       const recommendation = recommendationText(adviceRow);
       const tone = adviceRow?.level === "主動再平衡" ? "active" : adviceRow?.level === "配置正常" ? "normal" : "observe";
-      return `<article class="rebalanceItem ${tone}" role="row"><div class="rebalanceItemIdentity" role="cell"><b>${escapeHtml(row.code)}</b><small>${escapeHtml(holdingName(row))}</small></div><div class="rebalanceItemMetric" role="cell"><span>目前</span><b>${percent(currentWeight)}</b></div><div class="rebalanceItemMetric" role="cell"><span>目標</span><b>${Number.isFinite(row.targetAllocation) ? percent(row.targetAllocation) : "未設定"}</b></div><div class="rebalanceItemMetric rebalanceDifference ${differenceClass}" role="cell"><span>偏離</span><b>${percent(difference)}</b></div><div class="rebalanceAction" role="cell"><span>建議</span><b>${escapeHtml(recommendation.label)}</b>${recommendation.amount ? `<strong>${escapeHtml(recommendation.amount)}</strong>` : ""}<small>${escapeHtml(recommendation.detail)}${estimated ? "｜暫估" : ""}</small></div></article>`;
+      return `<article class="rebalanceItem ${tone}" role="row"><div class="rebalanceItemIdentity" role="cell"><b>${escapeHtml(row.code)}</b><small>${escapeHtml(holdingName(row))}</small></div><div class="rebalanceItemMetric rebalanceMarketValue" role="cell"><span>持有市值</span><b>${Number.isFinite(row.allocationValue) ? money(row.allocationValue) : "—"}</b></div><div class="rebalanceItemMetric" role="cell"><span>目前</span><b>${percent(currentWeight)}</b></div><div class="rebalanceItemMetric" role="cell"><span>目標</span><b>${Number.isFinite(row.targetAllocation) ? percent(row.targetAllocation) : "未設定"}</b></div><div class="rebalanceItemMetric rebalanceDifference ${differenceClass}" role="cell"><span>偏離</span><b>${percent(difference)}</b></div><div class="rebalanceAction" role="cell"><span>建議</span><b>${escapeHtml(recommendation.label)}</b>${recommendation.amount ? `<strong>${escapeHtml(recommendation.amount)}</strong>` : ""}<small>${escapeHtml(recommendation.detail)}${estimated ? "｜暫估" : ""}</small></div></article>`;
     }).join("") : '<p class="rebalancePending">尚未新增持股。</p>';
 
     const suggestedTotal = advice.formal ? advice.rows.reduce((sum, row) => sum + Math.max(0, Number(row.suggestedAmount) || 0), 0) : 0;
@@ -396,8 +396,8 @@
       return;
     }
     const center = size / 2;
-    const radius = size * .36;
-    const lineWidth = size * .19;
+    const radius = size * .29;
+    const lineWidth = size * .14;
     let start = -Math.PI / 2;
     allocation.forEach((item, index) => {
       const end = start + item.weight / 100 * Math.PI * 2;
@@ -409,6 +409,28 @@
       ctx.stroke();
       chartSegments.push({...item, start, end, color: ctx.strokeStyle});
       start = end;
+    });
+    ctx.lineWidth = Math.max(1, size * .004);
+    ctx.font = `800 ${Math.max(9, Math.round(size * .031))}px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif`;
+    chartSegments.forEach(segment => {
+      if (!Number.isFinite(segment.weight) || segment.weight < 2) return;
+      const mid = (segment.start + segment.end) / 2;
+      const right = Math.cos(mid) >= 0;
+      const innerX = center + Math.cos(mid) * (radius + lineWidth / 2 + 2);
+      const innerY = center + Math.sin(mid) * (radius + lineWidth / 2 + 2);
+      const elbowX = right ? size * .79 : size * .21;
+      const labelY = Math.max(size * .07, Math.min(size * .93, innerY));
+      const labelX = right ? size * .94 : size * .06;
+      ctx.strokeStyle = segment.color;
+      ctx.beginPath();
+      ctx.moveTo(innerX, innerY);
+      ctx.lineTo(elbowX, labelY);
+      ctx.lineTo(labelX + (right ? -3 : 3), labelY);
+      ctx.stroke();
+      ctx.fillStyle = "#e5d6b2";
+      ctx.textAlign = right ? "right" : "left";
+      ctx.textBaseline = "middle";
+      ctx.fillText(`${segment.code} ${number(segment.weight, 1)}%`, labelX, labelY);
     });
     if (chartSelection >= chartSegments.length) chartSelection = -1;
     if (chartSelection >= 0) {
@@ -443,7 +465,7 @@
     const x = point.clientX - rect.left - rect.width / 2;
     const y = point.clientY - rect.top - rect.height / 2;
     const distance = Math.hypot(x, y);
-    if (distance < rect.width * .25 || distance > rect.width * .48) return;
+    if (distance < rect.width * .20 || distance > rect.width * .38) return;
     let angle = Math.atan2(y, x);
     if (angle < -Math.PI / 2) angle += Math.PI * 2;
     const index = chartSegments.findIndex(segment => angle >= segment.start && angle <= segment.end);

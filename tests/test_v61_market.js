@@ -125,11 +125,11 @@ check("期貨籌碼盤後補抓保留，首頁正式 fallback 由同一 Actions 
   assert.match(marketWorkflow, /cancel-in-progress: true/);
 });
 
-check("市場一句話與額外快速資訊存在", () => {
+check("首頁重點與情緒結論存在", () => {
   assert.match(html, /id="todayHighlightsConclusion"/);
   assert.match(html, /id="homeSentimentConclusion"/);
-  assert.match(html, /市場風險/);
-  assert.match(html, /近期事件/);
+  assert.match(html, /id="homeEtfBrief"/);
+  assert.match(html, /id="homeSwingBrief"/);
 });
 
 check("手機 375、390、430 使用雙欄決策摘要與精簡買點", () => {

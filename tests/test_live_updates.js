@@ -46,7 +46,7 @@ check("首頁、買點與持股共用同一批行情", () => {
   assert.match(html, /applyHomeDelayedQuotes/);
   assert.match(html, /renderTop\(\)/);
   assert.match(html, /renderCards\(\)/);
-  assert.match(quotes, /renderPortfolio\(true\)/);
+  assert.match(quotes, /refreshPortfolio\(true\)/);
 });
 
 check("失敗保留最後資料", () => {

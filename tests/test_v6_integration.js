@@ -20,7 +20,7 @@ function check(name, fn) {
 }
 
 check("Version 6.2 品牌與五個正式分頁", () => {
-  assert.match(html, /HS \| ETF股市雷達/);
+  assert.match(html, /HS｜ETF股市雷達/);
   assert.match(html, /VERSION 6\.2/);
   assert.match(html, /data-tab="signals"[^>]*>[\s\S]*?<span>ETF雷達<\/span><\/button>/);
   for (const tab of ["today", "signals", "portfolio", "sentiment", "more"]) {
@@ -110,9 +110,10 @@ check("下探與回升文字正確且卡片不顯示必買", () => {
 });
 
 check("原有主要功能仍在", () => {
-  for (const marker of ["watchList", "cards", "cnnFearGreedContent", "fomoContent", "institutionContent", "trumpContent", "compare"]) {
+  for (const marker of ["watchList", "cards", "cnnFearGreedContent", "fomoContent", "institutionContent", "trumpContent"]) {
     assert.match(html, new RegExp(`id="${marker}"`));
   }
+  assert.doesNotMatch(html, /id="compare"/);
 });
 
 check("可及性與手機斷點", () => {

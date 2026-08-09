@@ -54,8 +54,8 @@
 
   function ratioBand(ratio){
     if(!finite(ratio))return{key:"unavailable",label:"資料暫時無法取得",tone:"neutral"};
-    if(ratio>=160)return{key:"general",label:"安全墊一般",tone:"calm"};
-    if(ratio>=150)return{key:"shrinking",label:"安全墊縮小",tone:"warning"};
+    if(ratio>=160)return{key:"general",label:"市場槓桿壓力一般",tone:"calm"};
+    if(ratio>=150)return{key:"shrinking",label:"維持率轉弱",tone:"warning"};
     if(ratio>=140)return{key:"pressure",label:"壓力升高",tone:"warning"};
     if(ratio>=130)return{key:"reference",label:"接近法規參考區",tone:"orange"};
     return{key:"extreme",label:"極端壓力區",tone:"danger"};
