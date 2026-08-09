@@ -15,6 +15,7 @@
   const CORE_MA_PERIODS = Object.freeze([20, 60, 200]);
   const TREND_STRUCTURE_PERIODS = Object.freeze([43, 87, 284]);
   const TRADE_STATES = Object.freeze(["ACCUMULATION", "HOLDING", "EXIT", "CLOSED"]);
+  const SWING_006201_POSITION_CONFIG = Object.freeze({first: 15, highQuality: 35, breakout: 60});
 
   const finite = value => {
     if (value === null || value === undefined || value === "") return null;
@@ -273,8 +274,8 @@
     const breakout = indicators.previous20DayHighestClose !== null && indicators.price > indicators.previous20DayHighestClose &&
       indicators.rows.at(-1)?.volume !== null && indicators.volumeMa20 !== null && indicators.rows.at(-1).volume >= indicators.volumeMa20 * 1.2 && (indicators.core.ma20Slope ?? -1) > 0;
     if (breakout && score >= 80) return {number: 4, key: "stage4", label: "Stage 4 突破確認", targetPosition: 100};
-    if (score >= 90) return {number: 3, key: "stage3", label: "Stage 3 趨勢確認", targetPosition: 70};
-    if (score >= 80) return {number: 2, key: "stage2", label: "Stage 2 轉強加碼", targetPosition: 45};
+    if (score >= 90) return {number: 3, key: "stage3", label: "Stage 3 趨勢確認", targetPosition: 80};
+    if (score >= 80) return {number: 2, key: "stage2", label: "Stage 2 轉強加碼", targetPosition: 50};
     if (score >= 70) return {number: 1, key: "stage1", label: "Stage 1 第一批試單", targetPosition: 20};
     return {number: 0, key: score >= 55 ? "near" : "wait", label: score >= 55 ? "接近買點" : "等待", targetPosition: 0};
   }
@@ -331,7 +332,8 @@
     if (confidence.label === "INSUFFICIENT") score = null;
     const stage = stage00733(score, indicators, {setupGate, marketShockGate});
     const exitPressure = exitPressure00733(indicators, input.tradeState || {});
-    const emergencyExit = Boolean(input.tradeState?.belowMa200Days >= 2 && finite(exitPressure.pnl) !== null && exitPressure.pnl <= -8);
+    const belowMa200Days = Math.max(Number(input.tradeState?.belowMa200Days)||0, consecutiveBelowMa(indicators.rows, 200, 2));
+    const emergencyExit = Boolean(belowMa200Days >= 2 && finite(exitPressure.pnl) !== null && exitPressure.pnl <= -8);
     return sanitizeResult({modelVersion:MODEL_VERSION,strategyType:STRATEGY_TYPES.SWING_00733,symbol:"00733",date:indicators.date,buyScore:score,rawBuyScore:weighted.rawScore,coverage:weighted.coverage,confidence,stage,exitPressure,emergencyExit,trendStructure:indicators.trendStructure,coreIndicators:core,weeklyKd:weekly,dailyKd:indicators.daily,relativeStrength:rs,drawdown60:indicators.drawdown60,gates:{setupGate,marketShockGate},caps,scoreFactors:weighted.factors,recommendedAction:emergencyExit?"核心風險條件觸發，退出優先。":stage.label,reasons:buildReasons(indicators, setupGate, marketShockGate),indicators});
   }
 
@@ -339,9 +341,19 @@
     if (score === null) return {number:0,key:"insufficient",label:"資料不足",targetPosition:0};
     if (gates.hardFail.triggered) return {number:0,key:"wait",label:"長期趨勢未通過",targetPosition:0};
     if (!gates.setupGate.passed || score < 80) return {number:0,key:score >= 70?"wait_confirm":"wait",label:score >= 70?"70–79 分：等待確認":"等待",targetPosition:0};
-    if (score >= 90 && input.breakoutConfirmed) return {number:2,key:"quality",label:"高品質反轉確認",targetPosition:60};
-    if (score >= 90) return {number:1,key:"quality_wait",label:"高分但等待突破",targetPosition:25};
-    return {number:1,key:"first",label:"80–89 分：第一批試單",targetPosition:25};
+    if (score >= 90 && input.breakoutConfirmed) return {number:2,key:"quality",label:"高品質反轉確認",targetPosition:SWING_006201_POSITION_CONFIG.breakout};
+    if (score >= 90) return {number:1,key:"quality_wait",label:"高分但等待突破",targetPosition:SWING_006201_POSITION_CONFIG.highQuality};
+    return {number:1,key:"first",label:"80–89 分：第一批試單",targetPosition:SWING_006201_POSITION_CONFIG.first};
+  }
+
+  function consecutiveBelowMa(rows, period, maximumDays) {
+    const normalized=normalizeOhlcv(rows);let count=0;
+    for(let index=normalized.length-1;index>=Math.max(period-1,normalized.length-maximumDays);index-=1){
+      const ma=simpleMovingAverage(normalized.slice(0,index+1).map(row=>row.close),period);
+      if(ma===null||normalized[index].close>=ma)break;
+      count+=1;
+    }
+    return count;
   }
 
   function exitPressure006201(indicators, input = {}) {
@@ -366,9 +378,10 @@
     const hardFail = {triggered:Boolean(indicators.price !== null && core.ma200 !== null && indicators.price < core.ma200 && (core.ma60Slope ?? 0) < 0),reason:"close_below_ma200_and_ma60_falling"};
     const benchmark = buildIndicators(input.benchmarkRows || []);
     const bearGateTriggered = Boolean(benchmark.price !== null && benchmark.core.ma200 !== null && benchmark.price < benchmark.core.ma200 && (benchmark.core.ma60Slope ?? 0) < 0);
-    const relativeWeaknessGate = {triggered:rs.return60 !== null && rs.return60 < -8,cap:69};
+    const relativeWeaknessGate = {triggered:rs.return60 !== null && rs.return60 < 0 && rs.recovery20 !== null && rs.recovery20 < 0,cap:69};
+    const stopConfirmationConfirmed = Boolean(weekly?.direction==="up"&&indicators.price>=core.ma20&&(core.ma20Slope??-1)>=0);
     const stopConfirmation = clamp((weekly?.direction === "up" ? 35 : 0)+(weekly?.k >= weekly?.d ? 20 : 0)+(indicators.price >= core.ma20 ? 20 : 0)+(indicators.lowStopped ? 15 : 0)+((indicators.return10 ?? -99)>0?10:0));
-    const breakoutConfirmed = Boolean(indicators.previous20DayHighestClose !== null && indicators.price > indicators.previous20DayHighestClose && indicators.rows.at(-1)?.volume !== null && indicators.volumeMa20 !== null && indicators.rows.at(-1).volume >= indicators.volumeMa20 * 1.2);
+    const breakoutConfirmed = Boolean(!bearGateTriggered&&indicators.previous20DayHighestClose !== null && indicators.price > indicators.previous20DayHighestClose && indicators.rows.at(-1)?.volume !== null && indicators.volumeMa20 !== null && indicators.rows.at(-1).volume >= indicators.volumeMa20 * 1.2);
     const weighted = weightedFactors([
       {key:"bottom",label:"底部位置",weight:25,value:pullbackFactor(indicators.drawdown60,-20,-8)},
       {key:"stopConfirmation",label:"止跌確認",weight:20,value:stopConfirmation},
@@ -382,17 +395,17 @@
     ]);
     let score = weighted.rawScore;
     const caps=[];
-    if (!setupGate.passed && score !== null) {score=Math.min(score,79);caps.push({reason:"setup_gate",value:79});}
+    if (!setupGate.passed && score !== null) {score=Math.min(score,69);caps.push({reason:"setup_gate",value:69});}
     if ((bearGateTriggered || relativeWeaknessGate.triggered) && score !== null) {score=Math.min(score,69);caps.push({reason:bearGateTriggered?"0050_bear_gate":"relative_weakness",value:69});}
     if (hardFail.triggered && score !== null) {score=Math.min(score,49);caps.push({reason:"hard_fail",value:49});}
     if (confidence.label === "INSUFFICIENT") score=null;
     const stage=stage006201(score,{breakoutConfirmed},{hardFail,setupGate});
     const exitPressure=exitPressure006201(indicators,{...input,breakoutConfirmed});
-    const below200Days=Number(input.tradeState?.belowMa200Days)||0;
+    const below200Days=Math.max(Number(input.tradeState?.belowMa200Days)||0,consecutiveBelowMa(indicators.rows,200,10));
     const pnl=finite(input.tradeState?.entryPrice)&&indicators.price?change(indicators.price,input.tradeState.entryPrice):null;
     const emergencyExit=Boolean(below200Days>=10&&(core.ma60Slope??0)<0&&pnl!==null&&pnl<=-8);
     const timeExit=Boolean((Number(input.tradeState?.holdingDays)||0)>=120);
-    return sanitizeResult({modelVersion:MODEL_VERSION,strategyType:STRATEGY_TYPES.SWING_006201,symbol:"006201",date:indicators.date,buyScore:score,rawBuyScore:weighted.rawScore,coverage:weighted.coverage,confidence,stage,exitPressure,emergencyExit,timeExit,cooldownDays:20,stopConfirmation,breakoutConfirmed,trendStructure:indicators.trendStructure,coreIndicators:core,weeklyKd:weekly,dailyKd:indicators.daily,relativeStrength:rs,drawdown60:indicators.drawdown60,gates:{setupGate,hardFail,bearGate:{triggered:bearGateTriggered},relativeWeaknessGate},caps,scoreFactors:weighted.factors,recommendedAction:emergencyExit||timeExit?"退出條件優先。":stage.label,reasons:buildReasons(indicators,setupGate,{triggered:bearGateTriggered}),indicators});
+    return sanitizeResult({modelVersion:MODEL_VERSION,strategyType:STRATEGY_TYPES.SWING_006201,symbol:"006201",date:indicators.date,buyScore:score,rawBuyScore:weighted.rawScore,coverage:weighted.coverage,confidence,stage,exitPressure,emergencyExit,timeExit,cooldownDays:20,stopConfirmation,stopConfirmationConfirmed,breakoutConfirmed,trendStructure:indicators.trendStructure,coreIndicators:core,weeklyKd:weekly,dailyKd:indicators.daily,relativeStrength:rs,drawdown60:indicators.drawdown60,gates:{setupGate,hardFail,bearGate:{triggered:bearGateTriggered},relativeWeaknessGate},caps,scoreFactors:weighted.factors,recommendedAction:emergencyExit||timeExit?"退出條件優先。":stage.label,reasons:buildReasons(indicators,setupGate,{triggered:bearGateTriggered}),indicators});
   }
 
   function buildReasons(indicators, setupGate, marketGate) {
@@ -406,7 +419,7 @@
 
   function normalizeTradeState(raw = {}) {
     const state = TRADE_STATES.includes(raw.state) ? raw.state : "CLOSED";
-    return {tradeId:String(raw.tradeId||""),symbol:String(raw.symbol||""),state,position:clamp(finite(raw.position)??0,0,100),entryPrice:finite(raw.entryPrice),peakPrice:finite(raw.peakPrice),entryDate:safeDate(raw.entryDate),exitDate:safeDate(raw.exitDate),highestStage:Math.max(0,Math.floor(finite(raw.highestStage)??0)),holdingDays:Math.max(0,Math.floor(finite(raw.holdingDays)??0)),belowMa200Days:Math.max(0,Math.floor(finite(raw.belowMa200Days)??0))};
+    return {tradeId:String(raw.tradeId||""),symbol:String(raw.symbol||""),state,position:clamp(finite(raw.position)??0,0,100),entryPrice:finite(raw.entryPrice),peakPrice:finite(raw.peakPrice),entryDate:safeDate(raw.entryDate),exitDate:safeDate(raw.exitDate),highestStage:Math.max(0,Math.floor(finite(raw.highestStage)??0)),lastExecutedStage:Math.max(0,Math.floor(finite(raw.lastExecutedStage)??finite(raw.highestStage)??0)),lastStageDate:safeDate(raw.lastStageDate),lastEntryPrice:finite(raw.lastEntryPrice),holdingDays:Math.max(0,Math.floor(finite(raw.holdingDays)??0)),belowMa200Days:Math.max(0,Math.floor(finite(raw.belowMa200Days)??0)),cooldownRemaining:Math.max(0,Math.floor(finite(raw.cooldownRemaining)??0))};
   }
 
   function transitionTradeState(rawState, event = {}) {
@@ -419,12 +432,14 @@
     const output={...current,state:next};
     if (action==="OPEN"&&current.state==="CLOSED"&&next==="ACCUMULATION") {
       output.tradeId=String(event.tradeId||`${event.symbol||current.symbol}-${event.date||""}`);
-      output.symbol=String(event.symbol||current.symbol);output.entryDate=safeDate(event.date);output.entryPrice=finite(event.price);output.peakPrice=finite(event.price);output.position=clamp(finite(event.position)??0,0,100);output.highestStage=Math.max(0,Math.floor(finite(event.stage)??0));
+      output.symbol=String(event.symbol||current.symbol);output.entryDate=safeDate(event.date);output.entryPrice=finite(event.price);output.peakPrice=finite(event.price);output.position=clamp(finite(event.position)??0,0,100);output.highestStage=Math.max(0,Math.floor(finite(event.stage)??0));output.lastExecutedStage=output.highestStage;output.lastStageDate=safeDate(event.date);output.lastEntryPrice=finite(event.price);
     }
     if (action==="ADD"&&["ACCUMULATION","HOLDING"].includes(current.state)) {
       const requestedStage=Math.max(0,Math.floor(finite(event.stage)??0));
-      if (requestedStage<=current.highestStage) return {...current,error:"stage_already_executed"};
-      output.position=clamp(finite(event.position)??current.position,0,100);output.highestStage=requestedStage;
+      if(safeDate(event.date)&&safeDate(event.date)===current.lastStageDate)return{...current,error:"one_stage_per_day"};
+      const repeatAllowed=requestedStage===current.highestStage&&event.stageCondition===true&&finite(event.price)!==null&&finite(current.lastEntryPrice)!==null&&event.price<=current.lastEntryPrice*.95;
+      if (requestedStage<current.highestStage||(requestedStage===current.highestStage&&!repeatAllowed)) return {...current,error:"stage_already_executed"};
+      output.position=clamp(finite(event.position)??current.position,0,100);output.highestStage=Math.max(current.highestStage,requestedStage);output.lastExecutedStage=requestedStage;output.lastStageDate=safeDate(event.date);output.lastEntryPrice=finite(event.price)??current.lastEntryPrice;
     }
     if (action==="PROTECT"&&next==="EXIT") output.position=Math.min(50,output.position);
     if (action==="CLOSE"&&next==="CLOSED") {output.position=0;output.exitDate=safeDate(event.date);}
@@ -466,5 +481,5 @@
     return Object.fromEntries(Object.entries(value).map(([key,item])=>[key,sanitizeResult(item)]));
   }
 
-  return Object.freeze({MODEL_VERSION,STRATEGY_TYPES,CORE_MA_PERIODS,TREND_STRUCTURE_PERIODS,TRADE_STATES,normalizeOhlcv,simpleMovingAverage,movingAverageSnapshot,dailyKdj,weeklyKdj,relativeStrength,trendStructure,dataConfidence,buildIndicators,weightedFactors,stage00733,stage006201,engine00733,engine006201,exitPressure00733,exitPressure006201,normalizeTradeState,transitionTradeState,runStrategy,backtestSignals,sanitizeResult});
+  return Object.freeze({MODEL_VERSION,STRATEGY_TYPES,CORE_MA_PERIODS,TREND_STRUCTURE_PERIODS,TRADE_STATES,SWING_006201_POSITION_CONFIG,normalizeOhlcv,simpleMovingAverage,movingAverageSnapshot,dailyKdj,weeklyKdj,relativeStrength,trendStructure,dataConfidence,buildIndicators,weightedFactors,stage00733,stage006201,consecutiveBelowMa,engine00733,engine006201,exitPressure00733,exitPressure006201,normalizeTradeState,transitionTradeState,runStrategy,backtestSignals,sanitizeResult});
 });

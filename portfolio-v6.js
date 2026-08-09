@@ -202,6 +202,8 @@
       const tradeLabel = radar?.strategyType === "swing00733" ? "00733 強勢趨勢拉回" : radar?.strategyType === "swing006201" ? "006201 上櫃低檔轉折" : "";
       const trendProtected = radar?.swing?.strategyType === "swing00733" && radar.swing.stage?.number >= 3;
       const rebalance = core.rebalanceDecision({actualWeight: row.weight, targetAllocation: row.targetAllocation, trendProtected});
+      const trade = tradeLabel ? window.HSPersistenceCore?.loadTradeState?.(row.code) : null;
+      const peakProfit = trade?.entryPrice > 0 && trade?.peakPrice > 0 ? (trade.peakPrice / trade.entryPrice - 1) * 100 : null;
       return `<article class="holdingCard" data-holding-code="${escapeHtml(row.code)}">
         <div class="holdingMain">
           <div class="holdingIdentity"><b>${escapeHtml(row.code)}</b><span>${escapeHtml(name)}</span></div>
@@ -224,6 +226,12 @@
             <div><span>行情日期</span><b>${escapeHtml(row.quote?.date || "行情暫缺")}</b></div>
             <div><span>策略類型</span><b>${escapeHtml(tradeLabel || row.strategyType || "使用預設模型")}</b></div>
             <div><span>目標配置</span><b>${Number.isFinite(row.targetAllocation) ? percent(row.targetAllocation) : "未設定"}</b></div>
+            ${tradeLabel ? `<div><span>Trade ID</span><b>${escapeHtml(trade?.tradeId || "尚未建立")}</b></div>
+            <div><span>Trade Mode／Stage</span><b>${escapeHtml(trade?.state || "CLOSED")}／${radar?.swing?.stage?.number ?? 0}</b></div>
+            <div><span>策略部位</span><b>${Number.isFinite(trade?.position) ? percent(trade.position) : "0%"}</b></div>
+            <div><span>買點／出場壓力</span><b>${Number.isFinite(radar?.swing?.buyScore) ? radar.swing.buyScore : "—"}／${Number.isFinite(radar?.swing?.exitPressure?.score) ? radar.swing.exitPressure.score : "—"}</b></div>
+            <div><span>最高浮盈／持有日</span><b>${Number.isFinite(peakProfit) ? percent(peakProfit) : "—"}／${Number(trade?.holdingDays)||0}</b></div>
+            <div><span>冷卻狀態</span><b>${Number(trade?.cooldownRemaining)>0 ? `${trade.cooldownRemaining} 交易日` : "無"}</b></div>` : ""}
           </div>
           <p class="holdingNote">${escapeHtml(rebalance.label)}</p>
           ${lossNote(row) ? `<p class="holdingNote">${escapeHtml(lossNote(row))}</p>` : ""}

@@ -30,7 +30,7 @@
     alerts:PREFIX+"alerts",etfUniverseCache:PREFIX+"etfUniverseCache",liveQuoteProxy:PREFIX+"liveQuoteProxy",
     holdings:PREFIX+"portfolio.holdings",quotes:PREFIX+"portfolio.quotes",portfolioAuto:PREFIX+"portfolio.autoRefresh",
     portfolioMarketVersion:PREFIX+"portfolio.marketVersion",finmindToken:PREFIX+"finmindToken",
-    forwardTest:PREFIX+"forwardTest.v1.2.1",migration:PREFIX+"migrationVersion"
+    forwardTest:PREFIX+"forwardTest.v1.2.1",decisionLog:PREFIX+"decisionLog",events:PREFIX+"events",migration:PREFIX+"migrationVersion"
   });
   const safeStorage=storage&&typeof storage.getItem==="function"?storage:null;
   const finite=value=>{if(value===null||value===undefined||value==="")return null;const number=Number(value);return Number.isFinite(number)?number:null};
@@ -67,7 +67,7 @@
     if(!/^[0-9A-Z]{2,10}$/.test(symbol)||!signalDate||signalDate<FORWARD_START_DATE||stage<1||!tradeId||raw?.provisional===true)return null;
     const score=finite(raw?.buyScore),exit=finite(raw?.exitPressure),price=finite(raw?.signalPrice);
     if(score===null||score<0||score>100||price===null||price<=0)return null;
-    return{key:`${symbol}|${signalDate}|${stage}|${tradeId}`,symbol,signalDate,stage,tradeId,strategyType:String(raw.strategyType||""),modelVersion:MODEL_VERSION,buyScore:score,exitPressure:exit,signalPrice:price,tradeState:String(raw.tradeState||"ACCUMULATION"),confidence:String(raw.confidence||"INSUFFICIENT"),outcomes:raw.outcomes&&typeof raw.outcomes==="object"?raw.outcomes:{},createdAt:String(raw.createdAt||new Date().toISOString())};
+    return{key:`${symbol}|${signalDate}|${stage}|${tradeId}`,symbol,signalDate,stage,tradeId,strategyType:String(raw.strategyType||""),modelVersion:MODEL_VERSION,buyScore:score,rawScore:finite(raw.rawScore),exitPressure:exit,signalPrice:price,position:finite(raw.position),weeklyJ:finite(raw.weeklyJ),relativeStrength:finite(raw.relativeStrength),ma20:finite(raw.ma20),ma60:finite(raw.ma60),ma200:finite(raw.ma200),drawdown60:finite(raw.drawdown60),gate:raw.gate&&typeof raw.gate==="object"?raw.gate:{},marketStatus:String(raw.marketStatus||""),tradeState:String(raw.tradeState||"ACCUMULATION"),confidence:String(raw.confidence||"INSUFFICIENT"),outcomes:raw.outcomes&&typeof raw.outcomes==="object"?raw.outcomes:{},createdAt:String(raw.createdAt||new Date().toISOString())};
   }
   function appendForwardRecord(raw){
     const record=validateForwardRecord(raw);if(!record)return{ok:false,reason:"invalid_or_provisional"};
@@ -76,6 +76,18 @@
     rows.push(record);return setJson(keys.forwardTest,rows)?{ok:true,duplicate:false,record}:{ok:false,reason:"storage_failed"};
   }
   function listForwardRecords(){const rows=getJson(keys.forwardTest,[]);return Array.isArray(rows)?rows.map(validateForwardRecord).filter(Boolean):[]}
+  function validateEvent(raw){
+    const id=String(raw?.id||""),symbol=String(raw?.symbol||"").toUpperCase(),date=safeDate(raw?.date),type=String(raw?.type||""),severity=String(raw?.severity||"");
+    if(!id||!date||!/^[0-9A-Z]{2,10}$/.test(symbol)||!["BUY_STAGE","EXIT_PRESSURE","MARKET_GATE","STRUCTURE_STOP","REBALANCE","DATA_WARNING"].includes(type)||!["low","medium","high","critical"].includes(severity))return null;
+    return{id,symbol,date,type,severity,title:String(raw.title||"").slice(0,120),reason:String(raw.reason||"").slice(0,300),strategyVersion:MODEL_VERSION,acknowledged:raw.acknowledged===true};
+  }
+  function appendEvent(raw){const event=validateEvent(raw);if(!event)return{ok:false,reason:"invalid_event"};const rows=getJson(keys.events,[]);if(!Array.isArray(rows))return{ok:false,reason:"invalid_store"};if(rows.some(item=>item?.id===event.id))return{ok:true,duplicate:true,event};rows.push(event);return setJson(keys.events,rows)?{ok:true,duplicate:false,event}:{ok:false,reason:"storage_failed"}}
+  function validateDecisionLog(raw){
+    const date=safeDate(raw?.date),symbol=String(raw?.symbol||"").toUpperCase(),score=finite(raw?.score),before=finite(raw?.positionBefore),after=finite(raw?.positionAfter);
+    if(!date||!/^[0-9A-Z]{2,10}$/.test(symbol)||score===null||score<0||score>100||before===null||after===null||before<0||before>100||after<0||after>100)return null;
+    return{date,symbol,tradeId:String(raw.tradeId||""),strategy:String(raw.strategy||""),score,stage:Math.max(0,Math.floor(finite(raw.stage)??0)),positionBefore:before,positionAfter:after,action:String(raw.action||"").slice(0,40),reason:String(raw.reason||"").slice(0,300),userNote:String(raw.userNote||"").slice(0,300),createdAt:String(raw.createdAt||new Date().toISOString())};
+  }
+  function appendDecisionLog(raw){const entry=validateDecisionLog(raw);if(!entry)return{ok:false,reason:"invalid_decision"};const rows=getJson(keys.decisionLog,[]);if(!Array.isArray(rows))return{ok:false,reason:"invalid_store"};rows.push(entry);return setJson(keys.decisionLog,rows)?{ok:true,entry}:{ok:false,reason:"storage_failed"}}
   function validateAllocations(items){
     if(!Array.isArray(items))return{ok:false,total:null};
     const normalized=[];let total=0;
@@ -83,5 +95,5 @@
     return{ok:total<=100,total:Number(total.toFixed(2)),items:normalized};
   }
   migrateLegacy();
-  return Object.freeze({PREFIX,MODEL_VERSION,FORWARD_START_DATE,SCHEMA_VERSION,LEGACY_KEYS,keys,key,getRaw,setRaw,remove,getJson,setJson,migrateLegacy,tradeKey,loadTradeState,saveTradeState,forwardKey,validateForwardRecord,appendForwardRecord,listForwardRecords,validateAllocations});
+  return Object.freeze({PREFIX,MODEL_VERSION,FORWARD_START_DATE,SCHEMA_VERSION,LEGACY_KEYS,keys,key,getRaw,setRaw,remove,getJson,setJson,migrateLegacy,tradeKey,loadTradeState,saveTradeState,forwardKey,validateForwardRecord,appendForwardRecord,listForwardRecords,validateEvent,appendEvent,validateDecisionLog,appendDecisionLog,validateAllocations});
 });

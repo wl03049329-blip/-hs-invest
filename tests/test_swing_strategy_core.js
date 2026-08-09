@@ -135,6 +135,21 @@ test("交易生命週期禁止 EXIT 回到 ACCUMULATION 並禁止重複 stage", 
   assert.strictEqual(repeated.error,"stage_already_executed");
 });
 
+test("同 Stage 僅在隔日且價格再低至少 5% 時允許一次重建", () => {
+  const opened=core.transitionTradeState({}, {action:"OPEN",nextState:"ACCUMULATION",tradeId:"00733-1",symbol:"00733",date:"2026-08-08",price:50,position:20,stage:1});
+  assert.strictEqual(core.transitionTradeState(opened,{action:"ADD",nextState:"ACCUMULATION",date:"2026-08-08",price:47,position:30,stage:1,stageCondition:true}).error,"one_stage_per_day");
+  assert.strictEqual(core.transitionTradeState(opened,{action:"ADD",nextState:"ACCUMULATION",date:"2026-08-11",price:48,position:30,stage:1,stageCondition:true}).error,"stage_already_executed");
+  const repeated=core.transitionTradeState(opened,{action:"ADD",nextState:"ACCUMULATION",date:"2026-08-11",price:47.5,position:30,stage:1,stageCondition:true});
+  assert.strictEqual(repeated.error,undefined);
+  assert.strictEqual(repeated.lastEntryPrice,47.5);
+});
+
+test("006201 第一批使用公開 15% 設定", () => {
+  const stage=core.stage006201(85,{breakoutConfirmed:false},{hardFail:{triggered:false},setupGate:{passed:true}});
+  assert.strictEqual(stage.targetPosition,15);
+  assert.strictEqual(core.SWING_006201_POSITION_CONFIG.first,15);
+});
+
 test("006201 退出後 20 日 cooling 期間不得建立新 Trade", () => {
   const blocked=core.transitionTradeState({state:"CLOSED",position:0},{nextState:"ACCUMULATION",action:"OPEN",symbol:"006201",date:"2026-08-09",price:20,position:25,cooldownRemaining:12});
   assert.strictEqual(blocked.state,"CLOSED");

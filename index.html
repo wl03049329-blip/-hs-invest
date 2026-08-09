@@ -1254,7 +1254,7 @@ function recordForwardSwingSignal(item,result){
   }
   if(state.error)return;
   HSPersistenceCore.saveTradeState(item.id,state);
-  HSPersistenceCore.appendForwardRecord({symbol:item.id,signalDate:result.date,stage:result.stage.number,tradeId:state.tradeId,strategyType:result.strategyType,buyScore:result.buyScore,exitPressure:result.exitPressure?.score,signalPrice:price,tradeState:state.state,confidence:result.confidence?.label,provisional:false});
+  HSPersistenceCore.appendForwardRecord({symbol:item.id,signalDate:result.date,stage:result.stage.number,tradeId:state.tradeId,strategyType:result.strategyType,buyScore:result.buyScore,rawScore:result.rawBuyScore,exitPressure:result.exitPressure?.score,signalPrice:price,position:state.position,weeklyJ:result.weeklyKd?.j,relativeStrength:result.relativeStrength?.return60,ma20:result.coreIndicators?.ma20,ma60:result.coreIndicators?.ma60,ma200:result.coreIndicators?.ma200,drawdown60:result.drawdown60,gate:result.gates,marketStatus:result.gates?.marketShockGate?.triggered||result.gates?.bearGate?.triggered?"FAIL":"PASS",tradeState:state.state,confidence:result.confidence?.label,provisional:false});
 }
 function applyDedicatedSwingModels(){
   if(!window.HSSwingStrategyCore)return;

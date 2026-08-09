@@ -15,6 +15,13 @@ assert.match(html,/Exit Pressure/);
 assert.match(html,/MA20／60／200/);
 assert.match(html,/MA43／87／284/);
 assert.match(html,/HS Swing Radar V1\.2\.1 Beta Validated Frozen/);
+assert.match(html,/recordForwardSwingSignal/);
+assert.match(html,/rawScore:result\.rawBuyScore/);
+assert.match(html,/marketStatus:/);
+const portfolio = fs.readFileSync("portfolio-v6.js","utf8");
+assert.match(portfolio,/Trade ID/);
+assert.match(portfolio,/買點／出場壓力/);
+assert.match(portfolio,/cooldownRemaining/);
 
 const visibleHomeOrder = ["todayHighlights","homeSentiment","homeEtfBrief","homeSwingBrief"];
 let cursor = -1;
