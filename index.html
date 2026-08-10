@@ -2465,7 +2465,6 @@ function longRankSnapshot(longs,saved,version,slot){
     ranks
   };
 }
-}
 function longRankRow(x,index,previous){
   const decision=strategyDecisionFor(x,"long_term_core"),score=decision?.score,stage=decision?.stage;
   const previousItem=previous?.items?.[x.id],oldRank=Number(previousItem?.current_rank??previous?.ranks?.[x.id]),change=Number.isFinite(oldRank)?oldRank-(index+1):0;
