@@ -28,6 +28,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A -- margin-data.json margin-cost-state.json reconciliation-report.json
+          git add -A -- margin-data.json margin-cost-state.json
           git diff --cached --quiet || git commit -m "Update margin risk data"
           git push
