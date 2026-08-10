@@ -300,7 +300,14 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 <link rel="stylesheet" href="portfolio-v6.css?v=20260810-finalux" />
 <link rel="stylesheet" href="v62-tech.css?v=20260809b" />
 <link rel="stylesheet" href="formal-black-gold.css?v=20260810-storyflow5" />
-</head>
+<style>
+/* HS story: final no-arrow layout */
+.hsStorySteps li::before,
+.hsStorySteps li::after{
+  content:none !important;
+  display:none !important;
+}
+</style></head>
 <body>
 <svg class="iconSprite" aria-hidden="true" width="0" height="0">
   <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5v8a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
