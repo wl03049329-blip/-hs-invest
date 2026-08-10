@@ -302,7 +302,15 @@ footer{color:#746f67}
   .hsStorySteps{grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
   .hsStorySteps li{min-height:102px;padding:13px 9px}.hsStorySteps li b{font-size:23px}.hsStorySteps li span{font-size:13px}
   .hsStorySteps li:not(:last-child)::after{right:-15px}
-  .hsStorySteps li:nth-child(2)::after{content:"↓";right:auto;top:auto;left:50%;bottom:-18px;transform:translateX(-50%)}
+  .hsStorySteps li:nth-child(2)::after{
+  content:"↙";
+  right:auto;
+  top:auto;
+  left:8%;
+  bottom:-22px;
+  transform:none;
+  font-size:24px;
+}
 }
 
 @media(max-width:430px){
