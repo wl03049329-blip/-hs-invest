@@ -2261,7 +2261,30 @@ function longRankComparator(a,b){
   const scoreA=displayScore(a,"long_term_core"),scoreB=displayScore(b,"long_term_core");
   return (Number.isFinite(scoreB)?scoreB:-1)-(Number.isFinite(scoreA)?scoreA:-1)||(Number.isFinite(a.j)?a.j:999)-(Number.isFinite(b.j)?b.j:999)||(Number.isFinite(a.fromHigh)?a.fromHigh:999)-(Number.isFinite(b.fromHigh)?b.fromHigh:999)||a.id.localeCompare(b.id);
 }
-function previousLongRanks(){try{const value=JSON.parse(localStorage.getItem(LONG_RANK_STORAGE_KEY)||"{}");return value&&typeof value==="object"?value:{}}catch{return{}}}
+function previousLongRanks(){
+  try{
+    const value=JSON.parse(localStorage.getItem(LONG_RANK_STORAGE_KEY)||"{}");
+    return value&&typeof value==="object"&&value.schema_version===2?value:{};
+  }catch{
+    return{};
+  }
+}
+
+function comparisonLongRanks(saved,slot=currentLongRankSlot()){
+  if(!saved||saved.schema_version!==2)return{};
+  if(saved.slot_time===slot){
+    return{
+      items:saved.previous_items||{},
+      ranks:saved.previous_ranks||{},
+      slot_time:saved.previous_slot_time||""
+    };
+  }
+  return{
+    items:saved.items||{},
+    ranks:saved.ranks||{},
+    slot_time:saved.slot_time||""
+  };
+}
 function currentLongRankSlot(date=new Date()){
   const parts=Object.fromEntries(new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Taipei",weekday:"short",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false}).formatToParts(date).map(part=>[part.type,part.value]));
   if(["Sat","Sun"].includes(parts.weekday))return"最近交易日 13:30";
@@ -2276,12 +2299,39 @@ function longRankScheduleStatus(date=new Date()){
   const format=slot=>`${String(Math.floor(slot/60)).padStart(2,"0")}:${String(slot%60).padStart(2,"0")}`;
   return{current:current===undefined?"盤前正式分數":format(current),next:next===undefined?"今日已完成":"下一次 "+format(next)};
 }
-function longRankSnapshot(longs,previous,version){
-  const priorItems=previous?.items||{};
-  return{version,slot_time:currentLongRankSlot(),items:Object.fromEntries(longs.map((item,index)=>{
-    const old=priorItems[item.id]||{},score=displayScore(item,"long_term_core");
-    return[item.id,{current_score:Number.isFinite(score)?score:null,previous_score:Number.isFinite(old.current_score)?old.current_score:null,current_rank:index+1,previous_rank:Number.isFinite(old.current_rank)?old.current_rank:null,slot_time:currentLongRankSlot()}];
-  })),ranks:Object.fromEntries(longs.map((item,index)=>[item.id,index+1]))};
+function longRankSnapshot(longs,saved,version){
+  const slot=currentLongRankSlot();
+  const sameSlot=saved?.schema_version===2&&saved.slot_time===slot;
+
+  const items=Object.fromEntries(longs.map((item,index)=>{
+    const score=displayScore(item,"long_term_core");
+    return[item.id,{
+      current_score:Number.isFinite(score)?score:null,
+      current_rank:index+1,
+      slot_time:slot
+    }];
+  }));
+
+  const ranks=Object.fromEntries(
+    longs.map((item,index)=>[item.id,index+1])
+  );
+
+  return{
+    schema_version:2,
+    version,
+    slot_time:slot,
+    previous_slot_time:sameSlot
+      ?(saved.previous_slot_time||"")
+      :(saved?.schema_version===2?saved.slot_time||"":""),
+    previous_items:sameSlot
+      ?(saved.previous_items||{})
+      :(saved?.schema_version===2?saved.items||{}:{}),
+    previous_ranks:sameSlot
+      ?(saved.previous_ranks||{})
+      :(saved?.schema_version===2?saved.ranks||{}:{}),
+    items,
+    ranks
+  };
 }
 function longRankRow(x,index,previous){
   const decision=strategyDecisionFor(x,"long_term_core"),score=decision?.score,stage=decision?.stage;
@@ -2319,11 +2369,11 @@ function renderTop(){
   const swings=all.filter(x=>swingIds.has(x.id)).sort((a,b)=>(displayScore(b,strategyModeFor(b))??-1)-(displayScore(a,strategyModeFor(a))??-1));
   const longCount=longs.filter(x=>(strategyDecisionFor(x,"long_term_core")?.score??0)>=60).length;
   const swingCount=swings.filter(x=>(strategyDecisionFor(x,strategyModeFor(x))?.stage?.number??0)>0||["first","confirmed"].includes(strategyDecisionFor(x,strategyModeFor(x))?.stage?.key)).length;
-  const previous=previousLongRanks(),version=liveMarketCacheVersion||all[0]?.date||"";
+  const saved=previousLongRanks(),previous=comparisonLongRanks(saved),version=liveMarketCacheVersion||all[0]?.date||"";
   $("#homeEtfBriefSummary").textContent=longs.length>=2?`第1優先：${longs[0].id}｜${displayScore(longs[0],"long_term_core")}分｜${displayStage(longs[0],"long_term_core")?.label}；第2優先：${longs[1].id}｜${displayScore(longs[1],"long_term_core")}分｜${displayStage(longs[1],"long_term_core")?.label}；其餘${longs.length-2}支依排名分批評估。`:"長期加碼資料載入中。";
   $("#rankList").innerHTML=longs.map((x,index)=>longRankRow(x,index,previous)).join("")||'<div class="newsEmpty">資料載入中</div>';
   $("#homeSwingList").innerHTML=`<div class="homeOpportunityGroup">${swings.map(x=>compactOpportunityRow(x,strategyModeFor(x))).join("")||'<div class="newsEmpty">資料載入中</div>'}</div>`;
-  if(version&&version!==lastRankSnapshotVersion){localStorage.setItem(LONG_RANK_STORAGE_KEY,JSON.stringify(longRankSnapshot(longs,previous,version)));lastRankSnapshotVersion=version}
+  if(version&&version!==lastRankSnapshotVersion){localStorage.setItem(LONG_RANK_STORAGE_KEY,JSON.stringify(longRankSnapshot(longs,saved,version)));lastRankSnapshotVersion=version}
   const radar=activeRadarItems(),sorted=[...radar].sort((a,b)=>(displayScore(b)??-1)-(displayScore(a)??-1)),low=[...radar].sort((a,b)=>a.j-b.j)[0],best=sorted.find(x=>Number.isFinite(displayScore(x)));
   $("#snapshotGrid").innerHTML=(best||low)?`<div class="snapshot"><span>最高策略分數</span><b>${best?`${best.id}｜${displayScore(best)} 分`:"資料不足"}</b></div><div class="snapshot"><span>最低週 J 值</span><b>${low?`${low.id}｜${fmt(low.j)}`:"—"}</b></div><div class="snapshot"><span>長期加碼區</span><b>${longCount} 檔</b></div><div class="snapshot"><span>波段已確認</span><b>${swingCount} 檔</b></div>`:'<div class="newsEmpty">尚無 ETF 資料。</div>';
   const hasIntraday=longs.some(item=>item.scoreMode==="intraday"),schedule=longRankScheduleStatus();
