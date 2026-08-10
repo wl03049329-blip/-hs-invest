@@ -839,6 +839,12 @@ footer{color:#746f67}
 
 #sentiment .chipSegments {
   grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  position: sticky !important;
+  top: max(0px, env(safe-area-inset-top)) !important;
+  z-index: 100 !important;
+  background: #050505f5 !important;
+  padding-top: 6px !important;
+  padding-bottom: 6px !important;
 }
 
 #sentiment .chipSegment {
