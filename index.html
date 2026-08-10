@@ -2069,7 +2069,7 @@ function applyHomeDelayedQuotes(detail){
     if(!Number.isFinite(price)||price<=0)continue;
     const quoteDate=String(quote?.date||"");
     if(/^\d{4}-\d{2}-\d{2}$/.test(quoteDate)&&/^\d{4}-\d{2}-\d{2}$/.test(String(x.formalState?.date||""))&&quoteDate<x.formalState.date)continue;
-    const isIntraday=quote.quoteMode==="delayed"&&quoteDate===taipeiToday()&&HSPortfolioCore.isTaipeiMarketOpen(new Date());
+    const isIntraday=quoteDate===taipeiToday()&&/^\d{2}:\d{2}:\d{2}$/.test(String(quote?.quoteTime||""));
     if(isIntraday){
       if(!applyIntradayEstimate(x,quote))continue;
     }else{
