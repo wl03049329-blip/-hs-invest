@@ -2271,74 +2271,200 @@ function longRankComparator(a,b){
 function previousLongRanks(){
   try{
     const value=JSON.parse(localStorage.getItem(LONG_RANK_STORAGE_KEY)||"{}");
-    return value&&typeof value==="object"&&value.schema_version===2?value:{};
+    return value&&typeof value==="object"&&value.schema_version===3?value:{};
   }catch{
     return{};
   }
 }
 
-function comparisonLongRanks(saved,slot=currentLongRankSlot()){
-  if(!saved||saved.schema_version!==2)return{};
+function longRankDataSlot(longs){
+  const rows=Array.isArray(longs)?longs:[];
+
+  const item=
+    rows.find(x=>
+      /^\d{4}-\d{2}-\d{2}$/.test(String(x?.date||"")) &&
+      /\d{2}:\d{2}/.test(String(x?.quoteTime||""))
+    ) ||
+    rows.find(x=>
+      /^\d{4}-\d{2}-\d{2}$/.test(String(x?.date||""))
+    );
+
+  if(!item)return currentLongRankSlot();
+
+  const date=String(item.date);
+
+  /* 盤後正式資料永遠歸在該交易日 13:30 */
+  if(item.scoreMode!=="intraday" || item.quoteMode==="close"){
+    return `${date} 13:30`;
+  }
+
+  const match=String(item.quoteTime||"").match(/(\d{2}):(\d{2})/);
+  if(!match)return `${date} 13:30`;
+
+  const minute=Number(match[1])*60+Number(match[2]);
+  const slots=[570,630,690,750,810];
+  const active=[...slots].reverse().find(slot=>minute>=slot);
+
+  if(active===undefined)return `${date} 09:30`;
+
+  return `${date} ${String(Math.floor(active/60)).padStart(2,"0")}:${String(active%60).padStart(2,"0")}`;
+}
+
+function expectedPreviousLongRankSlot(slot){
+  const match=String(slot||"").match(/^(\d{4}-\d{2}-\d{2}) (09:30|10:30|11:30|12:30|13:30)$/);
+  if(!match)return"";
+
+  const date=match[1];
+  const time=match[2];
+
+  if(time==="10:30")return`${date} 09:30`;
+  if(time==="11:30")return`${date} 10:30`;
+  if(time==="12:30")return`${date} 11:30`;
+  if(time==="13:30")return`${date} 12:30`;
+
+  /* 09:30 必須接上一個實際保存的交易日 13:30 */
+  return"PREVIOUS_CLOSE";
+}
+
+function isValidPreviousLongRankSlot(currentSlot,previousSlot){
+  if(!currentSlot||!previousSlot)return false;
+
+  const expected=expectedPreviousLongRankSlot(currentSlot);
+  if(!expected)return false;
+
+  if(expected!=="PREVIOUS_CLOSE"){
+    return previousSlot===expected;
+  }
+
+  const currentDate=currentSlot.slice(0,10);
+  const previousDate=previousSlot.slice(0,10);
+
+  return (
+    previousSlot.endsWith(" 13:30") &&
+    previousDate<currentDate
+  );
+}
+
+function comparisonLongRanks(saved,slot){
+  if(!saved||saved.schema_version!==3)return{};
+
   if(saved.slot_time===slot){
+    if(!isValidPreviousLongRankSlot(slot,saved.previous_slot_time)){
+      return{};
+    }
+
     return{
       items:saved.previous_items||{},
       ranks:saved.previous_ranks||{},
       slot_time:saved.previous_slot_time||""
     };
   }
+
+  if(!isValidPreviousLongRankSlot(slot,saved.slot_time)){
+    return{};
+  }
+
   return{
     items:saved.items||{},
     ranks:saved.ranks||{},
     slot_time:saved.slot_time||""
   };
 }
+
 function currentLongRankSlot(date=new Date()){
-  const parts=Object.fromEntries(new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Taipei",weekday:"short",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false}).formatToParts(date).map(part=>[part.type,part.value]));
+  const parts=Object.fromEntries(
+    new Intl.DateTimeFormat("en-CA",{
+      timeZone:"Asia/Taipei",
+      weekday:"short",
+      year:"numeric",
+      month:"2-digit",
+      day:"2-digit",
+      hour:"2-digit",
+      minute:"2-digit",
+      hour12:false
+    }).formatToParts(date).map(part=>[part.type,part.value])
+  );
+
   if(["Sat","Sun"].includes(parts.weekday))return"最近交易日 13:30";
-  const minute=Number(parts.hour)*60+Number(parts.minute),slots=[570,630,690,750,810],active=[...slots].reverse().find(slot=>minute>=slot);
+
+  const minute=Number(parts.hour)*60+Number(parts.minute);
+  const slots=[570,630,690,750,810];
+  const active=[...slots].reverse().find(slot=>minute>=slot);
+
   if(active===undefined)return`${parts.year}-${parts.month}-${parts.day} 盤前`;
+
   return`${parts.year}-${parts.month}-${parts.day} ${String(Math.floor(active/60)).padStart(2,"0")}:${String(active%60).padStart(2,"0")}`;
 }
-function longRankScheduleStatus(date=new Date()){
-  const parts=Object.fromEntries(new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Taipei",weekday:"short",hour:"2-digit",minute:"2-digit",hour12:false}).formatToParts(date).map(part=>[part.type,part.value]));
-  if(["Sat","Sun"].includes(parts.weekday))return{current:"最近交易日 13:30",next:"下一交易日 09:30"};
-  const minute=Number(parts.hour)*60+Number(parts.minute),slots=[570,630,690,750,810],current=[...slots].reverse().find(slot=>minute>=slot),next=slots.find(slot=>minute<slot);
-  const format=slot=>`${String(Math.floor(slot/60)).padStart(2,"0")}:${String(slot%60).padStart(2,"0")}`;
-  return{current:current===undefined?"盤前正式分數":format(current),next:next===undefined?"今日已完成":"下一次 "+format(next)};
-}
-function longRankSnapshot(longs,saved,version){
-  const slot=currentLongRankSlot();
-  const sameSlot=saved?.schema_version===2&&saved.slot_time===slot;
 
-  const items=Object.fromEntries(longs.map((item,index)=>{
-    const score=displayScore(item,"long_term_core");
-    return[item.id,{
-      current_score:Number.isFinite(score)?score:null,
-      current_rank:index+1,
-      slot_time:slot
-    }];
-  }));
+function longRankScheduleStatus(date=new Date()){
+  const parts=Object.fromEntries(
+    new Intl.DateTimeFormat("en-CA",{
+      timeZone:"Asia/Taipei",
+      weekday:"short",
+      hour:"2-digit",
+      minute:"2-digit",
+      hour12:false
+    }).formatToParts(date).map(part=>[part.type,part.value])
+  );
+
+  if(["Sat","Sun"].includes(parts.weekday)){
+    return{current:"最近交易日 13:30",next:"下一交易日 09:30"};
+  }
+
+  const minute=Number(parts.hour)*60+Number(parts.minute);
+  const slots=[570,630,690,750,810];
+  const current=[...slots].reverse().find(slot=>minute>=slot);
+  const next=slots.find(slot=>minute<slot);
+
+  const format=slot=>
+    `${String(Math.floor(slot/60)).padStart(2,"0")}:${String(slot%60).padStart(2,"0")}`;
+
+  return{
+    current:current===undefined?"盤前正式分數":format(current),
+    next:next===undefined?"今日已完成":"下一次 "+format(next)
+  };
+}
+
+function longRankSnapshot(longs,saved,version,slot){
+  const sameSlot=saved?.schema_version===3&&saved.slot_time===slot;
+
+  const items=Object.fromEntries(
+    longs.map((item,index)=>{
+      const score=displayScore(item,"long_term_core");
+
+      return[item.id,{
+        current_score:Number.isFinite(score)?score:null,
+        current_rank:index+1,
+        slot_time:slot
+      }];
+    })
+  );
 
   const ranks=Object.fromEntries(
     longs.map((item,index)=>[item.id,index+1])
   );
 
   return{
-    schema_version:2,
+    schema_version:3,
     version,
     slot_time:slot,
+
     previous_slot_time:sameSlot
       ?(saved.previous_slot_time||"")
-      :(saved?.schema_version===2?saved.slot_time||"":""),
+      :(saved?.schema_version===3?saved.slot_time||"":""),
+
     previous_items:sameSlot
       ?(saved.previous_items||{})
-      :(saved?.schema_version===2?saved.items||{}:{}),
+      :(saved?.schema_version===3?saved.items||{}:{}),
+
     previous_ranks:sameSlot
       ?(saved.previous_ranks||{})
-      :(saved?.schema_version===2?saved.ranks||{}:{}),
+      :(saved?.schema_version===3?saved.ranks||{}:{}),
+
     items,
     ranks
   };
+}
 }
 function longRankRow(x,index,previous){
   const decision=strategyDecisionFor(x,"long_term_core"),score=decision?.score,stage=decision?.stage;
@@ -2376,11 +2502,11 @@ function renderTop(){
   const swings=all.filter(x=>swingIds.has(x.id)).sort((a,b)=>(displayScore(b,strategyModeFor(b))??-1)-(displayScore(a,strategyModeFor(a))??-1));
   const longCount=longs.filter(x=>(strategyDecisionFor(x,"long_term_core")?.score??0)>=60).length;
   const swingCount=swings.filter(x=>(strategyDecisionFor(x,strategyModeFor(x))?.stage?.number??0)>0||["first","confirmed"].includes(strategyDecisionFor(x,strategyModeFor(x))?.stage?.key)).length;
-  const saved=previousLongRanks(),previous=comparisonLongRanks(saved),version=liveMarketCacheVersion||all[0]?.date||"";
+  const slot=longRankDataSlot(longs),saved=previousLongRanks(),previous=comparisonLongRanks(saved,slot),version=liveMarketCacheVersion||all[0]?.date||"";
   $("#homeEtfBriefSummary").textContent=longs.length>=2?`第1優先：${longs[0].id}｜${displayScore(longs[0],"long_term_core")}分｜${displayStage(longs[0],"long_term_core")?.label}；第2優先：${longs[1].id}｜${displayScore(longs[1],"long_term_core")}分｜${displayStage(longs[1],"long_term_core")?.label}；其餘${longs.length-2}支依排名分批評估。`:"長期加碼資料載入中。";
   $("#rankList").innerHTML=longs.map((x,index)=>longRankRow(x,index,previous)).join("")||'<div class="newsEmpty">資料載入中</div>';
   $("#homeSwingList").innerHTML=`<div class="homeOpportunityGroup">${swings.map(x=>compactOpportunityRow(x,strategyModeFor(x))).join("")||'<div class="newsEmpty">資料載入中</div>'}</div>`;
-  if(version&&version!==lastRankSnapshotVersion){localStorage.setItem(LONG_RANK_STORAGE_KEY,JSON.stringify(longRankSnapshot(longs,saved,version)));lastRankSnapshotVersion=version}
+  if(version&&version!==lastRankSnapshotVersion){localStorage.setItem(LONG_RANK_STORAGE_KEY,JSON.stringify(longRankSnapshot(longs,saved,version,slot)));lastRankSnapshotVersion=version}
   const radar=activeRadarItems(),sorted=[...radar].sort((a,b)=>(displayScore(b)??-1)-(displayScore(a)??-1)),low=[...radar].sort((a,b)=>a.j-b.j)[0],best=sorted.find(x=>Number.isFinite(displayScore(x)));
   $("#snapshotGrid").innerHTML=(best||low)?`<div class="snapshot"><span>最高策略分數</span><b>${best?`${best.id}｜${displayScore(best)} 分`:"資料不足"}</b></div><div class="snapshot"><span>最低週 J 值</span><b>${low?`${low.id}｜${fmt(low.j)}`:"—"}</b></div><div class="snapshot"><span>長期加碼區</span><b>${longCount} 檔</b></div><div class="snapshot"><span>波段已確認</span><b>${swingCount} 檔</b></div>`:'<div class="newsEmpty">尚無 ETF 資料。</div>';
   const hasIntraday=longs.some(item=>item.scoreMode==="intraday"),schedule=longRankScheduleStatus();
