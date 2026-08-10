@@ -940,3 +940,21 @@ footer{color:#746f67}
     padding-right: 3px !important;
   }
 }
+/* FIX: keep chip category tabs fixed at top while scrolling */
+#sentiment #chipPageTop{
+  position: sticky !important;
+  top: env(safe-area-inset-top) !important;
+  z-index: 100 !important;
+  background: #050505 !important;
+  padding-top: 6px !important;
+  padding-bottom: 8px !important;
+  margin-top: 0 !important;
+}
+
+#sentiment{
+  overflow: visible !important;
+}
+
+#sentiment .chipPanel{
+  overflow: visible !important;
+}
