@@ -941,20 +941,23 @@ footer{color:#746f67}
   }
 }
 /* FIX: keep chip category tabs fixed at top while scrolling */
+/* FIX: keep chip category tabs fixed on screen */
 #sentiment #chipPageTop{
-  position: sticky !important;
+  position: fixed !important;
   top: env(safe-area-inset-top) !important;
-  z-index: 100 !important;
-  background: #050505 !important;
-  padding-top: 6px !important;
-  padding-bottom: 8px !important;
-  margin-top: 0 !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  width: min(calc(100% - 28px), 1088px) !important;
+  z-index: 120 !important;
+  background: #050505f5 !important;
+  padding: 8px 6px !important;
+  margin: 0 !important;
+  border: 1px solid #3a2f1d !important;
+  border-radius: 14px !important;
+  box-shadow: 0 8px 24px #000b !important;
 }
 
+/* Reserve space so content is not covered by fixed tabs */
 #sentiment{
-  overflow: visible !important;
-}
-
-#sentiment .chipPanel{
-  overflow: visible !important;
+  padding-top: 118px !important;
 }
