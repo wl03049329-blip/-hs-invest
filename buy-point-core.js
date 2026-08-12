@@ -239,6 +239,9 @@
     return weekly.map((week, weeklyIndex) => {
       const dailyIndex = indexByDate.get(week.date);
       const price = closes[dailyIndex];
+      const weeklyCloses40 = weekly.slice(Math.max(0, weeklyIndex - 39), weeklyIndex + 1).map(item => finite(item.close));
+      const ma40w = weeklyCloses40.length === 40 && weeklyCloses40.every(value => value !== null) ? mean(weeklyCloses40) : null;
+      const bias40w = ma40w !== null && ma40w > 0 ? (price / ma40w - 1) * 100 : null;
       const ma20 = sliceMean(closes, dailyIndex, 20);
       const ma60 = sliceMean(closes, dailyIndex, 60);
       const ma120 = sliceMean(closes, dailyIndex, 120);
@@ -265,6 +268,8 @@
         ...week,
         dailyIndex,
         price,
+        ma40w,
+        bias40w,
         ma20,
         ma60,
         ma120,
