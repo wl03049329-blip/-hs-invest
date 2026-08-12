@@ -2556,8 +2556,9 @@ function renderHomeSentimentCards(){
   setHomeSentimentCard("#homeForeignFuturesCard",{value:Number.isFinite(foreign?.net)?`${foreign.net<0?"淨空":"淨多"} ${fmt(Math.abs(foreign.net))} 口`:"—",status:Number.isFinite(foreign?.net)?foreign.net>0?"偏多":"偏空":"資料尚未更新",date:futuresPosition?.dataDate,snapshot:futuresSnapshot});
   const ratio=Number.isFinite(tmf?.long)&&Number.isFinite(tmf?.short)&&tmf.short>0?tmf.long/tmf.short:null;
   setHomeSentimentCard("#homeTmfRatioCard",{value:Number.isFinite(ratio)?ratio.toFixed(2):"—",status:Number.isFinite(ratio)?ratio>1.1?"偏多":ratio<.9?"偏空":"中性":"資料尚未更新",date:futuresPosition?.dataDate,snapshot:futuresSnapshot});
-  const overviewValue=[cnn?.label,risk?.interpretation?.label].filter(Boolean).join("｜")||"資料更新中";
-  setHomeSentimentCard("#homeSentimentOverviewCard",{value:overviewValue,status:combinedSentimentConclusion(),date:values.dataDate||futuresPosition?.dataDate||cnnSnapshot.data_date,snapshot:marginSnapshot});
+  const overviewValue=cnn?.label||risk?.interpretation?.label||"資料更新中";
+  const overviewHint=/貪婪|偏熱/.test(overviewValue)?"避免追高":/恐懼|偏冷|壓力/.test(overviewValue)?"分批觀察":"等待回檔";
+  setHomeSentimentCard("#homeSentimentOverviewCard",{value:overviewValue,status:overviewHint,date:values.dataDate||futuresPosition?.dataDate||cnnSnapshot.data_date,snapshot:marginSnapshot});
 }
 function combinedSentimentConclusion(){
   const margin=marketChip.margin,cnn=cnnFearGreed,risk=marketChip.marginRisk,ratio=risk?.maintenance_ratio;
