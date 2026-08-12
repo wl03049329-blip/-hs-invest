@@ -981,6 +981,7 @@ let liveQuoteHttpStatus=0;
 let liveQuotePreviousValues=new Map();
 let lastRankSnapshotVersion="";
 const LONG_RANK_STORAGE_KEY=HSStorage.keys.longRank;
+const DAILY_LONG_RANK_STORAGE_KEY=HSStorage.key("dailyLongRank.v1");
 const LONG_RANK_HOURS=new Set([9,10,11,12,13]);
 let futuresPosition=null;
 let etfValuationItems={};
@@ -2427,9 +2428,41 @@ function rankBadgeHtml(rank){
 function uiRankMovement(change){return change>0?`▲ ${change}`:change<0?`▼ ${Math.abs(change)}`:"排名不變"}
 function uiScoreMovement(change){return Number.isFinite(change)?change>0?`+${change}`:change<0?`${change}`:"0":"首次"}
 function radarRangeBar(score,stage){const value=Number.isFinite(score)?Math.max(0,Math.min(100,score)):0;return`<div class="radarRange"><div class="radarRangeTrack"><i style="left:${value}%"></i></div><div class="radarRangeLabels"><span>偏高勿追</span><span>觀察</span><span>分批</span><span>強力區</span></div><b>${esc(stage?.label||"資料不足")}</b></div>`}
-function longOverviewCardHtml(x,index,previous){
-  const rank=index+1,decision=strategyDecisionFor(x,"long_term_core"),score=displayScore(x,"long_term_core"),stage=decision?.stage,old=previous?.items?.[x.id],oldRank=Number(old?.current_rank??previous?.ranks?.[x.id]),rankChange=Number.isFinite(oldRank)?oldRank-rank:0,scoreChange=Number.isFinite(old?.current_score)&&Number.isFinite(score)?score-old.current_score:null;
-  return`<button class="radarLongCard" type="button" data-open-radar-detail="${esc(x.id)}"><div class="radarLongTop">${rankBadgeHtml(rank)}<span class="radarLongIdentity"><b>${esc(x.id)}</b><small>${esc(x.name)}</small></span><span class="radarLongScore"><b>${Number.isFinite(score)?score:"—"}</b><small>長期加碼分</small></span><span class="radarLongMoves"><em class="${rankChange>0?"is-up":rankChange<0?"is-down":"is-flat"}">${uiRankMovement(rankChange)}</em><em class="${scoreChange>0?"is-up":scoreChange<0?"is-down":"is-flat"}">分數 ${uiScoreMovement(scoreChange)}</em></span></div><div class="radarCoreMetrics"><span><small>週 J</small><b>${fmt(x.j)}</b><em>${uiMetricStatus("j",x.j)}</em></span><span><small>週乖離</small><b>${Number.isFinite(x.weekBias)?fmt(x.weekBias)+"%":"—"}</b><em>${uiMetricStatus("bias",x.weekBias)}</em></span><span><small>距高點</small><b>${Number.isFinite(x.fromHigh)?fmt(x.fromHigh)+"%":"—"}</b><em>${uiMetricStatus("drawdown",x.fromHigh)}</em></span><span><small>當日漲跌</small><b class="${x.changePct>=0?"up":"down"}">${signed(x.changePct)}</b><em>${uiMetricStatus("change",x.changePct)}</em></span></div><div class="radarLongDecision"><strong>${esc(stage?.recommendation||stage?.conclusion||"等待資料更新")}</strong>${radarRangeBar(score,stage)}</div></button>`;
+function dailyFactorValue(decision,key){const row=(decision?.breakdown||[]).find(item=>item.key===key);return Number.isFinite(row?.value)?row.value:null}
+function createDailyLongRankSnapshot(items,finalizedAt=new Date().toISOString()){
+  const candidates=(Array.isArray(items)?items:[]).map(item=>({item,state:item.formalState,decision:item.formalStrategyDecisions?.long_term_core})).filter(row=>row.state&&/^\d{4}-\d{2}-\d{2}$/.test(String(row.state.date||""))&&Number.isFinite(row.decision?.score));
+  if(!candidates.length||new Set(candidates.map(row=>row.state.date)).size!==1)return null;
+  candidates.sort((a,b)=>b.decision.score-a.decision.score||(Number.isFinite(a.state.j)?a.state.j:999)-(Number.isFinite(b.state.j)?b.state.j:999)||(Number.isFinite(a.state.fromHigh)?a.state.fromHigh:999)-(Number.isFinite(b.state.fromHigh)?b.state.fromHigh:999)||a.item.id.localeCompare(b.item.id));
+  const tradingDate=candidates[0].state.date,rows=Object.fromEntries(candidates.map(({item,state,decision},index)=>[item.id,{
+    ticker:item.id,longTermScore:decision.score,rank:index+1,weeklyJ:Number.isFinite(state.j)?state.j:null,Bias40W:Number.isFinite(state.weekBias)?state.weekBias:null,
+    drawdown:Number.isFinite(state.fromHigh)?state.fromHigh:null,marketFear:dailyFactorValue(decision,"marketFear"),valuation:Number.isFinite(item.valuation?.score)?item.valuation.score:null,
+    availableWeight:Number.isFinite(decision.availableWeight)?decision.availableWeight:null
+  }]));
+  return{tradingDate,finalizedAt,items:rows};
+}
+function loadDailyLongRankHistory(){
+  try{const value=JSON.parse(localStorage.getItem(DAILY_LONG_RANK_STORAGE_KEY)||"{}");return value?.schema_version===1&&Array.isArray(value.snapshots)?value:{schema_version:1,snapshots:[]}}catch{return{schema_version:1,snapshots:[]}}
+}
+function saveDailyLongRankSnapshot(items,finalizedAt=new Date().toISOString()){
+  const snapshot=createDailyLongRankSnapshot(items,finalizedAt);if(!snapshot)return null;
+  const history=loadDailyLongRankHistory(),existing=history.snapshots.find(row=>row.tradingDate===snapshot.tradingDate);
+  if(existing)return existing;
+  const snapshots=[...history.snapshots,snapshot].sort((a,b)=>a.tradingDate.localeCompare(b.tradingDate)).slice(-370);
+  localStorage.setItem(DAILY_LONG_RANK_STORAGE_KEY,JSON.stringify({schema_version:1,snapshots}));return snapshot;
+}
+function dailyLongRankPair(history=loadDailyLongRankHistory()){
+  const snapshots=(history?.snapshots||[]).filter(row=>/^\d{4}-\d{2}-\d{2}$/.test(String(row?.tradingDate||""))).sort((a,b)=>a.tradingDate.localeCompare(b.tradingDate));
+  return{latest:snapshots.at(-1)||null,previous:snapshots.at(-2)||null};
+}
+function dailyLongRankMovement(pair,ticker){
+  const latest=pair?.latest?.items?.[ticker],previous=pair?.previous?.items?.[ticker];
+  if(!latest||!previous||!Number.isFinite(latest.longTermScore)||!Number.isFinite(latest.rank)||!Number.isFinite(previous.longTermScore)||!Number.isFinite(previous.rank))return{rankDelta:null,scoreDelta:null,displayRankChange:"日排名首次",displayScoreChange:"—"};
+  const rankDelta=previous.rank-latest.rank,scoreDelta=latest.longTermScore-previous.longTermScore;
+  return{rankDelta,scoreDelta,displayRankChange:rankDelta>0?`日排名 ↑${rankDelta}`:rankDelta<0?`日排名 ↓${Math.abs(rankDelta)}`:"日排名不變",displayScoreChange:scoreDelta>0?`日分數 +${scoreDelta}`:scoreDelta<0?`日分數 ${scoreDelta}`:"日分數 ±0"};
+}
+function longOverviewCardHtml(x,index,dailyMovement){
+  const rank=index+1,decision=strategyDecisionFor(x,"long_term_core"),score=displayScore(x,"long_term_core"),stage=decision?.stage,rankChange=dailyMovement?.rankDelta,scoreChange=dailyMovement?.scoreDelta;
+  return`<button class="radarLongCard" type="button" data-open-radar-detail="${esc(x.id)}"><div class="radarLongTop">${rankBadgeHtml(rank)}<span class="radarLongIdentity"><b>${esc(x.id)}</b><small>${esc(x.name)}</small></span><span class="radarLongScore"><b>${Number.isFinite(score)?score:"—"}</b><small>長期加碼分</small></span><span class="radarLongMoves" title="較前一交易日收盤"><em class="${rankChange>0?"is-up":rankChange<0?"is-down":"is-flat"}">${esc(dailyMovement?.displayRankChange||"日排名首次")}</em><em class="${scoreChange>0?"is-up":scoreChange<0?"is-down":"is-flat"}">${esc(dailyMovement?.displayScoreChange||"—")}</em></span></div><div class="radarCoreMetrics"><span><small>週 J</small><b>${fmt(x.j)}</b><em>${uiMetricStatus("j",x.j)}</em></span><span><small>週乖離</small><b>${Number.isFinite(x.weekBias)?fmt(x.weekBias)+"%":"—"}</b><em>${uiMetricStatus("bias",x.weekBias)}</em></span><span><small>距高點</small><b>${Number.isFinite(x.fromHigh)?fmt(x.fromHigh)+"%":"—"}</b><em>${uiMetricStatus("drawdown",x.fromHigh)}</em></span><span><small>當日漲跌</small><b class="${x.changePct>=0?"up":"down"}">${signed(x.changePct)}</b><em>${uiMetricStatus("change",x.changePct)}</em></span></div><div class="radarLongDecision"><strong>${esc(stage?.recommendation||stage?.conclusion||"等待資料更新")}</strong>${radarRangeBar(score,stage)}</div></button>`;
 }
 function scoreFactorValue(swing,...keys){for(const key of keys){const item=swing?.scoreFactors?.find(part=>part.key===key);if(Number.isFinite(item?.value))return item.value}return null}
 function scoreGaugeHtml(label,value){const safe=Number.isFinite(value)?Math.max(0,Math.min(100,value)):0;return`<div class="scoreGauge" style="--gauge:${safe}"><div><b>${Number.isFinite(value)?Math.round(value):"—"}</b><small>/100</small></div><span>${esc(label)}</span></div>`}
@@ -2455,7 +2488,7 @@ function swingOverviewHtml(x){
   return`<section class="swingDashboard"><div class="swingDashboardHead"><div><p class="eyebrow">SWING STRATEGY</p><h3>${esc(meta.title)}</h3><small>${esc(meta.subtitle)}</small></div><span>${esc(stage?.label||"資料不足")}</span></div><div class="dualGauge">${scoreGaugeHtml(meta.left[0],meta.left[1])}${scoreGaugeHtml(meta.right[0],meta.right[1])}</div><div class="swingTotalScore"><span>綜合波段買點分</span><b>${Number.isFinite(score)?Math.round(score):"—"}<small>／100</small></b><i><em style="width:${Number.isFinite(score)?Math.max(0,Math.min(100,score)):0}%"></em></i><small>觀望　／　低　／　中　／　中高　／　高</small></div><article class="swingStageCard"><small>目前階段</small><b>${esc(stage?.label||"資料不足")}</b><p>${esc(dedicatedSwingStageRecommendation(s)||s.recommendedAction||stage?.recommendation||"等待資料更新")}</p></article>${note}<h4 class="checklistTitle">條件檢核</h4>${swingChecklistHtml(x)}</section>`;
 }
 function longScoreChangeReason(x,scoreChange){
-  const delta=Number.isFinite(scoreChange)?scoreChange>0?`較上一時段上升 ${scoreChange} 分`:scoreChange<0?`較上一時段下降 ${Math.abs(scoreChange)} 分`:"與上一時段相同":"目前為首次顯示";
+  const delta=Number.isFinite(scoreChange)?scoreChange>0?`較前一交易日收盤上升 ${scoreChange} 分`:scoreChange<0?`較前一交易日收盤下降 ${Math.abs(scoreChange)} 分`:"與前一交易日收盤相同":"尚無前一交易日可比較資料";
   return`${delta}。目前週 J 為 ${fmt(x.j)}、週乖離 ${Number.isFinite(x.weekBias)?fmt(x.weekBias)+"%":"資料暫缺"}、距 52 週高點 ${Number.isFinite(x.fromHigh)?fmt(x.fromHigh)+"%":"資料暫缺"}；總分仍完全由既有正式引擎產生。`;
 }
 function detailAdvancedHtml(x){return`<details class="detailAdvanced"><summary>估值、歷史統計與其他詳細資料</summary>${valuationDetailsHtml(x)}${legacyComparisonHtml(x)}<section class="detailSection"><h4>歷史相似訊號統計</h4>${similarStatsHtml(x.historyStats.sameEnvironment,`相同市場環境｜${x.environment}`)}${similarStatsHtml(x.historyStats.allEnvironments,"全部市場環境")}</section>${buyPlanHtml(x)}</details>`}
@@ -2471,16 +2504,14 @@ function switchRadarOverviewView(name){const active=name==="explain"?"explain":"
 function renderCards(){
   const modeOrder={long_term_core:0,leveraged:1,swing00733:2,swing006201:3,swing:4,user_selected:5};
   const radar=[...activeRadarItems()].sort((a,b)=>{const modeA=strategyModeFor(a),modeB=strategyModeFor(b),group=(modeOrder[modeA]??9)-(modeOrder[modeB]??9);if(group)return group;if(modeA==="long_term_core"&&modeB==="long_term_core")return longRankComparator(a,b);return(displayScore(b,modeB)??-1)-(displayScore(a,modeA)??-1)});
-  const longPrevious=previousLongRanks();
+  const dailyPair=dailyLongRankPair();
   let longRankIndex=0;
   $("#cards").innerHTML=radar.length?radar.map((x,index)=>{
     const mode=strategyModeFor(x),decision=strategyDecisionFor(x,mode),stage=decision?.stage||x.buyStage,score=displayScore(x,mode);
     const longRank=mode==="long_term_core"?++longRankIndex:null;
-    const previousLongItem=longRank?longPrevious?.items?.[x.id]:null;
-    const oldLongRank=Number(previousLongItem?.current_rank??longPrevious?.ranks?.[x.id]);
-    const longRankChange=longRank&&Number.isFinite(oldLongRank)?oldLongRank-longRank:0;
-    const longScoreChange=Number.isFinite(previousLongItem?.current_score)&&Number.isFinite(score)?score-previousLongItem.current_score:null;
-    const radarRankUi=longRank?`<div class="signalRadarRank"><b>第${longRank}名</b><span class="${longRankChange>0?"is-up":longRankChange<0?"is-down":"is-flat"}">排名 ${longRankChange>0?`↑${longRankChange}`:longRankChange<0?`↓${Math.abs(longRankChange)}`:"不變"}</span><span class="${longScoreChange>0?"is-up":longScoreChange<0?"is-down":"is-flat"}">分數 ${Number.isFinite(longScoreChange)?longScoreChange===0?"不變":`${longScoreChange>0?"+":""}${longScoreChange}`:"首次"}</span></div>`:"";
+    const dailyMovement=longRank?dailyLongRankMovement(dailyPair,x.id):null;
+    const longRankChange=dailyMovement?.rankDelta??null,longScoreChange=dailyMovement?.scoreDelta??null;
+    const radarRankUi=longRank?`<div class="signalRadarRank"><b>第${longRank}名</b><span class="${longRankChange>0?"is-up":longRankChange<0?"is-down":"is-flat"}">${esc(dailyMovement.displayRankChange)}</span><span class="${longScoreChange>0?"is-up":longScoreChange<0?"is-down":"is-flat"}">${esc(dailyMovement.displayScoreChange)}</span></div>`:"";
     const previousMode=index?strategyModeFor(radar[index-1]):null;
     const groupTitle=mode==="long_term_core"?"長期 ETF":mode==="leveraged"?"槓桿":mode==="swing00733"?"00733｜強勢趨勢拉回":mode==="swing006201"?"006201｜上櫃低檔轉折":mode==="swing"?"一般波段":"使用者自訂策略";
     const groupIntro=mode==="long_term_core"?"既有長期加碼引擎維持不變。":mode==="leveraged"?"既有 00631L 高波動與每日重設防護維持不變。":mode==="swing00733"?"買強者的休息；RS、拉回品質、週 KD 與 Market Gate。":mode==="swing006201"?"買修正後的止跌；70–79 分仍等待確認。":mode==="swing"?"止跌、均線、趨勢與動能確認優先。":"依自選策略呈現決策層。";
@@ -2496,8 +2527,7 @@ function renderCards(){
     return `${groupHead}<details class="card signalCard ${x.signal.className} strategy-${mode}" data-signal-level="${esc(x.signal.label)}" data-etf-id="${esc(x.id)}"><summary class="signalCardSummary" aria-label="${esc(x.id)} ${esc(x.name)}，${esc(strategyModeLabel(mode))}，${Number.isFinite(score)?score+"分":"資料不足"}，${esc(stage?.label||"資料不足")}"><div class="signalCompactIdentity">${radarRankUi}<div class="signalTickerLine"><b>${x.id}</b><span>${esc(x.name)}</span></div><div class="signalPriceLine">$${fmt(x.price)} <small class="${x.changePct>=0?"up":"down"}">${signed(x.changePct)}</small></div><div class="modelMeta"><span>${esc(strategyModeLabel(mode))}</span></div></div><div class="signalCompactMetrics"><b class="radarPrimaryScore ${Number.isFinite(score)?"":"scoreUnavailable"}">${esc(strategyScoreLabel(x,mode))}</b><span>週 J ${fmt(x.j)}｜週乖離 ${Number.isFinite(x.weekBias)?`${fmt(x.weekBias)}%`:"—"}｜估值 ${esc(valuationScoreLabel(x))}</span><span>${swing?`Raw ${metricScore(swing.rawBuyScore)}｜Exit ${metricScore(swing.exitPressure?.score)}｜`:""}距高點 ${Number.isFinite(x.fromHigh)?fmt(x.fromHigh)+"%":"—"}</span><span>${swing?`Trend Structure ${esc(swing.trendStructure?.label||"—")}`:`${esc(homeMovingAverageStates(x))}｜資料完整度 ${Number.isFinite(decision?.coverage)?Math.round(decision.coverage)+"%":"—"}`}${next?`｜${esc(next)}`:""}</span></div><div class="signalCompactAction"><span class="signalLevel ${x.signal.className}">${esc(stage?.label||"資料不足")}</span><p>${esc(stage?.recommendation||stage?.conclusion||"等待資料更新")}</p><span class="signalExpandMark" aria-hidden="true"></span></div></summary><div class="signalCardDetails"><div class="signalDetailHero"><span>${esc(strategyModeLabel(mode))}</span><b>${Number.isFinite(score)?score:"—"}<small>／100</small></b><strong>${esc(stage?.label||"資料不足")}</strong><em>${esc(detailScoreState)}｜資料完整度 ${Number.isFinite(decision?.coverage)?Math.round(decision.coverage)+"%":"—"}</em></div><div class="signalDetailGrid"><div><span>買點分數</span><b>${Number.isFinite(score)?score:"資料不足"}</b></div><div><span>盤後正式分數</span><b>${Number.isFinite(formal)?formal:"—"}</b></div><div><span>Bias40W（40週均線）</span><b>${Number.isFinite(x.weekBias)?fmt(x.weekBias)+"%":"—"}</b></div><div><span>估值吸引力</span><b>${esc(valuationScoreLabel(x))}</b></div><div><span>止跌確認度</span><b>${metricScore(x.stopConfirmation?.score)}｜${esc(x.stopConfirmation?.label||"—")}</b></div><div><span>高點回檔幅度</span><b>${Number.isFinite(x.fromHigh)?fmt(x.fromHigh)+"%":"—"}</b></div><div><span>均線狀態</span><b>${esc(homeMovingAverageStates(x))}</b></div><div><span>週 K／D／J</span><b>${fmt(x.k)}／${fmt(x.d)}／${fmt(x.j)}｜${esc(x.direction)}</b></div><div><span>估值標的</span><b>${esc(proxy)}</b></div></div>${x.id==="00935"?'<div class="modelWarning">臺灣科技主題 ETF｜產業集中、波動較高；長期加碼仍需分批並控管單一產業曝險。</div>':""}${x.intradayProvisionalHigh?'<div class="modelWarning">盤中暫定新高；正式 52 週高點待收盤後確認。</div>':""}${swingDetails}${strategyBreakdownHtml(x,mode)}${mode==="long_term_core"?longTermDrawdownTableHtml(x):""}${valuationDetailsHtml(x)}${legacyComparisonHtml(x)}<section class="detailSection"><h4>歷史相似訊號統計</h4>${similarStatsHtml(x.historyStats.sameEnvironment,`相同市場環境｜${x.environment}`)}${similarStatsHtml(x.historyStats.allEnvironments,"全部市場環境")}</section>${buyPlanHtml(x)}<div class="dataFreshnessGrid"><span>價格：${esc(x.quoteTime?`${x.date} ${x.quoteTime}`:`${x.date} 收盤`)}</span><span>週 KD：${esc(x.kdDataDate)}｜${esc(x.weekDataLabel)}</span><span>估值：${esc(x.valuation?.sourceDate||"資料建立中")}</span><span>歷史統計截止：${esc(x.historyCutoff)}</span></div>${isHighVolatilityType(x.strategyType)?'<section class="leverageWarning"><b>槓桿型 ETF｜高波動模型</b><p>估值僅作標的市場背景；每日重設與波動耗損可能使長期結果偏離標的倍數。</p></section>':""}<div class="signalDetailActions"><button class="miniBtn" type="button" data-detail="${x.id}">查看走勢</button><button class="miniBtn" type="button" data-compare="${x.id}">加入比較</button><button class="miniBtn" type="button" data-drawdown="${x.id}">查看回檔價位</button></div></div></details>`;
   }).join(""):'<div class="watchEmpty">我的自選尚未加入 ETF。</div>';
   const longOverview=radar.filter(item=>strategyModeFor(item)==="long_term_core").sort(longRankComparator);
-  const overviewRow=(x,index)=>{const decision=strategyDecisionFor(x,"long_term_core"),score=displayScore(x,"long_term_core"),old=longPrevious?.items?.[x.id],oldRank=Number(old?.current_rank??longPrevious?.ranks?.[x.id]),rankChange=Number.isFinite(oldRank)?oldRank-(index+1):0,scoreChange=Number.isFinite(old?.current_score)&&Number.isFinite(score)?score-old.current_score:null;return`<button class="radarOverviewRankRow" type="button" data-open-radar-detail="${esc(x.id)}"><span class="radarOverviewRank">第${index+1}名</span><span class="radarOverviewTicker"><b>${esc(x.id)}</b><small>${esc(x.name)}</small></span><span class="radarOverviewScore"><b>${Number.isFinite(score)?score:"—"}</b><small>分</small></span><span class="radarOverviewChange">排名 ${rankChange>0?`↑${rankChange}`:rankChange<0?`↓${Math.abs(rankChange)}`:"不變"}<br>分數 ${Number.isFinite(scoreChange)?scoreChange===0?"不變":`${scoreChange>0?"+":""}${scoreChange}`:"首次"}</span><span class="radarOverviewStage">${esc(decision?.stage?.label||"資料不足")}</span></button>`};
-  $("#radarOverviewLong").innerHTML=longOverview.map((item,index)=>longOverviewCardHtml(item,index,longPrevious)).join("")||'<div class="newsEmpty">長期 ETF 資料載入中</div>';
+  $("#radarOverviewLong").innerHTML=longOverview.map((item,index)=>longOverviewCardHtml(item,index,dailyLongRankMovement(dailyPair,item.id))).join("")||'<div class="newsEmpty">長期 ETF 資料載入中</div>';
   const swingRoles={"00631L":"恐慌反轉型","00733":"強勢趨勢拉回型","006201":"低檔止跌轉折型"};
   const swingOverviewItems=["00631L","00733","006201"].map(id=>radar.find(item=>item.id===id)).filter(Boolean);
   $("#radarOverviewSwingTabs").innerHTML=swingOverviewItems.map((x,index)=>`<button class="${index===0?"active":""}" type="button" role="tab" aria-selected="${index===0}" data-swing-overview="${esc(x.id)}">${x.id} ${esc(swingRoles[x.id])}</button>`).join("");
@@ -2995,7 +3025,7 @@ async function load(){
     if(!all.length)throw new Error("目前清單內的 ETF 都無法取得價格資料");
     refreshAllDecisionModels();all.forEach(captureFormalState);renderTop();renderCards();renderChecks();renderTable();renderEvents();
     await Promise.allSettled([loadNews(all[0].date),loadChipData(),loadMarginRisk(),loadTrumpNews(),refreshCnnFearGreed(),loadFuturesPosition(),loadMarketEvents()]);
-    refreshAllDecisionModels();all.forEach(captureFormalState);renderMarket();renderTrump();renderSentiment();renderEvents();renderTop();renderCards();renderTable();
+    refreshAllDecisionModels();all.forEach(captureFormalState);saveDailyLongRankSnapshot(all.filter(item=>["0050","00830","00662","009815","00935"].includes(item.id)));renderMarket();renderTrump();renderSentiment();renderEvents();renderTop();renderCards();renderTable();
     if(pendingDelayedQuotes)applyHomeDelayedQuotes(pendingDelayedQuotes);
     const chipStatus=marketChip.marginRisk&&marketChip.institutional&&cnnFearGreed?"融資風險、法人與 CNN 情緒已更新":"部分籌碼或情緒資料尚未更新";
     m.textContent=`資料更新｜${all[0].date}${all[0].quoteTime?` ${all[0].quoteTime}`:" 收盤"}${failed.length?`｜${failed.length} 檔沿用最後資料`:""}`;
