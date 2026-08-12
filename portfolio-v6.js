@@ -794,7 +794,11 @@
       const freshnessLabel=snapshot=>typeof HSDataFreshnessCore!=="undefined"?HSDataFreshnessCore.label(snapshot?.status):"等待更新";
       const card=(selector,title,value,status,date,snapshot=waitingSnapshot)=>{
         const node=$v6(selector);if(!node)return;
-        node.innerHTML=`<span>${escapeHtml(title)}</span><b>${escapeHtml(value)}</b><em>${escapeHtml(status)}</em><small>${escapeHtml(date||"資料日期待更新")}｜${escapeHtml(freshnessLabel(snapshot))}</small>`;
+        const titleNode=node.querySelector("span"),valueNode=node.querySelector("b"),statusNode=node.querySelector("em"),dateNode=node.querySelector("small");
+        if(titleNode)titleNode.textContent=title;
+        if(valueNode)valueNode.textContent=value;
+        if(statusNode)statusNode.textContent=status;
+        if(dateNode)dateNode.textContent=`${date||"資料日期待更新"}｜${freshnessLabel(snapshot)}`;
         node.dataset.freshness=String(snapshot?.status||"WAITING").toLowerCase();
       };
       const marginDate=values?.dataDate||risk?.data_date||"—",futuresDate=futures?.dataDate||"—";
@@ -804,7 +808,7 @@
       card("#homeForeignFuturesCard","外資台指期",Number.isFinite(foreign?.net)?`${foreign.net<0?"淨空":"淨多"} ${number(Math.abs(foreign.net),0)}口`:"—",Number.isFinite(foreign?.net)?(foreign.net<0?"偏空":"偏多"):"資料暫缺",futuresDate,futures?.snapshot);
       const tmfRatio=Number.isFinite(tmf?.long)&&Number.isFinite(tmf?.short)&&tmf.short>0?tmf.long/tmf.short:null;
       const tmfState=Number.isFinite(tmfRatio)?(tmfRatio>1.1?"偏多":tmfRatio<.9?"偏空":"中性"):"資料暫缺";
-      card("#homeTmfRatioCard","微台散戶多空比",Number.isFinite(tmfRatio)?number(tmfRatio,2):"—",tmfState,futuresDate,futures?.snapshot);
+      card("#homeTmfRatioCard","散戶微台多空比",Number.isFinite(tmfRatio)?number(tmfRatio,2):"—",tmfState,futuresDate,futures?.snapshot);
       let conclusion="市場情緒資料仍在更新，長期 ETF 維持分批原則。";
       if(Number.isFinite(cnn?.score)){
         if(cnn.score>=56&&tmfState==="偏多")conclusion="市場情緒偏熱且散戶偏多，避免追高，等待週線回檔。";

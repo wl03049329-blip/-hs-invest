@@ -372,11 +372,12 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       <small>點卡片看完整籌碼</small>
     </div>
     <div id="homeSentimentCards" class="homeSentimentCards">
-      <button id="homeMarginBalanceCard" class="homeSentimentCard" type="button" data-home-chip="margin"><span>台股融資餘額</span><svg class="sentimentCardIcon" aria-hidden="true"><use href="#i-market"/></svg><b>—</b><em>載入中</em><small>盤後資料</small></button>
-      <button id="homeMaintenanceCard" class="homeSentimentCard" type="button" data-home-chip="margin"><span>市場推估融資維持率</span><svg class="sentimentCardIcon" aria-hidden="true"><use href="#i-risk-shield"/></svg><b>—</b><em>載入中</em><small>盤後資料</small></button>
-      <button id="homeCnnCard" class="homeSentimentCard" type="button" data-home-chip="mood"><span>CNN Fear &amp; Greed</span><svg class="sentimentCardIcon" aria-hidden="true"><use href="#i-gauge"/></svg><b>—</b><em>載入中</em><small>更新中</small></button>
-      <button id="homeForeignFuturesCard" class="homeSentimentCard" type="button" data-home-chip="futures"><span>外資台指期</span><svg class="sentimentCardIcon" aria-hidden="true"><use href="#i-globe"/></svg><b>—</b><em>載入中</em><small>盤後資料</small></button>
-      <button id="homeTmfRatioCard" class="homeSentimentCard homeSentimentWide" type="button" data-home-chip="futures"><span>微台散戶多空比</span><svg class="sentimentCardIcon" aria-hidden="true"><use href="#i-users"/></svg><b>—</b><em>載入中</em><small>非三大法人部位推估</small></button>
+      <button id="homeMarginBalanceCard" class="homeSentimentCard" type="button" data-home-chip="margin"><span>台股融資餘額</span><i class="sentimentCardEmoji" aria-hidden="true">💰</i><b>—</b><em>載入中</em><small>盤後資料</small></button>
+      <button id="homeMaintenanceCard" class="homeSentimentCard" type="button" data-home-chip="margin"><span>市場推估融資維持率</span><i class="sentimentCardEmoji" aria-hidden="true">🛡️</i><b>—</b><em>載入中</em><small>盤後資料</small></button>
+      <button id="homeCnnCard" class="homeSentimentCard" type="button" data-home-chip="mood"><span>CNN Fear &amp; Greed</span><i class="sentimentCardEmoji" aria-hidden="true">⚖️</i><b>—</b><em>載入中</em><small>更新中</small></button>
+      <button id="homeForeignFuturesCard" class="homeSentimentCard" type="button" data-home-chip="futures"><span>外資台指期</span><i class="sentimentCardEmoji" aria-hidden="true">🌐</i><b>—</b><em>載入中</em><small>盤後資料</small></button>
+      <button id="homeTmfRatioCard" class="homeSentimentCard" type="button" data-home-chip="futures"><span>散戶微台多空比</span><i class="sentimentCardEmoji" aria-hidden="true">🤡</i><b>—</b><em>載入中</em><small>非三大法人部位推估</small></button>
+      <button id="homeSentimentOverviewCard" class="homeSentimentCard" type="button" data-home-chip="overview"><span>總覽</span><i class="sentimentCardEmoji" aria-hidden="true">🔔</i><b>—</b><em>情緒資料彙整中</em><small>綜合市場判讀</small></button>
     </div>
     <p id="homeSentimentConclusion" class="homeSentimentConclusion">情緒資料彙整中…</p>
     <details id="homeSentimentDetails" class="homeSentimentDetails"><summary>展開資料方法與日期</summary><div>資料載入中…</div></details>
@@ -2555,6 +2556,8 @@ function renderHomeSentimentCards(){
   setHomeSentimentCard("#homeForeignFuturesCard",{value:Number.isFinite(foreign?.net)?`${foreign.net<0?"淨空":"淨多"} ${fmt(Math.abs(foreign.net))} 口`:"—",status:Number.isFinite(foreign?.net)?foreign.net>0?"偏多":"偏空":"資料尚未更新",date:futuresPosition?.dataDate,snapshot:futuresSnapshot});
   const ratio=Number.isFinite(tmf?.long)&&Number.isFinite(tmf?.short)&&tmf.short>0?tmf.long/tmf.short:null;
   setHomeSentimentCard("#homeTmfRatioCard",{value:Number.isFinite(ratio)?ratio.toFixed(2):"—",status:Number.isFinite(ratio)?ratio>1.1?"偏多":ratio<.9?"偏空":"中性":"資料尚未更新",date:futuresPosition?.dataDate,snapshot:futuresSnapshot});
+  const overviewValue=[cnn?.label,risk?.interpretation?.label].filter(Boolean).join("｜")||"資料更新中";
+  setHomeSentimentCard("#homeSentimentOverviewCard",{value:overviewValue,status:combinedSentimentConclusion(),date:values.dataDate||futuresPosition?.dataDate||cnnSnapshot.data_date,snapshot:marginSnapshot});
 }
 function combinedSentimentConclusion(){
   const margin=marketChip.margin,cnn=cnnFearGreed,risk=marketChip.marginRisk,ratio=risk?.maintenance_ratio;
