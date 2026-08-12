@@ -33,11 +33,14 @@
     const coverage = totalWeight ? availableWeight / totalWeight * 100 : 0;
     const breakdown = available.map(([key, weight]) => ({
       key, weight, value: clamp(finite(metrics[key])),
-      contribution: clamp(finite(metrics[key])) * weight / availableWeight
+      contribution: clamp(finite(metrics[key])) * weight / availableWeight,
+      rawContribution: clamp(finite(metrics[key])) * weight / 100
     }));
+    const weightedRawTotal = breakdown.reduce((sum, item) => sum + item.rawContribution, 0);
+    const normalizedScore = availableWeight ? clamp(weightedRawTotal / (availableWeight / 100)) : null;
     return {
       score: coverage >= minimumCoverage ? Math.round(clamp(breakdown.reduce((sum, item) => sum + item.contribution, 0))) : null,
-      coverage, availableWeight, totalWeight, breakdown,
+      coverage, availableWeight, totalWeight, weightedRawTotal, normalizedScore, breakdown,
       missing: entries.filter(([key]) => finite(metrics[key]) === null).map(([key]) => key)
     };
   }
@@ -112,6 +115,17 @@
     };
     const requiredReady = metrics.weeklyKdj !== null && (metrics.weeklyBias !== null || metrics.drawdown !== null);
     const result = weightedScore(metrics, LONG_TERM_WEIGHTS, 50);
+    const rawValues = {weeklyKdj:finite(input.j), weeklyBias:finite(input.weeklyBias), drawdown:finite(input.fromHigh), marketFear:finite(input.marketFear), valuation:finite(input.valuation)};
+    result.factorBreakdown = ["weeklyKdj","weeklyBias","drawdown","marketFear","valuation"].map(key => {
+      const weight = LONG_TERM_WEIGHTS[key];
+      const factorScore = finite(metrics[key]), available = factorScore !== null;
+      const rawContribution = available ? clamp(factorScore) * weight / 100 : null;
+      return {
+        key, raw:rawValues[key], score:available ? clamp(factorScore) : null, weight, available,
+        contribution:rawContribution,
+        normalizedContribution:result.availableWeight > 0 ? rawContribution / (result.availableWeight / 100) : null
+      };
+    });
     if (!requiredReady) result.score = null;
     const scoreStatus = result.score === null ? "unavailable" : result.coverage >= 80 ? "complete" : "provisional";
     return {mode:"long_term_core", modeLabel:MODES.long_term_core, ...result, scoreStatus, metrics, stage:longTermStage(result.score, input.stopConfirmation)};
