@@ -980,6 +980,7 @@ let liveQuoteLastAttemptAt=0;
 let liveQuoteHttpStatus=0;
 let liveQuotePreviousValues=new Map();
 let lastRankSnapshotVersion="";
+let latestSuccessfulMarketAsOf="";
 const LONG_RANK_STORAGE_KEY=HSStorage.keys.longRank;
 const DAILY_LONG_RANK_STORAGE_KEY=HSStorage.key("dailyLongRank.v1");
 const LONG_RANK_HOURS=new Set([9,10,11,12,13]);
@@ -1754,6 +1755,23 @@ function formatHomeQuoteTime(value){
   if(!Number.isFinite(time.getTime()))return"—";
   return new Intl.DateTimeFormat("zh-TW",{timeZone:"Asia/Taipei",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}).format(time);
 }
+function formatHeaderMarketAsOf(value){
+  const time=new Date(value);if(!Number.isFinite(time.getTime()))return"—";
+  const parts=Object.fromEntries(new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Taipei",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}).formatToParts(time).map(part=>[part.type,part.value]));
+  return`${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second}`;
+}
+function newerSuccessfulMarketAsOf(current,candidate){
+  const currentTime=Date.parse(current),candidateTime=Date.parse(candidate);
+  if(!Number.isFinite(candidateTime))return Number.isFinite(currentTime)?current:"";
+  return!Number.isFinite(currentTime)||candidateTime>currentTime?String(candidate):String(current);
+}
+function formalCloseMarketAsOf(items){
+  const values=(Array.isArray(items)?items:[]).map(item=>HSIntradayBuyPointCore.quoteAsOf({date:item.formalState?.date||item.date,quoteTime:"13:30:00"})).filter(Boolean).sort((a,b)=>Date.parse(b)-Date.parse(a));
+  return values[0]||"";
+}
+function recordSuccessfulMarketAsOf(asOf){latestSuccessfulMarketAsOf=newerSuccessfulMarketAsOf(latestSuccessfulMarketAsOf,asOf);return latestSuccessfulMarketAsOf}
+function headerMarketUpdateText(asOf,failedCount=0){return`資料更新｜${formatHeaderMarketAsOf(asOf)}${failedCount?`｜${failedCount} 檔沿用最後資料`:""}`}
+function renderHeaderMarketUpdate(failedCount=0){const node=$("#message");if(node&&latestSuccessfulMarketAsOf){node.className="message info";node.textContent=headerMarketUpdateText(latestSuccessfulMarketAsOf,failedCount)}}
 function marketValueText(item){
   if(!item||!Number.isFinite(item.value))return"—";
   return new Intl.NumberFormat("zh-TW",{minimumFractionDigits:item.key==="tsmc"?0:2,maximumFractionDigits:2}).format(item.value);
@@ -2074,7 +2092,7 @@ function applyHomeDelayedQuotes(detail){
     setHomeQuoteStatus(`延遲行情｜最後成功更新 ${formatHomeQuoteTime(detail.sourceUpdatedAt||checkedAt)}｜僅供參考`);
     return false;
   }
-  let updated=0;
+  let updated=0,appliedAsOf=[];
   for(const x of all){
     const quote=quotes.get(x.id),price=Number(quote?.price),previousClose=Number(quote?.previousClose);
     if(!Number.isFinite(price)||price<=0)continue;
@@ -2083,6 +2101,7 @@ function applyHomeDelayedQuotes(detail){
     const isIntraday=quote.quoteMode==="delayed"&&quoteDate===taipeiToday()&&HSPortfolioCore.isTaipeiMarketOpen(new Date())&&HSIntradayBuyPointCore.isFreshIntradayQuote(quote,new Date(),90);
     if(isIntraday){
       if(!applyIntradayEstimate(x,quote))continue;
+      if(x.intraday?.asOf)appliedAsOf.push(x.intraday.asOf);
     }else{
       restoreFormalState(x);
       x.price=price;
@@ -2091,6 +2110,7 @@ function applyHomeDelayedQuotes(detail){
       if(/^\d{4}-\d{2}-\d{2}$/.test(String(quote.date||"")))x.date=quote.date;
       x.quoteMode="close";
       x.quoteTime=String(quote.quoteTime||"");
+      const quoteAsOf=HSIntradayBuyPointCore.quoteAsOf(quote);if(quoteAsOf)appliedAsOf.push(quoteAsOf);
     }
     if(Number.isFinite(previousClose)&&previousClose>0)x.changePct=(price/previousClose-1)*100;
     updated++;
@@ -2105,6 +2125,8 @@ function applyHomeDelayedQuotes(detail){
   renderCards();
   renderTable();
   if(drawdownLookupState?.code)renderDrawdownResult();
+  const newestApplied=appliedAsOf.sort((a,b)=>Date.parse(b)-Date.parse(a))[0];if(newestApplied)recordSuccessfulMarketAsOf(newestApplied);
+  renderHeaderMarketUpdate();
   setHomeQuoteStatus(`${detail.source==="authorized_proxy"?"授權行情 Proxy":"GitHub Actions 快取"}｜延遲行情｜最後成功更新 ${formatHomeQuoteTime(detail.sourceUpdatedAt||checkedAt)}｜僅供參考`);
   return true;
 }
@@ -3025,10 +3047,10 @@ async function load(){
     if(!all.length)throw new Error("目前清單內的 ETF 都無法取得價格資料");
     refreshAllDecisionModels();all.forEach(captureFormalState);renderTop();renderCards();renderChecks();renderTable();renderEvents();
     await Promise.allSettled([loadNews(all[0].date),loadChipData(),loadMarginRisk(),loadTrumpNews(),refreshCnnFearGreed(),loadFuturesPosition(),loadMarketEvents()]);
-    refreshAllDecisionModels();all.forEach(captureFormalState);saveDailyLongRankSnapshot(all.filter(item=>["0050","00830","00662","009815","00935"].includes(item.id)));renderMarket();renderTrump();renderSentiment();renderEvents();renderTop();renderCards();renderTable();
+    refreshAllDecisionModels();all.forEach(captureFormalState);recordSuccessfulMarketAsOf(formalCloseMarketAsOf(all));saveDailyLongRankSnapshot(all.filter(item=>["0050","00830","00662","009815","00935"].includes(item.id)));renderMarket();renderTrump();renderSentiment();renderEvents();renderTop();renderCards();renderTable();
     if(pendingDelayedQuotes)applyHomeDelayedQuotes(pendingDelayedQuotes);
     const chipStatus=marketChip.marginRisk&&marketChip.institutional&&cnnFearGreed?"融資風險、法人與 CNN 情緒已更新":"部分籌碼或情緒資料尚未更新";
-    m.textContent=`資料更新｜${all[0].date}${all[0].quoteTime?` ${all[0].quoteTime}`:" 收盤"}${failed.length?`｜${failed.length} 檔沿用最後資料`:""}`;
+    renderHeaderMarketUpdate(failed.length);
     if($("#updated"))$("#updated").textContent="資料至 "+all[0].date+" 收盤｜"+all[0].weekState.label;maybeNotify();
   }catch(e){m.className="message error";m.innerHTML="更新失敗："+esc(e.message)+"<br>若 API 額度不足，請填入 FinMind Token 後重新更新。"}
   finally{b.disabled=false;b.removeAttribute("aria-busy");if(buttonLabel)buttonLabel.textContent="更新"}
