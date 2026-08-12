@@ -1896,7 +1896,7 @@ function applyAuthorizedMarket(payload,{includeCommodities=true}={}){
 function longRankRefreshWindow(date=new Date()){
   const parts=Object.fromEntries(new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Taipei",weekday:"short",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false}).formatToParts(date).map(part=>[part.type,part.value]));
   const hour=Number(parts.hour),minute=Number(parts.minute),weekday=parts.weekday;
-  return !["Sat","Sun"].includes(weekday)&&LONG_RANK_HOURS.has(hour)&&minute>=30&&minute<=39?`${parts.year}-${parts.month}-${parts.day}-${hour}`:"";
+  return !["Sat","Sun"].includes(weekday)&&LONG_RANK_HOURS.has(hour)&&minute>=30&&minute<=49?`${parts.year}-${parts.month}-${parts.day}-${hour}`:"";
 }
 function scheduleLongRankRefresh(){
   clearTimeout(longRankTimer);longRankTimer=null;
@@ -1925,8 +1925,7 @@ async function refreshLiveQuotes({force=false}={}){
       if(metaTime&&metaTime!==liveMarketCacheVersion){
         try{
           const cache=await fetchNoStore(`market-quotes.json?ts=${now}`,signal),quotes=parsePublicQuoteCache(cache);
-          if(quotes.size){window.dispatchEvent(new CustomEvent("hs:delayed-quotes",{detail:{quotes,sourceUpdatedAt:String(cache.updated_at||metaTime),checkedAt:new Date().toISOString(),source:"github_actions_cache"}}));successes++}
-          livePublicQuotes=quotes;liveMarketCacheVersion=metaTime;
+          if(quotes.size){livePublicQuotes=quotes;liveMarketCacheVersion=String(cache.updated_at||metaTime);window.dispatchEvent(new CustomEvent("hs:delayed-quotes",{detail:{quotes,sourceUpdatedAt:liveMarketCacheVersion,checkedAt:new Date().toISOString(),source:"github_actions_cache"}}));successes++}
         }catch{}
       }else window.dispatchEvent(new CustomEvent("hs:quote-cache-checked",{detail:{sourceUpdatedAt:metaTime,checkedAt:new Date().toISOString()}}));
     }
@@ -2023,7 +2022,7 @@ function provisionalRowsFor(x,quote){
 function applyIntradayEstimate(x,quote){
   const provisional=provisionalRowsFor(x,quote);
   if(!provisional)return false;
-  const {rows,hasHighLow,hasVolume,quoteDate}=provisional;
+  const {rows,hasHighLow,hasVolume,quoteDate,asOf}=provisional;
   x.intradayRows=rows;
   const features=HSBuyPointCore.buildWeeklyFeatures(rows,x.strategyType),feature=features.at(-1);
   if(!feature)return false;
@@ -2053,7 +2052,8 @@ function applyIntradayEstimate(x,quote){
     hasHighLow,
     hasVolume,
     quoteDate,
-    quoteTime:x.quoteTime
+    quoteTime:x.quoteTime,
+    asOf
   };
   x.action=actionFor(x);
   return true;
@@ -2064,6 +2064,8 @@ function applyHomeDelayedQuotes(detail){
     setHomeQuoteStatus("更新失敗，已保留最後資料",true);
     return false;
   }
+  const sourceVersion=String(detail?.sourceUpdatedAt||"");
+  if(sourceVersion)liveMarketCacheVersion=sourceVersion;
   pendingDelayedQuotes=detail;
   latestPublicQuotes=new Map(quotes);
   const checkedAt=detail.checkedAt||new Date().toISOString();
@@ -2077,7 +2079,7 @@ function applyHomeDelayedQuotes(detail){
     if(!Number.isFinite(price)||price<=0)continue;
     const quoteDate=String(quote?.date||"");
     if(/^\d{4}-\d{2}-\d{2}$/.test(quoteDate)&&/^\d{4}-\d{2}-\d{2}$/.test(String(x.formalState?.date||""))&&quoteDate<x.formalState.date)continue;
-    const isIntraday=quoteDate===taipeiToday()&&/^\d{2}:\d{2}:\d{2}$/.test(String(quote?.quoteTime||""));
+    const isIntraday=quote.quoteMode==="delayed"&&quoteDate===taipeiToday()&&HSPortfolioCore.isTaipeiMarketOpen(new Date())&&HSIntradayBuyPointCore.isFreshIntradayQuote(quote,new Date(),90);
     if(isIntraday){
       if(!applyIntradayEstimate(x,quote))continue;
     }else{
@@ -2300,6 +2302,12 @@ function currentLongRankSlot(date=new Date()){
   if(active===undefined)return`${parts.year}-${parts.month}-${parts.day} 盤前`;
   return`${parts.year}-${parts.month}-${parts.day} ${String(Math.floor(active/60)).padStart(2,"0")}:${String(active%60).padStart(2,"0")}`;
 }
+function intradayLongRankAsOf(longs){
+  const values=(Array.isArray(longs)?longs:[]).filter(item=>item.scoreMode==="intraday"&&item.intraday?.asOf).map(item=>new Date(item.intraday.asOf)).filter(date=>Number.isFinite(date.getTime()));
+  if(!values.length)return null;
+  const slots=new Set(values.map(currentLongRankSlot));
+  return slots.size===1?values.sort((a,b)=>a-b)[0]:null;
+}
 function longRankScheduleStatus(date=new Date()){
   const parts=Object.fromEntries(new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Taipei",weekday:"short",hour:"2-digit",minute:"2-digit",hour12:false}).formatToParts(date).map(part=>[part.type,part.value]));
   if(["Sat","Sun"].includes(parts.weekday))return{current:"最近交易日 13:30",next:"下一交易日 09:30"};
@@ -2307,8 +2315,8 @@ function longRankScheduleStatus(date=new Date()){
   const format=slot=>`${String(Math.floor(slot/60)).padStart(2,"0")}:${String(slot%60).padStart(2,"0")}`;
   return{current:current===undefined?"盤前正式分數":format(current),next:next===undefined?"今日已完成":"下一次 "+format(next)};
 }
-function longRankSnapshot(longs,saved,version){
-  const slot=currentLongRankSlot();
+function longRankSnapshot(longs,saved,version,snapshotAsOf){
+  const slot=currentLongRankSlot(snapshotAsOf);
   const sameSlot=saved?.schema_version===2&&saved.slot_time===slot;
 
   const items=Object.fromEntries(longs.map((item,index)=>{
@@ -2377,18 +2385,18 @@ function renderTop(){
   const swings=all.filter(x=>swingIds.has(x.id)).sort((a,b)=>(displayScore(b,strategyModeFor(b))??-1)-(displayScore(a,strategyModeFor(a))??-1));
   const longCount=longs.filter(x=>(strategyDecisionFor(x,"long_term_core")?.score??0)>=60).length;
   const swingCount=swings.filter(x=>(strategyDecisionFor(x,strategyModeFor(x))?.stage?.number??0)>0||["first","confirmed"].includes(strategyDecisionFor(x,strategyModeFor(x))?.stage?.key)).length;
-  const saved=previousLongRanks(),previous=comparisonLongRanks(saved),version=liveMarketCacheVersion||all[0]?.date||"";
+  const snapshotAsOf=intradayLongRankAsOf(longs),snapshotSlot=snapshotAsOf?currentLongRankSlot(snapshotAsOf):currentLongRankSlot(),saved=previousLongRanks(),previous=comparisonLongRanks(saved,snapshotSlot),version=liveMarketCacheVersion||"";
   $("#homeEtfBriefSummary").textContent=longs.length>=2?`第1優先：${longs[0].id}｜${displayScore(longs[0],"long_term_core")}分｜${displayStage(longs[0],"long_term_core")?.label}；第2優先：${longs[1].id}｜${displayScore(longs[1],"long_term_core")}分｜${displayStage(longs[1],"long_term_core")?.label}；其餘${longs.length-2}支依排名分批評估。`:"長期加碼資料載入中。";
   $("#rankList").innerHTML=longs.map((x,index)=>longRankRow(x,index,previous)).join("")||'<div class="newsEmpty">資料載入中</div>';
   $("#homeSwingList").innerHTML=`<div class="homeOpportunityGroup">${swings.map(x=>compactOpportunityRow(x,strategyModeFor(x))).join("")||'<div class="newsEmpty">資料載入中</div>'}</div>`;
-  if(version&&version!==lastRankSnapshotVersion){localStorage.setItem(LONG_RANK_STORAGE_KEY,JSON.stringify(longRankSnapshot(longs,saved,version)));lastRankSnapshotVersion=version}
+  if(snapshotAsOf&&version&&version!==lastRankSnapshotVersion){localStorage.setItem(LONG_RANK_STORAGE_KEY,JSON.stringify(longRankSnapshot(longs,saved,version,snapshotAsOf)));lastRankSnapshotVersion=version}
   const radar=activeRadarItems(),sorted=[...radar].sort((a,b)=>(displayScore(b)??-1)-(displayScore(a)??-1)),low=[...radar].sort((a,b)=>a.j-b.j)[0],best=sorted.find(x=>Number.isFinite(displayScore(x)));
   $("#snapshotGrid").innerHTML=(best||low)?`<div class="snapshot"><span>最高策略分數</span><b>${best?`${best.id}｜${displayScore(best)} 分`:"資料不足"}</b></div><div class="snapshot"><span>最低週 J 值</span><b>${low?`${low.id}｜${fmt(low.j)}`:"—"}</b></div><div class="snapshot"><span>長期加碼區</span><b>${longCount} 檔</b></div><div class="snapshot"><span>波段已確認</span><b>${swingCount} 檔</b></div>`:'<div class="newsEmpty">尚無 ETF 資料。</div>';
-  const hasIntraday=longs.some(item=>item.scoreMode==="intraday"),schedule=longRankScheduleStatus();
-  $("#updatedTop").textContent=hasIntraday?`盤中試算 ${schedule.current}｜週 KD 暫定`:`盤後正式 ${esc(all[0]?.date||"—")}｜完成週 KD`;
-  $("#radarCurrentSlot").textContent=`本次更新時段 ${schedule.current}`;
+  const hasIntraday=longs.some(item=>item.scoreMode==="intraday"),schedule=longRankScheduleStatus(),actualSnapshotTime=snapshotAsOf?snapshotSlot.slice(-5):schedule.current;
+  $("#updatedTop").textContent=hasIntraday?`盤中試算 ${actualSnapshotTime}｜週 KD 暫定`:`盤後正式 ${esc(all[0]?.date||"—")}｜完成週 KD`;
+  $("#radarCurrentSlot").textContent=`本次更新時段 ${actualSnapshotTime}`;
   $("#radarNextSlot").textContent=schedule.next.startsWith("下一次 ")?`下一次更新 ${schedule.next.slice(4)}`:schedule.next;
-  if($("#radarOverviewCurrent"))$("#radarOverviewCurrent").textContent=`本次更新時段：${schedule.current}`;
+  if($("#radarOverviewCurrent"))$("#radarOverviewCurrent").textContent=`本次更新時段：${actualSnapshotTime}`;
   if($("#radarOverviewNext"))$("#radarOverviewNext").textContent=schedule.next.startsWith("下一次 ")?`下一次更新：${schedule.next.slice(4)}`:`下一次更新：${schedule.next}`;
   renderTodayHighlights(longs,swings);
 }

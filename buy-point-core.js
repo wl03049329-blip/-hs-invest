@@ -114,18 +114,21 @@
       const close = finite(row?.close);
       const high = finite(row?.max ?? row?.close);
       const low = finite(row?.min ?? row?.close);
+      const open = finite(row?.open);
+      const volume = finite(row?.Trading_Volume ?? row?.trading_volume ?? row?.volume);
       if (!date || close === null || high === null || low === null) continue;
       const parsed = new Date(`${date}T00:00:00+08:00`);
       const weekday = parsed.getDay() || 7;
       const monday = new Date(parsed);
       monday.setDate(parsed.getDate() - weekday + 1);
       const key = monday.toISOString().slice(0, 10);
-      if (!weeks.has(key)) weeks.set(key, {date, close, high, low});
+      if (!weeks.has(key)) weeks.set(key, {date, open: open ?? close, close, high, low, volume: null});
       const week = weeks.get(key);
       week.date = date;
       week.close = close;
       week.high = Math.max(week.high, high);
       week.low = Math.min(week.low, low);
+      if (volume !== null) week.volume = (week.volume ?? 0) + volume;
     }
     let k = 50;
     let d = 50;

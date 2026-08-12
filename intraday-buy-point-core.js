@@ -10,37 +10,45 @@
     const number = Number(value);
     return Number.isFinite(number) ? number : null;
   };
-  const rowVolume = row => row?.Trading_Volume ?? row?.trading_volume ?? row?.volume ?? null;
+  function quoteAsOf(quote) {
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(String(quote?.date || "")) ? String(quote.date) : "";
+    const rawTime = String(quote?.quoteTime || "");
+    const time = /^([01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/.test(rawTime)
+      ? rawTime.length === 5 ? `${rawTime}:00` : rawTime : "";
+    return date && time ? `${date}T${time}+08:00` : "";
+  }
+
+  function isFreshIntradayQuote(quote, now = new Date(), maxAgeMinutes = 20) {
+    const asOf = quoteAsOf(quote);
+    const timestamp = Date.parse(asOf), current = now instanceof Date ? now.getTime() : Date.parse(now);
+    if (!asOf || !Number.isFinite(timestamp) || !Number.isFinite(current)) return false;
+    const age = current - timestamp;
+    return age >= -60_000 && age <= Math.max(1, Number(maxAgeMinutes) || 20) * 60_000;
+  }
 
   function buildProvisionalRows(officialRows, quote, formalDate) {
-    const rows = Array.isArray(officialRows) ? officialRows.map(row => ({...row})) : [];
+    const sourceRows = Array.isArray(officialRows) ? officialRows.map(row => ({...row})) : [];
     const price = finite(quote?.price);
     const quoteDate = /^\d{4}-\d{2}-\d{2}$/.test(String(quote?.date || "")) ? String(quote.date) : formalDate;
-    if (price === null || price <= 0 || !quoteDate || !rows.length) return null;
-    const high = finite(quote?.high), low = finite(quote?.low), volume = finite(quote?.volume);
+    if (price === null || price <= 0 || !quoteDate || !sourceRows.length) return null;
+    const rows = sourceRows.filter(row => String(row?.date || "") < quoteDate);
+    if (!rows.length) return null;
+    const open = finite(quote?.open), high = finite(quote?.high), low = finite(quote?.low), volume = finite(quote?.volume);
     const hasHighLow = high !== null && high > 0 && low !== null && low > 0 &&
       high >= low && price <= high * 1.001 && price >= low * 0.999;
     const hasVolume = volume !== null && volume >= 0;
     const provisional = {
       date: quoteDate,
+      open: open !== null && open > 0 ? open : null,
       close: price,
       max: hasHighLow ? high : price,
       min: hasHighLow ? low : price,
       Trading_Volume: hasVolume ? volume : null,
-      quote_time: String(quote?.quoteTime || "")
+      quote_time: String(quote?.quoteTime || ""),
+      as_of: quoteAsOf({...quote, date: quoteDate})
     };
-    const last = rows.at(-1);
-    if (last.date === quoteDate) {
-      provisional.max = hasHighLow ? high : Math.max(Number(last.max ?? last.close), price);
-      provisional.min = hasHighLow ? low : Math.min(Number(last.min ?? last.close), price);
-      if (!hasVolume) provisional.Trading_Volume = rowVolume(last);
-      rows[rows.length - 1] = {...last, ...provisional};
-    } else if (quoteDate > last.date) {
-      rows.push(provisional);
-    } else {
-      return null;
-    }
-    return {rows, hasHighLow, hasVolume, quoteDate, coverage: 70 + (hasHighLow ? 16 : 0) + (hasVolume ? 14 : 0)};
+    rows.push(provisional);
+    return {rows, hasHighLow, hasVolume, quoteDate, asOf: provisional.as_of, finalizedThrough: rows.at(-2)?.date || "", coverage: 70 + (hasHighLow ? 16 : 0) + (hasVolume ? 14 : 0)};
   }
 
   function mergeStopConfirmation(formal, provisional, options = {}) {
@@ -71,5 +79,5 @@
     return intraday === null || formal === null ? null : Math.round(intraday - formal);
   }
 
-  return {buildProvisionalRows, mergeStopConfirmation, scoreDelta};
+  return {quoteAsOf, isFreshIntradayQuote, buildProvisionalRows, mergeStopConfirmation, scoreDelta};
 });
