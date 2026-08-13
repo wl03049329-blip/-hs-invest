@@ -1,0 +1,194 @@
+{
+  "phase": "7B_00757",
+  "status": "LOCAL_IMPLEMENTATION_COMPLETE",
+  "completion_status": "00757 LONG_TERM_ETF PRODUCTION INTEGRATION COMPLETE",
+  "access_date": "2026-08-14",
+  "version": "2.0",
+  "production_universe_added": "00757",
+  "strategy_type": "LONG_TERM_ETF",
+  "strategy_mode": "long_term_core",
+  "model": "FINAL_CORE_WEIGHT_V1",
+  "weights": {
+    "weeklyJ": 30,
+    "dd52": 55,
+    "crash": 15
+  },
+  "special_case": false,
+  "missing_policy": "FAIL_CLOSED",
+  "data": {
+    "status": "ETF_NATIVE_HISTORY",
+    "first_date": "2018-12-06",
+    "last_date": "2026-08-13",
+    "trading_days": 1866,
+    "weekly_observations": 396,
+    "dd52_ready": true,
+    "crash_ready": true,
+    "weekly_j_ready": true,
+    "dividend_events": 0,
+    "split_events": 0,
+    "normalized_events": 0,
+    "source": "https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice&data_id=00757&start_date=2018-01-01",
+    "source_sha256": "4B4D51923EA169C2DE7F3E263468DD7C3A5751ED8E4436B4DCAB2D2E0543C4D1"
+  },
+  "current": {
+    "coreScore": 3.3,
+    "coreScoreDisplay": 3,
+    "coreLabel": "一般持有",
+    "historicalTriggerRate": null,
+    "rank": 4,
+    "dataStatus": "ETF_NATIVE_HISTORY",
+    "marketAsOf": "2026-08-13T13:30:00+08:00",
+    "coreFactors": {
+      "weeklyJ": {
+        "raw": 92.604620420057,
+        "score": 0,
+        "weight": 30,
+        "contribution": 0
+      },
+      "dd52": {
+        "raw": -1.7562346329469625,
+        "score": 6,
+        "weight": 55,
+        "contribution": 3.3000000000000003
+      },
+      "crash": {
+        "raw": -1.687170474516697,
+        "score": 0,
+        "weight": 15,
+        "contribution": 0
+      }
+    }
+  },
+  "distribution": {
+    "gte_30": {
+      "total": 1615,
+      "frequency_pct": 29.5356
+    },
+    "gte_40": {
+      "total": 1615,
+      "frequency_pct": 24.0248
+    },
+    "gte_45": {
+      "total": 1615,
+      "frequency_pct": 21.3003
+    },
+    "gte_50": {
+      "total": 1615,
+      "frequency_pct": 17.7709
+    },
+    "gte_65": {
+      "total": 1615,
+      "frequency_pct": 8.2972
+    },
+    "gte_70": {
+      "total": 1615,
+      "frequency_pct": 6.935
+    },
+    "gte_80": {
+      "total": 1615,
+      "frequency_pct": 4.582
+    },
+    "gte_90": {
+      "total": 1615,
+      "frequency_pct": 0.9288
+    }
+  },
+  "stress": [
+    [
+      "2020_COVID",
+      "2020-02-20",
+      "2020-04-30",
+      48,
+      "2020-03-17",
+      100,
+      -16.110082,
+      -31.994554,
+      -31.855389,
+      "歷史極端機會",
+      "PASS_HIGH_SCORE_IN_PULLBACK"
+    ],
+    [
+      "2022_TECH_BEAR",
+      "2022-01-03",
+      "2022-12-30",
+      246,
+      "2022-05-12",
+      93.766516,
+      -6.266446,
+      -36.431159,
+      -20.61086,
+      "歷史極端機會",
+      "PASS_HIGH_SCORE_IN_PULLBACK"
+    ],
+    [
+      "2024_08_05",
+      "2024-07-15",
+      "2024-08-30",
+      33,
+      "2024-08-05",
+      73.612194,
+      -13.331245,
+      -19.230769,
+      -19.020323,
+      "強力加碼訊號",
+      "PASS_HIGH_SCORE_IN_PULLBACK"
+    ],
+    [
+      "2025_TARIFF_SHOCK",
+      "2025-03-20",
+      "2025-05-15",
+      38,
+      "2025-04-07",
+      93.680153,
+      -5.062697,
+      -30.108011,
+      -20.966921,
+      "歷史極端機會",
+      "PASS_HIGH_SCORE_IN_PULLBACK"
+    ],
+    [
+      "2026_MEDIUM_PULLBACKS",
+      "2026-01-01",
+      "2026-08-13",
+      147,
+      "2026-03-31",
+      65.572949,
+      3.944657,
+      -19.722222,
+      -10.288248,
+      "積極加碼訊號",
+      "PASS_HIGH_SCORE_IN_PULLBACK"
+    ]
+  ],
+  "regression": {
+    "new_tests": "15/15 PASS",
+    "existing": "41/41 test files PASS (test_etf_universe.py requires repo-root PYTHONPATH)",
+    "mobile": "375/390/430 PASS",
+    "blocking_errors": 0
+  },
+  "deployment": {
+    "status": "PENDING",
+    "branch": "main"
+  },
+  "unchanged": {
+    "version": true,
+    "final_core_weights": true,
+    "weekly_j_mapping": true,
+    "dd52_mapping": true,
+    "crash_mapping": true,
+    "ranking_algorithm": true,
+    "comparison_baselines": true,
+    "etf009815": true
+  },
+  "outputs": [
+    "PHASE7B_00757_REPORT.md",
+    "00757_data_readiness.md",
+    "00757_current_snapshot.csv",
+    "00757_score_distribution.csv",
+    "00757_stress_validation.csv",
+    "00757_production_regression.csv",
+    "00757_ui_validation.csv",
+    "00757_release_record.md",
+    "phase7b_00757_complete_report.json"
+  ]
+}

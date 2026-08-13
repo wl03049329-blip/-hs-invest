@@ -37,6 +37,7 @@ BASE_TRACKED_CHANNELS = (
     "tse_0050.tw",
     "tse_00631L.tw",
     "tse_00662.tw",
+    "tse_00757.tw",
     "tse_00830.tw",
     "otc_009815.tw",
 )
@@ -47,7 +48,7 @@ OVERVIEW_CODES = {
 }
 CODE_RE = re.compile(r"^[0-9A-Z]{4,10}$")
 TAIPEI = ZoneInfo("Asia/Taipei")
-RADAR_CODES = ("0050", "00662", "00830", "00935", "009815")
+RADAR_CODES = ("0050", "00662", "00757", "00830", "00935", "009815")
 RADAR_SLOTS = ("09:30", "10:30", "11:30", "12:30", "13:30")
 RADAR_QUOTE_TOLERANCE_MINUTES = 20
 

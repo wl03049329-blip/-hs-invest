@@ -626,7 +626,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
     <details class="moreHubCard"><summary><span>資料來源與使用說明</span><small>盤中試算、盤後資料與估值代理</small></summary><p>盤中價格可能延遲；週 KD、融資、法人、期貨籌碼與估值各自標示資料日期。缺少資料不以 0 代替。</p></details>
     <details class="moreHubCard"><summary><span>HS 投資原則</span><small>分批、紀律，不把評分當成保證</small></summary><p>長期持有仍要重視買點；恐慌時比亢奮時更值得注意；不用單一訊號 All in，也不以模型預言市場。</p></details>
     <details class="moreHubCard"><summary><span>必要設定</span><small>提醒、行情與裝置內資料</small></summary><p>持股、自選、提醒與策略狀態只儲存在目前瀏覽器。下方保留既有資料、提醒與行情來源設定。</p></details>
-    <details class="moreHubCard"><summary><span>歷史回測與驗證</span><small>查看模型方法、區間與限制</small></summary><div class="phase6bMethod"><h3>FINAL_CORE_WEIGHT_V1</h3><p>用途：衡量長期核心 ETF 是否進入額外加碼區，而不是預測最低點。</p><ul><li>週 J 低檔：30%</li><li>52 週高點回檔：55%</li><li>20 日急跌：15%</li></ul><p>分數門檻使用未四捨五入的精確值；畫面分數僅向下取整。歷史觸發率為校準樣本中的出現頻率，不代表未來報酬或勝率。</p><p>資料缺失採 FAIL_CLOSED：三個核心因子任一缺失即顯示資料不足，不重新正規化。0050、00662、00830、00935 已有 canonical 校準；009815 暫不提供正式核心分數。</p><p>回測使用當時可取得資料、調整企業行動後價格與固定 mapping；不保證未來結果，也不構成投資建議。</p></div></details>
+    <details class="moreHubCard"><summary><span>歷史回測與驗證</span><small>查看模型方法、區間與限制</small></summary><div class="phase6bMethod"><h3>FINAL_CORE_WEIGHT_V1</h3><p>用途：衡量長期核心 ETF 是否進入額外加碼區，而不是預測最低點。</p><ul><li>週 J 低檔：30%</li><li>52 週高點回檔：55%</li><li>20 日急跌：15%</li></ul><p>分數門檻使用未四捨五入的精確值；畫面分數僅向下取整。歷史觸發率為校準樣本中的出現頻率，不代表未來報酬或勝率。</p><p>資料缺失採 FAIL_CLOSED：三個核心因子任一缺失即顯示資料不足，不重新正規化。0050、00662、00757、00830、00935 使用相同 canonical 長期核心模型；009815 暫不提供正式核心分數。</p><p>回測使用當時可取得資料、調整企業行動後價格與固定 mapping；不保證未來結果，也不構成投資建議。</p></div></details>
     <details class="moreHubCard"><summary><span>版本資訊</span><small>HS ETF 股市雷達 2.0</small></summary><p>長期核心：FINAL_CORE_WEIGHT_V1；緊急回復旗標保留 LEGACY_LONG_TERM_V62。波段與槓桿模型未變。</p></details>
   </section>
 
@@ -910,6 +910,7 @@ const DEFAULT_WATCHLIST=[
   {id:"0050",name:"元大台灣50",type:"台灣股票",risk:"中高",market:"台灣大型股",strategyType:"equity",category:"equity_broad",classificationConfidence:"medium",strategyMode:"long_term_core"},
   {id:"00830",name:"國泰費城半導體",type:"海外股票",risk:"高",market:"美國半導體",strategyType:"equity",category:"equity_sector",classificationConfidence:"high",strategyMode:"long_term_core"},
   {id:"00662",name:"富邦NASDAQ",type:"海外股票",risk:"高",market:"美國科技",strategyType:"equity",category:"equity_overseas",classificationConfidence:"medium",strategyMode:"long_term_core"},
+  {id:"00757",name:"統一FANG+",type:"海外股票",risk:"高",market:"美國科技",strategyType:"LONG_TERM_ETF",category:"equity_overseas",classificationConfidence:"high",strategyMode:"long_term_core"},
   {id:"009815",name:"大華美國MAG7+",type:"海外股票",risk:"高",market:"美國大型科技",strategyType:"equity",category:"equity_overseas",classificationConfidence:"medium",strategyMode:"long_term_core"},
   {id:"00935",name:"野村臺灣新科技50",type:"台灣股票",risk:"高",market:"台灣科技主題",strategyType:"equity",category:"equity_sector",classificationConfidence:"high",strategyMode:"long_term_core"},
   {id:"00631L",name:"元大台灣50正2",type:"槓桿ETF",risk:"極高",market:"台灣大型股2倍",strategyType:"leveraged",category:"leveraged",classificationConfidence:"high",strategyMode:"leveraged"},
@@ -1005,8 +1006,8 @@ let cnnPollInFlight=null;
 let cnnLastAttemptAt=0;
 const CNN_POLL_INTERVAL=20*60*1000;
 const LIVE_QUOTE_PROXY_KEY=HSStorage.keys.liveQuoteProxy;
-const LIVE_QUOTE_PUBLIC_CODES=new Set(["0050","00830","00662","009815","00935","00631L","00733","006201","2330"]);
-const LONG_RADAR_CODES=new Set(["0050","00662","00830","00935","009815"]);
+const LIVE_QUOTE_PUBLIC_CODES=new Set(["0050","00830","00662","00757","009815","00935","00631L","00733","006201","2330"]);
+const LONG_RADAR_CODES=new Set(["0050","00662","00757","00830","00935","009815"]);
 const LONG_TERM_CORE_SCORE_VERSION=window.HS_LONG_TERM_CORE_SCORE_VERSION||"FINAL_CORE_WEIGHT_V1";
 
 const $=s=>document.querySelector(s);
@@ -1355,9 +1356,10 @@ function applyStrategyModes(x){
   x.strategyDecisions=HSStrategyModeCore.buildDecisions(strategyInputs(x));
   if(window.HSFinalCoreProduction){
     const legacy=x.strategyDecisions.long_term_core;
+    const marketAsOf=x.quoteMode==="delayed"&&/^\d{2}:\d{2}(?::\d{2})?$/.test(String(x.quoteTime||""))?`${x.date}T${String(x.quoteTime).length===5?x.quoteTime+":00":x.quoteTime}+08:00`:`${x.date}T13:30:00+08:00`;
     x.strategyDecisions.long_term_core=HSFinalCoreProduction.buildDecision({
       ticker:x.id,j:x.j,k:x.k,d:x.d,dd52:x.fromHigh,rows:x.intradayRows||x.officialRows||[],
-      weeklyBias:x.weekBias,marketFear:marketFearMetric(),valuation:valuationMetricFor(x)
+      weeklyBias:x.weekBias,marketFear:marketFearMetric(),valuation:valuationMetricFor(x),marketAsOf
     },legacy,LONG_TERM_CORE_SCORE_VERSION);
   }
   x.activeStrategyMode=strategyModeFor(x);
@@ -1841,7 +1843,7 @@ function updateHomeFastFacts(){
 }
 function todayBuyDecisionText(){
   if(!all.length)return"買點資料載入中，暫不做判斷。";
-  const longIds=new Set(["0050","00830","00662","009815","00935"]),swingIds=new Set(["00631L","00733","006201"]);
+  const longIds=new Set(["0050","00830","00662","00757","009815","00935"]),swingIds=new Set(["00631L","00733","006201"]);
   const longs=all.filter(x=>longIds.has(x.id)).map(x=>({x,d:strategyDecisionFor(x,"long_term_core")})).filter(row=>Number.isFinite(row.d?.score)).sort((a,b)=>b.d.score-a.d.score);
   const swings=all.filter(x=>swingIds.has(x.id)).map(x=>({x,d:strategyDecisionFor(x,"swing")})).filter(row=>Number.isFinite(row.d?.score)).sort((a,b)=>b.d.score-a.d.score);
   const longReady=longs.filter(row=>row.d.score>=60).slice(0,2),swingReady=swings.filter(row=>["first","confirmed"].includes(row.d.stage?.key));
@@ -2484,7 +2486,7 @@ function renderTodayHighlights(longs,swings){
   }
 }
 function renderTop(){
-  const longIds=new Set(["0050","00830","00662","009815","00935"]),swingIds=new Set(["00631L","00733","006201"]);
+  const longIds=new Set(["0050","00830","00662","00757","009815","00935"]),swingIds=new Set(["00631L","00733","006201"]);
   const longs=all.filter(x=>longIds.has(x.id)).sort(longRankComparator);
   const swings=all.filter(x=>swingIds.has(x.id)).sort((a,b)=>(displayScore(b,strategyModeFor(b))??-1)-(displayScore(a,strategyModeFor(a))??-1));
   const longCount=longs.filter(x=>(strategyDecisionFor(x,"long_term_core")?.score??0)>=60).length;

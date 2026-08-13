@@ -1,0 +1,16 @@
+test,result,evidence
+strategyType LONG_TERM_ETF,PASS,DEFAULT_WATCHLIST strategyMode=long_term_core; no dedicated engine
+FINAL_CORE_WEIGHT_V1,PASS,FINAL_CORE_WEIGHT_V1
+J weight 30,PASS,30
+DD52 weight 55,PASS,55
+Crash weight 15,PASS,15
+auxiliary factors excluded,PASS,canonical buildFinal ignores auxiliary values in coreScore
+missing factor FAIL_CLOSED,PASS,coreScore null
+no renormalization,PASS,all three required
+ranking exact CoreScore,PASS,rank 4
+trigger mapping exact,PASS,
+labels exact,PASS,一般持有
+intraday Weekly J shared,PASS,LONG_RADAR_CODES and RADAR_CODES include 00757
+DD52 adjusted intraday High,PASS,last 252 adjusted max
+finite output,PASS,no NaN/Infinity
+009815 unchanged,PASS,unsupported / FAIL_CLOSED
