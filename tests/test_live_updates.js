@@ -24,10 +24,13 @@ check("台北盤中時段邊界", () => {
 });
 
 check("首頁 ETF 盤中試算標示完整", () => {
-  assert.match(html, /盤中試算 \$\{schedule\.current\}/);
+  assert.match(html, /盤中試算 \$\{actualSnapshotTime\}/);
+  assert.match(html, /actualSnapshotTime=radarDisplay\.current/);
+  assert.doesNotMatch(html, /actualSnapshotTime=snapshotAsOf\?snapshotSlot\.slice\(-5\):schedule\.current/);
   assert.match(html, /週 KD 暫定/);
   assert.doesNotMatch(production, /即時行情/);
-  assert.match(html, /quoteDate===taipeiToday\(\)&&HSPortfolioCore\.isTaipeiMarketOpen\(new Date\(\)\)/);
+  assert.match(html, /validatedRadarRefresh\(detail\.radarRefresh,quotes\)/);
+  assert.match(html, /verifiedCacheQuote\|\|authorizedFresh/);
   assert.match(html, /hasIntraday\?`盤中試算[\s\S]*:`盤後正式/);
 });
 

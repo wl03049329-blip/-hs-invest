@@ -37,6 +37,6 @@ assert.strictEqual(provisionalFriday.k,finalFriday.k);assert.strictEqual(provisi
 assert.strictEqual(intraday.quoteAsOf({date:"2026-08-12",quoteTime:"09:30"}),"2026-08-12T09:30:00+08:00");
 assert.strictEqual(intraday.isFreshIntradayQuote({date:"2026-08-12",quoteTime:"09:30:00"},new Date("2026-08-12T11:01:00+08:00"),90),false);
 const html=fs.readFileSync(path.join(__dirname,"..","index.html"),"utf8");
-assert.match(html,/intradayLongRankAsOf\(longs\)/);assert.match(html,/item\.intraday\?\.asOf/);assert.match(html,/longRankSnapshot\(longs,saved,version,snapshotAsOf\)/);assert.match(html,/minute>=30&&minute<=49/);
+assert.match(html,/intradayLongRankAsOf\(longs\)/);assert.match(html,/item\.intraday\?\.asOf/);assert.match(html,/longRankSnapshot\(longs,saved,version,snapshotAsOf,snapshotSlot\)/);assert.match(html,/minute>=30&&minute<=49/);
 console.log(JSON.stringify(output,null,2));
 console.log("PASS P1 TEST 1-10; run P0 and V6 suites for TEST 11-12");

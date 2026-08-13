@@ -27,7 +27,7 @@ check("Version 6.2 品牌與五個正式分頁", () => {
     assert.match(html, new RegExp(`data-tab="${tab}"`));
   }
   assert.doesNotMatch(html, /data-tab="trump"/);
-  assert.match(html, /id="trump-watch"[^>]+data-tab-section="sentiment"[^>]+data-chip-panel="events"/);
+  assert.match(html, /data-chip-panel="events"[^>]*>[\s\S]*?id="trump-watch"/);
 });
 
 check("首頁內嵌程式可通過語法解析", () => {
@@ -138,9 +138,10 @@ check("行情 JSON 結構與價格有效", () => {
 });
 
 check("Actions 以固定排程更新同源行情", () => {
-  assert.match(workflow, /cron: "30 1,2,3,4,5 \* \* 1-5"/);
-  assert.match(workflow, /scripts\/update_market_quotes\.py/);
-  assert.match(workflow, /git add market-quotes\.json market-quotes-meta\.json market-overview\.json tx-futures-quote\.json/);
+  assert.match(workflow, /cron: "25 0 \* \* 1-5"/);
+  assert.match(workflow, /scripts\/run_intraday_radar_session\.py/);
+  const sessionRunner = fs.readFileSync(path.join(root, "scripts", "run_intraday_radar_session.py"), "utf8");
+  assert.match(sessionRunner, /"market-quotes\.json"[\s\S]*"market-quotes-meta\.json"[\s\S]*"market-overview\.json"[\s\S]*"tx-futures-quote\.json"/);
 });
 
 process.stdout.write(`\n${checks.length} V6 integration tests passed.\n`);

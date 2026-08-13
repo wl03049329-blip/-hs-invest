@@ -11,6 +11,7 @@ const quoteUi = fs.readFileSync(path.join(root, "portfolio-v6.js"), "utf8");
 const quoteScript = fs.readFileSync(path.join(root, "scripts", "update_market_quotes.py"), "utf8");
 const futuresScript = fs.readFileSync(path.join(root, "scripts", "update_futures_position.py"), "utf8");
 const marketWorkflow = fs.readFileSync(path.join(root, ".github", "workflows", "update-market-quotes.yml"), "utf8");
+const marketRunner = fs.readFileSync(path.join(root, "scripts", "run_intraday_radar_session.py"), "utf8");
 const futuresWorkflow = fs.readFileSync(path.join(root, ".github", "workflows", "update-futures-position.yml"), "utf8");
 const overviewRaw = JSON.parse(fs.readFileSync(path.join(root, "market-overview.json"), "utf8"));
 const futuresRaw = JSON.parse(fs.readFileSync(path.join(root, "futures-position.json"), "utf8"));
@@ -120,9 +121,10 @@ check("期貨籌碼盤後補抓保留，首頁正式 fallback 由同一 Actions 
   assert.match(futuresRaw.methodology, /相同交易日/);
   assert.match(futuresWorkflow, /cron: "20 10 \* \* 1-5"/);
   assert.match(futuresWorkflow, /cron: "0 11 \* \* 1-5"/);
-  assert.match(marketWorkflow, /cron: "30 1,2,3,4,5 \* \* 1-5"/);
-  assert.match(marketWorkflow, /tx-futures-quote\.json/);
-  assert.match(marketWorkflow, /cancel-in-progress: true/);
+  assert.match(marketWorkflow, /cron: "25 0 \* \* 1-5"/);
+  assert.match(marketWorkflow, /run_intraday_radar_session\.py/);
+  assert.match(marketRunner, /tx-futures-quote\.json/);
+  assert.match(marketWorkflow, /cancel-in-progress: false/);
 });
 
 check("首頁重點與情緒結論存在", () => {

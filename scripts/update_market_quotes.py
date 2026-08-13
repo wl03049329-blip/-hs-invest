@@ -14,7 +14,7 @@ import re
 import tempfile
 import urllib.parse
 import urllib.request
-from datetime import date, datetime, time, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -47,6 +47,9 @@ OVERVIEW_CODES = {
 }
 CODE_RE = re.compile(r"^[0-9A-Z]{4,10}$")
 TAIPEI = ZoneInfo("Asia/Taipei")
+RADAR_CODES = ("0050", "00662", "00830", "00935", "009815")
+RADAR_SLOTS = ("09:30", "10:30", "11:30", "12:30", "13:30")
+RADAR_QUOTE_TOLERANCE_MINUTES = 20
 
 
 def fetch_json(url: str, *, timeout: int = 25) -> Any:
@@ -203,6 +206,7 @@ def fetch_mis_snapshot() -> list[dict[str, Any]]:
                 "low": low,
                 "open": open_price,
                 "volume": volume,
+                "source": TWSE_MIS_URL,
             }
         )
     if not all(any(row["code"] == code for row in valid) for code in OVERVIEW_CODES):
@@ -210,10 +214,71 @@ def fetch_mis_snapshot() -> list[dict[str, Any]]:
     return valid
 
 
-def spot_quote_mode(now: datetime, data_date: str) -> str:
-    weekday = now.weekday() < 5
-    in_session = time(9, 0) <= now.time() <= time(13, 30)
-    return "delayed" if weekday and in_session and data_date == now.date().isoformat() else "close"
+def quote_datetime(data_date: str, quote_time: str) -> datetime | None:
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(data_date or "")):
+        return None
+    if not re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d", str(quote_time or "")):
+        return None
+    try:
+        return datetime.fromisoformat(f"{data_date}T{quote_time}").replace(tzinfo=TAIPEI)
+    except ValueError:
+        return None
+
+
+def spot_quote_mode(now: datetime, data_date: str, quote_time: str = "") -> str:
+    """Classify by the source quote timestamp, never by job completion time."""
+    quote_at = quote_datetime(data_date, quote_time)
+    if quote_at is None or quote_at.weekday() >= 5:
+        return "close"
+    in_session = time(9, 0) <= quote_at.time() <= time(13, 30, 59)
+    return "delayed" if in_session else "close"
+
+
+def validate_radar_refresh(
+    rows: list[dict[str, Any]], trading_date: str, slot: str, verified_at: datetime
+) -> dict[str, Any]:
+    if slot not in RADAR_SLOTS:
+        raise ValueError(f"unsupported radar slot: {slot}")
+    if trading_date != verified_at.astimezone(TAIPEI).date().isoformat():
+        raise ValueError("radar trading date is not Taipei today")
+    target = datetime.fromisoformat(f"{trading_date}T{slot}:00").replace(tzinfo=TAIPEI)
+    minimum = target - timedelta(minutes=RADAR_QUOTE_TOLERANCE_MINUTES)
+    maximum = target + timedelta(minutes=RADAR_QUOTE_TOLERANCE_MINUTES)
+    by_code = {str(row.get("code", "")): row for row in rows}
+    quote_times: dict[str, str] = {}
+    market_as_of: dict[str, str] = {}
+    for code in RADAR_CODES:
+        row = by_code.get(code)
+        if not row:
+            raise ValueError(f"radar quote missing: {code}")
+        if row.get("date") != trading_date:
+            raise ValueError(f"radar quote date mismatch: {code}")
+        if row.get("source") != TWSE_MIS_URL:
+            raise ValueError(f"radar quote source mismatch: {code}")
+        price = finite_number(row.get("price"), positive=True)
+        open_price = finite_number(row.get("open"), positive=True)
+        high = finite_number(row.get("high"), positive=True)
+        low = finite_number(row.get("low"), positive=True)
+        if None in (price, open_price, high, low) or high < low:
+            raise ValueError(f"radar OHLC invalid: {code}")
+        if price < low * 0.999 or price > high * 1.001:
+            raise ValueError(f"radar price outside high/low: {code}")
+        quote_at = quote_datetime(trading_date, str(row.get("quote_time", "")))
+        if quote_at is None or quote_at < minimum or quote_at > maximum:
+            raise ValueError(f"radar quote time outside {slot} window: {code}")
+        quote_times[code] = quote_at.strftime("%H:%M:%S")
+        market_as_of[code] = quote_at.isoformat()
+    return {
+        "verified": True,
+        "trading_date": trading_date,
+        "slot": slot,
+        "verified_at": verified_at.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "codes": list(RADAR_CODES),
+        "quote_times": quote_times,
+        "market_as_of": market_as_of,
+        "source": "TWSE_MIS",
+        "source_url": TWSE_MIS_URL,
+    }
 
 
 def third_wednesday(year: int, month: int) -> date:
@@ -352,7 +417,7 @@ def build_overview(mis_rows: list[dict[str, Any]], now: datetime) -> dict[str, A
         if not definition:
             continue
         key, name = definition
-        mode = spot_quote_mode(now, row["date"])
+        mode = spot_quote_mode(now, row["date"], row["quote_time"])
         change = row["price"] - row["previous_close"]
         instruments[key] = {
             "key": key,
@@ -413,11 +478,13 @@ def write_market_cache(
     statuses: dict[str, str],
     now: datetime,
     existing: dict[str, Any],
+    radar_refresh: dict[str, Any] | None = None,
+    refresh_attempt: dict[str, Any] | None = None,
 ) -> None:
     items = sorted({item["code"]: item for item in items}.values(), key=lambda item: item["code"])
     validate_quote_items(items)
-    if existing.get("items") == items:
-        payload = existing
+    if existing.get("items") == items and not radar_refresh:
+        payload = dict(existing)
     else:
         payload = {
             "version": 2,
@@ -437,6 +504,14 @@ def write_market_cache(
             },
             "items": items,
         }
+        if radar_refresh:
+            payload["radar_refresh"] = radar_refresh
+        elif isinstance(existing.get("radar_refresh"), dict):
+            payload["radar_refresh"] = existing["radar_refresh"]
+    if refresh_attempt:
+        payload["radar_refresh_attempt"] = refresh_attempt
+    elif isinstance(existing.get("radar_refresh_attempt"), dict):
+        payload["radar_refresh_attempt"] = existing["radar_refresh_attempt"]
     write_atomic(OUTPUT, payload, compact=True)
     meta = {
         "version": payload["version"],
@@ -444,12 +519,16 @@ def write_market_cache(
         "source_dates": payload["source_dates"],
         "source_status": payload["source_status"],
         "item_count": len(payload["items"]),
+        "radar_refresh": payload.get("radar_refresh"),
+        "radar_refresh_attempt": payload.get("radar_refresh_attempt"),
     }
     write_atomic(META_OUTPUT, meta)
 
 
 def main() -> None:
     now = datetime.now(TAIPEI)
+    requested_slot = str(os.environ.get("HS_RADAR_SLOT", "")).strip()
+    requested_date = str(os.environ.get("HS_RADAR_TRADING_DATE", now.date().isoformat())).strip()
     existing_quotes = existing_payload(OUTPUT)
     existing_overview = existing_payload(OVERVIEW_OUTPUT)
     existing_futures = existing_payload(FUTURES_OUTPUT)
@@ -472,8 +551,13 @@ def main() -> None:
             statuses[market] = "cached_after_error"
 
     mis_rows: list[dict[str, Any]] = []
+    radar_refresh: dict[str, Any] | None = None
+    refresh_attempt: dict[str, Any] | None = None
     try:
         mis_rows = fetch_mis_snapshot()
+        if requested_slot:
+            radar_refresh = validate_radar_refresh(mis_rows, requested_date, requested_slot, now)
+            refresh_attempt = {**radar_refresh, "status": "success"}
         statuses["TWSE_MIS"] = "ok"
         item_map = {
             item["code"]: item
@@ -484,7 +568,7 @@ def main() -> None:
             if not CODE_RE.fullmatch(row["code"]):
                 continue
             old = item_map.get(row["code"], {})
-            mode = spot_quote_mode(now, row["date"])
+            mode = spot_quote_mode(now, row["date"], row["quote_time"])
             item_map[row["code"]] = {
                 "code": row["code"],
                 "name": row["name"] or old.get("name", row["code"]),
@@ -501,10 +585,24 @@ def main() -> None:
             }
         items = list(item_map.values())
     except Exception as exc:  # noqa: BLE001
-        statuses["TWSE_MIS"] = f"cached_after_error: {clean_text(exc, 100)}"
-        items = [item for rows in items_by_market.values() for item in rows]
+        error_text = clean_text(exc, 100)
+        statuses["TWSE_MIS"] = f"cached_after_error: {error_text}"
+        if requested_slot and existing_quotes.get("items"):
+            items = existing_quotes["items"]
+            statuses = dict(existing_quotes.get("source_status") or statuses)
+            refresh_attempt = {
+                "verified": False,
+                "status": "failed",
+                "trading_date": requested_date,
+                "slot": requested_slot,
+                "attempted_at": now.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
+                "error": error_text,
+            }
+            mis_rows = []
+        else:
+            items = [item for rows in items_by_market.values() for item in rows]
 
-    write_market_cache(items, statuses, now, existing_quotes)
+    write_market_cache(items, statuses, now, existing_quotes, radar_refresh, refresh_attempt)
 
     try:
         if not mis_rows:

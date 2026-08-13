@@ -59,7 +59,7 @@ result=movement(storedRankLatest,storedRankPrevious);assert.strictEqual(result.r
 console.log("TEST 9 PASS: previous rank is read from its saved snapshot without recomputation");
 
 assert.match(html,/const dailyPair=dailyLongRankPair\(\)/);assert.doesNotMatch(html,/const longPrevious=previousLongRanks\(\)/);
-assert.match(html,/const snapshotAsOf=intradayLongRankAsOf\(longs\)/);assert.match(html,/longRankSnapshot\(longs,saved,version,snapshotAsOf\)/);
+assert.match(html,/const snapshotAsOf=intradayLongRankAsOf\(longs\)/);assert.match(html,/longRankSnapshot\(longs,saved,version,snapshotAsOf,snapshotSlot\)/);
 console.log("TEST 10 PASS: P2 homepage intraday snapshot pipeline remains present and separate");
 
 assert.deepStrictEqual(Object.keys(latestSameRank.items["00830"]),["ticker","longTermScore","rank","weeklyJ","Bias40W","drawdown","marketFear","valuation","availableWeight"]);
