@@ -27,7 +27,8 @@ for (const label of ["首頁", "ETF雷達", "個人持股", "籌碼", "更多"])
   assert.match(html, new RegExp(`<span>${label}<\\/span>`));
 }
 assert.doesNotMatch(html, /data-tab="trump"/);
-assert.match(html, /id="trump-watch"[^>]+data-tab-section="sentiment"[^>]+data-chip-panel="events"/);
+assert.match(html, /data-tab-section="sentiment"/);
+assert.match(html, /data-chip-panel="events"[\s\S]*id="trump-watch"/);
 assert.match(tech, /safe-area-inset-top/);
 assert.match(tech, /safe-area-inset-bottom/);
 assert.doesNotMatch(html, /id="homeMarketOverview"/);

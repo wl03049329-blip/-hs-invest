@@ -77,6 +77,7 @@ class MarginNetworkResilienceTests(unittest.TestCase):
             out.write_bytes((ROOT / "margin-data.json").read_bytes())
             state.write_bytes((ROOT / "margin-cost-state.json").read_bytes())
             before_out, before_state = out.read_bytes(), state.read_bytes()
+            expected_date = json.loads(before_out)["data_date"]
             with mock.patch.object(MODULE, "OUT", out), \
                     mock.patch.object(MODULE, "STATE", state), \
                     mock.patch.object(MODULE, "RECONCILIATION", directory / "reconciliation-report.json"), \
@@ -85,7 +86,7 @@ class MarginNetworkResilienceTests(unittest.TestCase):
                 self.assertEqual(MODULE.main(), 0)
             self.assertEqual(out.read_bytes(), before_out)
             self.assertEqual(state.read_bytes(), before_state)
-            self.assertEqual(json.loads(out.read_text(encoding="utf-8"))["data_date"], "2026-08-11")
+            self.assertEqual(json.loads(out.read_text(encoding="utf-8"))["data_date"], expected_date)
 
     def test_first_build_without_cache_still_fails(self):
         with tempfile.TemporaryDirectory() as directory:

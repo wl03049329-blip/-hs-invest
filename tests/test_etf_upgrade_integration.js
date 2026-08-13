@@ -23,7 +23,7 @@ assert.match(html, /估值尚未納入正式分數/);
 assert.match(html, /valuation-core\.js/);
 assert.match(html, /intraday-buy-point-core\.js/);
 assert.match(html, /同類型前/);
-assert.match(html, /低於 70%/);
+assert.match(html, /三個核心因子缺一即不評分/);
 
 for (const tab of ["overview", "mood", "institutions", "futures", "events"]) {
   assert.match(html, new RegExp(`data-chip-tab="${tab}"`));

@@ -18,7 +18,7 @@ assert.match(css,/homeSentimentWide\{grid-column:1\/-1\}/);
 
 for(const code of ["0050","00830","00662","009815","00935"])assert.match(html,new RegExp(`id:"${code}"[^\n]+strategyMode:"long_term_core"`));
 assert.match(html,/sort\(longRankComparator\)/);
-assert.match(html,/longRankComparator[\s\S]*scoreB[\s\S]*a\.j[\s\S]*a\.fromHigh[\s\S]*localeCompare/);
+assert.match(html,/longRankComparator[\s\S]*coreScore[\s\S]*scoreB-scoreA\|\|a\.id\.localeCompare/);
 assert.match(html,/第\$\{index\+1\}名/);
 assert.match(html,/rankDelta>0\?`↑\$\{rankDelta\}`:rankDelta<0\?`↓/);
 assert.match(html,/LONG_RANK_STORAGE_KEY/);

@@ -25,7 +25,7 @@ console.log("TEST 3 PASS: valid zero factor remains in availableWeight");
 const missingValuation=core.longTermDecision({j:20,k:25,d:28,weeklyBias:-3,fromHigh:-10,marketFear:50,valuation:null});
 const missingFactor=factor(missingValuation,"valuation");
 assert.equal(missingFactor.available,false);assert.equal(missingFactor.score,null);assert.equal(missingFactor.contribution,null);assert.equal(missingValuation.availableWeight,95);
-assert.match(html,/資料不足/);assert.match(html,/本次不計入/);
+assert.match(html,/資料不足/);assert.match(html,/缺失即停止評分/);
 console.log("TEST 4 PASS: unavailable factor is distinct from a zero score");
 
 for(const item of etf00830.factorBreakdown)close(item.contribution,item.score*item.weight/100);
@@ -51,7 +51,7 @@ const etf009815=core.longTermDecision({j:18,k:24,d:27,weeklyBias:null,fromHigh:-
 assert.equal(etf009815.availableWeight,85);assert.equal(factor(etf009815,"weeklyBias").available,false);assert.equal(factor(etf009815,"weeklyBias").score,null);
 console.log("TEST 10 PASS: 009815 insufficient Bias40W is not rendered as zero");
 
-assert.match(html,/longTermFactorGrid/);assert.match(html,/weightedRawTotal/);assert.match(html,/normalizedScore/);assert.match(html,/最終長期加碼分/);
+assert.match(html,/longTermFactorGrid/);assert.match(html,/coreScore/);assert.match(html,/coreScoreDisplay/);assert.match(html,/長期核心正式分數拆解/);
 assert.match(css,/@media\(max-width:430px\)\{\.longTermFactorGrid\{grid-template-columns:1fr\}/);
 console.log("TEST 11 PASS: responsive P5 breakdown markup has no horizontal grid dependency");
 
