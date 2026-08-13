@@ -15,12 +15,15 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import http.client
 import json
 import math
 import os
+import socket
 import tempfile
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -44,6 +47,18 @@ TPEX_PRICE = "https://www.tpex.org.tw/www/zh-tw/afterTrading/dailyQuotes?date={s
 TWSE_SOURCE = "https://www.twse.com.tw/zh/trading/margin/mi-margn.html"
 TPEX_SOURCE = "https://www.tpex.org.tw/zh-tw/mainboard/trading/margin-trading/transactions.html"
 RULE_SOURCE = "https://twse-regulation.twse.com.tw/TW/law/DOC01.aspx?FLCODE=FL007121&FLNO=53"
+RETRYABLE_NETWORK_ERRORS = (
+    OSError,
+    TimeoutError,
+    socket.timeout,
+    urllib.error.URLError,
+    http.client.HTTPException,
+    http.client.IncompleteRead,
+)
+
+
+class NetworkFetchError(RuntimeError):
+    """A structured source remained unavailable after finite retries."""
 
 
 def number(value: object, *, positive: bool = False) -> float:
@@ -63,23 +78,32 @@ def maybe(value: object, *, positive: bool = False) -> float | None:
         return None
 
 
-def get_json(url: str, timeout: int = 35, attempts: int = 3) -> dict:
+def get_json(url: str, timeout: int = 35, attempts: int = 4) -> dict:
     last: Exception | None = None
-    for attempt in range(attempts):
+    host = urllib.parse.urlparse(url).netloc or "unknown-host"
+    for attempt in range(1, attempts + 1):
         try:
             request = urllib.request.Request(url, headers=HEADERS)
             with urllib.request.urlopen(request, timeout=timeout) as response:
                 if response.status != 200:
-                    raise RuntimeError(f"HTTP {response.status}")
-                payload = json.loads(response.read().decode("utf-8-sig"))
+                    raise ValueError(f"HTTP {response.status}")
+                raw = response.read()
+                payload = json.loads(raw.decode("utf-8-sig"))
             if not isinstance(payload, dict):
                 raise ValueError("JSON root is not an object")
             return payload
-        except (OSError, ValueError, urllib.error.URLError) as exc:
+        except (*RETRYABLE_NETWORK_ERRORS, ValueError) as exc:
             last = exc
-            if attempt + 1 < attempts:
-                time.sleep(0.6 * (attempt + 1))
-    raise RuntimeError(f"structured source failed: {last}")
+            print(
+                f"source={host} attempt {attempt}/{attempts} failed: "
+                f"{type(exc).__name__}: {exc}",
+                flush=True,
+            )
+            if attempt < attempts:
+                delay = 2 ** (attempt - 1)
+                print(f"source={host} retrying in {delay}s", flush=True)
+                time.sleep(delay)
+    raise NetworkFetchError(f"structured source failed after {attempts} attempts ({host}): {last}") from last
 
 
 def table(payload: dict, index: int) -> list[list[Any]]:
@@ -185,10 +209,16 @@ def fetch_day(day: dt.date) -> tuple[list[dict], dict]:
             if len(twse) < 100 or len(tpex) < 50:
                 raise RuntimeError("security coverage is unexpectedly small")
             return twse + tpex, {"twse": twse_totals, "tpex": tpex_totals}
+        except RETRYABLE_NETWORK_ERRORS as exc:
+            last = NetworkFetchError(f"official source transport failed for {day}: {exc}")
+            if attempt + 1 < 3:
+                time.sleep(1.2 * (attempt + 1))
         except (ValueError, RuntimeError) as exc:
             last = exc
             if attempt + 1 < 3:
                 time.sleep(1.2 * (attempt + 1))
+    if isinstance(last, NetworkFetchError):
+        raise NetworkFetchError(f"official trading day transport failed: {last}") from last
     raise RuntimeError(f"official trading day is incomplete: {last}")
 
 
@@ -456,6 +486,7 @@ def trading_days_to_fetch(end: dt.date, target: int) -> list[dt.date]:
 
 
 def newest_day(now: dt.date, after: str | None) -> tuple[dt.date, list[dict], dict] | None:
+    network_errors: list[NetworkFetchError] = []
     for offset in range(0, 12):
         day = now - dt.timedelta(days=offset)
         if day.weekday() >= 5 or (after and day.isoformat() <= after):
@@ -463,9 +494,31 @@ def newest_day(now: dt.date, after: str | None) -> tuple[dt.date, list[dict], di
         try:
             records, short = fetch_day(day)
             return day, records, short
+        except NetworkFetchError as exc:
+            network_errors.append(exc)
         except (ValueError, RuntimeError):
             continue
+    if network_errors:
+        raise NetworkFetchError(f"newest trading day lookup failed: {network_errors[-1]}") from network_errors[-1]
     return None
+
+
+def valid_previous_cache(payload: dict | None, state: dict | None) -> bool:
+    if not isinstance(payload, dict) or not isinstance(state, dict):
+        return False
+    try:
+        validate_payload(payload)
+        if state.get("model") != "rolling_estimated_margin_cost":
+            return False
+        if state.get("warmup_trading_days", 0) < MIN_WARMUP_DAYS:
+            return False
+        if state.get("data_date") != payload.get("data_date"):
+            return False
+        if not isinstance(state.get("history"), list) or not state["history"]:
+            return False
+        return True
+    except (KeyError, TypeError, ValueError):
+        return False
 
 
 def main() -> int:
@@ -475,15 +528,19 @@ def main() -> int:
     now = dt.datetime.now(dt.timezone.utc)
     today = now.astimezone(TAIPEI).date()
     old_payload, state = load_json(OUT), load_json(STATE)
-    if not state or state.get("model") != "rolling_estimated_margin_cost" or state.get("warmup_trading_days", 0) < MIN_WARMUP_DAYS:
-        state = blank_state()
-        for day, records, short in trading_days_to_fetch(today, max(MIN_WARMUP_DAYS, args.bootstrap_days)):
-            summarize(state, records, short, day)
-    else:
-        latest = newest_day(today, state.get("data_date"))
-        if latest:
-            summarize(state, latest[1], latest[2], latest[0])
+    has_valid_previous = valid_previous_cache(old_payload, state)
     try:
+        if not state or state.get("model") != "rolling_estimated_margin_cost" or state.get("warmup_trading_days", 0) < MIN_WARMUP_DAYS:
+            state = blank_state()
+            for day, records, short in trading_days_to_fetch(today, max(MIN_WARMUP_DAYS, args.bootstrap_days)):
+                summarize(state, records, short, day)
+        else:
+            latest = newest_day(today, state.get("data_date"))
+            if latest:
+                summarize(state, latest[1], latest[2], latest[0])
+            elif has_valid_previous:
+                print(f"no newer official trading day; retained {OUT.name} data_date={old_payload['data_date']}")
+                return 0
         payload = build_payload(state, now)
         atomic_write(STATE, state)
         atomic_write(OUT, payload)
@@ -495,8 +552,10 @@ def main() -> int:
         print(f"updated {OUT.name}: {payload['data_date']} ratio={payload['maintenance_ratio']['value']} warmup={payload['model']['warmup_trading_days']}")
         return 0
     except Exception as exc:
-        if old_payload and old_payload.get("model", {}).get("name") == "rolling_estimated_margin_cost":
-            print(f"update failed; retained previous valid rolling cache: {exc}")
+        if has_valid_previous:
+            print("MARGIN_UPDATE_DEGRADED")
+            print("retained previous valid cache")
+            print(f"reason={type(exc).__name__}: {exc}")
             return 0
         raise
 
