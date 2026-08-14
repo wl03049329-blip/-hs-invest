@@ -1137,3 +1137,33 @@ footer{color:#746f67}
 .coreScoreAction{margin:14px 0;padding:14px;border-radius:16px;background:#101010;border:1px solid rgba(226,181,87,.25)}.coreScoreAction h4,.coreScoreAction p{margin:0 0 8px}.coreScoreAction>div{display:grid;grid-template-columns:72px 1fr;gap:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.08)}.coreScoreAction>div+div{margin-top:8px}.coreScoreAction b{color:#f2c86e}
 .coreScoreLadder{list-style:none;margin:0;padding:0;display:grid;gap:6px}.coreScoreLadder li{display:grid;grid-template-columns:54px 1fr auto;align-items:center;gap:8px;padding:9px 10px;border-radius:12px;background:#101010;border:1px solid rgba(255,255,255,.08)}.coreScoreLadder li.current{border-color:#f2c86e;box-shadow:0 0 0 1px rgba(242,200,110,.28) inset;background:#1b160c}.coreScoreLadder li span,.coreScoreLadder li small{color:#aaa}.coreScoreLadder li b{color:#f3ead2}.coreScoreDisclaimer{font-size:.78rem;line-height:1.55;color:#aaa;margin:14px 2px 0}
 @media(max-width:430px){.coreScoreSheet{border-radius:22px 22px 0 0}.coreScoreLadder li{grid-template-columns:50px 1fr}.coreScoreLadder li small{grid-column:2}.phase6bMethod{padding:12px 14px 16px}}
+
+/* P1: keep long-term radar status badges readable without forcing card overflow. */
+#homeEtfBrief .longRankCore{
+  display:flex!important;
+  flex-wrap:wrap!important;
+  align-items:center!important;
+}
+#homeEtfBrief .longRankJ{
+  flex:0 0 auto!important;
+  white-space:nowrap!important;
+}
+#homeEtfBrief .longRankStage{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:auto!important;
+  min-width:max-content!important;
+  max-width:none!important;
+  flex:0 0 auto!important;
+  padding:4px 7px!important;
+  line-height:1!important;
+  white-space:nowrap!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+}
+#homeEtfBrief .longRankTrigger{
+  flex:0 1 auto!important;
+  min-width:0!important;
+  white-space:nowrap!important;
+}
