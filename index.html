@@ -3064,18 +3064,27 @@ function openWatchModal(){
   });
 }
 function closeWatchModal(){$("#watchModal").classList.remove("show")}
-function openCoreScoreModal(ticker){
+let lastScoreSheetTrigger=null;
+function rememberScoreSheetTrigger(trigger){
+  lastScoreSheetTrigger=trigger&&typeof trigger.focus==="function"?trigger:null;
+}
+function restoreScoreSheetFocus(){
+  const trigger=lastScoreSheetTrigger;lastScoreSheetTrigger=null;
+  if(trigger&&document.contains(trigger)&&typeof trigger.focus==="function")trigger.focus();
+}
+function openCoreScoreModal(ticker,trigger){
+  rememberScoreSheetTrigger(trigger);
   const x=all.find(item=>item.id===ticker),decision=x?strategyDecisionFor(x,"long_term_core"):null,score=decision?.coreScore;
   if(!x||!decision)return;
   const ladder=[
     [0,29,"一般持有",null],[30,39,"回檔訊號出現",22.1],[40,44,"加碼條件浮現",14.8],[45,49,"試探加碼",11.6],[50,64,"正式加碼訊號",9.0],[65,69,"積極加碼訊號",3.6],[70,79,"強力加碼訊號",2.8],[80,89,"重大加碼機會",1.3],[90,100,"歷史極端機會",.3]
   ];
   const rows=ladder.map(([min,max,label,rate])=>`<li class="${Number.isFinite(score)&&score>=min&&score<=max?'current':''}"><span>${min}–${max}</span><b>${label}</b><small>${rate===null?'一般區間':`歷史觸發約 ${rate.toFixed(1)}%`}</small></li>`).join('');
-  const trigger=Number.isFinite(decision.historicalTriggerRate)?`歷史觸發約 ${decision.historicalTriggerRate.toFixed(1)}%`:'歷史觸發：一般區間';
-  $("#coreScoreContent").innerHTML=`<section class="coreScoreHero"><small>${esc(x.id)} ${esc(x.name)}</small><b>${Number.isFinite(decision.coreScoreDisplay)?decision.coreScoreDisplay:'N/A'}<em>/100</em></b><strong>${esc(decision.label||'資料不足')}</strong><span>${esc(trigger)}</span></section><section class="coreScoreAction"><h4>${esc(decision.cta?.headline||'資料不足')}</h4><p>${esc(decision.cta?.detail||'核心資料尚未齊備。')}</p><div><b>基本投入</b><span>依你的長期資產配置與固定計畫持續執行。</span></div><div><b>額外加碼</b><span>${Number.isFinite(score)&&score>=50?'依分數區間與資金紀律分批啟動。':'目前先保留資金，等待正式加碼訊號。'}</span></div></section><ol class="coreScoreLadder">${rows}</ol><p class="coreScoreDisclaimer">歷史觸發率不是未來勝率；分數不代表最低點、保證獲利或個人投資建議。盤中分數使用最新成功延遲行情試算，正式日線基準另行保留。</p>`;
+  const triggerText=Number.isFinite(decision.historicalTriggerRate)?`歷史觸發約 ${decision.historicalTriggerRate.toFixed(1)}%`:'歷史觸發：一般區間';
+  $("#coreScoreContent").innerHTML=`<section class="coreScoreHero"><small>${esc(x.id)} ${esc(x.name)}</small><b>${Number.isFinite(decision.coreScoreDisplay)?decision.coreScoreDisplay:'N/A'}<em>/100</em></b><strong>${esc(decision.label||'資料不足')}</strong><span>${esc(triggerText)}</span></section><section class="coreScoreAction"><h4>${esc(decision.cta?.headline||'資料不足')}</h4><p>${esc(decision.cta?.detail||'核心資料尚未齊備。')}</p><div><b>基本投入</b><span>依你的長期資產配置與固定計畫持續執行。</span></div><div><b>額外加碼</b><span>${Number.isFinite(score)&&score>=50?'依分數區間與資金紀律分批啟動。':'目前先保留資金，等待正式加碼訊號。'}</span></div></section><ol class="coreScoreLadder">${rows}</ol><p class="coreScoreDisclaimer">歷史觸發率不是未來勝率；分數不代表最低點、保證獲利或個人投資建議。盤中分數使用最新成功延遲行情試算，正式日線基準另行保留。</p>`;
   const modal=$("#coreScoreModal");modal.classList.add("show");modal.setAttribute("aria-hidden","false");
 }
-function closeCoreScoreModal(){const modal=$("#coreScoreModal");modal.classList.remove("show");modal.setAttribute("aria-hidden","true")}
+function closeCoreScoreModal(){const modal=$("#coreScoreModal");modal.classList.remove("show");modal.setAttribute("aria-hidden","true");restoreScoreSheetFocus()}
 function coreScoreHistoryDateLabel(date){return /^\d{4}-\d{2}-\d{2}$/.test(String(date||""))?`${date.slice(5,7)}/${date.slice(8,10)}`:"—"}
 function renderCoreScoreHistory(ticker){
   try{
@@ -3093,14 +3102,15 @@ function renderCoreScoreHistory(ticker){
     $("#coreScoreHistoryContent").innerHTML='<section class="coreScoreHistoryEmpty"><b>歷史資料讀取失敗</b><p>請稍後重新開啟；目前正式分數與其他頁面不受影響。</p></section>';
   }
 }
-function openCoreScoreHistoryModal(ticker){
+function openCoreScoreHistoryModal(ticker,trigger){
+  rememberScoreSheetTrigger(trigger);
   const x=all.find(item=>item.id===ticker),modal=$("#coreScoreHistoryModal");
   $("#coreScoreHistoryTicker").textContent=x?`${x.id} ${x.name}`:ticker;
   $("#coreScoreHistoryContent").innerHTML='<div class="coreScoreHistoryLoading">資料讀取中…</div>';
   modal.classList.add("show");modal.setAttribute("aria-hidden","false");
   requestAnimationFrame(()=>renderCoreScoreHistory(ticker));
 }
-function closeCoreScoreHistoryModal(){const modal=$("#coreScoreHistoryModal");modal.classList.remove("show");modal.setAttribute("aria-hidden","true")}
+function closeCoreScoreHistoryModal(){const modal=$("#coreScoreHistoryModal");modal.classList.remove("show");modal.setAttribute("aria-hidden","true");restoreScoreSheetFocus()}
 function renderSearchResults(){
   const q=$("#etfSearch").value.trim().toLowerCase();
   if(!q){$("#searchResults").innerHTML="";return}
@@ -3152,10 +3162,10 @@ $("#closeModal").addEventListener("click",()=>$("#modal").classList.remove("show
 $("#modal").addEventListener("click",e=>{if(e.target===$("#modal"))$("#modal").classList.remove("show")});
 $("#closeCoreScoreModal").addEventListener("click",closeCoreScoreModal);
 $("#coreScoreModal").addEventListener("click",event=>{if(event.target===$("#coreScoreModal"))closeCoreScoreModal()});
-document.addEventListener("click",event=>{const button=event.target.closest("[data-read-core-score]");if(!button)return;event.preventDefault();event.stopPropagation();openCoreScoreModal(button.dataset.readCoreScore)});
+document.addEventListener("click",event=>{const button=event.target.closest("[data-read-core-score]");if(!button)return;event.preventDefault();event.stopPropagation();openCoreScoreModal(button.dataset.readCoreScore,button)});
 $("#closeCoreScoreHistoryModal").addEventListener("click",closeCoreScoreHistoryModal);
 $("#coreScoreHistoryModal").addEventListener("click",event=>{if(event.target===$("#coreScoreHistoryModal"))closeCoreScoreHistoryModal()});
-document.addEventListener("click",event=>{const button=event.target.closest("[data-core-score-history]");if(!button)return;event.preventDefault();event.stopPropagation();openCoreScoreHistoryModal(button.dataset.coreScoreHistory)});
+document.addEventListener("click",event=>{const button=event.target.closest("[data-core-score-history]");if(!button)return;event.preventDefault();event.stopPropagation();openCoreScoreHistoryModal(button.dataset.coreScoreHistory,button)});
 let lastHsStoryTrigger=$("#openHsStory");
 function renderHsCanonicalScoreGuide(){
   const target=$("#hsCanonicalScoreGuide");if(!target)return;
