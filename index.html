@@ -2551,18 +2551,23 @@ function longRankChange(previousItem,currentRank,currentScore){
     displayScoreChange:Number.isFinite(scoreDelta)?scoreDelta===0?"分數 ±0":`分數 ${scoreDelta>0?"+":""}${scoreDelta}`:"—"
   };
 }
+function coreStatusTier(score,label=""){
+  if(!Number.isFinite(score)||label==="資料不足")return"status-tier-na";
+  const labels=[...(HSFinalCoreProduction?.LABELS||[])].sort((a,b)=>a.min-b.min),tier=labels.findIndex((item,index)=>score>=item.min&&(index===labels.length-1||score<labels[index+1].min));
+  return tier>=0?`status-tier-${tier+1}`:"status-tier-na";
+}
 function longRankRow(x,index,previous){
   const decision=strategyDecisionFor(x,"long_term_core"),score=decision?.score,stage=decision?.stage;
   const previousItem=previous?.items?.[x.id],changeState=longRankChange(previousItem,index+1,score),change=changeState.rankDelta,scoreDelta=changeState.scoreDelta,movement=changeState.displayRankChange,moveClass=change>0?"rank-up":change<0?"rank-down":"";
   const scoreState=decision?.scoreStatus==="complete"?"完整分數":decision?.scoreStatus==="provisional"?"暫定分數｜部分資料未納入":"資料不足";
   const rankTone=change>0?"is-up":change<0?"is-down":"is-flat",scoreTone=scoreDelta>0?"is-up":scoreDelta<0?"is-down":"is-flat";
-  const stageLabel=stage?.label||"資料不足",stageTone=/加碼|留意|觀察/.test(stageLabel)?"stage-watch":/勿追|過熱|暫停/.test(stageLabel)?"stage-hot":"stage-hold";
+  const stageLabel=stage?.label||"資料不足",statusTier=coreStatusTier(Number.isFinite(decision?.coreScore)?decision.coreScore:score,stageLabel);
   const medal=["🥇","🥈","🥉"][index];
   const rankBadge=medal
     ?`<span class="longRankNo medalEmoji" aria-label="第${index+1}名">${medal}</span>`
     :`<span class="longRankNo numericRank" aria-label="第${index+1}名"><i>${index+1}</i></span>`;
   const trigger=Number.isFinite(decision?.historicalTriggerRate)?`歷史觸發約 ${decision.historicalTriggerRate.toFixed(1)}%`:'歷史觸發：一般區間';
-  return `<details class="homeLongRankCard ${moveClass}"><summary>${rankBadge}<span class="longRankTicker"><b>${esc(x.id)}</b><small>${esc(x.name)}</small><span class="longRankCore"><span class="longRankJ"><b>週J</b> ${fmt(x.j)}</span><span class="longRankStage ${stageTone}">${esc(stageLabel)}</span><span class="longRankTrigger">${esc(trigger)}</span></span></span><span class="longRankScore"><b>${Number.isFinite(score)?score:"—"}</b><small>長期核心分</small></span><span class="longRankChanges"><span class="rankMovement ${rankTone}">${movement}</span><span class="scoreMovement ${scoreTone}">${changeState.displayScoreChange}</span></span></summary><div class="longRankDetails"><span>52週回檔 <b>${Number.isFinite(x.fromHigh)?fmt(x.fromHigh)+"%":"—"}</b></span><span>訊號 <b>${esc(decision?.label||'資料不足')}</b></span><span>${esc(trigger)}</span><p>${esc(decision?.cta?.detail||stage?.recommendation||"等待資料更新")}</p><div class="longRankActions"><button class="miniBtn" type="button" data-read-core-score="${esc(x.id)}">讀懂你的分數</button><button class="miniBtn" type="button" data-core-score-history="${esc(x.id)}">近10日盤後分數</button></div></div></details>`;
+  return `<details class="homeLongRankCard ${moveClass}"><summary>${rankBadge}<span class="longRankTicker"><b>${esc(x.id)}</b><small>${esc(x.name)}</small><span class="longRankCore"><span class="longRankJ"><b>週J</b> ${fmt(x.j)}</span><span class="longRankStage ${statusTier}">${esc(stageLabel)}</span><span class="longRankTrigger">${esc(trigger)}</span></span></span><span class="longRankScore"><b>${Number.isFinite(score)?score:"—"}</b><small>長期核心分</small></span><span class="longRankChanges"><span class="rankMovement ${rankTone}">${movement}</span><span class="scoreMovement ${scoreTone}">${changeState.displayScoreChange}</span></span></summary><div class="longRankDetails"><span>52週回檔 <b>${Number.isFinite(x.fromHigh)?fmt(x.fromHigh)+"%":"—"}</b></span><span>訊號 <b>${esc(decision?.label||'資料不足')}</b></span><span>${esc(trigger)}</span><p>${esc(decision?.cta?.detail||stage?.recommendation||"等待資料更新")}</p><div class="longRankActions"><button class="miniBtn" type="button" data-read-core-score="${esc(x.id)}">讀懂你的分數</button><button class="miniBtn" type="button" data-core-score-history="${esc(x.id)}">近10日盤後分數</button></div></div></details>`;
 }
 function renderTodayHighlights(longs,swings){
   const bestLong=longs.find(item=>Number.isFinite(displayScore(item,"long_term_core")));
@@ -3079,9 +3084,10 @@ function openCoreScoreModal(ticker,trigger){
   const ladder=[
     [0,29,"一般持有",null],[30,39,"回檔訊號出現",22.1],[40,44,"加碼條件浮現",14.8],[45,49,"試探加碼",11.6],[50,64,"正式加碼訊號",9.0],[65,69,"積極加碼訊號",3.6],[70,79,"強力加碼訊號",2.8],[80,89,"重大加碼機會",1.3],[90,100,"歷史極端機會",.3]
   ];
-  const rows=ladder.map(([min,max,label,rate])=>`<li class="${Number.isFinite(score)&&score>=min&&score<=max?'current':''}"><span>${min}–${max}</span><b>${label}</b><small>${rate===null?'一般區間':`歷史觸發約 ${rate.toFixed(1)}%`}</small></li>`).join('');
+  const rows=ladder.map(([min,max,label,rate],index)=>`<li class="status-tier-${index+1} ${Number.isFinite(score)&&score>=min&&score<=max?'current':''}"><span>${min}–${max}</span><b>${label}</b><small>${rate===null?'一般區間':`歷史觸發約 ${rate.toFixed(1)}%`}</small></li>`).join('');
   const triggerText=Number.isFinite(decision.historicalTriggerRate)?`歷史觸發約 ${decision.historicalTriggerRate.toFixed(1)}%`:'歷史觸發：一般區間';
-  $("#coreScoreContent").innerHTML=`<section class="coreScoreHero"><small>${esc(x.id)} ${esc(x.name)}</small><b>${Number.isFinite(decision.coreScoreDisplay)?decision.coreScoreDisplay:'N/A'}<em>/100</em></b><strong>${esc(decision.label||'資料不足')}</strong><span>${esc(triggerText)}</span></section><section class="coreScoreAction"><h4>${esc(decision.cta?.headline||'資料不足')}</h4><p>${esc(decision.cta?.detail||'核心資料尚未齊備。')}</p><div><b>基本投入</b><span>依你的長期資產配置與固定計畫持續執行。</span></div><div><b>額外加碼</b><span>${Number.isFinite(score)&&score>=50?'依分數區間與資金紀律分批啟動。':'目前先保留資金，等待正式加碼訊號。'}</span></div></section><ol class="coreScoreLadder">${rows}</ol><p class="coreScoreDisclaimer">歷史觸發率不是未來勝率；分數不代表最低點、保證獲利或個人投資建議。盤中分數使用最新成功延遲行情試算，正式日線基準另行保留。</p>`;
+  const statusTier=coreStatusTier(score,decision.label||"資料不足");
+  $("#coreScoreContent").innerHTML=`<section class="coreScoreHero ${statusTier}"><small>${esc(x.id)} ${esc(x.name)}</small><b>${Number.isFinite(decision.coreScoreDisplay)?decision.coreScoreDisplay:'N/A'}<em>/100</em></b><strong>${esc(decision.label||'資料不足')}</strong><span>${esc(triggerText)}</span></section><section class="coreScoreAction"><h4>${esc(decision.cta?.headline||'資料不足')}</h4><p>${esc(decision.cta?.detail||'核心資料尚未齊備。')}</p><div><b>基本投入</b><span>依你的長期資產配置與固定計畫持續執行。</span></div><div><b>額外加碼</b><span>${Number.isFinite(score)&&score>=50?'依分數區間與資金紀律分批啟動。':'目前先保留資金，等待正式加碼訊號。'}</span></div></section><ol class="coreScoreLadder">${rows}</ol><p class="coreScoreDisclaimer">歷史觸發率不是未來勝率；分數不代表最低點、保證獲利或個人投資建議。盤中分數使用最新成功延遲行情試算，正式日線基準另行保留。</p>`;
   const modal=$("#coreScoreModal");modal.classList.add("show");modal.setAttribute("aria-hidden","false");
 }
 function closeCoreScoreModal(){const modal=$("#coreScoreModal");modal.classList.remove("show");modal.setAttribute("aria-hidden","true");restoreScoreSheetFocus()}
