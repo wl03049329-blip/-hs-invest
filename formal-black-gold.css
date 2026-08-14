@@ -1131,7 +1131,8 @@ footer{color:#746f67}
 .coreScoreExplainButton{display:block;margin:14px auto 0}
 .longRankTrigger{font-size:.64rem;color:#b9ad8e;white-space:nowrap}
 .coreScoreModal{z-index:3200;align-items:flex-end}
-.coreScoreSheet{width:min(100%,620px);max-height:calc(100dvh - 20px);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding-bottom:calc(env(safe-area-inset-bottom) + 24px)}
+.coreScoreSheet{width:min(100%,620px);max-height:calc(100dvh - 20px);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding-top:max(19px,calc(env(safe-area-inset-top) + 14px));padding-bottom:calc(env(safe-area-inset-bottom) + 24px)}
+.coreScoreSheet>.sheetHead{align-items:flex-start}
 .coreScoreHero{text-align:center;display:grid;gap:5px;padding:16px;border:1px solid rgba(226,181,87,.45);border-radius:18px;background:linear-gradient(145deg,#17130c,#090909)}
 .coreScoreHero>small,.coreScoreHero>span{color:#c8b98f}.coreScoreHero>b{font-size:3rem;line-height:1;color:#f2c86e}.coreScoreHero>b em{font-size:.85rem;font-style:normal;color:#9e9279}.coreScoreHero>strong{font-size:1.15rem}
 .coreScoreAction{margin:14px 0;padding:14px;border-radius:16px;background:#101010;border:1px solid rgba(226,181,87,.25)}.coreScoreAction h4,.coreScoreAction p{margin:0 0 8px}.coreScoreAction>div{display:grid;grid-template-columns:72px 1fr;gap:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.08)}.coreScoreAction>div+div{margin-top:8px}.coreScoreAction b{color:#f2c86e}
