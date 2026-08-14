@@ -1168,3 +1168,16 @@ footer{color:#746f67}
   min-width:0!important;
   white-space:nowrap!important;
 }
+
+/* P3: finalized close history reuses the canonical score sheet and P2 safe area. */
+#homeEtfBrief .longRankActions{grid-column:1/-1;display:flex;gap:8px;width:100%;min-width:0}
+#homeEtfBrief .longRankActions .miniBtn{flex:1 1 50%;min-width:0;min-height:38px;padding:8px 6px;font-size:10px;line-height:1.15;white-space:nowrap}
+.coreScoreHistorySubtitle{display:block;margin-top:4px;color:#a99d83;font-size:.76rem}
+#coreScoreHistoryContent{margin-top:14px}
+.coreScoreHistoryLoading,.coreScoreHistoryEmpty{padding:30px 18px;border:1px solid rgba(226,181,87,.25);border-radius:16px;background:#10100f;text-align:center;color:#b9ad93}
+.coreScoreHistoryEmpty b{display:block;margin-bottom:8px;color:#f2d17d;font-size:1.05rem}.coreScoreHistoryEmpty p{margin:0;line-height:1.6}.coreScoreHistoryEmpty small{display:block;margin-top:10px;color:#8f8778}
+.coreScoreHistoryList{list-style:none;display:grid;gap:7px;margin:0;padding:0}
+.coreScoreHistoryList li{display:grid;grid-template-columns:58px 54px minmax(0,1fr) auto;align-items:center;gap:9px;padding:11px 12px;border:1px solid rgba(255,255,255,.08);border-radius:13px;background:#10100f}
+.coreScoreHistoryList time{color:#a99d83;font-size:.78rem;font-variant-numeric:tabular-nums}.coreScoreHistoryList b{color:#f2cc6f;font-size:1.45rem;line-height:1}.coreScoreHistoryList span{min-width:0;color:#eee3ca;font-weight:800}.coreScoreHistoryList small{color:#9d9483;white-space:nowrap}
+.coreScoreHistoryNote{margin:12px 2px 0;color:#8f8778;font-size:.72rem;line-height:1.55}
+@media(max-width:430px){#homeEtfBrief .longRankActions{gap:6px}#homeEtfBrief .longRankActions .miniBtn{font-size:9px;padding-inline:4px}.coreScoreHistoryList li{grid-template-columns:46px 44px minmax(0,1fr);gap:7px;padding:10px}.coreScoreHistoryList b{font-size:1.3rem}.coreScoreHistoryList small{grid-column:3;white-space:normal}}

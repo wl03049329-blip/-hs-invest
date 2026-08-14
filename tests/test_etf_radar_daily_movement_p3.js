@@ -5,11 +5,13 @@ const vm=require("vm");
 
 const root=path.resolve(__dirname,"..");
 const html=fs.readFileSync(path.join(root,"index.html"),"utf8");
+const intraday=require(path.join(root,"intraday-buy-point-core.js"));
+const production=require(path.join(root,"final-core-production.js"));
 const start=html.indexOf("function dailyFactorValue");
 const end=html.indexOf("function scoreFactorValue");
 assert.ok(start>=0&&end>start,"P3 daily snapshot functions must exist");
 
-const memory=new Map(),context={Date,Number,Array,Object,Math,JSON,Set,DAILY_LONG_RANK_STORAGE_KEY:"hsRadar.dailyLongRank.v1",localStorage:{getItem:key=>memory.get(key)||null,setItem:(key,value)=>memory.set(key,value)}};
+const memory=new Map(),context={Date,Number,Array,Object,Math,JSON,Set,HSIntradayBuyPointCore:intraday,HSFinalCoreProduction:production,DAILY_LONG_RANK_STORAGE_KEY:"hsRadar.dailyLongRank.v1",localStorage:{getItem:key=>memory.get(key)||null,setItem:(key,value)=>memory.set(key,value)}};
 vm.createContext(context);vm.runInContext(html.slice(start,end),context);
 
 const item=(id,date,score,j,bias,drawdown,marketFear=60,valuation=55,availableWeight=100)=>({
@@ -62,7 +64,7 @@ assert.match(html,/const dailyPair=dailyLongRankPair\(\)/);assert.doesNotMatch(h
 assert.match(html,/const snapshotAsOf=intradayLongRankAsOf\(longs\)/);assert.match(html,/longRankSnapshot\(longs,saved,version,snapshotAsOf,snapshotSlot\)/);
 console.log("TEST 10 PASS: P2 homepage intraday snapshot pipeline remains present and separate");
 
-assert.deepStrictEqual(Object.keys(latestSameRank.items["00830"]),["ticker","longTermScore","coreScore","coreScoreDisplay","coreScoreVersion","coreFactors","label","historicalTriggerRate","auxiliary","rank","weeklyJ","Bias40W","drawdown","marketFear","valuation","availableWeight"]);
+for(const key of ["ticker","symbol","trading_date","final_core_score","display_score","status","data_as_of","calculated_at","engine_version","weekly_j"])assert.ok(key in latestSameRank.items["00830"],`missing traceability field ${key}`);
 console.log("P3 daily snapshot traceability fields PASS");
 
 console.log("00830 DAILY TRACE");

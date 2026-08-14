@@ -790,6 +790,13 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
   </article>
 </div>
 
+<div id="coreScoreHistoryModal" class="modal coreScoreModal coreScoreHistoryModal" role="dialog" aria-modal="true" aria-labelledby="coreScoreHistoryTitle" aria-hidden="true">
+  <article class="sheet coreScoreSheet coreScoreHistorySheet">
+    <div class="sheetHead"><div><p id="coreScoreHistoryTicker" class="eyebrow">ETF</p><h3 id="coreScoreHistoryTitle">近10日盤後分數</h3><small class="coreScoreHistorySubtitle">最近 10 個已完成交易日</small></div><button id="closeCoreScoreHistoryModal" class="close" type="button">關閉</button></div>
+    <div id="coreScoreHistoryContent" aria-live="polite"></div>
+  </article>
+</div>
+
 <div id="modal" class="modal">
   <div class="sheet">
     <div class="sheetHead">
@@ -2522,7 +2529,7 @@ function longRankRow(x,index,previous){
     ?`<span class="longRankNo medalEmoji" aria-label="第${index+1}名">${medal}</span>`
     :`<span class="longRankNo numericRank" aria-label="第${index+1}名"><i>${index+1}</i></span>`;
   const trigger=Number.isFinite(decision?.historicalTriggerRate)?`歷史觸發約 ${decision.historicalTriggerRate.toFixed(1)}%`:'歷史觸發：一般區間';
-  return `<details class="homeLongRankCard ${moveClass}"><summary>${rankBadge}<span class="longRankTicker"><b>${esc(x.id)}</b><small>${esc(x.name)}</small><span class="longRankCore"><span class="longRankJ"><b>週J</b> ${fmt(x.j)}</span><span class="longRankStage ${stageTone}">${esc(stageLabel)}</span><span class="longRankTrigger">${esc(trigger)}</span></span></span><span class="longRankScore"><b>${Number.isFinite(score)?score:"—"}</b><small>長期核心分</small></span><span class="longRankChanges"><span class="rankMovement ${rankTone}">${movement}</span><span class="scoreMovement ${scoreTone}">${changeState.displayScoreChange}</span></span></summary><div class="longRankDetails"><span>52週回檔 <b>${Number.isFinite(x.fromHigh)?fmt(x.fromHigh)+"%":"—"}</b></span><span>訊號 <b>${esc(decision?.label||'資料不足')}</b></span><span>${esc(trigger)}</span><p>${esc(decision?.cta?.detail||stage?.recommendation||"等待資料更新")}</p><button class="miniBtn" type="button" data-read-core-score="${esc(x.id)}">讀懂你的分數</button></div></details>`;
+  return `<details class="homeLongRankCard ${moveClass}"><summary>${rankBadge}<span class="longRankTicker"><b>${esc(x.id)}</b><small>${esc(x.name)}</small><span class="longRankCore"><span class="longRankJ"><b>週J</b> ${fmt(x.j)}</span><span class="longRankStage ${stageTone}">${esc(stageLabel)}</span><span class="longRankTrigger">${esc(trigger)}</span></span></span><span class="longRankScore"><b>${Number.isFinite(score)?score:"—"}</b><small>長期核心分</small></span><span class="longRankChanges"><span class="rankMovement ${rankTone}">${movement}</span><span class="scoreMovement ${scoreTone}">${changeState.displayScoreChange}</span></span></summary><div class="longRankDetails"><span>52週回檔 <b>${Number.isFinite(x.fromHigh)?fmt(x.fromHigh)+"%":"—"}</b></span><span>訊號 <b>${esc(decision?.label||'資料不足')}</b></span><span>${esc(trigger)}</span><p>${esc(decision?.cta?.detail||stage?.recommendation||"等待資料更新")}</p><div class="longRankActions"><button class="miniBtn" type="button" data-read-core-score="${esc(x.id)}">讀懂你的分數</button><button class="miniBtn" type="button" data-core-score-history="${esc(x.id)}">近10日盤後分數</button></div></div></details>`;
 }
 function renderTodayHighlights(longs,swings){
   const bestLong=longs.find(item=>Number.isFinite(displayScore(item,"long_term_core")));
@@ -2581,11 +2588,11 @@ function createDailyLongRankSnapshot(items,finalizedAt=new Date().toISOString())
   if(!candidates.length||new Set(candidates.map(row=>row.state.date)).size!==1)return null;
   candidates.sort((a,b)=>(Number.isFinite(b.decision.coreScore)?b.decision.coreScore:b.decision.score)-(Number.isFinite(a.decision.coreScore)?a.decision.coreScore:a.decision.score)||a.item.id.localeCompare(b.item.id));
   const tradingDate=candidates[0].state.date,rows=Object.fromEntries(candidates.map(({item,state,decision},index)=>[item.id,{
-    ticker:item.id,longTermScore:decision.score,coreScore:Number.isFinite(decision.coreScore)?decision.coreScore:null,coreScoreDisplay:decision.coreScoreDisplay,coreScoreVersion:decision.coreScoreVersion,coreFactors:decision.coreFactors,label:decision.label,historicalTriggerRate:decision.historicalTriggerRate,auxiliary:decision.auxiliary,rank:index+1,weeklyJ:Number.isFinite(state.j)?state.j:null,Bias40W:Number.isFinite(state.weekBias)?state.weekBias:null,
+    ticker:item.id,symbol:item.id,trading_date:tradingDate,longTermScore:decision.score,coreScore:Number.isFinite(decision.coreScore)?decision.coreScore:null,final_core_score:Number.isFinite(decision.coreScore)?decision.coreScore:null,coreScoreDisplay:decision.coreScoreDisplay,display_score:decision.coreScoreDisplay,coreScoreVersion:decision.coreScoreVersion,engine_version:decision.coreScoreVersion,coreFactors:decision.coreFactors,label:decision.label,status:decision.label,data_as_of:HSIntradayBuyPointCore.quoteAsOf({date:tradingDate,quoteTime:"13:30:00"}),calculated_at:finalizedAt,historicalTriggerRate:decision.historicalTriggerRate,auxiliary:decision.auxiliary,rank:index+1,weeklyJ:Number.isFinite(state.j)?state.j:null,weekly_j:Number.isFinite(state.j)?state.j:null,Bias40W:Number.isFinite(state.weekBias)?state.weekBias:null,
     drawdown:Number.isFinite(state.fromHigh)?state.fromHigh:null,marketFear:dailyFactorValue(decision,"marketFear"),valuation:Number.isFinite(item.valuation?.score)?item.valuation.score:null,
     availableWeight:Number.isFinite(decision.availableWeight)?decision.availableWeight:null
   }]));
-  return{tradingDate,finalizedAt,items:rows};
+  return{snapshot_type:"FINALIZED_CLOSE",tradingDate,finalizedAt,items:rows};
 }
 function loadDailyLongRankHistory(){
   try{const value=JSON.parse(localStorage.getItem(DAILY_LONG_RANK_STORAGE_KEY)||"{}");return value?.schema_version===1&&Array.isArray(value.snapshots)?value:{schema_version:1,snapshots:[]}}catch{return{schema_version:1,snapshots:[]}}
@@ -2606,6 +2613,35 @@ function dailyLongRankMovement(pair,ticker){
   if(!latest||!previous||!Number.isFinite(latest.longTermScore)||!Number.isFinite(latest.rank)||!Number.isFinite(previous.longTermScore)||!Number.isFinite(previous.rank))return{rankDelta:null,scoreDelta:null,displayRankChange:"日排名首次",displayScoreChange:"—"};
   const rankDelta=previous.rank-latest.rank,scoreDelta=latest.longTermScore-previous.longTermScore;
   return{rankDelta,scoreDelta,displayRankChange:rankDelta>0?`日排名 ↑${rankDelta}`:rankDelta<0?`日排名 ↓${Math.abs(rankDelta)}`:"日排名不變",displayScoreChange:scoreDelta>0?`日分數 +${scoreDelta}`:scoreDelta<0?`日分數 ${scoreDelta}`:"日分數 ±0"};
+}
+function isCompletedTradingDate(date){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(date||"")))return false;
+  const [year,month,day]=String(date).split("-").map(Number),weekday=new Date(Date.UTC(year,month-1,day)).getUTCDay();
+  return weekday>=1&&weekday<=5;
+}
+function officialCoreScoreHistory(history,ticker,limit=10){
+  const snapshots=Array.isArray(history?.snapshots)?history.snapshots:[],seen=new Set(),rows=[];
+  for(const snapshot of [...snapshots].sort((a,b)=>String(b?.tradingDate||"").localeCompare(String(a?.tradingDate||"")))){
+    const tradingDate=String(snapshot?.tradingDate||""),snapshotType=String(snapshot?.snapshot_type||"").toUpperCase();
+    if(!isCompletedTradingDate(tradingDate)||seen.has(tradingDate)||(snapshotType&&snapshotType!=="FINALIZED_CLOSE"))continue;
+    const item=snapshot?.items?.[ticker];
+    if(!item)continue;
+    const finalRaw=item.final_core_score??item.coreScore,displayRaw=item.display_score??item.coreScoreDisplay;
+    const finalCoreScore=finalRaw===null||finalRaw===undefined||finalRaw===""?NaN:Number(finalRaw),storedDisplay=displayRaw===null||displayRaw===undefined||displayRaw===""?NaN:Number(displayRaw);
+    if(!Number.isFinite(finalCoreScore)||finalCoreScore<0||finalCoreScore>100)continue;
+    const dataAsOf=String(item.data_as_of||item.dataAsOf||"");
+    if(dataAsOf&&dataAsOf.slice(0,10)!==tradingDate)continue;
+    const canonical=HSFinalCoreProduction.labelFor(finalCoreScore),displayScore=Number.isFinite(storedDisplay)?Math.floor(storedDisplay):Math.floor(finalCoreScore);
+    rows.push({symbol:ticker,tradingDate,finalCoreScore,displayScore,status:canonical.label,weeklyJ:Number.isFinite(Number(item.weekly_j??item.weeklyJ))?Number(item.weekly_j??item.weeklyJ):null,dataAsOf:dataAsOf||null,calculatedAt:item.calculated_at||snapshot.finalizedAt||null,engineVersion:item.engine_version||item.coreScoreVersion||null});
+    seen.add(tradingDate);
+    if(rows.length>=Math.max(1,Math.min(10,Number(limit)||10)))break;
+  }
+  return rows;
+}
+function coreScoreHistoryState(ticker,history=loadDailyLongRankHistory()){
+  if(ticker==="009815")return{kind:"wait_native",rows:[]};
+  const rows=officialCoreScoreHistory(history,ticker,10);
+  return{kind:rows.length?"ready":"empty",rows};
 }
 function longOverviewCardHtml(x,index,dailyMovement){
   const rank=index+1,decision=strategyDecisionFor(x,"long_term_core"),score=displayScore(x,"long_term_core"),stage=decision?.stage,rankChange=dailyMovement?.rankDelta,scoreChange=dailyMovement?.scoreDelta;
@@ -3007,6 +3043,31 @@ function openCoreScoreModal(ticker){
   const modal=$("#coreScoreModal");modal.classList.add("show");modal.setAttribute("aria-hidden","false");
 }
 function closeCoreScoreModal(){const modal=$("#coreScoreModal");modal.classList.remove("show");modal.setAttribute("aria-hidden","true")}
+function coreScoreHistoryDateLabel(date){return /^\d{4}-\d{2}-\d{2}$/.test(String(date||""))?`${date.slice(5,7)}/${date.slice(8,10)}`:"—"}
+function renderCoreScoreHistory(ticker){
+  try{
+    const state=coreScoreHistoryState(ticker),content=$("#coreScoreHistoryContent");
+    if(state.kind==="wait_native"){
+      content.innerHTML='<section class="coreScoreHistoryEmpty"><b>歷史分數尚未建立</b><p>009815 原生交易資料目前仍未達 HS Core Score 正式評分所需成熟度。</p><small>資料不夠，就不假裝有答案。</small></section>';
+      return;
+    }
+    if(state.kind==="empty"){
+      content.innerHTML='<section class="coreScoreHistoryEmpty"><b>尚無合法盤後歷史紀錄</b><p>系統只顯示實際保存的正式收盤分數，不以今日資料回填過去紀錄。</p></section>';
+      return;
+    }
+    content.innerHTML=`<ol class="coreScoreHistoryList">${state.rows.map(row=>`<li><time datetime="${esc(row.tradingDate)}">${esc(coreScoreHistoryDateLabel(row.tradingDate))}</time><b>${row.displayScore}</b><span>${esc(row.status)}</span>${Number.isFinite(row.weeklyJ)?`<small>週 J ${fmt(row.weeklyJ)}</small>`:""}</li>`).join("")}</ol><p class="coreScoreHistoryNote">依實際存在的正式盤後 snapshot 取最近 ${state.rows.length} 筆；不含盤中試算、週末或未保存日期。</p>`;
+  }catch(error){
+    $("#coreScoreHistoryContent").innerHTML='<section class="coreScoreHistoryEmpty"><b>歷史資料讀取失敗</b><p>請稍後重新開啟；目前正式分數與其他頁面不受影響。</p></section>';
+  }
+}
+function openCoreScoreHistoryModal(ticker){
+  const x=all.find(item=>item.id===ticker),modal=$("#coreScoreHistoryModal");
+  $("#coreScoreHistoryTicker").textContent=x?`${x.id} ${x.name}`:ticker;
+  $("#coreScoreHistoryContent").innerHTML='<div class="coreScoreHistoryLoading">資料讀取中…</div>';
+  modal.classList.add("show");modal.setAttribute("aria-hidden","false");
+  requestAnimationFrame(()=>renderCoreScoreHistory(ticker));
+}
+function closeCoreScoreHistoryModal(){const modal=$("#coreScoreHistoryModal");modal.classList.remove("show");modal.setAttribute("aria-hidden","true")}
 function renderSearchResults(){
   const q=$("#etfSearch").value.trim().toLowerCase();
   if(!q){$("#searchResults").innerHTML="";return}
@@ -3059,6 +3120,9 @@ $("#modal").addEventListener("click",e=>{if(e.target===$("#modal"))$("#modal").c
 $("#closeCoreScoreModal").addEventListener("click",closeCoreScoreModal);
 $("#coreScoreModal").addEventListener("click",event=>{if(event.target===$("#coreScoreModal"))closeCoreScoreModal()});
 document.addEventListener("click",event=>{const button=event.target.closest("[data-read-core-score]");if(!button)return;event.preventDefault();event.stopPropagation();openCoreScoreModal(button.dataset.readCoreScore)});
+$("#closeCoreScoreHistoryModal").addEventListener("click",closeCoreScoreHistoryModal);
+$("#coreScoreHistoryModal").addEventListener("click",event=>{if(event.target===$("#coreScoreHistoryModal"))closeCoreScoreHistoryModal()});
+document.addEventListener("click",event=>{const button=event.target.closest("[data-core-score-history]");if(!button)return;event.preventDefault();event.stopPropagation();openCoreScoreHistoryModal(button.dataset.coreScoreHistory)});
 let lastHsStoryTrigger=$("#openHsStory");
 function openHsStory(event){lastHsStoryTrigger=event?.currentTarget||lastHsStoryTrigger;const modal=$("#hsStoryModal");modal.classList.add("show");modal.setAttribute("aria-hidden","false");setTimeout(()=>$("#closeHsStory").focus(),30)}
 function closeHsStory(){const modal=$("#hsStoryModal");modal.classList.remove("show");modal.setAttribute("aria-hidden","true");lastHsStoryTrigger?.focus()}
@@ -3188,7 +3252,7 @@ async function load(){
     if(!all.length)throw new Error("目前清單內的 ETF 都無法取得價格資料");
     refreshAllDecisionModels();all.forEach(captureFormalState);renderTop();renderCards();renderChecks();renderTable();renderEvents();
     await Promise.allSettled([loadNews(all[0].date),loadChipData(),loadMarginRisk(),loadTrumpNews(),refreshCnnFearGreed(),loadFuturesPosition(),loadMarketEvents()]);
-    refreshAllDecisionModels();all.forEach(captureFormalState);recordSuccessfulMarketAsOf(formalCloseMarketAsOf(all));saveDailyLongRankSnapshot(all.filter(item=>["0050","00830","00662","009815","00935"].includes(item.id)));renderMarket();renderTrump();renderSentiment();renderEvents();renderTop();renderCards();renderTable();
+    refreshAllDecisionModels();all.forEach(captureFormalState);recordSuccessfulMarketAsOf(formalCloseMarketAsOf(all));saveDailyLongRankSnapshot(all.filter(item=>LONG_RADAR_CODES.has(item.id)));renderMarket();renderTrump();renderSentiment();renderEvents();renderTop();renderCards();renderTable();
     if(pendingDelayedQuotes)applyHomeDelayedQuotes(pendingDelayedQuotes);
     const chipStatus=marketChip.marginRisk&&marketChip.institutional&&cnnFearGreed?"融資風險、法人與 CNN 情緒已更新":"部分籌碼或情緒資料尚未更新";
     renderHeaderMarketUpdate(failed.length);
