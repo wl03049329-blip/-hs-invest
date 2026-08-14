@@ -138,8 +138,8 @@ check("行情 JSON 結構與價格有效", () => {
 });
 
 check("Actions 以固定排程更新同源行情", () => {
-  assert.match(workflow, /cron: "25 0 \* \* 1-5"/);
-  assert.match(workflow, /scripts\/run_intraday_radar_session\.py/);
+  assert.match(workflow, /cron: "27,32,37,42,47 1,2,3,4,5 \* \* 1-5"/);
+  assert.match(workflow, /scripts\/run_intraday_radar_session\.py --scheduled-once/);
   const sessionRunner = fs.readFileSync(path.join(root, "scripts", "run_intraday_radar_session.py"), "utf8");
   assert.match(sessionRunner, /"market-quotes\.json"[\s\S]*"market-quotes-meta\.json"[\s\S]*"market-overview\.json"[\s\S]*"tx-futures-quote\.json"/);
 });

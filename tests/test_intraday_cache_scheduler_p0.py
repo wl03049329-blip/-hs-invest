@@ -93,9 +93,10 @@ assert session.slot_action(datetime.fromisoformat("2026-08-13T09:35:00+08:00"), 
 assert session.slot_action(datetime.fromisoformat("2026-08-13T09:46:00+08:00"), target) == "skip"
 
 workflow = (ROOT / ".github" / "workflows" / "update-market-quotes.yml").read_text(encoding="utf-8")
-assert 'cron: "25 0 * * 1-5"' in workflow
+assert 'cron: "27,32,37,42,47 1,2,3,4,5 * * 1-5"' in workflow
 assert "run_intraday_radar_session.py" in workflow
-assert "timeout-minutes: 345" in workflow
+assert "--scheduled-once" in workflow
+assert "timeout-minutes: 20" in workflow
 assert 'cron: "32 1,2,3,4,5 * * 1-5"' not in workflow
 
 print("PASS production intraday scheduler, five-ETF validation, 13:30 timestamp mode and cache version regression")

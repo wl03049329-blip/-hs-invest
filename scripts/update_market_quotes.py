@@ -505,6 +505,8 @@ def write_market_cache(
             },
             "items": items,
         }
+        if isinstance(existing.get("intraday_completeness"), dict):
+            payload["intraday_completeness"] = existing["intraday_completeness"]
         if radar_refresh:
             payload["radar_refresh"] = radar_refresh
         elif isinstance(existing.get("radar_refresh"), dict):
@@ -522,6 +524,7 @@ def write_market_cache(
         "item_count": len(payload["items"]),
         "radar_refresh": payload.get("radar_refresh"),
         "radar_refresh_attempt": payload.get("radar_refresh_attempt"),
+        "intraday_completeness": payload.get("intraday_completeness"),
     }
     write_atomic(META_OUTPUT, meta)
 

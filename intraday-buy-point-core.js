@@ -79,5 +79,55 @@
     return intraday === null || formal === null ? null : Math.round(intraday - formal);
   }
 
-  return {quoteAsOf, isFreshIntradayQuote, buildProvisionalRows, mergeStopConfirmation, scoreDelta};
+  function buildCoreAudit(input = {}) {
+    const decision = input.decision || {};
+    const factors = decision.coreFactors || {};
+    const snapshotSlot = String(input.snapshotSlot || "");
+    const tradingDate = String(input.tradingDate || "");
+    const symbol = String(input.symbol || "");
+    return {
+      symbol,
+      snapshot_slot: snapshotSlot,
+      cache_key: symbol && tradingDate && snapshotSlot
+        ? `${symbol}:${tradingDate}:${snapshotSlot.replace(":", "")}` : "",
+      price: finite(input.price),
+      price_as_of: String(input.priceAsOf || ""),
+      weekly_j_raw: finite(input.weeklyJRaw),
+      weekly_j_score: finite(factors.weeklyJ?.score),
+      bias40w_raw: finite(input.bias40wRaw),
+      bias40w_score: finite(input.bias40wScore),
+      drawdown_52w_raw: finite(input.drawdown52wRaw),
+      drawdown_52w_score: finite(factors.dd52?.score),
+      crash_raw: finite(factors.crash?.raw),
+      crash_score: finite(factors.crash?.score),
+      core_factors: factors,
+      available_weight: finite(decision.availableWeight),
+      final_core_score: finite(decision.coreScore),
+      rank: finite(input.rank),
+      calculated_at: String(input.calculatedAt || ""),
+      data_as_of: String(input.dataAsOf || input.priceAsOf || ""),
+      status: input.status === "SUCCESS" ? "SUCCESS" : "UPDATE_FAILED"
+    };
+  }
+
+  function validateCoreBatch(entries, expectedSymbols, tradingDate, snapshotSlot) {
+    const expected = [...new Set((expectedSymbols || []).map(String))].sort();
+    const rows = Array.isArray(entries) ? entries : [];
+    if (!expected.length || rows.length !== expected.length) return {verified:false, status:"UPDATE_FAILED", dataAsOf:""};
+    const symbols = rows.map(item => String(item?.symbol || "")).sort();
+    if (symbols.some((symbol, index) => symbol !== expected[index])) return {verified:false, status:"UPDATE_FAILED", dataAsOf:""};
+    const times = [];
+    for (const item of rows) {
+      const audit = item?.audit || {};
+      const asOf = Date.parse(audit.data_as_of);
+      if (audit.status !== "SUCCESS" || audit.snapshot_slot !== snapshotSlot ||
+          !audit.cache_key.startsWith(`${item.symbol}:${tradingDate}:`) || !Number.isFinite(asOf)) {
+        return {verified:false, status:"UPDATE_FAILED", dataAsOf:""};
+      }
+      times.push(asOf);
+    }
+    return {verified:true, status:"SUCCESS", dataAsOf:new Date(Math.min(...times)).toISOString()};
+  }
+
+  return {quoteAsOf, isFreshIntradayQuote, buildProvisionalRows, mergeStopConfirmation, scoreDelta, buildCoreAudit, validateCoreBatch};
 });

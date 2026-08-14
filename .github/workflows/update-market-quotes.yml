@@ -2,8 +2,9 @@ name: Update delayed market quotes
 
 on:
   schedule:
-    # 台北週一至週五 08:25 啟動單一 session；job 內依序執行五個正式 slot。
-    - cron: "25 0 * * 1-5"
+    # 台北週一至週五 09:27～13:47：每個正式 slot 提前喚醒並在合法窗口內重試。
+    # GitHub schedule 可能延遲；多次短任務降低單一 cron 漏送造成整日缺檔的風險。
+    - cron: "27,32,37,42,47 1,2,3,4,5 * * 1-5"
   workflow_dispatch:
 
 permissions:
@@ -16,7 +17,7 @@ concurrency:
 jobs:
   update:
     runs-on: ubuntu-latest
-    timeout-minutes: 345
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
@@ -28,5 +29,5 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-      - name: Run validated 09:30–13:30 radar session
-        run: python scripts/run_intraday_radar_session.py
+      - name: Run one idempotent intraday radar scheduler tick
+        run: python scripts/run_intraday_radar_session.py --scheduled-once

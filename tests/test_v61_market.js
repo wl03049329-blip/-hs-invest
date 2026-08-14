@@ -121,7 +121,7 @@ check("期貨籌碼盤後補抓保留，首頁正式 fallback 由同一 Actions 
   assert.match(futuresRaw.methodology, /相同交易日/);
   assert.match(futuresWorkflow, /cron: "20 10 \* \* 1-5"/);
   assert.match(futuresWorkflow, /cron: "0 11 \* \* 1-5"/);
-  assert.match(marketWorkflow, /cron: "25 0 \* \* 1-5"/);
+  assert.match(marketWorkflow, /cron: "27,32,37,42,47 1,2,3,4,5 \* \* 1-5"/);
   assert.match(marketWorkflow, /run_intraday_radar_session\.py/);
   assert.match(marketRunner, /tx-futures-quote\.json/);
   assert.match(marketWorkflow, /cancel-in-progress: false/);

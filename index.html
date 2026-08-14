@@ -994,6 +994,7 @@ let lastRankSnapshotVersion="";
 let latestSuccessfulMarketAsOf="";
 let liveRadarRefresh=null;
 let liveRadarRefreshAttempt=null;
+let liveRadarCompleteness=null;
 const LONG_RANK_STORAGE_KEY=HSStorage.keys.longRank;
 const DAILY_LONG_RANK_STORAGE_KEY=HSStorage.key("dailyLongRank.v1");
 const LONG_RANK_HOURS=new Set([9,10,11,12,13]);
@@ -1976,11 +1977,12 @@ async function refreshLiveQuotes({force=false}={}){
     if(metaResult.status==="fulfilled"){
       liveRadarRefresh=metaResult.value?.radar_refresh||liveRadarRefresh;
       liveRadarRefreshAttempt=metaResult.value?.radar_refresh_attempt||liveRadarRefreshAttempt;
+      liveRadarCompleteness=metaResult.value?.intraday_completeness||liveRadarCompleteness;
       const metaTime=String(metaResult.value?.updated_at||"");
       if(metaTime&&metaTime!==liveMarketCacheVersion){
         try{
           const cache=await fetchNoStore(`market-quotes.json?ts=${now}`,signal),quotes=parsePublicQuoteCache(cache);
-          if(quotes.size){livePublicQuotes=quotes;liveMarketCacheVersion=String(cache.updated_at||metaTime);liveRadarRefresh=cache.radar_refresh||liveRadarRefresh;liveRadarRefreshAttempt=cache.radar_refresh_attempt||liveRadarRefreshAttempt;window.dispatchEvent(new CustomEvent("hs:delayed-quotes",{detail:{quotes,sourceUpdatedAt:liveMarketCacheVersion,checkedAt:new Date().toISOString(),source:"github_actions_cache",radarRefresh:liveRadarRefresh,radarRefreshAttempt:liveRadarRefreshAttempt}}));successes++}
+          if(quotes.size){livePublicQuotes=quotes;liveMarketCacheVersion=String(cache.updated_at||metaTime);liveRadarRefresh=cache.radar_refresh||liveRadarRefresh;liveRadarRefreshAttempt=cache.radar_refresh_attempt||liveRadarRefreshAttempt;liveRadarCompleteness=cache.intraday_completeness||liveRadarCompleteness;window.dispatchEvent(new CustomEvent("hs:delayed-quotes",{detail:{quotes,sourceUpdatedAt:liveMarketCacheVersion,checkedAt:new Date().toISOString(),source:"github_actions_cache",radarRefresh:liveRadarRefresh,radarRefreshAttempt:liveRadarRefreshAttempt,radarCompleteness:liveRadarCompleteness}}));successes++}
         }catch{}
       }else window.dispatchEvent(new CustomEvent("hs:quote-cache-checked",{detail:{sourceUpdatedAt:metaTime,checkedAt:new Date().toISOString()}}));
     }
@@ -2074,7 +2076,7 @@ function mergedIntradayStop(formal,provisional,{hasHighLow,hasVolume}){
 function provisionalRowsFor(x,quote){
   return HSIntradayBuyPointCore.buildProvisionalRows(x.officialRows,quote,x.formalState?.date);
 }
-function applyIntradayEstimate(x,quote){
+function applyIntradayEstimate(x,quote,calculatedAt=new Date().toISOString()){
   const provisional=provisionalRowsFor(x,quote);
   if(!provisional)return false;
   const {rows,hasHighLow,hasVolume,quoteDate,asOf}=provisional;
@@ -2090,15 +2092,17 @@ function applyIntradayEstimate(x,quote){
   x.intradayProvisionalHigh=Number.isFinite(provisionalHigh)&&provisionalHigh>(x.formalState?.high52??Infinity)?provisionalHigh:null;
   x.high52=x.formalState?.high52??x.high52;
   x.low52=Math.min(...last252.map(row=>Number(row.min??row.close)).filter(Number.isFinite));
-  x.fromHigh=Number.isFinite(x.high52)&&x.high52>0?(price/x.high52-1)*100:null;
+  const asOfHigh52=Math.max(...[x.high52,provisionalHigh].filter(value=>Number.isFinite(value)&&value>0));
+  x.fromHigh=Number.isFinite(asOfHigh52)&&asOfHigh52>0?(price/asOfHigh52-1)*100:null;
   x.fromLow=Number.isFinite(x.low52)&&x.low52>0?(price/x.low52-1)*100:null;
   x.historicalPosition=HSBuyPointCore.historicalPosition(features,rows,feature);
   x.stopConfirmation=mergedIntradayStop(x.formalStopConfirmation,feature.stop,{hasHighLow,hasVolume});
   x.trend=trendState(rows,price);
   x.kdDataDate=quoteDate;x.weekDataLabel="依目前週線試算";
   x.quoteMode="delayed";x.quoteTime=String(quote.quoteTime||"");
-  x.legacyScore=calcBuyScore(x);x.scoreParts=scoreParts(x);
   refreshDecisionModel(x);
+  const coreDecision=strategyDecisionFor(x,"long_term_core"),supported=HSFinalCoreProduction?.SUPPORTED_TICKERS?.includes(x.id);
+  if(supported&&(!Number.isFinite(coreDecision?.coreScore)||coreDecision?.coreScoreVersion!==LONG_TERM_CORE_SCORE_VERSION))return false;
   x.scoreMode="intraday";
   x.intraday={
     score:x.score,
@@ -2109,10 +2113,42 @@ function applyIntradayEstimate(x,quote){
     quoteDate,
     quoteTime:x.quoteTime,
     asOf,
-    radarSlot:String(quote.radarSlot||"")
+    radarSlot:String(quote.radarSlot||""),
+    status:"SUCCESS",
+    calculatedAt
   };
+  x.intraday.audit=HSIntradayBuyPointCore.buildCoreAudit({
+    symbol:x.id,snapshotSlot:x.intraday.radarSlot,tradingDate:quoteDate,price,priceAsOf:asOf,
+    weeklyJRaw:x.j,bias40wRaw:x.weekBias,bias40wScore:HSStrategyModeCore.weeklyBiasFactor(x.weekBias),
+    drawdown52wRaw:x.fromHigh,decision:coreDecision,calculatedAt,dataAsOf:asOf,status:"SUCCESS"
+  });
   x.action=actionFor(x);
   return true;
+}
+function cloneIntradayCandidate(source){
+  return{
+    ...source,
+    formalState:source.formalState?{...source.formalState}:null,
+    formalTechnicalLow:{...(source.formalTechnicalLow||{})},
+    formalStopConfirmation:cloneStop(source.formalStopConfirmation),
+    stopConfirmation:cloneStop(source.stopConfirmation),
+    technicalLow:{...(source.technicalLow||{})},
+    strategyDecisions:source.strategyDecisions?JSON.parse(JSON.stringify(source.strategyDecisions)):null
+  };
+}
+function buildIntradayRadarBatch(quotes,refresh){
+  const calculatedAt=new Date().toISOString(),entries=[];
+  for(const code of LONG_RADAR_CODES){
+    const source=all.find(item=>item.id===code),quote=quotes.get(code);
+    if(!source||!quote)return{verified:false,status:"UPDATE_FAILED",entries:[]};
+    const candidate=cloneIntradayCandidate(source);
+    if(!applyIntradayEstimate(candidate,{...quote,radarSlot:refresh.slot},calculatedAt))return{verified:false,status:"UPDATE_FAILED",entries:[]};
+    const previousClose=Number(quote.previousClose);
+    if(Number.isFinite(previousClose)&&previousClose>0)candidate.changePct=(candidate.price/previousClose-1)*100;
+    entries.push({symbol:code,source,candidate,audit:candidate.intraday?.audit});
+  }
+  const validation=HSIntradayBuyPointCore.validateCoreBatch(entries,[...LONG_RADAR_CODES],refresh.trading_date,refresh.slot);
+  return{...validation,entries,calculatedAt};
 }
 function applyHomeDelayedQuotes(detail){
   const quotes=detail?.quotes;
@@ -2122,6 +2158,7 @@ function applyHomeDelayedQuotes(detail){
   }
   const sourceVersion=String(detail?.sourceUpdatedAt||"");
   if(sourceVersion)liveMarketCacheVersion=sourceVersion;
+  if(detail?.radarCompleteness)liveRadarCompleteness=detail.radarCompleteness;
   pendingDelayedQuotes=detail;
   latestPublicQuotes=new Map(quotes);
   const checkedAt=detail.checkedAt||new Date().toISOString();
@@ -2129,11 +2166,21 @@ function applyHomeDelayedQuotes(detail){
     setHomeQuoteStatus(`延遲行情｜最後成功更新 ${formatHomeQuoteTime(detail.sourceUpdatedAt||checkedAt)}｜僅供參考`);
     return false;
   }
-  let updated=0,appliedAsOf=[];
+  let updated=0,appliedAsOf=[],radarHandled=new Set();
   const verifiedRefresh=detail.source==="github_actions_cache"?validatedRadarRefresh(detail.radarRefresh,quotes):null;
-  liveRadarRefresh=verifiedRefresh||liveRadarRefresh;
   liveRadarRefreshAttempt=detail.radarRefreshAttempt||liveRadarRefreshAttempt;
+  if(verifiedRefresh){
+    const batch=buildIntradayRadarBatch(quotes,verifiedRefresh);
+    radarHandled=new Set(LONG_RADAR_CODES);
+    if(batch.verified){
+      for(const entry of batch.entries){Object.assign(entry.source,entry.candidate);updated++;if(entry.audit?.data_as_of)appliedAsOf.push(entry.audit.data_as_of)}
+      liveRadarRefresh=verifiedRefresh;
+    }else{
+      liveRadarRefreshAttempt={verified:false,status:"failed",trading_date:verifiedRefresh.trading_date,slot:verifiedRefresh.slot,error:"core_calculation_failed"};
+    }
+  }
   for(const x of all){
+    if(radarHandled.has(x.id))continue;
     const quote=quotes.get(x.id),price=Number(quote?.price),previousClose=Number(quote?.previousClose);
     if(!Number.isFinite(price)||price<=0)continue;
     const quoteDate=String(quote?.date||"");
@@ -2382,7 +2429,7 @@ function currentLongRankSlot(date=new Date()){
 }
 function intradayLongRankAsOf(longs){
   const items=(Array.isArray(longs)?longs:[]).filter(item=>item.scoreMode==="intraday"&&item.intraday?.asOf),values=items.map(item=>new Date(item.intraday.asOf)).filter(date=>Number.isFinite(date.getTime()));
-  if(!values.length)return null;
+  if(!values.length||items.length!==longs.length||items.some(item=>item.intraday?.status!=="SUCCESS"))return null;
   const verifiedSlots=new Set(items.map(item=>item.intraday?.radarSlot).filter(slot=>/^\d{2}:\d{2}$/.test(String(slot||"")))),slots=verifiedSlots.size?verifiedSlots:new Set(values.map(currentLongRankSlot));
   return slots.size===1?values.sort((a,b)=>a-b)[0]:null;
 }
@@ -2398,16 +2445,21 @@ function longRankScheduleStatus(date=new Date()){
   const format=slot=>`${String(Math.floor(slot/60)).padStart(2,"0")}:${String(slot%60).padStart(2,"0")}`;
   return{current:current===undefined?"盤前正式分數":format(current),next:next===undefined?"今日已完成":"下一次 "+format(next)};
 }
-function intradayRadarDisplayState(snapshotSlot,schedule,attempt,today=taipeiToday()){
+function intradayRadarDisplayState(snapshotSlot,schedule,attempt,completeness,today=taipeiToday()){
   const current=snapshotSlot?String(snapshotSlot).slice(-5):"等待盤中資料";
-  const failed=attempt?.status==="failed"&&attempt?.trading_date===today&&/^\d{2}:\d{2}$/.test(String(attempt?.slot||""))?`${attempt.slot} 更新失敗`:"";
+  const sameDay=completeness?.trading_date===today,successCount=Number(completeness?.success_count),expectedCount=Number(completeness?.expected_count);
+  const countText=Number.isFinite(successCount)&&Number.isFinite(expectedCount)?`${successCount}/${expectedCount}`:"";
+  const completenessWarning=!sameDay?"":completeness.snapshot_status==="SNAPSHOT_MISSED"?`今日盤中資料未建立${countText?`（${countText}）`:""}`:completeness.snapshot_status==="SNAPSHOT_PARTIAL"&&(completeness.missed_slots?.length||completeness.failed_slots?.length)?`今日盤中資料未完整建立${countText?`（${countText}）`:""}`:"";
+  const attemptFailure=attempt?.status==="failed"&&attempt?.trading_date===today&&/^\d{2}:\d{2}$/.test(String(attempt?.slot||""))?`${attempt.slot} 更新失敗`:"";
+  const failed=completenessWarning||attemptFailure;
   const next=failed?"等待下一筆成功資料":schedule.next.startsWith("下一次 ")?`下一次更新 ${schedule.next.slice(4)}`:schedule.next;
-  return{current,failed,next};
+  return{current,failed,next,completeness:countText,snapshotStatus:sameDay?String(completeness.snapshot_status||""):""};
 }
 function createLongRankSnapshot(longs,version,snapshotAsOf,snapshotSlot=""){
   const marketAsOf=snapshotAsOf instanceof Date?snapshotAsOf.toISOString():new Date(snapshotAsOf).toISOString(),snapshotTime=snapshotSlot||currentLongRankSlot(snapshotAsOf),tradingDate=snapshotTradingDate(snapshotAsOf);
   const items=Object.fromEntries(longs.map((item,index)=>{
     const score=displayScore(item,"long_term_core");
+    const audit=item.intraday?.audit?{...item.intraday.audit,rank:index+1}:null;
     return[item.id,{
       ticker:item.id,
       longTermScore:Number.isFinite(score)?score:null,
@@ -2421,11 +2473,13 @@ function createLongRankSnapshot(longs,version,snapshotAsOf,snapshotSlot=""){
       rank:index+1,
       weeklyJ:Number.isFinite(item.j)?item.j:null,
       Bias40W:Number.isFinite(item.weekBias)?item.weekBias:null,
+      audit,
       current_score:Number.isFinite(score)?score:null,
       current_rank:index+1
     }];
   }));
-  return{tradingDate,snapshotTime,marketAsOf,version,items};
+  const calculatedAt=longs.map(item=>item.intraday?.calculatedAt).filter(Boolean).sort().at(-1)||"";
+  return{tradingDate,snapshotTime,marketAsOf,dataAsOf:marketAsOf,calculatedAt,status:"SUCCESS",version,items};
 }
 function longRankSnapshot(longs,saved,version,snapshotAsOf,snapshotSlot=""){
   const current=createLongRankSnapshot(longs,version,snapshotAsOf,snapshotSlot),legacySnapshots=[];
@@ -2498,8 +2552,8 @@ function renderTop(){
   if(snapshotAsOf&&version&&version!==lastRankSnapshotVersion){localStorage.setItem(LONG_RANK_STORAGE_KEY,JSON.stringify(longRankSnapshot(longs,saved,version,snapshotAsOf,snapshotSlot)));lastRankSnapshotVersion=version}
   const radar=activeRadarItems(),sorted=[...radar].sort((a,b)=>(displayScore(b)??-1)-(displayScore(a)??-1)),low=[...radar].sort((a,b)=>a.j-b.j)[0],best=sorted.find(x=>Number.isFinite(displayScore(x)));
   $("#snapshotGrid").innerHTML=(best||low)?`<div class="snapshot"><span>最高策略分數</span><b>${best?`${best.id}｜${displayScore(best)} 分`:"資料不足"}</b></div><div class="snapshot"><span>最低週 J 值</span><b>${low?`${low.id}｜${fmt(low.j)}`:"—"}</b></div><div class="snapshot"><span>長期加碼區</span><b>${longCount} 檔</b></div><div class="snapshot"><span>波段已確認</span><b>${swingCount} 檔</b></div>`:'<div class="newsEmpty">尚無 ETF 資料。</div>';
-  const hasIntraday=longs.some(item=>item.scoreMode==="intraday"),schedule=longRankScheduleStatus(),radarDisplay=intradayRadarDisplayState(snapshotSlot,schedule,liveRadarRefreshAttempt),actualSnapshotTime=radarDisplay.current,failedAttempt=radarDisplay.failed;
-  $("#updatedTop").textContent=hasIntraday?`盤中試算 ${actualSnapshotTime}｜週 KD 暫定`:`盤後正式 ${esc(all[0]?.date||"—")}｜完成週 KD`;
+  const hasIntraday=longs.some(item=>item.scoreMode==="intraday"),schedule=longRankScheduleStatus(),radarDisplay=intradayRadarDisplayState(snapshotSlot,schedule,liveRadarRefreshAttempt,liveRadarCompleteness),actualSnapshotTime=radarDisplay.current,failedAttempt=radarDisplay.failed;
+  $("#updatedTop").textContent=hasIntraday?`盤中試算 ${actualSnapshotTime}｜週 KD 暫定`:radarDisplay.snapshotStatus&&radarDisplay.snapshotStatus!=="SNAPSHOT_SUCCESS"?`市場正式資料 ${esc(all[0]?.date||"—")}｜盤中雷達 ${radarDisplay.completeness||"未建立"}`:`盤後正式 ${esc(all[0]?.date||"—")}｜完成週 KD`;
   $("#radarCurrentSlot").textContent=`本次更新時段 ${actualSnapshotTime}${failedAttempt?`｜${failedAttempt}`:""}`;
   $("#radarNextSlot").textContent=radarDisplay.next;
   if($("#radarOverviewCurrent"))$("#radarOverviewCurrent").textContent=`本次更新時段：${actualSnapshotTime}${failedAttempt?`｜${failedAttempt}`:""}`;
