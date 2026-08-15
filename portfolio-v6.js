@@ -371,14 +371,14 @@
     const canvas = $v6("#portfolioChart");
     const ctx = canvas.getContext("2d");
     const wrap = canvas.parentElement;
-    const size = Math.max(220, Math.min(560, wrap.clientWidth || 320));
+    const size = Math.max(112, Math.min(560, Math.round(wrap.clientWidth || 320)));
     const ratio = Math.min(window.devicePixelRatio || 1, 2);
     if (canvas.width !== Math.round(size * ratio) || canvas.height !== Math.round(size * ratio)) {
       canvas.width = Math.round(size * ratio);
       canvas.height = Math.round(size * ratio);
     }
-    canvas.style.width = `${size}px`;
-    canvas.style.height = `${size}px`;
+    canvas.style.width = "100%";
+    canvas.style.height = "100%";
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
     ctx.clearRect(0, 0, size, size);
     const marketRows = computed.rows
@@ -386,7 +386,7 @@
       .map(row => ({...row, allocationValue: row.marketValue, valueSource: "market"}));
     const allocation = core.buildAllocation(marketRows);
     const marketTotal = allocation.reduce((sum, item) => sum + item.value, 0);
-    $v6("#portfolioAllocationMode").textContent = "目前市值配置";
+    $v6("#portfolioAllocationMode").textContent = "依目前市值";
     chartSegments = [];
     if (!allocation.length) {
       ctx.strokeStyle = "#244332";
@@ -413,38 +413,6 @@
       chartSegments.push({...item, start, end, color: ctx.strokeStyle});
       start = end;
     });
-    ctx.lineWidth = Math.max(1, size * .004);
-    chartSegments.forEach(segment => {
-      if (!Number.isFinite(segment.weight) || segment.weight < 2) return;
-      const mid = (segment.start + segment.end) / 2;
-      const right = Math.cos(mid) >= 0;
-      const innerX = center + Math.cos(mid) * (radius + lineWidth / 2 + 2);
-      const innerY = center + Math.sin(mid) * (radius + lineWidth / 2 + 2);
-      const elbowX = right ? size * .79 : size * .21;
-      const labelY = Math.max(size * .07, Math.min(size * .93, innerY));
-      const labelX = right ? size * .94 : size * .06;
-      ctx.strokeStyle = segment.color;
-      ctx.beginPath();
-      ctx.moveTo(innerX, innerY);
-      ctx.lineTo(elbowX, labelY);
-      ctx.lineTo(labelX + (right ? -3 : 3), labelY);
-      ctx.stroke();
-      const codeSize = Math.max(11, Math.round(size * .038));
-      const percentSize = Math.max(10, Math.round(size * .033));
-      ctx.textAlign = right ? "right" : "left";
-      ctx.textBaseline = "middle";
-      ctx.lineJoin = "round";
-      ctx.strokeStyle = "rgba(0,0,0,.92)";
-      ctx.lineWidth = Math.max(2.5, size * .009);
-      ctx.font = `900 ${codeSize}px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif`;
-      ctx.strokeText(segment.code, labelX, labelY - codeSize * .48);
-      ctx.fillStyle = "#fff4d2";
-      ctx.fillText(segment.code, labelX, labelY - codeSize * .48);
-      ctx.font = `850 ${percentSize}px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif`;
-      ctx.strokeText(`${number(segment.weight, 1)}%`, labelX, labelY + percentSize * .62);
-      ctx.fillStyle = "#e7c978";
-      ctx.fillText(`${number(segment.weight, 1)}%`, labelX, labelY + percentSize * .62);
-    });
     if (chartSelection >= chartSegments.length) chartSelection = -1;
     if (chartSelection >= 0) {
       const segment = chartSegments[chartSelection];
@@ -459,7 +427,7 @@
       ctx.arc(center + Math.cos(mid) * (radius + lineWidth / 2 + 4), center + Math.sin(mid) * (radius + lineWidth / 2 + 4), 3, 0, Math.PI * 2);
       ctx.fill();
     }
-    $v6("#portfolioChartCenter").innerHTML = `<b>${money(marketTotal)}</b><span>${marketRows.length} 檔持股｜目前市值</span>`;
+    $v6("#portfolioChartCenter").innerHTML = `<b>${money(marketTotal)}</b><span>${marketRows.length} 檔持股<em>｜總市值</em></span>`;
     renderAllocationLegend();
   }
 
@@ -470,7 +438,7 @@
         ? `<span>累積損益 <b class="${valueClass(item.pnl)}">${money(item.pnl)}</b></span>`
         : "";
       const members = item.code === "其他" ? `<small>包含 ${escapeHtml(item.members.join("、"))}</small>` : "";
-      return `<button class="allocationLegendItem${index === chartSelection ? " selected" : ""}" type="button" data-allocation-index="${index}" aria-pressed="${index === chartSelection}"><i style="--allocation-color:${item.color}"></i><span class="allocationLegendIdentity"><b>${escapeHtml(item.code)}・${escapeHtml(item.name)}</b><small>占比 ${number(item.weight, 2)}%</small></span><span class="allocationLegendValues"><b>${money(item.value)}</b>${pnl}</span>${members}</button>`;
+      return `<button class="allocationLegendItem${index === chartSelection ? " selected" : ""}" type="button" data-allocation-index="${index}" aria-pressed="${index === chartSelection}"><i style="--allocation-color:${item.color}"></i><span class="allocationLegendIdentity"><b><span class="allocationCode">${escapeHtml(item.code)}</span><span class="allocationName">・${escapeHtml(item.name)}</span></b></span><strong class="allocationLegendWeight">${number(item.weight, 1)}%</strong><span class="allocationLegendValues"><b>${money(item.value)}</b>${pnl}</span>${members}</button>`;
     }).join("");
     detail.querySelectorAll("[data-allocation-index]").forEach(button => button.addEventListener("click", () => showChartDetail(Number(button.dataset.allocationIndex))));
   }
