@@ -1246,15 +1246,16 @@ footer{color:#746f67}
 .radarPageHeader>p:last-child{margin:6px 0 0;color:#9b9386;font-size:12px;line-height:1.5}
 
 .radarModeLauncher{display:grid;grid-template-columns:minmax(0,1.18fr) minmax(0,1fr);gap:10px;margin-bottom:12px}
-.radarModeCard{position:relative;isolation:isolate;min-width:0;min-height:132px;padding:16px 17px;border:1px solid #3a3328;border-radius:17px;background:#080808;color:inherit;overflow:hidden;text-align:left;cursor:pointer;transition:border-color .18s ease,background .18s ease,transform .18s ease}
+.radarModeCard{position:relative;isolation:isolate;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"badge cta" "title title" "description description";align-content:center;column-gap:10px;min-width:0;min-height:98px;padding:11px 14px;border:1px solid #3a3328;border-radius:17px;background:#080808;color:inherit;overflow:hidden;text-align:left;cursor:pointer;transition:border-color .18s ease,background .18s ease,transform .18s ease}
 .radarModeCard>*{position:relative;z-index:1}
 .radarModeCard strong,.radarModeCard small,.radarModeCard em{display:block}
-.radarModeCard strong{margin-top:11px;color:#eee7dc;font-size:22px;line-height:1.1}
-.radarModeCard small{margin-top:7px;color:#9e9689;font-size:11px;line-height:1.45}
-.radarModeCard em{margin-top:12px;color:#b4a98f;font-size:10px;font-style:normal;font-weight:850;white-space:nowrap}
+.radarModeCard>.hsSelectBadge,.radarModeCard>.watchlistBadge{grid-area:badge;align-self:center}
+.radarModeCard strong{grid-area:title;margin-top:6px;color:#eee7dc;font-size:20px;line-height:1.08}
+.radarModeCard small{grid-area:description;margin-top:4px;color:#9e9689;font-size:10px;line-height:1.35}
+.radarModeCard em{grid-area:cta;align-self:center;margin:0;color:#b4a98f;font-size:9px;font-style:normal;font-weight:850;white-space:nowrap}
 .radarModeCard:hover,.radarModeCard:focus-visible{outline:none;transform:translateY(-1px)}
 .radarModeCardFeatured{border-color:#6b552b;background:linear-gradient(145deg,#0a0907 0%,#050505 70%);box-shadow:inset 0 0 0 1px rgba(239,207,127,.05),0 12px 26px #0007}
-.radarModeCardFeatured::after{content:"";position:absolute;right:-13px;bottom:-20px;width:132px;height:132px;background:url("assets/hs-etf-radar-final.png?v=5") center/contain no-repeat;opacity:.075;filter:sepia(.2) saturate(.7);pointer-events:none}
+.radarModeCardFeatured::after{content:"";position:absolute;right:-9px;bottom:-18px;width:104px;height:104px;background:url("assets/hs-etf-radar-final.png?v=5") center/contain no-repeat;opacity:.045;filter:sepia(.2) saturate(.7);pointer-events:none}
 .radarModeCardFeatured strong{color:#f2e6c8}.radarModeCardFeatured em{color:#d8bd7b}
 .radarModeCardFeatured.active{border-color:#d1ac5a;background:linear-gradient(145deg,#171107 0%,#070605 72%);box-shadow:inset 0 0 0 1px rgba(255,226,156,.16),0 0 22px rgba(184,139,48,.10)}
 .radarModeCardWatchlist{border-color:#343b37;background:linear-gradient(145deg,#090d0b,#060706)}
@@ -1264,10 +1265,18 @@ footer{color:#746f67}
 .hsSelectBadge{border:1px solid #8c7038;background:#151006;color:#e8cb84;box-shadow:inset 0 0 0 1px rgba(255,226,153,.04)}
 .watchlistBadge,.hsSelectBadge.is-watchlist{border:1px solid #51574f;background:#0d110e;color:#b8bcb4;box-shadow:none}
 
-.radarModeContext{margin:0 1px 10px;padding:13px 15px;border-left:2px solid #caa653;border-bottom:1px solid #342b1d;border-radius:0 0 12px 0;background:linear-gradient(90deg,rgba(35,26,12,.78),rgba(7,7,7,0))}
+.radarModeContext{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-areas:"badge title" "badge description";column-gap:10px;align-items:center;margin:0 1px 8px;padding:7px 12px;border-left:2px solid #caa653;border-bottom:1px solid #342b1d;border-radius:0 0 12px 0;background:linear-gradient(90deg,rgba(35,26,12,.68),rgba(7,7,7,0))}
 .radarModeContext.is-watchlist{border-left-color:#858b7d;background:linear-gradient(90deg,rgba(24,29,25,.8),rgba(7,7,7,0))}
-.radarModeContext h2{margin:8px 0 0;color:#f0e9dd;font-size:20px;line-height:1.1}
-.radarModeContext p{margin:5px 0 0;color:#a69e91;font-size:11px;line-height:1.5}
+.radarModeContext>.hsSelectBadge,.radarModeContext>.watchlistBadge{grid-area:badge}
+.radarModeContext h2{grid-area:title;margin:0;color:#f0e9dd;font-size:16px;line-height:1.1}
+.radarModeContext p{grid-area:description;margin:2px 0 0;color:#a69e91;font-size:9px;line-height:1.35}
+
+/* ETF Radar ranks 4+ share one restrained premium badge; ranking logic is untouched. */
+#signals .rankBadge.regular{position:relative;width:42px;height:50px;border:1px solid rgba(215,180,103,.58);border-radius:11px 11px 14px 14px;color:#ead099;background:linear-gradient(155deg,#17130d 0%,#070706 58%,#21170a 100%);box-shadow:inset 0 0 0 1px rgba(255,231,177,.045),inset 0 -10px 18px rgba(173,118,32,.08),0 6px 14px rgba(0,0,0,.34)}
+#signals .rankBadge.regular::before{content:"";position:absolute;inset:3px;border:1px solid rgba(211,175,94,.16);border-radius:8px 8px 11px 11px;pointer-events:none}
+#signals .rankBadge.regular i{position:relative;font-size:20px;font-weight:900;letter-spacing:-.03em;text-shadow:0 1px 8px rgba(222,179,85,.18)}
+#signals .rankBadge.regular small{position:relative;margin-top:-5px;color:#8f7b55;font-size:0;font-weight:800;letter-spacing:.14em}
+#signals .rankBadge.regular small::after{content:"RANK";font-size:5px}
 #watchPanel{margin-top:0!important;margin-bottom:10px}
 #watchPanel .watchManageDetails{border:0;background:transparent}
 #watchPanel .watchManageDetails>summary{display:none}
@@ -1278,18 +1287,17 @@ footer{color:#746f67}
 
 @media(max-width:760px){
   .radarModeLauncher{grid-template-columns:1fr;gap:8px}
-  .radarModeCard{min-height:112px;padding:14px 15px}
-  .radarModeCard strong{margin-top:8px;font-size:20px}
-  .radarModeCard small{margin-top:5px;font-size:10px}
-  .radarModeCard em{margin-top:9px}
-  .radarModeCardFeatured::after{right:-10px;bottom:-18px;width:112px;height:112px}
+  .radarModeCard{min-height:86px;padding:10px 13px}
+  .radarModeCard strong{margin-top:5px;font-size:19px}
+  .radarModeCard small{margin-top:3px;font-size:9px;line-height:1.3}
+  .radarModeCardFeatured::after{right:-7px;bottom:-16px;width:90px;height:90px}
 }
 
 @media(max-width:430px){
   .radarPageHeader{margin-bottom:8px}.radarPageHeader h2{font-size:26px}.radarPageHeader>p:last-child{font-size:11px}
-  .radarModeCard{min-height:106px;border-radius:15px}
-  .radarModeCard small{max-width:82%}
-  .radarModeContext{padding:11px 13px}.radarModeContext h2{font-size:18px}.radarModeContext p{font-size:10px}
+  .radarModeCard{min-height:84px;border-radius:15px}
+  .radarModeCard small{max-width:100%}
+  .radarModeContext{padding:7px 10px}.radarModeContext h2{font-size:15px}.radarModeContext p{font-size:8px}
 }
 
 /* Phase 2E Lite: transparent Generic ETF diagnostics for MY WATCHLIST only. */
