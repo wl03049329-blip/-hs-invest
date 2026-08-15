@@ -1226,3 +1226,92 @@ footer{color:#746f67}
 .coreScoreLadder li[class*="status-tier-"]{border-color:var(--status-border);background:var(--status-bg);box-shadow:0 0 10px var(--status-glow)}
 .coreScoreLadder li[class*="status-tier-"] b{color:var(--status-text)}
 .coreScoreLadder li[class*="status-tier-"].current{border-color:var(--status-border);background:var(--status-bg);box-shadow:0 0 0 1px var(--status-border) inset,0 0 18px var(--status-glow);outline:1px solid var(--status-border);outline-offset:1px}
+
+/* ETF Radar Phase 1 — brand-first navigation; presentation only. */
+#signals:not(.tabHidden){display:flex;flex-direction:column}
+#signals>.radarPageHeader{order:0}
+#signals>.radarModeLauncher{order:1}
+#signals>.radarModeContext{order:2}
+#signals>.watchPanel{order:3}
+#signals>#radarOverview{order:4}
+#signals>.radarDetailHeading{order:5}
+#signals>#radarDetailBack{order:6}
+#signals>#cards{order:7}
+#signals>.signalLegend{order:8}
+#signals>.watchPanel[hidden]{display:none!important}
+
+.radarPageHeader{margin:2px 1px 10px}
+.radarPageHeader .eyebrow{display:block!important;margin:0 0 4px;color:#b89750;font-size:9px;font-weight:900;letter-spacing:.18em}
+.radarPageHeader h2{margin:0;color:#f4ede1;font-size:clamp(24px,5vw,32px);line-height:1.1}
+.radarPageHeader>p:last-child{margin:6px 0 0;color:#9b9386;font-size:12px;line-height:1.5}
+
+.radarModeLauncher{display:grid;grid-template-columns:minmax(0,1.18fr) minmax(0,1fr);gap:10px;margin-bottom:12px}
+.radarModeCard{position:relative;isolation:isolate;min-width:0;min-height:132px;padding:16px 17px;border:1px solid #3a3328;border-radius:17px;background:#080808;color:inherit;overflow:hidden;text-align:left;cursor:pointer;transition:border-color .18s ease,background .18s ease,transform .18s ease}
+.radarModeCard>*{position:relative;z-index:1}
+.radarModeCard strong,.radarModeCard small,.radarModeCard em{display:block}
+.radarModeCard strong{margin-top:11px;color:#eee7dc;font-size:22px;line-height:1.1}
+.radarModeCard small{margin-top:7px;color:#9e9689;font-size:11px;line-height:1.45}
+.radarModeCard em{margin-top:12px;color:#b4a98f;font-size:10px;font-style:normal;font-weight:850;white-space:nowrap}
+.radarModeCard:hover,.radarModeCard:focus-visible{outline:none;transform:translateY(-1px)}
+.radarModeCardFeatured{border-color:#6b552b;background:linear-gradient(145deg,#0a0907 0%,#050505 70%);box-shadow:inset 0 0 0 1px rgba(239,207,127,.05),0 12px 26px #0007}
+.radarModeCardFeatured::after{content:"";position:absolute;right:-13px;bottom:-20px;width:132px;height:132px;background:url("assets/hs-etf-radar-final.png?v=5") center/contain no-repeat;opacity:.075;filter:sepia(.2) saturate(.7);pointer-events:none}
+.radarModeCardFeatured strong{color:#f2e6c8}.radarModeCardFeatured em{color:#d8bd7b}
+.radarModeCardFeatured.active{border-color:#d1ac5a;background:linear-gradient(145deg,#171107 0%,#070605 72%);box-shadow:inset 0 0 0 1px rgba(255,226,156,.16),0 0 22px rgba(184,139,48,.10)}
+.radarModeCardWatchlist{border-color:#343b37;background:linear-gradient(145deg,#090d0b,#060706)}
+.radarModeCardWatchlist em{color:#aeb9ae}.radarModeCardWatchlist.active{border-color:#8e927d;background:linear-gradient(145deg,#111611,#070907);box-shadow:inset 0 0 0 1px rgba(194,191,151,.09)}
+
+.hsSelectBadge,.watchlistBadge{display:inline-flex;align-items:center;justify-content:center;width:max-content;max-width:100%;min-height:22px;padding:4px 9px;border-radius:999px;font-size:8px;font-weight:950;line-height:1;letter-spacing:.16em;white-space:nowrap}
+.hsSelectBadge{border:1px solid #8c7038;background:#151006;color:#e8cb84;box-shadow:inset 0 0 0 1px rgba(255,226,153,.04)}
+.watchlistBadge,.hsSelectBadge.is-watchlist{border:1px solid #51574f;background:#0d110e;color:#b8bcb4;box-shadow:none}
+
+.radarModeContext{margin:0 1px 10px;padding:13px 15px;border-left:2px solid #caa653;border-bottom:1px solid #342b1d;border-radius:0 0 12px 0;background:linear-gradient(90deg,rgba(35,26,12,.78),rgba(7,7,7,0))}
+.radarModeContext.is-watchlist{border-left-color:#858b7d;background:linear-gradient(90deg,rgba(24,29,25,.8),rgba(7,7,7,0))}
+.radarModeContext h2{margin:8px 0 0;color:#f0e9dd;font-size:20px;line-height:1.1}
+.radarModeContext p{margin:5px 0 0;color:#a69e91;font-size:11px;line-height:1.5}
+#watchPanel{margin-top:0!important;margin-bottom:10px}
+#watchPanel .watchManageDetails{border:0;background:transparent}
+#watchPanel .watchManageDetails>summary{display:none}
+#watchPanel .watchHead{justify-content:flex-end;padding-top:2px}
+#watchPanel .watchHead>div:first-child{display:none}
+#watchPanel .watchActions{display:flex;width:100%;gap:7px}
+#watchPanel .watchActions .miniBtn{flex:1 1 auto}
+
+@media(max-width:760px){
+  .radarModeLauncher{grid-template-columns:1fr;gap:8px}
+  .radarModeCard{min-height:112px;padding:14px 15px}
+  .radarModeCard strong{margin-top:8px;font-size:20px}
+  .radarModeCard small{margin-top:5px;font-size:10px}
+  .radarModeCard em{margin-top:9px}
+  .radarModeCardFeatured::after{right:-10px;bottom:-18px;width:112px;height:112px}
+}
+
+@media(max-width:430px){
+  .radarPageHeader{margin-bottom:8px}.radarPageHeader h2{font-size:26px}.radarPageHeader>p:last-child{font-size:11px}
+  .radarModeCard{min-height:106px;border-radius:15px}
+  .radarModeCard small{max-width:82%}
+  .radarModeContext{padding:11px 13px}.radarModeContext h2{font-size:18px}.radarModeContext p{font-size:10px}
+}
+
+/* Phase 2E Lite: transparent Generic ETF diagnostics for MY WATCHLIST only. */
+#watchPanel{opacity:1}
+#radarOverview[hidden],#signals>.radarDetailHeading[hidden],#signals>.signalLegend[hidden]{display:none!important}
+.watchDiagnostics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
+.watchDiagnosticCard{display:grid;min-width:0;gap:10px;padding:14px;border:1px solid #3b3326;border-radius:17px;background:linear-gradient(145deg,#0c0b09,#070707);color:#ece7dc;text-align:left;box-shadow:0 12px 25px #0005;cursor:pointer}
+.watchDiagnosticCard[role="button"]{width:100%;font:inherit}
+.watchDiagnosticCard:hover,.watchDiagnosticCard:focus-visible{outline:none;border-color:#92743b;box-shadow:0 0 0 2px #c6a55925,0 12px 25px #0007}
+.watchDiagnosticCard>header{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;min-width:0}
+.watchDiagnosticCard>header>div{min-width:0}.watchDiagnosticCard>header b{font-size:18px;color:#f2d998}.watchDiagnosticCard>header span{display:block;margin-top:2px;color:#bcb4a6;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.watchDiagnosticCard>header em,.watchMaturity{flex:0 0 auto;max-width:48%;padding:5px 8px;border:1px solid #574a32;border-radius:999px;background:#17130d;color:#d6c395;font-size:9px;font-style:normal;font-weight:850;line-height:1;white-space:nowrap}
+.watchMaturity-benchmark_unavailable{border-color:#635a46;color:#c8b98d}.watchMaturity-insufficient_history,.watchMaturity-partial,.watchMaturity-wait_native{border-color:#4a4842;background:#111;color:#aaa49a}.watchMaturity-unsupported_asset_class{border-color:#58423b;background:#17100e;color:#c3a59c}
+.watchDiagnosticPrice{display:flex;align-items:baseline;gap:8px}.watchDiagnosticPrice>b{font-size:25px;line-height:1;color:#f5eee2}.watchDiagnosticPrice>span{font-size:11px;font-weight:900}
+.watchDiagnosticMetrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;margin:0}
+.watchDiagnosticMetrics>div{min-width:0;padding:7px 5px;border:1px solid #29241d;border-radius:10px;background:#0b0a08;text-align:center}.watchDiagnosticMetrics dt{color:#847d71;font-size:8px}.watchDiagnosticMetrics dd{margin:3px 0 0;color:#e0d5bf;font-size:10px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.watchDiagnosticCard>p{min-height:2.8em;margin:0;color:#aaa193;font-size:10px;line-height:1.4}
+.watchDiagnosticCard>footer{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-top:9px;border-top:1px solid #29241c}.watchDiagnosticCard>footer span{color:#7f796f;font-size:8px}.watchDiagnosticCard>footer strong{color:#d2b66f;font-size:9px;white-space:nowrap}
+.watchDiagnosticCard.is-loading,.watchDiagnosticCard.is-error{cursor:default}.watchDiagnosticLoading,.watchDiagnosticError{grid-column:1/-1;padding:22px 12px;border:1px dashed #383127;border-radius:12px;color:#9e978b;text-align:center;font-size:11px}
+.watchDiagnosticError{display:grid;gap:6px}.watchDiagnosticError b{color:#d6b697}.watchDiagnosticError span{color:#928b80}.watchDiagnosticError .miniBtn{justify-self:center;margin-top:3px}
+.watchDiagnosticSheet{width:min(100%,720px)}.watchDiagnosticAsOf{display:block;margin-top:4px;color:#8e877b;font-size:9px}
+.watchDiagnosticSummary{display:grid;gap:5px;margin-bottom:12px;padding:13px 14px;border:1px solid #66532f;border-radius:14px;background:linear-gradient(135deg,#1a1409,#0b0906)}.watchDiagnosticSummary b{color:#ebd6a0;font-size:13px;line-height:1.5}.watchDiagnosticSummary small{color:#9b9282;font-size:9px;line-height:1.45}.watchDiagnosticSummary.is-muted{border-color:#39352d;background:#0d0c0a}
+.watchDiagnosticDetailGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.watchDiagnosticSection{min-width:0;padding:12px;border:1px solid #302a20;border-radius:14px;background:#0b0a08}.watchDiagnosticSection h4{margin:0 0 9px;color:#dfc27d;font-size:12px}.watchDiagnosticSection dl{display:grid;gap:0;margin:0}.watchDiagnosticSection dl>div{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;padding:7px 0;border-top:1px solid #242019}.watchDiagnosticSection dt{color:#8f887d;font-size:9px}.watchDiagnosticSection dd{margin:0;color:#e3dbcd;font-size:10px;font-weight:850;text-align:right;overflow-wrap:anywhere}
+@media(max-width:760px){.watchDiagnostics{grid-template-columns:1fr}.watchDiagnosticCard{padding:12px}.watchDiagnosticDetailGrid{grid-template-columns:1fr}.watchDiagnosticCard>p{min-height:0}}
+@media(max-width:430px){.watchDiagnosticMetrics{gap:4px}.watchDiagnosticMetrics>div{padding:6px 3px}.watchDiagnosticMetrics dd{font-size:9px}.watchDiagnosticCard>header em{max-width:50%;font-size:8px}.watchDiagnosticSheet{border-radius:22px 22px 0 0}}
