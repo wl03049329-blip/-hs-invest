@@ -381,9 +381,12 @@
     canvas.style.height = `${size}px`;
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
     ctx.clearRect(0, 0, size, size);
-    const allocation = core.buildAllocation(computed.rows);
-    const allocationEstimated = Boolean(computed.allocationEstimated);
-    $v6("#portfolioAllocationMode").textContent = allocationEstimated ? "依成本暫估" : "依目前市值";
+    const marketRows = computed.rows
+      .filter(row => Number.isFinite(row.marketValue) && row.marketValue > 0)
+      .map(row => ({...row, allocationValue: row.marketValue, valueSource: "market"}));
+    const allocation = core.buildAllocation(marketRows);
+    const marketTotal = allocation.reduce((sum, item) => sum + item.value, 0);
+    $v6("#portfolioAllocationMode").textContent = "目前市值配置";
     chartSegments = [];
     if (!allocation.length) {
       ctx.strokeStyle = "#244332";
@@ -392,7 +395,7 @@
       ctx.arc(size / 2, size / 2, size * .32, 0, Math.PI * 2);
       ctx.stroke();
       $v6("#portfolioChartCenter").innerHTML = `<b>${holdings.length ? "資料暫缺" : "尚無持股"}</b><span>${holdings.length} 檔持股</span>`;
-      $v6("#portfolioChartDetail").textContent = holdings.length ? "持股資料不完整，暫時無法計算配置。" : "新增持股後會在此顯示資產配置。";
+      $v6("#portfolioChartDetail").innerHTML = `<p class="allocationLegendEmpty">${holdings.length ? "行情資料暫缺，無法以市值計算配置。" : "新增持股後會在此顯示目前市值配置。"}</p>`;
       return;
     }
     const center = size / 2;
@@ -411,7 +414,6 @@
       start = end;
     });
     ctx.lineWidth = Math.max(1, size * .004);
-    ctx.font = `800 ${Math.max(9, Math.round(size * .031))}px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif`;
     chartSegments.forEach(segment => {
       if (!Number.isFinite(segment.weight) || segment.weight < 2) return;
       const mid = (segment.start + segment.end) / 2;
@@ -427,10 +429,21 @@
       ctx.lineTo(elbowX, labelY);
       ctx.lineTo(labelX + (right ? -3 : 3), labelY);
       ctx.stroke();
-      ctx.fillStyle = "#e5d6b2";
+      const codeSize = Math.max(11, Math.round(size * .038));
+      const percentSize = Math.max(10, Math.round(size * .033));
       ctx.textAlign = right ? "right" : "left";
       ctx.textBaseline = "middle";
-      ctx.fillText(`${segment.code} ${number(segment.weight, 1)}%`, labelX, labelY);
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = "rgba(0,0,0,.92)";
+      ctx.lineWidth = Math.max(2.5, size * .009);
+      ctx.font = `900 ${codeSize}px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif`;
+      ctx.strokeText(segment.code, labelX, labelY - codeSize * .48);
+      ctx.fillStyle = "#fff4d2";
+      ctx.fillText(segment.code, labelX, labelY - codeSize * .48);
+      ctx.font = `850 ${percentSize}px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif`;
+      ctx.strokeText(`${number(segment.weight, 1)}%`, labelX, labelY + percentSize * .62);
+      ctx.fillStyle = "#e7c978";
+      ctx.fillText(`${number(segment.weight, 1)}%`, labelX, labelY + percentSize * .62);
     });
     if (chartSelection >= chartSegments.length) chartSelection = -1;
     if (chartSelection >= 0) {
@@ -446,14 +459,25 @@
       ctx.arc(center + Math.cos(mid) * (radius + lineWidth / 2 + 4), center + Math.sin(mid) * (radius + lineWidth / 2 + 4), 3, 0, Math.PI * 2);
       ctx.fill();
     }
-    $v6("#portfolioChartCenter").innerHTML = `<b>${money(computed.allocationTotal)}</b><span>${holdings.length} 檔持股${allocationEstimated ? "｜成本暫估" : ""}</span>`;
+    $v6("#portfolioChartCenter").innerHTML = `<b>${money(marketTotal)}</b><span>${marketRows.length} 檔持股｜目前市值</span>`;
+    renderAllocationLegend();
+  }
+
+  function renderAllocationLegend() {
+    const detail = $v6("#portfolioChartDetail");
+    detail.innerHTML = chartSegments.map((item, index) => {
+      const pnl = Number.isFinite(item.pnl)
+        ? `<span>累積損益 <b class="${valueClass(item.pnl)}">${money(item.pnl)}</b></span>`
+        : "";
+      const members = item.code === "其他" ? `<small>包含 ${escapeHtml(item.members.join("、"))}</small>` : "";
+      return `<button class="allocationLegendItem${index === chartSelection ? " selected" : ""}" type="button" data-allocation-index="${index}" aria-pressed="${index === chartSelection}"><i style="--allocation-color:${item.color}"></i><span class="allocationLegendIdentity"><b>${escapeHtml(item.code)}・${escapeHtml(item.name)}</b><small>占比 ${number(item.weight, 2)}%</small></span><span class="allocationLegendValues"><b>${money(item.value)}</b>${pnl}</span>${members}</button>`;
+    }).join("");
+    detail.querySelectorAll("[data-allocation-index]").forEach(button => button.addEventListener("click", () => showChartDetail(Number(button.dataset.allocationIndex))));
   }
 
   function showChartDetail(index) {
     if (!chartSegments.length) return;
     chartSelection = (index + chartSegments.length) % chartSegments.length;
-    const item = chartSegments[chartSelection];
-    $v6("#portfolioChartDetail").innerHTML = `<b><i style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${item.color};margin-right:6px"></i>${escapeHtml(item.code)} · ${escapeHtml(item.name)}</b>${item.estimated ? "成本暫估" : "市值"} ${money(item.value)}｜占比 ${percent(item.weight)}<br>${item.estimated ? "累積損益待行情" : `累積損益 <span class="${valueClass(item.pnl)}">${money(item.pnl)}</span>`}${item.code === "其他" ? `<br><small>包含 ${escapeHtml(item.members.join("、"))}</small>` : ""}`;
     drawAllocation();
   }
 
