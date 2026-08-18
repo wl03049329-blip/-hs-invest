@@ -1,74 +1,74 @@
 {
-  "data_date": "2026-08-17",
-  "updated_at": "2026-08-18T18:32:53+08:00",
+  "data_date": "2026-08-18",
+  "updated_at": "2026-08-18T21:48:55+08:00",
   "data_mode": "after_hours",
   "model": {
     "name": "rolling_estimated_margin_cost",
     "financing_ratio": 0.6,
     "initial_maintenance_ratio": 166.6667,
-    "warmup_trading_days": 127,
+    "warmup_trading_days": 128,
     "is_estimated": true,
     "sample_state": "ready"
   },
   "margin_balance": {
-    "estimated_financing_principal": 827642024394,
-    "daily_change": 5498610137,
-    "daily_change_pct": 0.67,
-    "change_20d": -117563725474,
-    "percentile_60d": 23.3,
-    "balance_shares": 11086220000
+    "estimated_financing_principal": 825305644487,
+    "daily_change": -2336379907,
+    "daily_change_pct": -0.28,
+    "change_20d": -135564390752,
+    "percentile_60d": 21.7,
+    "balance_shares": 11034347000
   },
   "maintenance_ratio": {
-    "value": 170.8,
-    "daily_change": 0.6,
-    "average_20d": 152.52,
-    "percentile_60d": 68.3,
-    "collateral_market_value": 1413636723520,
-    "estimated_financing_principal": 827642024394,
+    "value": 166.54,
+    "daily_change": -4.26,
+    "average_20d": 152.89,
+    "percentile_60d": 53.3,
+    "collateral_market_value": 1374442765320,
+    "estimated_financing_principal": 825305644487,
     "method": "rolling_estimated_margin_cost",
     "is_estimated": true
   },
   "short_balance": {
-    "shares": 255582000,
-    "daily_change": -3346000
+    "shares": 238771000,
+    "daily_change": -16811000
   },
   "markets": {
     "twse": {
-      "collateral_market_value": 1072422667400.0,
-      "estimated_remaining_cost": 1028752296255.0,
-      "estimated_financing_principal": 617251377753.0,
-      "margin_balance_shares": 8866970000.0,
-      "matched_count": 1226,
+      "collateral_market_value": 1041747734940.0,
+      "estimated_remaining_cost": 1025410880137.0,
+      "estimated_financing_principal": 615246528082.0,
+      "margin_balance_shares": 8814689000.0,
+      "matched_count": 1225,
       "missing_count": 1,
-      "stale_price_count": 2,
-      "maintenance_ratio": 173.74
+      "stale_price_count": 5,
+      "maintenance_ratio": 169.32
     },
     "tpex": {
-      "collateral_market_value": 341214056120.0,
-      "estimated_remaining_cost": 350651077734.0,
-      "estimated_financing_principal": 210390646641.0,
-      "margin_balance_shares": 2219250000.0,
+      "collateral_market_value": 332695030380.0,
+      "estimated_remaining_cost": 350098527341.0,
+      "estimated_financing_principal": 210059116404.0,
+      "margin_balance_shares": 2219658000.0,
       "matched_count": 822,
       "missing_count": 0,
-      "stale_price_count": 7,
-      "maintenance_ratio": 162.18
+      "stale_price_count": 9,
+      "maintenance_ratio": 158.38
     },
     "combined": {
-      "collateral_market_value": 1413636723520.0,
-      "estimated_remaining_cost": 1379403373989.0,
-      "estimated_financing_principal": 827642024394.0,
-      "margin_balance_shares": 11086220000.0,
-      "matched_count": 2048,
+      "collateral_market_value": 1374442765320.0,
+      "estimated_remaining_cost": 1375509407478.0,
+      "estimated_financing_principal": 825305644487.0,
+      "margin_balance_shares": 11034347000.0,
+      "matched_count": 2047,
       "missing_count": 1,
-      "stale_price_count": 9,
-      "maintenance_ratio": 170.8
+      "stale_price_count": 14,
+      "maintenance_ratio": 166.54
     }
   },
   "coverage": {
-    "matched_count": 2048,
+    "matched_count": 2047,
     "missing_count": 1,
     "coverage_ratio": 99.99,
-    "stale_price_count": 9
+    "stale_price_count": 14
   },
   "risk_state": "依推估維持率判讀",
   "summary": "融資本金採逐檔滾動成本推估；融資增減與維持率需交叉觀察，單日變動不代表後續方向。",
@@ -847,6 +847,12 @@
       "estimated_financing_principal": 827642024394.0,
       "collateral_market_value": 1413636723520.0,
       "maintenance_ratio": 170.8
+    },
+    {
+      "date": "2026-08-18",
+      "estimated_financing_principal": 825305644487.0,
+      "collateral_market_value": 1374442765320.0,
+      "maintenance_ratio": 166.54
     }
   ],
   "missing_securities": [
