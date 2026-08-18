@@ -49,6 +49,17 @@ assert refresh0930["verified"] is True
 assert refresh0930["codes"] == list(quotes.RADAR_CODES)
 assert refresh0930["slot"] == "09:30"
 
+old_fetch_json, old_tracked_channels = quotes.fetch_json, quotes.tracked_channels
+mis_rows = [{
+    "c": row["code"], "n": row["name"], "z": str(row["price"]), "y": str(row["previous_close"]),
+    "d": row["date"].replace("-", ""), "t": row["quote_time"], "h": str(row["high"]),
+    "l": str(row["low"]), "o": str(row["open"]), "v": "100", "ex": "otc" if row["code"] == "009815" else "tse",
+} for row in radar_rows("09:30")]
+quotes.tracked_channels = lambda: [f"tse_{code}.tw" for code in quotes.RADAR_CODES]
+quotes.fetch_json = lambda *_args, **_kwargs: {"msgArray": mis_rows}
+assert {row["code"] for row in quotes.fetch_mis_snapshot()} == set(quotes.RADAR_CODES)
+quotes.fetch_json, quotes.tracked_channels = old_fetch_json, old_tracked_channels
+
 bad = radar_rows("09:30")[:-1]
 try:
     quotes.validate_radar_refresh(bad, "2026-08-13", "09:30", at0930)
@@ -71,12 +82,18 @@ with tempfile.TemporaryDirectory() as temp:
     statuses = {"TWSE": "official_closing_data", "TPEx": "official_closing_data", "TWSE_MIS": "ok"}
     quotes.write_market_cache(items, statuses, at0930, {}, refresh0930, {**refresh0930, "status": "success"})
     first = json.loads(quotes.OUTPUT.read_text(encoding="utf-8"))
+    assert list(first["intraday_quote_snapshots"]) == ["2026-08-13_0930"]
+    assert first["intraday_snapshot_meta"]["current_slot"] == "09:30"
+    assert first["intraday_snapshot_meta"]["previous_successful_slot"] is None
     at1030 = datetime.fromisoformat("2026-08-13T10:32:00+08:00")
     refresh1030 = quotes.validate_radar_refresh(radar_rows("10:30"), "2026-08-13", "10:30", at1030)
     quotes.write_market_cache(items, statuses, at1030, first, refresh1030, {**refresh1030, "status": "success"})
     second = json.loads(quotes.OUTPUT.read_text(encoding="utf-8"))
     assert second["updated_at"] != first["updated_at"], "same prices must still produce a new successful cache version"
     assert second["radar_refresh"]["slot"] == "10:30"
+    assert list(second["intraday_quote_snapshots"]) == ["2026-08-13_0930", "2026-08-13_1030"]
+    assert second["intraday_snapshot_meta"]["previous_successful_slot"] == "09:30"
+    assert second["intraday_snapshot_meta"]["last_successful_snapshot"] == "2026-08-13_1030"
     failed = {"verified": False, "status": "failed", "trading_date": "2026-08-13", "slot": "11:30", "error": "fixture"}
     quotes.write_market_cache(items, statuses, datetime.fromisoformat("2026-08-13T11:32:00+08:00"), second, None, failed)
     third = json.loads(quotes.OUTPUT.read_text(encoding="utf-8"))
@@ -84,6 +101,8 @@ with tempfile.TemporaryDirectory() as temp:
     assert third["radar_refresh"]["slot"] == "10:30"
     assert third["radar_refresh_attempt"]["slot"] == "11:30"
     assert third["radar_refresh_attempt"]["status"] == "failed"
+    assert list(third["intraday_quote_snapshots"]) == ["2026-08-13_0930", "2026-08-13_1030"]
+    assert third["intraday_snapshot_meta"]["last_successful_snapshot"] == "2026-08-13_1030"
     quotes.ROOT, quotes.OUTPUT, quotes.META_OUTPUT = old_root, old_output, old_meta
 
 assert session.TARGET_SLOTS == ("09:30", "10:30", "11:30", "12:30", "13:30")

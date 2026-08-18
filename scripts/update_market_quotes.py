@@ -210,8 +210,6 @@ def fetch_mis_snapshot() -> list[dict[str, Any]]:
                 "source": TWSE_MIS_URL,
             }
         )
-    if not all(any(row["code"] == code for row in valid) for code in OVERVIEW_CODES):
-        raise ValueError("TWSE MIS snapshot is missing a required market instrument")
     return valid
 
 
@@ -507,10 +505,50 @@ def write_market_cache(
         }
         if isinstance(existing.get("intraday_completeness"), dict):
             payload["intraday_completeness"] = existing["intraday_completeness"]
+        if isinstance(existing.get("intraday_quote_snapshots"), dict):
+            payload["intraday_quote_snapshots"] = existing["intraday_quote_snapshots"]
         if radar_refresh:
             payload["radar_refresh"] = radar_refresh
         elif isinstance(existing.get("radar_refresh"), dict):
             payload["radar_refresh"] = existing["radar_refresh"]
+    if radar_refresh:
+        snapshots = dict(payload.get("intraday_quote_snapshots") or {})
+        key = f'{radar_refresh["trading_date"]}_{radar_refresh["slot"].replace(":", "")}'
+        if key not in snapshots:
+            by_code = {item["code"]: item for item in payload["items"]}
+            snapshot_items = {
+                code: {
+                    field: by_code[code].get(field)
+                    for field in ("price", "open", "high", "low", "volume", "date", "quote_time")
+                }
+                for code in RADAR_CODES
+                if code in by_code
+            }
+            if len(snapshot_items) != len(RADAR_CODES):
+                raise ValueError("validated radar snapshot is missing a required ETF")
+            snapshots[key] = {
+                "market_date": radar_refresh["trading_date"],
+                "slot": radar_refresh["slot"],
+                "status": "SUCCESS",
+                "calculated_at": radar_refresh["verified_at"],
+                "market_as_of": radar_refresh["market_as_of"],
+                "items": snapshot_items,
+            }
+        successful = sorted(
+            (row for row in snapshots.values() if row.get("status") == "SUCCESS"),
+            key=lambda row: (str(row.get("market_date", "")), str(row.get("slot", ""))),
+        )
+        previous = successful[-2] if len(successful) > 1 else None
+        payload["intraday_quote_snapshots"] = snapshots
+        payload["intraday_snapshot_meta"] = {
+            "current_market_date": radar_refresh["trading_date"],
+            "current_slot": radar_refresh["slot"],
+            "previous_successful_slot": previous.get("slot") if previous else None,
+            "last_successful_snapshot": key,
+            "snapshot_calculated_at": radar_refresh["verified_at"],
+        }
+    elif isinstance(existing.get("intraday_snapshot_meta"), dict):
+        payload["intraday_snapshot_meta"] = existing["intraday_snapshot_meta"]
     if refresh_attempt:
         payload["radar_refresh_attempt"] = refresh_attempt
     elif isinstance(existing.get("radar_refresh_attempt"), dict):
@@ -525,6 +563,8 @@ def write_market_cache(
         "radar_refresh": payload.get("radar_refresh"),
         "radar_refresh_attempt": payload.get("radar_refresh_attempt"),
         "intraday_completeness": payload.get("intraday_completeness"),
+        "intraday_snapshot_meta": payload.get("intraday_snapshot_meta"),
+        "intraday_quote_snapshots": payload.get("intraday_quote_snapshots"),
     }
     write_atomic(META_OUTPUT, meta)
 

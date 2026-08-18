@@ -2490,15 +2490,23 @@ function snapshotTradingDate(marketAsOf){
   const parts=Object.fromEntries(new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Taipei",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(date).map(part=>[part.type,part.value]));
   return`${parts.year}-${parts.month}-${parts.day}`;
 }
-function comparisonLongRanks(saved,currentSnapshot){
-  if(!saved||!currentSnapshot)return{};
+function finalizedCloseComparison(currentSnapshot,history=null){
+  let source=history;
+  if(!source)try{source=loadDailyLongRankHistory()}catch{source={snapshots:[]}}
+  const previous=(source?.snapshots||[]).filter(snapshot=>snapshot?.snapshot_type==="FINALIZED_CLOSE"&&snapshot.tradingDate<currentSnapshot.tradingDate).sort((a,b)=>b.tradingDate.localeCompare(a.tradingDate))[0];
+  return previous?{items:previous.items||{},ranks:Object.fromEntries(Object.entries(previous.items||{}).map(([ticker,item])=>[ticker,item.rank])),slot_time:`${previous.tradingDate} 13:30`,marketAsOf:previous.finalizedAt||"",baseline_type:"FINALIZED_CLOSE"}:{};
+}
+function comparisonLongRanks(saved,currentSnapshot,dailyHistory=null){
+  if(!currentSnapshot)return{};
+  saved=saved||{};
   if(saved.schema_version===3){
     const previous=(saved.snapshots||[]).filter(snapshot=>snapshot.tradingDate===currentSnapshot.tradingDate&&snapshot.snapshotTime<currentSnapshot.snapshotTime).sort((a,b)=>b.snapshotTime.localeCompare(a.snapshotTime))[0];
-    return previous?{items:previous.items||{},ranks:Object.fromEntries(Object.entries(previous.items||{}).map(([ticker,item])=>[ticker,item.rank])),slot_time:previous.snapshotTime,marketAsOf:previous.marketAsOf}:{};
+    if(previous)return{items:previous.items||{},ranks:Object.fromEntries(Object.entries(previous.items||{}).map(([ticker,item])=>[ticker,item.rank])),slot_time:previous.snapshotTime,marketAsOf:previous.marketAsOf,baseline_type:"INTRADAY_SUCCESS"};
+    return currentSnapshot.snapshotTime.endsWith("09:30")?finalizedCloseComparison(currentSnapshot,dailyHistory):{};
   }
-  if(saved.schema_version!==2)return{};
+  if(saved.schema_version!==2)return currentSnapshot.snapshotTime.endsWith("09:30")?finalizedCloseComparison(currentSnapshot,dailyHistory):{};
   const slot=currentSnapshot.snapshotTime;
-  if(String(saved.slot_time||"").slice(0,10)!==currentSnapshot.tradingDate)return{};
+  if(String(saved.slot_time||"").slice(0,10)!==currentSnapshot.tradingDate)return currentSnapshot.snapshotTime.endsWith("09:30")?finalizedCloseComparison(currentSnapshot,dailyHistory):{};
   if(saved.slot_time===slot)return{items:saved.previous_items||{},ranks:saved.previous_ranks||{},slot_time:saved.previous_slot_time||""};
   return{items:saved.items||{},ranks:saved.ranks||{},slot_time:saved.slot_time||""};
 }
@@ -2571,26 +2579,33 @@ function longRankSnapshot(longs,saved,version,snapshotAsOf,snapshotSlot=""){
   }
   const snapshots=(saved?.schema_version===3?Array.isArray(saved.snapshots)?saved.snapshots:[]:legacySnapshots).filter(snapshot=>snapshot&&snapshot.tradingDate===current.tradingDate);
   const existing=snapshots.find(snapshot=>snapshot.snapshotTime===current.snapshotTime);
-  if(existing&&existing.marketAsOf&&new Date(existing.marketAsOf)>new Date(current.marketAsOf))return saved;
+  if(existing)return saved;
   const next=snapshots.filter(snapshot=>snapshot.snapshotTime!==current.snapshotTime);
   next.push(current);
   next.sort((a,b)=>a.snapshotTime.localeCompare(b.snapshotTime));
+  const previous=[...next].filter(snapshot=>snapshot.snapshotTime<current.snapshotTime).sort((a,b)=>b.snapshotTime.localeCompare(a.snapshotTime))[0];
   return{
     schema_version:3,
     version,
     tradingDate:current.tradingDate,
+    currentMarketDate:current.tradingDate,
+    currentSlot:current.snapshotTime.slice(-5),
+    previousSuccessfulSlot:previous?.snapshotTime?.slice(-5)||null,
+    lastSuccessfulSnapshot:current.snapshotTime,
+    snapshotCalculatedAt:current.calculatedAt||current.marketAsOf,
     snapshots:next.slice(-5)
   };
 }
 function longRankChange(previousItem,currentRank,currentScore){
-  const previousRank=previousItem?.rank??previousItem?.current_rank,previousScore=previousItem?.longTermScore??previousItem?.current_score,hasPrevious=Number.isFinite(previousRank)&&Number.isFinite(previousScore);
+  const previousRank=previousItem?.rank??previousItem?.current_rank,previousScore=previousItem?.coreScore??previousItem?.final_core_score??previousItem?.longTermScore??previousItem?.current_score,hasPrevious=Number.isFinite(previousRank)&&Number.isFinite(previousScore);
   if(!hasPrevious)return{rankDelta:null,scoreDelta:null,displayRankChange:"本日首次",displayScoreChange:"—"};
   const rankDelta=previousRank-currentRank,scoreDelta=Number.isFinite(currentScore)?currentScore-previousScore:null;
+  const displayDelta=Number.isFinite(scoreDelta)?Math.round(scoreDelta*10)/10:null;
   return{
     rankDelta,
     scoreDelta,
     displayRankChange:rankDelta>0?`↑${rankDelta}`:rankDelta<0?`↓${Math.abs(rankDelta)}`:"排名不變",
-    displayScoreChange:Number.isFinite(scoreDelta)?scoreDelta===0?"分數 ±0":`分數 ${scoreDelta>0?"+":""}${scoreDelta}`:"—"
+    displayScoreChange:Number.isFinite(displayDelta)?Object.is(displayDelta,-0)||displayDelta===0?"分數 ±0":`分數 ${displayDelta>0?"+":""}${displayDelta.toFixed(1)}`:"—"
   };
 }
 function coreStatusTier(score,label=""){
@@ -2600,7 +2615,7 @@ function coreStatusTier(score,label=""){
 }
 function longRankRow(x,index,previous){
   const decision=strategyDecisionFor(x,"long_term_core"),score=decision?.score,stage=decision?.stage;
-  const previousItem=previous?.items?.[x.id],changeState=longRankChange(previousItem,index+1,score),change=changeState.rankDelta,scoreDelta=changeState.scoreDelta,movement=changeState.displayRankChange,moveClass=change>0?"rank-up":change<0?"rank-down":"";
+  const previousItem=previous?.items?.[x.id],changeState=longRankChange(previousItem,index+1,decision?.coreScore),change=changeState.rankDelta,scoreDelta=changeState.scoreDelta,movement=changeState.displayRankChange,moveClass=change>0?"rank-up":change<0?"rank-down":"";
   const scoreState=decision?.scoreStatus==="complete"?"完整分數":decision?.scoreStatus==="provisional"?"暫定分數｜部分資料未納入":"資料不足";
   const rankTone=change>0?"is-up":change<0?"is-down":"is-flat",scoreTone=scoreDelta>0?"is-up":scoreDelta<0?"is-down":"is-flat";
   const stageLabel=stage?.label||"資料不足",statusTier=coreStatusTier(Number.isFinite(decision?.coreScore)?decision.coreScore:score,stageLabel);
