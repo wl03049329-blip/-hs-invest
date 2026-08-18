@@ -312,22 +312,36 @@
     $v6("#rebalanceEstimateNote").hidden = !estimated || !holdings.length;
     $v6("#rebalanceTargetTotal").textContent = totalMessage.text;
     $v6("#rebalanceTargetTotal").className = `rebalanceTargetTotal ${totalMessage.className}`.trim();
-    targetRows.innerHTML = computed.rows.length ? computed.rows.map(row => `<label class="rebalanceTargetRow"><span class="rebalanceTargetIdentity"><b>${escapeHtml(row.code)}</b><span>${escapeHtml(holdingName(row))}</span></span><span class="rebalanceTargetInput"><input type="number" min="0" max="100" step="0.1" inputmode="decimal" value="${Number.isFinite(row.targetAllocation) ? row.targetAllocation : ""}" data-rebalance-target="${escapeHtml(row.code)}" aria-label="${escapeHtml(row.code)} 目標配置">%</span></label>`).join("") : '<p class="rebalancePending">新增持股後即可設定目標配置。</p>';
-
     const currentDeviations = computed.rows.map(row => Number.isFinite(row.targetAllocation) && Number.isFinite(row.weight) ? Math.abs(row.weight - row.targetAllocation) : null).filter(Number.isFinite);
     const meanDeviation = currentDeviations.length ? currentDeviations.reduce((sum, value) => sum + value, 0) / currentDeviations.length : null;
     if (advice.formal) {
       const healthLabel = advice.health >= 80 ? "良好" : advice.health >= 60 ? "普通" : "偏離較大";
-      $v6("#rebalanceHealth").textContent = `${healthLabel} ${advice.health}`;
-      $v6("#rebalanceDeviation").textContent = `偏離度 ${number(meanDeviation, 1)}%`;
+      $v6("#rebalanceHealth").textContent = advice.health;
+      $v6("#rebalanceHealthLabel").textContent = healthLabel;
+      $v6("#rebalanceDeviationValue").textContent = Number.isFinite(meanDeviation) ? `${number(meanDeviation, 1)}%` : "—";
+      $v6("#rebalanceDeviation").textContent = "目前配置與目標配置平均偏離";
       status.innerHTML = `<b>${escapeHtml(advice.level)}</b><span>${escapeHtml(advice.profileLabel)}容忍區間｜目標合計 100%${estimated ? "｜暫估" : ""}</span>`;
     } else {
       $v6("#rebalanceHealth").textContent = "待完成";
-      $v6("#rebalanceDeviation").textContent = Number.isFinite(meanDeviation) ? `偏離度 ${number(meanDeviation, 1)}%` : "偏離度 —";
+      $v6("#rebalanceHealthLabel").textContent = "等待完整目標配置";
+      $v6("#rebalanceDeviationValue").textContent = Number.isFinite(meanDeviation) ? `${number(meanDeviation, 1)}%` : "—";
+      $v6("#rebalanceDeviation").textContent = "目前配置與目標配置平均偏離";
       if (advice.status === "target_over") status.textContent = `超額配置 ${number(Math.abs(advice.gap), 1)}%；表格保留，但暫不產生正式建議。`;
       else if (advice.status === "target_incomplete") status.textContent = Math.abs(advice.gap) <= .01 ? "尚有持股未設定目標；表格保留，但暫不產生正式建議。" : `尚有 ${number(Math.max(0, advice.gap), 1)}% 未配置；表格保留，但暫不產生正式建議。`;
       else status.textContent = holdings.length ? "目前依可用持股價值暫估配置。" : "新增持股並設定每檔目標配置後，即可產生建議。";
     }
+
+    const readout = core.buildRebalanceReadout({rows: computed.rows, advice});
+    const readoutByCode = new Map(readout.items.map(item => [item.code, item]));
+    $v6("#rebalanceRecommendation").textContent = readout.recommendation;
+    $v6("#rebalanceFundingMode").textContent = readout.fundingMode;
+    $v6("#rebalanceFundingPriority").textContent = readout.fundingPriority.length ? readout.fundingPriority.slice(0, 5).map(item => item.code).join(" → ") : advice.formal ? "目前無明顯低配部位" : "完成目標配置後顯示";
+    targetRows.innerHTML = computed.rows.length ? computed.rows.map(row => {
+      const item = readoutByCode.get(row.code);
+      const stateClass = item ? `is-${item.state}` : "is-pending";
+      const gapText = item ? `${item.allocationGap > 0 ? "+" : ""}${number(item.allocationGap, 1)}%` : "—";
+      return `<label class="rebalanceTargetRow ${stateClass}"><span class="rebalanceTargetIdentity"><b>${escapeHtml(row.code)}</b><span>${escapeHtml(holdingName(row))}</span></span><span class="rebalanceTargetCompare"><small>目前 ${item ? `${number(item.currentWeight, 1)}%` : "—"}</small><span>→</span><span class="rebalanceTargetInput"><small>目標</small><input type="number" min="0" max="100" step="0.1" inputmode="decimal" value="${Number.isFinite(row.targetAllocation) ? row.targetAllocation : ""}" data-rebalance-target="${escapeHtml(row.code)}" aria-label="${escapeHtml(row.code)} 目標配置">%</span></span><span class="rebalanceGapBadge ${stateClass}">${item ? `${item.stateLabel} ${gapText}` : "尚未設定"}</span></label>`;
+    }).join("") : '<p class="rebalancePending">新增持股後即可設定目標配置。</p>';
 
     output.innerHTML = computed.rows.length ? computed.rows.map(row => {
       const adviceRow = advice.formal ? advice.rows.find(item => item.code === row.code) : null;

@@ -265,6 +265,53 @@
     return {state: "balanced", difference, label: "配置接近目標"};
   }
 
+  function buildRebalanceReadout({rows = [], advice = null} = {}) {
+    const adviceRows = new Map((advice?.formal && Array.isArray(advice.rows) ? advice.rows : []).map(row => [normalizeCode(row.code), row]));
+    const items = (Array.isArray(rows) ? rows : []).map(raw => {
+      const code = normalizeCode(raw?.code);
+      const currentWeight = Number(raw?.weight);
+      const targetWeight = raw?.targetAllocation === null || raw?.targetAllocation === undefined || raw?.targetAllocation === "" ? null : Number(raw.targetAllocation);
+      if (!CODE_PATTERN.test(code) || !Number.isFinite(currentWeight) || !Number.isFinite(targetWeight)) return null;
+      const allocationGap = Number((currentWeight - targetWeight).toFixed(2));
+      const adviceRow = adviceRows.get(code);
+      const hasBand = Number.isFinite(adviceRow?.lower) && Number.isFinite(adviceRow?.upper);
+      const state = hasBand
+        ? currentWeight > adviceRow.upper + 1e-9 ? "over" : currentWeight < adviceRow.lower - 1e-9 ? "under" : "near"
+        : Math.abs(allocationGap) <= .1 ? "near" : allocationGap > 0 ? "over" : "under";
+      return {
+        code,
+        currentWeight: Number(currentWeight.toFixed(2)),
+        targetWeight: Number(targetWeight.toFixed(2)),
+        allocationGap,
+        fundingNeed: Number(Math.max(0, targetWeight - currentWeight).toFixed(2)),
+        state,
+        stateLabel: state === "over" ? "超配" : state === "under" ? "低配" : "接近目標"
+      };
+    }).filter(Boolean);
+    const fundingPriority = items.filter(item => item.fundingNeed > 0).sort((a, b) => b.fundingNeed - a.fundingNeed || a.code.localeCompare(b.code));
+    const overCount = items.filter(item => item.state === "over").length;
+    const outOfBandCount = items.filter(item => item.state !== "near").length;
+    const priorityCodes = fundingPriority.slice(0, 3).map(item => item.code);
+    const health = Number(advice?.health);
+    let recommendation = "完成目標配置後，系統會整理配置差異與下一筆資金方向。";
+    if (advice?.formal && items.length) {
+      if (priorityCodes.length) {
+        const condition = Number.isFinite(health) && health < 60 ? "目前配置偏離較大" : outOfBandCount ? "目前配置仍有偏離" : "目前配置大致接近目標";
+        recommendation = `${condition}，下一筆新增資金優先補足 ${priorityCodes.join("、")}${overCount ? "，暫不需主動賣出超配部位" : ""}。`;
+      } else if (overCount) {
+        recommendation = "目前有超配部位，下一筆新增資金依目標比例投入，暫不需主動賣出。";
+      } else {
+        recommendation = "目前配置接近目標，維持即可，下一筆資金依目標比例投入。";
+      }
+    }
+    return {
+      items,
+      fundingPriority,
+      recommendation,
+      fundingMode: fundingPriority.length ? "以新增資金再平衡" : advice?.formal ? "接近目標" : "等待完整目標配置"
+    };
+  }
+
   function validQuote(quote) {
     const price = Number(quote?.price);
     const previousClose = Number(quote?.previousClose);
@@ -498,6 +545,7 @@
     allocationBand,
     calculateRebalanceAdvice,
     rebalanceDecision,
+    buildRebalanceReadout,
     calculatePortfolio,
     buildAllocation,
     targetsFromAllocation,
