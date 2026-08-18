@@ -297,9 +297,9 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 .homeOpportunityGroup{display:grid;gap:7px;background:#07130e;border:1px solid var(--line);border-radius:15px;padding:10px}.homeOpportunityGroup h3{font-size:13px;margin:0;color:#dffff0}.homeOpportunityRow{display:grid;grid-template-columns:1fr auto;gap:3px 8px;width:100%;text-align:left;color:inherit;background:#102219;border:1px solid #244332;border-radius:11px;padding:9px}.homeOpportunityRow span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.homeOpportunityRow strong{color:#dffff0}.homeOpportunityRow small{grid-column:1/-1;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.strategyBadge{font-size:11px;font-weight:900;color:#dffff0;background:#173126;border-radius:999px;padding:6px 9px}.watchStrategy label{display:grid;gap:3px;color:var(--muted);font-size:10px}.watchStrategy select,.drawdownReference select,.drawdownReference input{background:#07130e;border:1px solid var(--line);color:#fff;border-radius:9px;padding:7px;max-width:150px}.drawdownTool{margin:12px 0}.drawdownForm{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin:12px 0}.drawdownForm label{display:grid;gap:5px;color:var(--muted);font-size:12px}.drawdownForm input{width:100%;background:#07130e;border:1px solid var(--line);color:#fff;border-radius:12px;padding:11px}.drawdownSummary{margin-top:12px}.drawdownTitle,.drawdownReference,.drawdownHeadline{display:flex;gap:10px;align-items:center;justify-content:space-between}.drawdownTitle h3{margin:0}.drawdownTitle span{font-size:11px;color:#dffff0;background:#173126;border-radius:999px;padding:6px 9px}.drawdownReference{justify-content:flex-start;margin:12px 0;flex-wrap:wrap}.drawdownReference label{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:12px}.drawdownHeadline{display:grid;grid-template-columns:repeat(3,1fr)}.drawdownHeadline>div{background:#07130e;border:1px solid var(--line);border-radius:13px;padding:10px}.drawdownHeadline span,.drawdownHeadline small{display:block;color:var(--muted);font-size:10px}.drawdownHeadline b{display:block;font-size:20px;margin:4px 0}.drawdownTableWrap{overflow:auto;margin-top:12px;border:1px solid var(--line);border-radius:13px}.drawdownTable{min-width:0}.drawdownTable th,.drawdownTable td{padding:10px;text-align:left}.drawdownTable tr.current{background:#453c10;color:#ffe46f}.drawdownTable th:first-child,.drawdownTable td:first-child{position:static;background:transparent}.strategyBreakdown small{display:block;margin-top:8px;color:var(--muted)}
 @media(max-width:620px){.watchRow{grid-template-columns:minmax(0,1fr) auto}.watchStrategy{grid-column:1/-1}.watchStrategy select{max-width:none;width:100%}.homeOpportunityRow{font-size:12px}.drawdownHeadline{gap:6px}.drawdownHeadline>div{padding:8px}.drawdownHeadline b{font-size:16px}.drawdownForm{grid-template-columns:1fr}.drawdownForm .btn{width:100%}}
 </style>
-<link rel="stylesheet" href="portfolio-v6.css?v=20260810-finalux" />
+<link rel="stylesheet" href="portfolio-v6.css?v=20260818-portfolio-ui" />
 <link rel="stylesheet" href="v62-tech.css?v=20260809b" />
-<link rel="stylesheet" href="formal-black-gold.css?v=20260810-storyflow5" />
+<link rel="stylesheet" href="formal-black-gold.css?v=20260818-portfolio-ui" />
 <style>
 /* HS story: final no-arrow layout */
 .hsStorySteps li::before,
@@ -447,10 +447,6 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       <div><p class="eyebrow">MY PORTFOLIO</p><h2 id="portfolioTitle"><span class="headingEmoji" aria-hidden="true">💼</span>我的持股</h2></div>
       <button id="portfolioAddBtn" class="btn" type="button" aria-label="新增持股">＋ 新增持股</button>
     </div>
-    <div class="portfolioPrivacy" role="note">
-      <b>持股資料只儲存在此裝置，不會上傳或公開。</b>
-      <span>換手機、清除瀏覽器資料或使用無痕模式時，持股資料可能消失，請定期匯出備份。</span>
-    </div>
     <article class="panel quoteStatusPanel">
       <div class="quoteStatusMain">
         <div><b>盤中延遲行情</b><span>約每 5 分鐘更新｜僅供參考</span></div>
@@ -462,6 +458,21 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
         <button id="portfolioRefreshBtn" class="miniBtn" type="button" aria-label="手動重新整理持股行情">重新整理</button>
       </div>
       <small id="portfolioQuoteNote">股價依同源快取中最新可取得的盤中延遲或收盤資料計算；個別代號若無盤中來源會清楚沿用最新收盤，實際成交價格與券商數字可能不同。</small>
+    </article>
+
+    <article class="panel allocationPanel portfolioPrimaryPanel">
+      <div class="panelTitle compactTitle">
+        <div><p class="eyebrow">ALLOCATION</p><h2><span class="headingEmoji" aria-hidden="true">🥧</span>資產配置</h2></div>
+        <small id="portfolioAllocationMode">依目前市值</small>
+      </div>
+      <div class="allocationLayout">
+        <div class="allocationCanvasWrap">
+          <canvas id="portfolioChart" width="560" height="560" tabindex="0" aria-label="持股資產配置圓餅圖，可用方向鍵選擇區塊"></canvas>
+          <div id="portfolioChartCenter" class="chartCenter" aria-hidden="true"><b>資料更新中</b><span>0 檔持股</span></div>
+        </div>
+        <div id="portfolioChartDetail" class="chartDetail" aria-live="polite">點擊或觸碰圖表區塊查看明細。</div>
+      </div>
+      <small class="allocationHelper">點擊色塊或持股查看明細</small>
     </article>
 
     <div id="portfolioSummary" class="portfolioSummary" aria-live="polite"></div>
@@ -512,21 +523,6 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       </div>
     </details>
 
-    <article class="panel allocationPanel">
-      <div class="panelTitle compactTitle">
-        <div><p class="eyebrow">ALLOCATION</p><h2><span class="headingEmoji" aria-hidden="true">🥧</span>資產配置</h2></div>
-        <small id="portfolioAllocationMode">依目前市值</small>
-      </div>
-      <div class="allocationLayout">
-        <div class="allocationCanvasWrap">
-          <canvas id="portfolioChart" width="560" height="560" tabindex="0" aria-label="持股資產配置圓餅圖，可用方向鍵選擇區塊"></canvas>
-          <div id="portfolioChartCenter" class="chartCenter" aria-hidden="true"><b>資料更新中</b><span>0 檔持股</span></div>
-        </div>
-        <div id="portfolioChartDetail" class="chartDetail" aria-live="polite">點擊或觸碰圖表區塊查看明細。</div>
-      </div>
-      <small class="allocationHelper">點擊色塊或持股查看明細</small>
-    </article>
-
     <div class="portfolioToolbar">
       <label>排序
         <select id="portfolioSort" aria-label="持股排序方式">
@@ -545,6 +541,10 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       </div>
     </div>
     <div id="portfolioList" class="portfolioList"></div>
+    <div class="portfolioPrivacy" role="note">
+      <b>持股資料只儲存在此裝置，不會上傳或公開。</b>
+      <span>換手機、清除瀏覽器資料或使用無痕模式時，持股資料可能消失，請定期匯出備份。</span>
+    </div>
   </section>
 
 
@@ -3457,6 +3457,6 @@ loadAlerts();renderWatchlist();renderEvents();renderTrump();switchChipTab(localS
 
 </script>
 <script src="portfolio-core.js?v=20260810-rebalance1"></script>
-<script src="portfolio-v6.js?v=20260810-finalux"></script>
+<script src="portfolio-v6.js?v=20260818-portfolio-ui"></script>
 </body>
 </html>

@@ -395,8 +395,8 @@ footer{color:#746f67}
 .strategy-leveraged .swingQuantDetail .signalDetailGrid>div:nth-child(-n+3){background:radial-gradient(circle at 50% 30%,#2b1e0b,#090807 68%);border:1px solid #574321;text-align:center}
 .strategy-leveraged .swingQuantDetail .signalDetailGrid>div:nth-child(-n+3) b{color:#e8ca7e;font-size:20px}
 
-/* Portfolio: assets first, rebalance as a focused entry */
-.portfolioTopline{order:1}.portfolioPrivacy{order:2}.quoteStatusPanel{order:3}.portfolioSummary{order:4}.allocationPanel{order:5}.portfolioToolbar{order:6}.portfolioList{order:7}.rebalancePanel{order:8}
+/* Portfolio: allocation and performance first, rebalance second, details last */
+.portfolioTopline{order:1}.quoteStatusPanel{order:2}.allocationPanel{order:3}.portfolioSummary{order:4}.rebalancePanel{order:5}.portfolioToolbar{order:6}.portfolioList{order:7}.portfolioPrivacy{order:8}
 .rebalancePanel{padding:0!important;overflow:hidden}
 .rebalancePanel>summary{list-style:none}.rebalancePanel>summary::-webkit-details-marker{display:none}
 .rebalanceEntry{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 16px;cursor:pointer;background:radial-gradient(circle at 12% 20%,#211707,#090807 60%)}
@@ -431,7 +431,7 @@ footer{color:#746f67}
   .radarOverviewHead small{display:block}.radarOverviewPanel{padding:10px}.radarOverviewRankRow{grid-template-columns:46px minmax(0,1fr) 42px 64px;padding:8px;gap:5px}.radarOverviewStage{grid-column:2/-1;justify-self:start}.radarOverviewRank{font-size:10px}.radarOverviewScore b{font-size:22px}.radarOverviewChange{font-size:7px}.radarOverviewSwing{grid-template-columns:1fr}.radarOverviewSwingCard{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center}.radarOverviewSwingCard strong{grid-column:2;grid-row:1;margin:0}.radarOverviewSwingCard em{grid-column:1/-1}
   .radarSentimentShortcut{align-items:flex-end}.radarSentimentShortcut span b{font-size:10px}.radarSentimentShortcut>strong{font-size:8px}
   .watchPanel{margin-top:8px!important}.radarDetailDeck.is-open .signalCardSummary{grid-template-columns:minmax(0,1fr) auto}.signalDetailHero>b{font-size:42px}
-  .portfolioSummary{order:4}.allocationPanel{order:5}.portfolioToolbar{order:6}.portfolioList{order:7}.rebalancePanel{order:8}
+  .allocationPanel{order:3}.portfolioSummary{order:4}.rebalancePanel{order:5}.portfolioToolbar{order:6}.portfolioList{order:7}.portfolioPrivacy{order:8}
   .rebalanceEntry{padding:13px}.rebalanceEntry span b{font-size:17px}.rebalanceEntry span em{font-size:9px}
   .hsStoryHeroLogo{width:94px;height:94px}.hsStoryHero h2{font-size:32px}.hsPrinciples{grid-template-columns:1fr}.hsEtfRoles{grid-template-columns:1fr}.hsEtfRoles>div:last-child{grid-column:auto}.hsStoryFinal{padding:30px 16px}.hsStoryFinal p{font-size:23px}
 }
@@ -668,7 +668,7 @@ footer{color:#746f67}
 .drawdownTool{border-color:#6a5229!important}
 
 @media(max-width:760px){
-  .portfolioPage:not(.tabHidden){display:flex!important;flex-direction:column!important}.portfolioPage.tabHidden{display:none!important}.portfolioTopline{order:1}.portfolioPrivacy{order:2}.quoteStatusPanel{order:3}.portfolioSummary{order:4}.rebalancePanel{order:5}.allocationPanel{order:6}.portfolioToolbar{order:7}.portfolioList{order:8}
+  .portfolioPage:not(.tabHidden){display:flex!important;flex-direction:column!important}.portfolioPage.tabHidden{display:none!important}.portfolioTopline{order:1}.quoteStatusPanel{order:2}.allocationPanel{order:3}.portfolioSummary{order:4}.rebalancePanel{order:5}.portfolioToolbar{order:6}.portfolioList{order:7}.portfolioPrivacy{order:8}
   .portfolioModal .portfolioSheet{max-height:calc(100dvh - 24px)!important;overflow-y:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior:contain!important;touch-action:pan-y!important;padding-bottom:calc(env(safe-area-inset-bottom) + 24px)!important}
 }
 

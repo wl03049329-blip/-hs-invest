@@ -237,9 +237,9 @@
           <div class="holdingMetric"><span>累積損益</span><b class="${valueClass(row.totalPnl)}">${quoteMissing ? "—" : money(row.totalPnl)}</b></div>
           <div class="holdingActions"><button type="button" data-edit-holding="${escapeHtml(row.code)}" aria-label="修改 ${escapeHtml(row.code)} 持股">修改</button><button type="button" data-delete-holding="${escapeHtml(row.code)}" aria-label="刪除 ${escapeHtml(row.code)} 持股">刪除</button></div>
         </div>
-        <div class="holdingRadar">${radarHtml}</div>
         <details class="holdingDetails">
           <summary>展開股數、成本、市值與占比</summary>
+          <div class="holdingRadar">${radarHtml}</div>
           <div class="holdingDetailsGrid">
             <div><span>股數</span><b>${number(row.shares, 4)}</b></div>
             <div><span>平均成本</span><b>${money(row.averageCost)}</b></div>
