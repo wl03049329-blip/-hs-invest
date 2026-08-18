@@ -2,9 +2,11 @@ name: Update futures positioning
 
 on:
   schedule:
-    # 台北平日 18:20、19:00（UTC 10:20、11:00）盤後抓取；第二次補抓可能延後公布的資料。
+    # 台北平日 18:20、19:00、21:00，加上次日 07:30 補抓延後公布資料。
     - cron: "20 10 * * 1-5"
     - cron: "0 11 * * 1-5"
+    - cron: "0 13 * * 1-5"
+    - cron: "30 23 * * 1-5"
   workflow_dispatch:
 
 permissions:

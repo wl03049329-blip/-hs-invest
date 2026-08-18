@@ -2,9 +2,11 @@ name: Update margin risk data
 
 on:
   schedule:
-    # UTC 10:00 / 11:00 = 台北時間平日 18:00 / 19:00。
+    # 台北平日 18:00 / 19:00 / 21:00，加上次日 07:30（涵蓋週六早上補抓週五資料）。
     - cron: "0 10 * * 1-5"
     - cron: "0 11 * * 1-5"
+    - cron: "0 13 * * 1-5"
+    - cron: "30 23 * * 1-5"
   workflow_dispatch:
 
 permissions:

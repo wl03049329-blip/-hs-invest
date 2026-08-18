@@ -8,7 +8,7 @@ import math
 import os
 import tempfile
 import urllib.request
-from datetime import datetime, timezone
+from datetime import datetime, time, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +25,35 @@ PRODUCTS = {
     "TMF": "微型臺指期貨",
 }
 INSTITUTION_TYPES = ("自營商", "投信", "外資及陸資")
+TAIPEI = timezone(timedelta(hours=8))
+
+
+def expected_trading_date(now: datetime) -> str:
+    local = now.astimezone(TAIPEI)
+    day = local.date()
+    if local.time() < time(15, 30):
+        day -= timedelta(days=1)
+    while day.weekday() >= 5:
+        day -= timedelta(days=1)
+    return day.isoformat()
+
+
+def freshness_status(expected: str, source: str, production: str) -> str:
+    if source < production:
+        return "STALE_DATA_DETECTED"
+    if source < expected:
+        return "SOURCE_NOT_READY"
+    if source > production:
+        return "UPDATED_SUCCESSFULLY"
+    return "UP_TO_DATE"
+
+
+def emit_freshness(status: str, *, expected: str, source: str, production: str) -> None:
+    prefix = "::warning::" if status in {"SOURCE_NOT_READY", "STALE_DATA_DETECTED"} else ""
+    print(
+        f"{prefix}{status} expected_date={expected} "
+        f"source_latest={source} production_date={production}"
+    )
 
 
 def fetch_json(url: str) -> list[dict[str, Any]]:
@@ -198,6 +227,9 @@ def comparable(payload: dict[str, Any]) -> dict[str, Any]:
 
 def main() -> None:
     existing = read_existing()
+    now = datetime.now(timezone.utc)
+    expected = expected_trading_date(now)
+    production_before = str(existing.get("data_date", ""))
     try:
         institutional = fetch_json(INSTITUTION_URL)
         daily = fetch_json(DAILY_URL)
@@ -207,6 +239,22 @@ def main() -> None:
         if not common_dates:
             raise ValueError("official sources do not contain an aligned trading date")
         current_date = common_dates[0]
+        if production_before and current_date < production_before:
+            emit_freshness(
+                "STALE_DATA_DETECTED",
+                expected=expected,
+                source=current_date,
+                production=production_before,
+            )
+            return
+        if production_before and current_date == production_before:
+            emit_freshness(
+                freshness_status(expected, current_date, production_before),
+                expected=expected,
+                source=current_date,
+                production=production_before,
+            )
+            return
         current_inst = institutional_dates[current_date]
         current_daily = daily_dates[current_date]
 
@@ -228,7 +276,7 @@ def main() -> None:
 
         payload = {
             "version": 1,
-            "updated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            "updated_at": now.isoformat().replace("+00:00", "Z"),
             "data_date": current_date,
             "foreign_tx": with_change(current_tx, previous_tx),
             "estimated_non_institutional_mtx": with_change(current_mtx, previous_mtx),
@@ -253,11 +301,18 @@ def main() -> None:
         if existing and comparable(existing) == comparable(payload):
             payload["updated_at"] = existing["updated_at"]
         write_atomic(payload)
-        print(f"Updated futures positions for {current_date}.")
+        status = freshness_status(expected, current_date, production_before or current_date)
+        emit_freshness(status, expected=expected, source=current_date, production=current_date)
     except Exception as exc:  # noqa: BLE001
         if existing:
             validate_output(existing)
-            print(f"Kept previous valid futures-position.json after failure: {exc}")
+            emit_freshness(
+                "STALE_DATA_DETECTED",
+                expected=expected,
+                source="UNKNOWN",
+                production=production_before,
+            )
+            print(f"kept_previous_valid_futures_cache=true reason={type(exc).__name__}: {exc}")
             return
         raise
 

@@ -61,6 +61,35 @@ class NetworkFetchError(RuntimeError):
     """A structured source remained unavailable after finite retries."""
 
 
+def expected_trading_date(now: dt.datetime) -> dt.date:
+    """Return the latest weekday whose after-hours data should be available."""
+    local = now.astimezone(TAIPEI)
+    day = local.date()
+    if local.time() < dt.time(15, 30):
+        day -= dt.timedelta(days=1)
+    while day.weekday() >= 5:
+        day -= dt.timedelta(days=1)
+    return day
+
+
+def freshness_status(expected: str, source: str, production: str) -> str:
+    if source < production:
+        return "STALE_DATA_DETECTED"
+    if source < expected:
+        return "SOURCE_NOT_READY"
+    if source > production:
+        return "UPDATED_SUCCESSFULLY"
+    return "UP_TO_DATE"
+
+
+def emit_freshness(status: str, *, expected: str, source: str, production: str) -> None:
+    prefix = "::warning::" if status in {"SOURCE_NOT_READY", "STALE_DATA_DETECTED"} else ""
+    print(
+        f"{prefix}{status} expected_date={expected} "
+        f"source_latest={source} production_date={production}"
+    )
+
+
 def number(value: object, *, positive: bool = False) -> float:
     if isinstance(value, bool):
         raise ValueError("boolean is not numeric")
@@ -527,8 +556,10 @@ def main() -> int:
     args = parser.parse_args()
     now = dt.datetime.now(dt.timezone.utc)
     today = now.astimezone(TAIPEI).date()
+    expected = expected_trading_date(now).isoformat()
     old_payload, state = load_json(OUT), load_json(STATE)
     has_valid_previous = valid_previous_cache(old_payload, state)
+    production_before = str((old_payload or {}).get("data_date", ""))
     try:
         if not state or state.get("model") != "rolling_estimated_margin_cost" or state.get("warmup_trading_days", 0) < MIN_WARMUP_DAYS:
             state = blank_state()
@@ -537,11 +568,34 @@ def main() -> int:
         else:
             latest = newest_day(today, state.get("data_date"))
             if latest:
+                candidate = latest[0].isoformat()
+                if production_before and candidate < production_before:
+                    emit_freshness(
+                        "STALE_DATA_DETECTED",
+                        expected=expected,
+                        source=candidate,
+                        production=production_before,
+                    )
+                    return 0
                 summarize(state, latest[1], latest[2], latest[0])
             elif has_valid_previous:
-                print(f"no newer official trading day; retained {OUT.name} data_date={old_payload['data_date']}")
+                emit_freshness(
+                    "SOURCE_NOT_READY",
+                    expected=expected,
+                    source=production_before,
+                    production=production_before,
+                )
                 return 0
         payload = build_payload(state, now)
+        production_after = str(payload["data_date"])
+        if production_before and production_after < production_before:
+            emit_freshness(
+                "STALE_DATA_DETECTED",
+                expected=expected,
+                source=production_after,
+                production=production_before,
+            )
+            return 0
         atomic_write(STATE, state)
         atomic_write(OUT, payload)
         report = reconciliation(payload)
@@ -549,12 +603,19 @@ def main() -> int:
             atomic_write(RECONCILIATION, report)
         elif RECONCILIATION.exists():
             RECONCILIATION.unlink()
-        print(f"updated {OUT.name}: {payload['data_date']} ratio={payload['maintenance_ratio']['value']} warmup={payload['model']['warmup_trading_days']}")
+        status = freshness_status(expected, production_after, production_before or production_after)
+        emit_freshness(status, expected=expected, source=production_after, production=production_after)
+        print(f"margin_ratio={payload['maintenance_ratio']['value']} warmup={payload['model']['warmup_trading_days']}")
         return 0
     except Exception as exc:
         if has_valid_previous:
-            print("MARGIN_UPDATE_DEGRADED")
-            print("retained previous valid cache")
+            emit_freshness(
+                "STALE_DATA_DETECTED",
+                expected=expected,
+                source="UNKNOWN",
+                production=production_before,
+            )
+            print("MARGIN_UPDATE_DEGRADED retained_previous_valid_cache=true")
             print(f"reason={type(exc).__name__}: {exc}")
             return 0
         raise
