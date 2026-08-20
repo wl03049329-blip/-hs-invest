@@ -626,6 +626,33 @@ def validate_quote_items(items: list[dict[str, Any]]) -> None:
         datetime.strptime(str(item.get("date", "")), "%Y-%m-%d")
 
 
+def merge_official_close_with_lkg(
+    items_by_market: dict[str, list[dict[str, Any]]], existing_items: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Keep a symbol's last known close only when its current official row is absent.
+
+    A missing individual row must not discard the other market's newly published
+    official close data.  Intraday MIS validation is deliberately not involved
+    in this merge: it has a separate snapshot-completeness responsibility.
+    """
+    current = {
+        item["code"]: item
+        for rows in items_by_market.values()
+        for item in rows
+    }
+    available_markets = set(items_by_market)
+    for item in existing_items:
+        code = item.get("code")
+        market = item.get("market")
+        if (
+            isinstance(code, str)
+            and market in available_markets
+            and code not in current
+        ):
+            current[code] = item
+    return list(current.values())
+
+
 def write_market_cache(
     items: list[dict[str, Any]],
     statuses: dict[str, str],
@@ -638,6 +665,9 @@ def write_market_cache(
     validate_quote_items(items)
     if existing.get("items") == items and not radar_refresh:
         payload = dict(existing)
+        # Freshness metadata may change even when every official quote remains
+        # identical.  Do not pretend an old MIS status is still current.
+        payload["source_status"] = statuses
     else:
         payload = {
             "version": 2,
@@ -749,6 +779,11 @@ def main() -> None:
             items_by_market[market] = previous
             statuses[market] = "cached_after_error"
 
+    # Official closing data owns the production quote cache.  Preserve a
+    # per-symbol last known close only for a source row that is individually
+    # absent; never let an intraday Radar validation failure roll back this set.
+    items = merge_official_close_with_lkg(items_by_market, existing_quotes.get("items", []))
+
     mis_rows: list[dict[str, Any]] = []
     mis_diagnostics: dict[str, Any] = {}
     radar_refresh: dict[str, Any] | None = None
@@ -763,11 +798,7 @@ def main() -> None:
             }
             refresh_attempt = dict(radar_refresh)
         statuses["TWSE_MIS"] = "ok"
-        item_map = {
-            item["code"]: item
-            for rows in items_by_market.values()
-            for item in rows
-        }
+        item_map = {item["code"]: item for item in items}
         for row in mis_rows:
             if not CODE_RE.fullmatch(row["code"]):
                 continue
@@ -791,9 +822,7 @@ def main() -> None:
     except Exception as exc:  # noqa: BLE001
         error_text = clean_text(exc, 100)
         statuses["TWSE_MIS"] = f"cached_after_error: {error_text}"
-        if requested_slot and existing_quotes.get("items"):
-            items = existing_quotes["items"]
-            statuses = dict(existing_quotes.get("source_status") or statuses)
+        if requested_slot:
             refresh_attempt = {
                 "verified": False,
                 "status": "failed",
