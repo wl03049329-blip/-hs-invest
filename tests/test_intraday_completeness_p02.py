@@ -1,5 +1,5 @@
 import importlib.util
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -92,8 +92,38 @@ duplicate = runner.record_slot_outcome(
 assert duplicate["slots"]["09:30"] == saved
 
 
+# TEST 6: all five slots retain their legal execution windows; the prewake
+# scheduler may enter from 09:27, but it never permits a +16-minute backfill.
+for slot in runner.TARGET_SLOTS:
+    target = runner.slot_datetime("2026-08-14", slot)
+    state = runner.new_completeness("2026-08-14")
+    assert runner.slot_action(target - timedelta(minutes=3), target) == "wait"
+    assert runner.upcoming_slot(state, target - timedelta(minutes=3), prewake_minutes=15) == slot
+    assert runner.slot_action(target + timedelta(minutes=2), target) == "run"
+    assert runner.slot_action(target + timedelta(minutes=14), target) == "run"
+    assert runner.slot_action(target + timedelta(minutes=16), target) == "skip"
+print("TEST 6 PASS: every slot has prewake and legal retry windows")
+
+
+# TEST 7: a failed slot remains FAILED with its original source error after
+# expiration, while completeness still records that the slot was missed.
+failed_expired = runner.new_completeness("2026-08-14")
+failed_expired = runner.record_slot_outcome(
+    failed_expired, "10:30", runner.SLOT_FAILED, {"error": "radar quote missing: 0050"}, at("2026-08-14T10:32:00")
+)
+failed_expired = runner.reconcile_expired_slots(failed_expired, at("2026-08-14T10:46:00"))
+row = failed_expired["slots"]["10:30"]
+assert row["status"] == runner.SLOT_FAILED
+assert row["error"] == "radar quote missing: 0050"
+assert row["expired"] is True and row["expiry_reason"] == "legal_asof_window_expired"
+assert "10:30" in failed_expired["failed_slots"] and "10:30" in failed_expired["missed_slots"]
+assert failed_expired["snapshot_status"] == runner.SNAPSHOT_FAILED
+print("TEST 7 PASS: failed reason survives expiration")
+
+
 workflow = (ROOT / ".github" / "workflows" / "update-market-quotes.yml").read_text(encoding="utf-8")
-assert 'cron: "27,32,37,42,47 1,2,3,4,5 * * 1-5"' in workflow
+assert 'cron: "27,30,35,40,45 1,2,3,4,5 * * 1-5"' in workflow
 assert "--scheduled-once" in workflow
 assert "cancel-in-progress: false" in workflow
-print("PASS P0.2 scheduler completeness tests 1-5")
+assert "queue: max" in workflow
+print("PASS P0.2 scheduler completeness tests 1-7")

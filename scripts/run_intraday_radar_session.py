@@ -27,7 +27,9 @@ SNAPSHOT_PARTIAL = "SNAPSHOT_PARTIAL"
 SNAPSHOT_MISSED = "SNAPSHOT_MISSED"
 SNAPSHOT_FAILED = "SNAPSHOT_FAILED"
 DEFAULT_GRACE_MINUTES = 15
-DEFAULT_PREWAKE_MINUTES = 5
+# GitHub scheduled runs can arrive early or late.  A 15-minute prewake still
+# reaches the target plus settle period within this workflow's 20-minute cap.
+DEFAULT_PREWAKE_MINUTES = 15
 CACHE_FILES = (
     "market-quotes.json",
     "market-quotes-meta.json",
@@ -108,7 +110,10 @@ def load_completeness(trading_date: str) -> dict:
 def summarize_completeness(state: dict, updated_at: datetime | None = None) -> dict:
     slots = state.setdefault("slots", {})
     successful = [slot for slot in TARGET_SLOTS if slots.get(slot, {}).get("status") == SLOT_SUCCESS]
-    missed = [slot for slot in TARGET_SLOTS if slots.get(slot, {}).get("status") == SLOT_MISSED]
+    missed = [
+        slot for slot in TARGET_SLOTS
+        if slots.get(slot, {}).get("status") == SLOT_MISSED or slots.get(slot, {}).get("expired") is True
+    ]
     failed = [slot for slot in TARGET_SLOTS if slots.get(slot, {}).get("status") == SLOT_FAILED]
     pending = [slot for slot in TARGET_SLOTS if slots.get(slot, {}).get("status") == SLOT_PENDING]
     if len(successful) == len(TARGET_SLOTS):
@@ -143,7 +148,14 @@ def reconcile_expired_slots(state: dict, now: datetime, grace_minutes: int = DEF
         if row.get("status") == SLOT_SUCCESS:
             continue
         if now.astimezone(TAIPEI) > slot_datetime(trading_date, slot) + timedelta(minutes=grace_minutes):
-            row.update({"status": SLOT_MISSED, "reason": "legal_asof_window_expired"})
+            expired_at = now.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+            if row.get("status") == SLOT_FAILED:
+                # Keep the source error inspectable after the legal retry
+                # window closes; expiration is an additional fact, not a
+                # replacement for the failed attempt.
+                row.update({"expired": True, "expired_at": expired_at, "expiry_reason": "legal_asof_window_expired"})
+            else:
+                row.update({"status": SLOT_MISSED, "reason": "legal_asof_window_expired", "expired": True, "expired_at": expired_at})
     return summarize_completeness(state, now)
 
 
@@ -151,7 +163,7 @@ def eligible_slot(state: dict, now: datetime, grace_minutes: int = DEFAULT_GRACE
     local_now = now.astimezone(TAIPEI)
     trading_date = str(state.get("trading_date") or local_now.date().isoformat())
     for slot in TARGET_SLOTS:
-        if state["slots"][slot].get("status") in {SLOT_SUCCESS, SLOT_MISSED}:
+        if state["slots"][slot].get("status") in {SLOT_SUCCESS, SLOT_MISSED} or state["slots"][slot].get("expired") is True:
             continue
         target = slot_datetime(trading_date, slot)
         if target <= local_now <= target + timedelta(minutes=grace_minutes):
@@ -175,7 +187,7 @@ def record_slot_outcome(state: dict, slot: str, status: str, attempt: dict | Non
     if slot not in TARGET_SLOTS or status not in {SLOT_SUCCESS, SLOT_FAILED, SLOT_MISSED}:
         raise ValueError("invalid slot outcome")
     row = state["slots"][slot]
-    if row.get("status") in {SLOT_SUCCESS, SLOT_MISSED}:
+    if row.get("status") in {SLOT_SUCCESS, SLOT_MISSED} or row.get("expired") is True:
         return summarize_completeness(state, now)
     attempt = attempt if isinstance(attempt, dict) else {}
     row.update({

@@ -2,9 +2,9 @@ name: Update delayed market quotes
 
 on:
   schedule:
-    # 台北週一至週五 09:27～13:47：每個正式 slot 提前喚醒並在合法窗口內重試。
-    # GitHub schedule 可能延遲；多次短任務降低單一 cron 漏送造成整日缺檔的風險。
-    - cron: "27,32,37,42,47 1,2,3,4,5 * * 1-5"
+    # 台北週一至週五每個 slot 的預喚醒、正點與合法重試窗口。
+    # 最後一次為 slot +15 分鐘；不可在窗口外回填未來行情。
+    - cron: "27,30,35,40,45 1,2,3,4,5 * * 1-5"
   workflow_dispatch:
 
 permissions:
@@ -13,6 +13,9 @@ permissions:
 concurrency:
   group: update-delayed-market-quotes
   cancel-in-progress: false
+  # Preserve the short retry ticks.  The default single pending run can replace
+  # an earlier tick before it reaches its legal as-of window.
+  queue: max
 
 jobs:
   update:
