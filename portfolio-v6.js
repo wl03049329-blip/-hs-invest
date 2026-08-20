@@ -21,7 +21,7 @@
   let holdings = loadHoldings();
   let quoteMap = loadQuoteCache();
   let publicQuoteMap = new Map();
-  let computed = core.calculatePortfolio(holdings, quoteMap);
+  let computed = core.calculatePortfolio(holdings, quoteMap, {now: Date.now()});
   let pendingDuplicate = null;
   let editingCode = null;
   let catalog = [];
@@ -31,6 +31,7 @@
   let lastAttemptAt = 0;
   let lastSuccessAt = latestCachedFetchTime();
   let failureCount = 0;
+  let pendingManualPortfolioApply = false;
   let marketCacheVersion = localStorage.getItem(MARKET_VERSION_KEY) || "";
   let chartSegments = [];
   let chartSelection = -1;
@@ -89,7 +90,13 @@
           name: core.sanitizeName(quote.name),
           date: String(quote.date || ""),
           fetchedAt: String(quote.fetchedAt || ""),
-          market: quote.market === "TPEx" ? "TPEx" : "TWSE"
+          market: quote.market === "TPEx" ? "TPEx" : "TWSE",
+          quoteMode: quote.quoteMode === "delayed" ? "delayed" : "close",
+          quoteTime: String(quote.quoteTime || ""),
+          stale: quote.stale === true,
+          fallback: quote.fallback === true,
+          staleReason: String(quote.staleReason || ""),
+          sourceUpdatedAt: String(quote.sourceUpdatedAt || "")
         });
       }
       return map;
@@ -144,6 +151,18 @@
     }).format(new Date(lastSuccessAt))}`;
   }
 
+  function portfolioFreshnessLabel() {
+    if (!holdings.length) return "尚未新增持股";
+    const current = computed.rows.filter(row => row.quoteStatus === "current").length;
+    const stale = computed.rows.filter(row => row.quoteStatus === "stale").length;
+    const missing = holdings.length - current - stale;
+    const parts = [];
+    if (current) parts.push(`${current} 檔最新`);
+    if (stale) parts.push(`${stale} 檔最後有效資料`);
+    if (missing) parts.push(`${missing} 檔行情暫缺`);
+    return `持股行情：${parts.join("、") || "行情暫缺"}`;
+  }
+
   function taipeiToday() {
     return new Intl.DateTimeFormat("en-CA", {timeZone: "Asia/Taipei", year: "numeric", month: "2-digit", day: "2-digit"}).format(new Date());
   }
@@ -154,7 +173,7 @@
 
   function renderQuoteStatus(message) {
     $v6("#portfolioMarketMode").textContent = marketModeText();
-    $v6("#portfolioQuoteStatus").textContent = message || quoteTimeLabel();
+    $v6("#portfolioQuoteStatus").textContent = `${message || quoteTimeLabel()}｜${portfolioFreshnessLabel()}`;
   }
 
   function renderSummary() {
@@ -171,7 +190,7 @@
       element.innerHTML = [
         ["今日損益", "資料更新中", "等待全部持股行情"],
         ["累積損益", "資料更新中", "缺少價格不會誤算為 0"],
-        ["股票市值", "資料更新中", "已保留最後成功價格"]
+        ["股票市值", "資料更新中", computed.fallbackCount ? `${computed.fallbackCount} 檔僅供最後有效價格參考` : "已保留最後成功價格"]
       ].map(([label, value, note]) => `<article class="summaryCard"><span>${label}</span><b class="dataPending">${value}</b><small>${note}</small></article>`).join("");
       return;
     }
@@ -220,6 +239,8 @@
     list.innerHTML = sortedRows().map(row => {
       const radar = radarFor(row.code);
       const quoteMissing = !row.quote;
+      const quoteStale = row.quoteStatus === "stale";
+      const quoteState = quoteMissing ? "行情暫缺" : quoteStale ? "最後有效資料" : "最新行情";
       const name = holdingName(row);
       const radarHtml = radar
         ? `<span class="radarPill">買點 ${radar.score === null ? "—" : radar.score} 分</span><b>${escapeHtml(radar.trend)}</b><span>${escapeHtml(radar.action)}</span>`
@@ -229,12 +250,12 @@
       const rebalance = core.rebalanceDecision({actualWeight: row.weight, targetAllocation: row.targetAllocation, trendProtected});
       const trade = tradeLabel ? window.HSPersistenceCore?.loadTradeState?.(row.code) : null;
       const peakProfit = trade?.entryPrice > 0 && trade?.peakPrice > 0 ? (trade.peakPrice / trade.entryPrice - 1) * 100 : null;
-      return `<article class="holdingCard" data-holding-code="${escapeHtml(row.code)}">
+      return `<article class="holdingCard${quoteStale ? " holdingQuoteStale" : ""}" data-holding-code="${escapeHtml(row.code)}">
         <div class="holdingMain">
           <div class="holdingIdentity"><b>${escapeHtml(row.code)}</b><span>${escapeHtml(name)}</span></div>
-          <div class="holdingMetric"><span>今日損益</span><b class="${valueClass(row.todayPnl)}">${quoteMissing ? "行情暫缺" : money(row.todayPnl)}</b></div>
-          <div class="holdingMetric"><span>漲跌幅</span><b class="${valueClass(row.changeRate)}">${quoteMissing ? "—" : percent(row.changeRate)}</b></div>
-          <div class="holdingMetric"><span>累積損益</span><b class="${valueClass(row.totalPnl)}">${quoteMissing ? "—" : money(row.totalPnl)}</b></div>
+          <div class="holdingMetric"><span>今日損益</span><b class="${valueClass(row.todayPnl)}">${quoteMissing || quoteStale ? quoteState : money(row.todayPnl)}</b></div>
+          <div class="holdingMetric"><span>漲跌幅</span><b class="${valueClass(row.changeRate)}">${quoteMissing || quoteStale ? "—" : percent(row.changeRate)}</b></div>
+          <div class="holdingMetric"><span>累積損益</span><b class="${valueClass(row.totalPnl)}">${quoteMissing || quoteStale ? quoteState : money(row.totalPnl)}</b></div>
           <div class="holdingActions"><button type="button" data-edit-holding="${escapeHtml(row.code)}" aria-label="修改 ${escapeHtml(row.code)} 持股">修改</button><button type="button" data-delete-holding="${escapeHtml(row.code)}" aria-label="刪除 ${escapeHtml(row.code)} 持股">刪除</button></div>
         </div>
         <details class="holdingDetails">
@@ -244,11 +265,12 @@
             <div><span>股數</span><b>${number(row.shares, 4)}</b></div>
             <div><span>平均成本</span><b>${money(row.averageCost)}</b></div>
             <div><span>總成本</span><b>${money(row.totalCost)}</b></div>
-            <div><span>目前股價</span><b>${quoteMissing ? "行情暫缺" : money(row.quote.price)}</b></div>
-            <div><span>目前市值</span><b>${quoteMissing ? `${money(row.allocationValue)}（成本暫估）` : money(row.marketValue)}</b></div>
+            <div><span>目前股價</span><b>${quoteMissing ? "行情暫缺" : `${money(row.quote.price)}${quoteStale ? "（最後有效）" : ""}`}</b></div>
+            <div><span>目前市值</span><b>${quoteMissing ? `${money(row.allocationValue)}（成本暫估）` : `${money(row.marketValue)}${quoteStale ? "（最後有效）" : ""}`}</b></div>
             <div><span>市值占比</span><b>${percent(row.weight)}</b></div>
             <div><span>累積報酬率</span><b class="${valueClass(row.returnRate)}">${percent(row.returnRate)}</b></div>
-            <div><span>行情日期</span><b>${escapeHtml(row.quote?.date || "行情暫缺")}</b></div>
+            <div><span>行情狀態</span><b>${escapeHtml(quoteState)}</b></div>
+            <div><span>行情時間</span><b>${escapeHtml(row.quote?.asOf || row.quote?.date || "行情暫缺")}</b></div>
             <div><span>策略類型</span><b>${escapeHtml(tradeLabel || row.strategyType || "使用預設模型")}</b></div>
             <div><span>目標配置</span><b>${Number.isFinite(row.targetAllocation) ? percent(row.targetAllocation) : "未設定"}</b></div>
             ${tradeLabel ? `<div><span>Trade ID</span><b>${escapeHtml(trade?.tradeId || "尚未建立")}</b></div>
@@ -366,7 +388,7 @@
   }
 
   function refreshPortfolio(animate = false, {focusTarget = ""} = {}) {
-    computed = core.calculatePortfolio(holdings, quoteMap);
+    computed = core.calculatePortfolio(holdings, quoteMap, {now: Date.now()});
     const simulation = $v6("#rebalanceSimulation");
     if (simulation) simulation.hidden = true;
     renderSummary();
@@ -730,7 +752,23 @@
     // 行情輪詢由首頁 HSLiveMarket 的單一控制器負責，持股只消費同一批公開行情。
   }
 
+  function reconcilePortfolioQuotes(incoming, {applyPortfolio = true, sourceUpdatedAt = ""} = {}) {
+    if (!holdings.length) return {currentCount: 0, staleCount: 0, missingCount: 0};
+    const merged = core.mergePortfolioQuoteRefresh({
+      previous: quoteMap,
+      incoming,
+      holdings,
+      applyPortfolio,
+      sourceUpdatedAt
+    });
+    quoteMap = merged.quotes;
+    saveQuoteCache();
+    refreshPortfolio(true);
+    return merged;
+  }
+
   async function updateQuotes({force = false, applyPortfolio = $v6("#portfolioAutoRefresh").checked} = {}) {
+    if (applyPortfolio && !$v6("#portfolioAutoRefresh").checked) pendingManualPortfolioApply = true;
     if (window.HSLiveMarket) return window.HSLiveMarket.refresh();
     if (refreshInFlight) return refreshInFlight;
     const now = Date.now();
@@ -760,24 +798,16 @@
             checkedAt
           }}));
         }
-        const needsPortfolioUpdate = result.changed || holdings.some(item => !quoteMap.has(item.code));
-        if (needsPortfolioUpdate && applyPortfolio && holdings.length) {
-          const heldCodes = new Set(holdings.map(item => item.code));
-          for (const [code, quote] of publicQuoteMap) {
-            if (heldCodes.has(code)) quoteMap.set(code, quote);
-          }
-          saveQuoteCache();
-          refreshPortfolio(true);
-        }
-        const missing = holdings.filter(item => !quoteMap.has(item.code)).length;
+        const reconciliation = !result.changed && holdings.length
+          ? reconcilePortfolioQuotes(publicQuoteMap, {applyPortfolio, sourceUpdatedAt: result.fetchedAt})
+          : null;
         const suffix = result.partial ? "；部分市場來源暫時無法取得" : "";
         if (!holdings.length) renderQuoteStatus("首頁行情快取已檢查；尚未新增持股");
         else if (!applyPortfolio) renderQuoteStatus(`${quoteTimeLabel()}；持股自動更新已關閉`);
-        else renderQuoteStatus(`${quoteTimeLabel()}${missing ? `；${missing} 檔行情暫缺` : ""}${suffix}`);
+        else renderQuoteStatus(`${quoteTimeLabel()}${reconciliation?.missingCount ? `；${reconciliation.missingCount} 檔行情暫缺` : ""}${suffix}`);
         scheduleNext(60000);
       } catch {
         failureCount += 1;
-        if (applyPortfolio && holdings.length) refreshPortfolio();
         window.dispatchEvent(new CustomEvent("hs:delayed-quotes-error"));
         renderQuoteStatus("行情更新失敗，已保留最後資料");
         scheduleNext();
@@ -880,12 +910,11 @@
     const incoming=event?.detail?.quotes;
     if(!(incoming instanceof Map))return;
     publicQuoteMap=new Map(incoming);
-    lastSuccessAt=Date.parse(event.detail.sourceUpdatedAt||event.detail.checkedAt||new Date().toISOString());
-    if($v6("#portfolioAutoRefresh").checked&&holdings.length){
-      const heldCodes=new Set(holdings.map(item=>item.code));
-      for(const [code,quote] of publicQuoteMap)if(heldCodes.has(code))quoteMap.set(code,quote);
-      saveQuoteCache();refreshPortfolio(true);
-    }
+    const sourceTime=Date.parse(event.detail.sourceUpdatedAt||"");
+    if(Number.isFinite(sourceTime))lastSuccessAt=sourceTime;
+    const applyPortfolio=$v6("#portfolioAutoRefresh").checked||pendingManualPortfolioApply;
+    pendingManualPortfolioApply=false;
+    reconcilePortfolioQuotes(publicQuoteMap, {applyPortfolio, sourceUpdatedAt: event.detail.sourceUpdatedAt||""});
     renderQuoteStatus(`${quoteTimeLabel()}｜${event.detail.source==="authorized_proxy"?"授權延遲行情":"公開快取"}`);
   }
 
@@ -948,7 +977,10 @@
     $v6("#portfolioAutoRefresh").addEventListener("change", event => {
       localStorage.setItem(AUTO_KEY, event.target.checked ? "1" : "0");
       if (event.target.checked) updateQuotes({force: true, applyPortfolio: true});
-      else renderQuoteStatus(`${quoteTimeLabel()}；持股自動更新已關閉`);
+      else {
+        reconcilePortfolioQuotes(new Map(), {applyPortfolio: false, sourceUpdatedAt: ""});
+        renderQuoteStatus(`${quoteTimeLabel()}；持股自動更新已關閉`);
+      }
     });
     const rebalanceIds = ["rebalanceCash", "rebalanceProfile", "rebalanceCustomTolerance", "rebalanceReminder", "rebalanceCustomDays", "rebalanceCashFirst", "rebalanceTrendProtection"];
     $v6("#rebalanceCash").value = rebalanceSettings.cash;
@@ -991,7 +1023,10 @@
       if ($v6("#portfolioAutoRefresh").checked) updateQuotes();
     });
     window.addEventListener("hs:delayed-quotes",applySharedQuotes);
-    window.addEventListener("hs:delayed-quotes-error",()=>renderQuoteStatus("行情更新失敗，已保留最後資料"));
+    window.addEventListener("hs:delayed-quotes-error",()=>{
+      reconcilePortfolioQuotes(new Map(), {applyPortfolio: true, sourceUpdatedAt: ""});
+      renderQuoteStatus("行情更新失敗，已保留最後有效資料");
+    });
     window.addEventListener("resize", () => {
       cancelAnimationFrame(resizeFrame);
       resizeFrame = requestAnimationFrame(drawAllocation);
@@ -1008,7 +1043,7 @@
   refreshPortfolio();
   renderHomeSentiment();
   const initialShared=window.HSLiveMarket?.latestQuotes?.();
-  if(initialShared instanceof Map&&initialShared.size)applySharedQuotes({detail:{quotes:initialShared,sourceUpdatedAt:new Date().toISOString(),source:"shared_cache"}});
+  if(initialShared instanceof Map&&initialShared.size)applySharedQuotes({detail:{quotes:initialShared,sourceUpdatedAt:"",source:"shared_cache"}});
 
   window.HSPortfolioV6 = Object.freeze({
     storageKey: HOLDINGS_KEY,

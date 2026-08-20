@@ -9,6 +9,7 @@
   const MAX_HOLDINGS = 30;
   const MAX_SHARES = 1e12;
   const MAX_COST = 1e9;
+  const QUOTE_MAX_AGE_MS = 5 * 24 * 60 * 60 * 1000;
   const STRATEGY_TYPES = new Set(["longTerm", "leveraged", "swing00733", "swing006201", "userSelected", ""]);
 
   function finitePositive(value, max) {
@@ -25,7 +26,9 @@
   }
 
   function normalizeCode(value) {
-    return String(value ?? "").trim().toUpperCase();
+    const raw = String(value ?? "").trim().toUpperCase();
+    const matched = raw.match(/^(?:TSE_|OTC_)?([0-9A-Z]{4,10})(?:\.TW)?$/);
+    return matched ? matched[1] : raw;
   }
 
   function validateHolding(input) {
@@ -312,10 +315,39 @@
     };
   }
 
-  function validQuote(quote) {
+  function quoteAsOf(quote) {
+    const date = String(quote?.date ?? "");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return "";
+    const time = /^\d{2}:\d{2}(?::\d{2})?$/.test(String(quote?.quoteTime ?? ""))
+      ? String(quote.quoteTime)
+      : "13:30:00";
+    return `${date}T${time.length === 5 ? `${time}:00` : time}+08:00`;
+  }
+
+  function quoteFreshness(quote, {now = Date.now(), maxAgeMs = QUOTE_MAX_AGE_MS} = {}) {
+    const price = Number(quote?.price);
+    if (!Number.isFinite(price) || price <= 0) return {status: "missing", isCurrent: false, isFallback: false, asOf: "", reason: "missing_price"};
+    const asOf = quoteAsOf(quote);
+    const asOfMs = Date.parse(asOf);
+    if (!Number.isFinite(asOfMs)) return {status: "stale", isCurrent: false, isFallback: true, asOf, reason: "missing_asof"};
+    if (quote?.stale === true || quote?.fallback === true || quote?.freshness === "stale") {
+      return {status: "stale", isCurrent: false, isFallback: true, asOf, reason: String(quote?.staleReason || "last_known_good")};
+    }
+    const nowMs = now instanceof Date ? now.getTime() : Number(now);
+    if (Number.isFinite(nowMs) && asOfMs > nowMs + 6 * 60 * 60 * 1000) {
+      return {status: "stale", isCurrent: false, isFallback: true, asOf, reason: "future_asof"};
+    }
+    if (Number.isFinite(nowMs) && Number.isFinite(maxAgeMs) && maxAgeMs >= 0 && nowMs - asOfMs > maxAgeMs) {
+      return {status: "stale", isCurrent: false, isFallback: true, asOf, reason: "quote_age"};
+    }
+    return {status: "current", isCurrent: true, isFallback: false, asOf, reason: ""};
+  }
+
+  function validQuote(quote, freshnessOptions) {
     const price = Number(quote?.price);
     const previousClose = Number(quote?.previousClose);
     if (!Number.isFinite(price) || price <= 0) return null;
+    const freshness = quoteFreshness(quote, freshnessOptions);
     return {
       price,
       previousClose: Number.isFinite(previousClose) && previousClose > 0 ? previousClose : null,
@@ -323,15 +355,20 @@
       date: String(quote?.date ?? ""),
       fetchedAt: String(quote?.fetchedAt ?? ""),
       quoteMode: quote?.quoteMode === "delayed" ? "delayed" : "close",
-      quoteTime: String(quote?.quoteTime ?? "")
+      quoteTime: String(quote?.quoteTime ?? ""),
+      stale: freshness.status === "stale",
+      fallback: freshness.isFallback,
+      staleReason: freshness.reason,
+      freshness: freshness.status,
+      asOf: freshness.asOf
     };
   }
 
-  function calculatePortfolio(holdings, quotes) {
+  function calculatePortfolio(holdings, quotes, freshnessOptions) {
     const quoteLookup = quotes instanceof Map ? quotes : new Map(Object.entries(quotes || {}));
     const rows = holdings.map(raw => {
       const item = validateHolding(raw);
-      const quote = validQuote(quoteLookup.get(item.code));
+      const quote = validQuote(quoteLookup.get(item.code), freshnessOptions);
       const totalCost = item.shares * item.averageCost;
       if (!quote) return {...item, quote: null, totalCost, marketValue: null, allocationValue: totalCost, valueSource: "cost", totalPnl: null, returnRate: null, todayPnl: null, changeRate: null, weight: null};
       const marketValue = item.shares * quote.price;
@@ -339,18 +376,19 @@
       const returnRate = totalCost > 0 ? totalPnl / totalCost * 100 : null;
       const todayPnl = quote.previousClose ? item.shares * (quote.price - quote.previousClose) : null;
       const changeRate = quote.previousClose ? (quote.price / quote.previousClose - 1) * 100 : null;
-      return {...item, quote, totalCost, marketValue, allocationValue: marketValue, valueSource: "market", totalPnl, returnRate, todayPnl, changeRate, weight: null};
+      return {...item, quote, quoteStatus: quote.freshness, totalCost, marketValue, allocationValue: marketValue, valueSource: quote.stale ? "market_fallback" : "market", totalPnl, returnRate, todayPnl, changeRate, weight: null};
     });
-    const complete = rows.length > 0 && rows.every(row => row.quote && Number.isFinite(row.todayPnl));
+    const complete = rows.length > 0 && rows.every(row => row.quoteStatus === "current" && Number.isFinite(row.todayPnl));
     const quotedRows = rows.filter(row => Number.isFinite(row.marketValue));
     const totalMarketValue = quotedRows.reduce((sum, row) => sum + row.marketValue, 0);
     const allocationTotal = rows.reduce((sum, row) => sum + (Number.isFinite(row.allocationValue) && row.allocationValue > 0 ? row.allocationValue : 0), 0);
     const allocationEstimated = rows.some(row => row.valueSource === "cost");
+    const fallbackCount = rows.filter(row => row.valueSource === "market_fallback").length;
     for (const row of rows) {
       row.weight = Number.isFinite(row.allocationValue) && allocationTotal > 0 ? row.allocationValue / allocationTotal * 100 : null;
     }
     if (!complete) {
-      return {rows, complete: false, totalMarketValue: null, allocationTotal, allocationEstimated, totalCost: null, totalPnl: null, returnRate: null, todayPnl: null, todayRate: null};
+      return {rows, complete: false, totalMarketValue: null, allocationTotal, allocationEstimated, fallbackCount, totalCost: null, totalPnl: null, returnRate: null, todayPnl: null, todayRate: null};
     }
     const totalCost = rows.reduce((sum, row) => sum + row.totalCost, 0);
     const totalPnl = totalMarketValue - totalCost;
@@ -362,6 +400,7 @@
       totalMarketValue,
       allocationTotal,
       allocationEstimated,
+      fallbackCount,
       totalCost,
       totalPnl,
       returnRate: totalCost > 0 ? totalPnl / totalCost * 100 : null,
@@ -502,11 +541,44 @@
         quoteTime: String(row.quote_time || ""),
         high: high !== null && high > 0 ? high : null,
         low: low !== null && low > 0 ? low : null,
-        volume: volume !== null && volume >= 0 ? volume : null
+        volume: volume !== null && volume >= 0 ? volume : null,
+        stale: false,
+        fallback: false,
+        sourceUpdatedAt: updatedAt
       });
     }
     if (!result.size) throw new Error("行情快取沒有有效資料。");
     return result;
+  }
+
+  function cloneQuote(quote, changes = {}) {
+    return {...quote, ...changes};
+  }
+
+  function mergePortfolioQuoteRefresh({previous, incoming, holdings, applyPortfolio = true, sourceUpdatedAt = ""} = {}) {
+    const prior = previous instanceof Map ? previous : new Map(Object.entries(previous || {}));
+    const latest = incoming instanceof Map ? incoming : new Map(Object.entries(incoming || {}));
+    const codes = new Set((Array.isArray(holdings) ? holdings : []).map(item => normalizeCode(typeof item === "string" ? item : item?.code)).filter(code => CODE_PATTERN.test(code)));
+    const quotes = new Map(prior);
+    let currentCount = 0;
+    let staleCount = 0;
+    let missingCount = 0;
+    for (const code of codes) {
+      const incomingQuote = latest.get(code);
+      const previousQuote = prior.get(code);
+      if (applyPortfolio && incomingQuote) {
+        quotes.set(code, cloneQuote(incomingQuote, {stale: false, fallback: false, staleReason: "", sourceUpdatedAt: String(sourceUpdatedAt || incomingQuote.sourceUpdatedAt || incomingQuote.fetchedAt || "")}));
+        currentCount += 1;
+      } else if (previousQuote) {
+        const reason = applyPortfolio ? "source_missing" : "auto_refresh_disabled";
+        quotes.set(code, cloneQuote(previousQuote, {stale: true, fallback: true, staleReason: reason, sourceUpdatedAt: String(sourceUpdatedAt || previousQuote.sourceUpdatedAt || "")}));
+        staleCount += 1;
+      } else {
+        quotes.delete(code);
+        missingCount += 1;
+      }
+    }
+    return {quotes, currentCount, staleCount, missingCount};
   }
 
   function taipeiParts(now) {
@@ -537,6 +609,7 @@
   return {
     CODE_PATTERN,
     MAX_HOLDINGS,
+    QUOTE_MAX_AGE_MS,
     validateHolding,
     validateImportPayload,
     mergeHolding,
@@ -547,6 +620,9 @@
     rebalanceDecision,
     buildRebalanceReadout,
     calculatePortfolio,
+    quoteFreshness,
+    quoteAsOf,
+    mergePortfolioQuoteRefresh,
     buildAllocation,
     targetsFromAllocation,
     parseTwseRows,

@@ -9,7 +9,7 @@ function test(name, fn) {
 }
 
 const holding = (code, shares = 1000, averageCost = 50) => ({code, shares, averageCost, customName: "", name: code});
-const quote = (price, previousClose = price - 1) => ({price, previousClose, name: "測試標的", date: "2026-07-28", fetchedAt: "2026-07-29T00:00:00Z"});
+const quote = (price, previousClose = price - 1) => ({price, previousClose, name: "測試標的", date: new Date().toISOString().slice(0, 10), quoteTime: "13:30:00", fetchedAt: new Date().toISOString()});
 
 test("新增持股格式驗證", () => {
   assert.deepEqual(core.validateHolding(holding("0050")).code, "0050");
