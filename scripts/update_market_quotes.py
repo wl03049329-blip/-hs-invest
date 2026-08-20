@@ -55,6 +55,15 @@ RADAR_NON_BLOCKING_SYMBOLS = ("009815",)
 RADAR_CODES = RADAR_REQUIRED_LIVE_SYMBOLS + RADAR_NON_BLOCKING_SYMBOLS
 RADAR_SLOTS = ("09:30", "10:30", "11:30", "12:30", "13:30")
 RADAR_QUOTE_TOLERANCE_MINUTES = 20
+MIS_BATCH_SIZE = 60
+
+
+class MisSnapshotRows(list[dict[str, Any]]):
+    """Parsed MIS rows with compact required-symbol fetch diagnostics."""
+
+    def __init__(self, rows: list[dict[str, Any]], diagnostics: dict[str, Any]) -> None:
+        super().__init__(rows)
+        self.diagnostics = diagnostics
 
 
 def fetch_json(url: str, *, timeout: int = 25) -> Any:
@@ -170,51 +179,179 @@ def tracked_channels() -> list[str]:
     return sorted(channels)
 
 
-def fetch_mis_snapshot() -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
-    channels = tracked_channels()
-    for offset in range(0, len(channels), 60):
-        query = urllib.parse.urlencode(
-            {"ex_ch": "|".join(channels[offset : offset + 60]), "json": "1", "delay": "0"}
-        )
-        payload = fetch_json(f"{TWSE_MIS_URL}?{query}", timeout=20)
-        batch = payload.get("msgArray") if isinstance(payload, dict) else None
-        if not isinstance(batch, list):
-            raise ValueError("TWSE MIS response has no msgArray")
-        rows.extend(batch)
-    valid = []
+def mis_channel_code(channel: str) -> str:
+    match = re.fullmatch(r"(?:tse|otc)_([0-9A-Z]{4,10})\.tw", str(channel or ""), re.IGNORECASE)
+    return match.group(1).upper() if match else ""
+
+
+def fetch_mis_batch(channels: list[str]) -> list[dict[str, Any]]:
+    query = urllib.parse.urlencode({"ex_ch": "|".join(channels), "json": "1", "delay": "0"})
+    payload = fetch_json(f"{TWSE_MIS_URL}?{query}", timeout=20)
+    batch = payload.get("msgArray") if isinstance(payload, dict) else None
+    if not isinstance(batch, list):
+        raise ValueError("TWSE MIS response has no msgArray")
+    return [row for row in batch if isinstance(row, dict)]
+
+
+def required_raw_fields(row: dict[str, Any] | None) -> dict[str, Any]:
+    row = row if isinstance(row, dict) else {}
+    return {key: row.get(key) for key in ("c", "ex", "d", "^", "t", "%", "z", "y", "o", "h", "l", "v")}
+
+
+def missing_or_invalid_reason(value: Any, *, missing: str, invalid: str, positive: bool = False) -> str | None:
+    if value is None or not str(value).strip() or str(value).strip() in {"-", "--"}:
+        return missing
+    return invalid if finite_number(value, positive=positive) is None else None
+
+
+def parse_mis_row(row: dict[str, Any], *, required: bool = False) -> tuple[dict[str, Any] | None, str | None]:
+    if not isinstance(row, dict):
+        return None, "malformed_row"
+    code = str(row.get("c", "")).strip().upper()
+    if not code or not CODE_RE.fullmatch(code):
+        return None, "malformed_row"
+    price_reason = missing_or_invalid_reason(row.get("z"), missing="missing_price", invalid="invalid_price", positive=True)
+    if price_reason:
+        return None, price_reason
+    reference_reason = missing_or_invalid_reason(
+        row.get("y"), missing="missing_reference_price", invalid="invalid_reference_price", positive=True
+    )
+    if reference_reason:
+        return None, reference_reason
+    date_value = row.get("d") or row.get("^")
+    if date_value is None or not str(date_value).strip():
+        return None, "missing_date"
+    data_date = iso_date(date_value)
+    if data_date is None:
+        return None, "invalid_date"
+    quote_time = str(row.get("t") or row.get("%") or "").strip()
+    if required and not quote_time:
+        return None, "missing_time"
+    if quote_time and not re.fullmatch(r"\d{2}:\d{2}:\d{2}", quote_time):
+        return None, "invalid_time"
+    price = finite_number(row.get("z"), positive=True)
+    previous_close = finite_number(row.get("y"), positive=True)
+    high = finite_number(row.get("h"), positive=True)
+    low = finite_number(row.get("l"), positive=True)
+    open_price = finite_number(row.get("o"), positive=True)
+    volume_lots = finite_number(row.get("v"))
+    volume = volume_lots * 1000 if volume_lots is not None and volume_lots >= 0 else None
+    return {
+        "code": code,
+        "name": clean_text(row.get("n")),
+        "price": price,
+        "previous_close": previous_close,
+        "date": data_date,
+        "quote_time": quote_time or "—",
+        "market": "TPEx" if row.get("ex") == "otc" else "TWSE",
+        "high": high,
+        "low": low,
+        "open": open_price,
+        "volume": volume,
+        "source": TWSE_MIS_URL,
+    }, None
+
+
+def inspect_mis_batch(
+    rows: list[dict[str, Any]], required_codes: set[str]
+) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
+    parsed: dict[str, dict[str, Any]] = {}
+    raw_required: dict[str, dict[str, Any]] = {}
+    rejected: dict[str, dict[str, Any]] = {}
     for row in rows:
-        code = str(row.get("c", "")).strip().upper()
-        price = finite_number(row.get("z"), positive=True)
-        previous_close = finite_number(row.get("y"), positive=True)
-        data_date = iso_date(row.get("d") or row.get("^"))
-        quote_time = str(row.get("t") or row.get("%") or "").strip()
-        high = finite_number(row.get("h"), positive=True)
-        low = finite_number(row.get("l"), positive=True)
-        open_price = finite_number(row.get("o"), positive=True)
-        volume_lots = finite_number(row.get("v"))
-        volume = volume_lots * 1000 if volume_lots is not None and volume_lots >= 0 else None
-        if not code or price is None or previous_close is None or data_date is None:
-            continue
-        if quote_time and not re.fullmatch(r"\d{2}:\d{2}:\d{2}", quote_time):
-            continue
-        valid.append(
-            {
-                "code": code,
-                "name": clean_text(row.get("n")),
-                "price": price,
-                "previous_close": previous_close,
-                "date": data_date,
-                "quote_time": quote_time or "—",
-                "market": "TPEx" if row.get("ex") == "otc" else "TWSE",
-                "high": high,
-                "low": low,
-                "open": open_price,
-                "volume": volume,
-                "source": TWSE_MIS_URL,
-            }
-        )
-    return valid
+        code = str(row.get("c", "")).strip().upper() if isinstance(row, dict) else ""
+        is_required = code in required_codes
+        if is_required:
+            raw_required[code] = row
+        parsed_row, reason = parse_mis_row(row, required=is_required)
+        if parsed_row:
+            parsed[parsed_row["code"]] = parsed_row
+            if code in required_codes:
+                rejected.pop(code, None)
+        elif is_required:
+            rejected[code] = {"reason": reason or "malformed_row", "raw_fields": required_raw_fields(row)}
+    return parsed, raw_required, rejected
+
+
+def fetch_mis_snapshot() -> MisSnapshotRows:
+    channels = tracked_channels()
+    batches = [channels[offset : offset + MIS_BATCH_SIZE] for offset in range(0, len(channels), MIS_BATCH_SIZE)]
+    required_codes = set(RADAR_REQUIRED_LIVE_SYMBOLS)
+    required_locations: dict[str, dict[str, Any]] = {}
+    for batch_index, batch in enumerate(batches, start=1):
+        for request_key in batch:
+            code = mis_channel_code(request_key)
+            if code in required_codes:
+                required_locations[code] = {"batch": batch_index, "request_key": request_key}
+
+    parsed_by_code: dict[str, dict[str, Any]] = {}
+    raw_required: dict[str, dict[str, Any]] = {}
+    rejected_required: dict[str, dict[str, Any]] = {}
+    for batch in batches:
+        parsed, raw, rejected = inspect_mis_batch(fetch_mis_batch(batch), required_codes)
+        parsed_by_code.update(parsed)
+        raw_required.update(raw)
+        rejected_required.update(rejected)
+        for code in raw:
+            if code in parsed:
+                rejected_required.pop(code, None)
+
+    def status_for(code: str) -> str:
+        if code in parsed_by_code:
+            return "PRESENT_AND_PARSED"
+        return "PARSE_REJECTED" if code in raw_required else "RAW_MISSING"
+
+    initial_missing = [code for code in RADAR_REQUIRED_LIVE_SYMBOLS if status_for(code) == "RAW_MISSING"]
+    initial_rejected = {
+        code: {**required_locations.get(code, {}), **rejected_required.get(code, {})}
+        for code in RADAR_REQUIRED_LIVE_SYMBOLS
+        if status_for(code) == "PARSE_REJECTED"
+    }
+    problem_codes = [code for code in RADAR_REQUIRED_LIVE_SYMBOLS if status_for(code) != "PRESENT_AND_PARSED"]
+    retry_batch_indexes = sorted({required_locations[code]["batch"] for code in problem_codes if code in required_locations})
+    retry_recovered: list[str] = []
+    for batch_index in retry_batch_indexes:
+        retry_parsed, retry_raw, retry_rejected = inspect_mis_batch(fetch_mis_batch(batches[batch_index - 1]), required_codes)
+        affected_codes = [
+            code for code in problem_codes if required_locations.get(code, {}).get("batch") == batch_index
+        ]
+        for code in affected_codes:
+            if code in retry_raw:
+                raw_required[code] = retry_raw[code]
+            if code in retry_parsed:
+                parsed_by_code[code] = retry_parsed[code]
+                rejected_required.pop(code, None)
+                retry_recovered.append(code)
+            elif code in retry_rejected:
+                rejected_required[code] = retry_rejected[code]
+
+    final_missing = [code for code in RADAR_REQUIRED_LIVE_SYMBOLS if code not in raw_required]
+    final_rejected = {
+        code: {**required_locations.get(code, {}), **rejected_required.get(code, {})}
+        for code in RADAR_REQUIRED_LIVE_SYMBOLS
+        if code in raw_required and code not in parsed_by_code
+    }
+    symbol_diagnostics = {
+        code: {
+            **required_locations.get(code, {}),
+            "raw_present": code in raw_required,
+            "parsed": code in parsed_by_code,
+            "rejection_reason": final_rejected.get(code, {}).get("reason"),
+            "raw_fields": final_rejected.get(code, {}).get("raw_fields"),
+        }
+        for code in RADAR_REQUIRED_LIVE_SYMBOLS
+    }
+    diagnostics = {
+        "required_symbols": list(RADAR_REQUIRED_LIVE_SYMBOLS),
+        "initial_missing": initial_missing,
+        "initial_parse_rejected": initial_rejected,
+        "retried_batches": retry_batch_indexes,
+        "retry_recovered": sorted(set(retry_recovered)),
+        "final_missing": final_missing,
+        "final_parse_rejected": final_rejected,
+        "symbols": symbol_diagnostics,
+    }
+    return MisSnapshotRows(list(parsed_by_code.values()), diagnostics)
 
 
 def quote_datetime(data_date: str, quote_time: str) -> datetime | None:
@@ -238,7 +375,8 @@ def spot_quote_mode(now: datetime, data_date: str, quote_time: str = "") -> str:
 
 
 def validate_radar_refresh(
-    rows: list[dict[str, Any]], trading_date: str, slot: str, verified_at: datetime
+    rows: list[dict[str, Any]], trading_date: str, slot: str, verified_at: datetime,
+    required_diagnostics: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if slot not in RADAR_SLOTS:
         raise ValueError(f"unsupported radar slot: {slot}")
@@ -248,12 +386,21 @@ def validate_radar_refresh(
     minimum = target - timedelta(minutes=RADAR_QUOTE_TOLERANCE_MINUTES)
     maximum = target + timedelta(minutes=RADAR_QUOTE_TOLERANCE_MINUTES)
     by_code = {str(row.get("code", "")): row for row in rows}
+    diagnostics = required_diagnostics or getattr(rows, "diagnostics", {})
+    final_missing = set(diagnostics.get("final_missing") or []) if isinstance(diagnostics, dict) else set()
+    final_rejected = diagnostics.get("final_parse_rejected") if isinstance(diagnostics, dict) else {}
+    final_rejected = final_rejected if isinstance(final_rejected, dict) else {}
     quote_times: dict[str, str] = {}
     market_as_of: dict[str, str] = {}
     for code in RADAR_REQUIRED_LIVE_SYMBOLS:
+        if code in final_missing:
+            raise ValueError(f"radar required quote raw missing: {code}")
+        if code in final_rejected:
+            reason = clean_text(final_rejected[code].get("reason"), 40)
+            raise ValueError(f"radar required quote parse rejected: {code} reason={reason or 'malformed_row'}")
         row = by_code.get(code)
         if not row:
-            raise ValueError(f"radar quote missing: {code}")
+            raise ValueError(f"radar required quote lookup missing: {code}")
         if row.get("date") != trading_date:
             raise ValueError(f"radar quote date mismatch: {code}")
         if row.get("source") != TWSE_MIS_URL:
@@ -283,6 +430,7 @@ def validate_radar_refresh(
         "market_as_of": market_as_of,
         "source": "TWSE_MIS",
         "source_url": TWSE_MIS_URL,
+        "required_symbol_diagnostics": diagnostics,
     }
 
 
@@ -602,13 +750,15 @@ def main() -> None:
             statuses[market] = "cached_after_error"
 
     mis_rows: list[dict[str, Any]] = []
+    mis_diagnostics: dict[str, Any] = {}
     radar_refresh: dict[str, Any] | None = None
     refresh_attempt: dict[str, Any] | None = None
     try:
         mis_rows = fetch_mis_snapshot()
+        mis_diagnostics = getattr(mis_rows, "diagnostics", {})
         if requested_slot:
             radar_refresh = {
-                **validate_radar_refresh(mis_rows, requested_date, requested_slot, now),
+                **validate_radar_refresh(mis_rows, requested_date, requested_slot, now, mis_diagnostics),
                 "status": "success",
             }
             refresh_attempt = dict(radar_refresh)
@@ -651,6 +801,7 @@ def main() -> None:
                 "slot": requested_slot,
                 "attempted_at": now.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
                 "error": error_text,
+                "required_symbol_diagnostics": mis_diagnostics,
             }
             mis_rows = []
         else:
