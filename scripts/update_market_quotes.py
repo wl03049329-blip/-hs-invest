@@ -48,7 +48,11 @@ OVERVIEW_CODES = {
 }
 CODE_RE = re.compile(r"^[0-9A-Z]{4,10}$")
 TAIPEI = ZoneInfo("Asia/Taipei")
-RADAR_CODES = ("0050", "00662", "00757", "00830", "00935", "009815")
+# The UI can keep WAIT_NATIVE instruments visible, but a symbol which is not
+# eligible for a formal Core Score must never block the verified live batch.
+RADAR_REQUIRED_LIVE_SYMBOLS = ("0050", "00662", "00757", "00830", "00935")
+RADAR_NON_BLOCKING_SYMBOLS = ("009815",)
+RADAR_CODES = RADAR_REQUIRED_LIVE_SYMBOLS + RADAR_NON_BLOCKING_SYMBOLS
 RADAR_SLOTS = ("09:30", "10:30", "11:30", "12:30", "13:30")
 RADAR_QUOTE_TOLERANCE_MINUTES = 20
 
@@ -246,7 +250,7 @@ def validate_radar_refresh(
     by_code = {str(row.get("code", "")): row for row in rows}
     quote_times: dict[str, str] = {}
     market_as_of: dict[str, str] = {}
-    for code in RADAR_CODES:
+    for code in RADAR_REQUIRED_LIVE_SYMBOLS:
         row = by_code.get(code)
         if not row:
             raise ValueError(f"radar quote missing: {code}")
@@ -272,7 +276,9 @@ def validate_radar_refresh(
         "trading_date": trading_date,
         "slot": slot,
         "verified_at": verified_at.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
-        "codes": list(RADAR_CODES),
+        "codes": list(RADAR_REQUIRED_LIVE_SYMBOLS),
+        "non_blocking_codes": list(RADAR_NON_BLOCKING_SYMBOLS),
+        "non_blocking_status": {code: "WAIT_NATIVE" for code in RADAR_NON_BLOCKING_SYMBOLS},
         "quote_times": quote_times,
         "market_as_of": market_as_of,
         "source": "TWSE_MIS",
@@ -521,10 +527,10 @@ def write_market_cache(
                     field: by_code[code].get(field)
                     for field in ("price", "open", "high", "low", "volume", "date", "quote_time")
                 }
-                for code in RADAR_CODES
+                for code in RADAR_REQUIRED_LIVE_SYMBOLS
                 if code in by_code
             }
-            if len(snapshot_items) != len(RADAR_CODES):
+            if len(snapshot_items) != len(RADAR_REQUIRED_LIVE_SYMBOLS):
                 raise ValueError("validated radar snapshot is missing a required ETF")
             snapshots[key] = {
                 "market_date": radar_refresh["trading_date"],
@@ -533,6 +539,7 @@ def write_market_cache(
                 "calculated_at": radar_refresh["verified_at"],
                 "market_as_of": radar_refresh["market_as_of"],
                 "items": snapshot_items,
+                "non_blocking_status": radar_refresh.get("non_blocking_status", {}),
             }
         successful = sorted(
             (row for row in snapshots.values() if row.get("status") == "SUCCESS"),
@@ -600,8 +607,11 @@ def main() -> None:
     try:
         mis_rows = fetch_mis_snapshot()
         if requested_slot:
-            radar_refresh = validate_radar_refresh(mis_rows, requested_date, requested_slot, now)
-            refresh_attempt = {**radar_refresh, "status": "success"}
+            radar_refresh = {
+                **validate_radar_refresh(mis_rows, requested_date, requested_slot, now),
+                "status": "success",
+            }
+            refresh_attempt = dict(radar_refresh)
         statuses["TWSE_MIS"] = "ok"
         item_map = {
             item["code"]: item

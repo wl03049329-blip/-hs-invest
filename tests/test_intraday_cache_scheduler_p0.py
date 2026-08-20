@@ -46,7 +46,8 @@ def radar_rows(slot, prices=None):
 at0930 = datetime.fromisoformat("2026-08-13T09:32:00+08:00")
 refresh0930 = quotes.validate_radar_refresh(radar_rows("09:30"), "2026-08-13", "09:30", at0930)
 assert refresh0930["verified"] is True
-assert refresh0930["codes"] == list(quotes.RADAR_CODES)
+assert refresh0930["codes"] == list(quotes.RADAR_REQUIRED_LIVE_SYMBOLS)
+assert refresh0930["non_blocking_status"] == {"009815": "WAIT_NATIVE"}
 assert refresh0930["slot"] == "09:30"
 
 old_fetch_json, old_tracked_channels = quotes.fetch_json, quotes.tracked_channels
@@ -60,12 +61,15 @@ quotes.fetch_json = lambda *_args, **_kwargs: {"msgArray": mis_rows}
 assert {row["code"] for row in quotes.fetch_mis_snapshot()} == set(quotes.RADAR_CODES)
 quotes.fetch_json, quotes.tracked_channels = old_fetch_json, old_tracked_channels
 
-bad = radar_rows("09:30")[:-1]
-try:
-    quotes.validate_radar_refresh(bad, "2026-08-13", "09:30", at0930)
-    raise AssertionError("missing one radar ETF must fail the whole slot")
-except ValueError:
-    pass
+without_native = [row for row in radar_rows("09:30") if row["code"] != "009815"]
+assert quotes.validate_radar_refresh(without_native, "2026-08-13", "09:30", at0930)["verified"] is True
+for required_code in quotes.RADAR_REQUIRED_LIVE_SYMBOLS:
+    bad = [row for row in radar_rows("09:30") if row["code"] != required_code]
+    try:
+        quotes.validate_radar_refresh(bad, "2026-08-13", "09:30", at0930)
+        raise AssertionError(f"missing required {required_code} must fail the whole slot")
+    except ValueError as exc:
+        assert required_code in str(exc)
 
 assert quotes.spot_quote_mode(datetime.fromisoformat("2026-08-13T13:42:00+08:00"), "2026-08-13", "13:30:00") == "delayed"
 assert quotes.spot_quote_mode(datetime.fromisoformat("2026-08-13T14:00:00+08:00"), "2026-08-13", "14:00:00") == "close"
@@ -83,6 +87,8 @@ with tempfile.TemporaryDirectory() as temp:
     quotes.write_market_cache(items, statuses, at0930, {}, refresh0930, {**refresh0930, "status": "success"})
     first = json.loads(quotes.OUTPUT.read_text(encoding="utf-8"))
     assert list(first["intraday_quote_snapshots"]) == ["2026-08-13_0930"]
+    assert set(first["intraday_quote_snapshots"]["2026-08-13_0930"]["items"]) == set(quotes.RADAR_REQUIRED_LIVE_SYMBOLS)
+    assert first["intraday_quote_snapshots"]["2026-08-13_0930"]["non_blocking_status"] == {"009815": "WAIT_NATIVE"}
     assert first["intraday_snapshot_meta"]["current_slot"] == "09:30"
     assert first["intraday_snapshot_meta"]["previous_successful_slot"] is None
     at1030 = datetime.fromisoformat("2026-08-13T10:32:00+08:00")
@@ -118,4 +124,4 @@ assert "--scheduled-once" in workflow
 assert "timeout-minutes: 20" in workflow
 assert 'cron: "32 1,2,3,4,5 * * 1-5"' not in workflow
 
-print("PASS production intraday scheduler, five-ETF validation, 13:30 timestamp mode and cache version regression")
+print("PASS production intraday scheduler, five-ETF validation, WAIT_NATIVE isolation, 13:30 timestamp mode and cache version regression")

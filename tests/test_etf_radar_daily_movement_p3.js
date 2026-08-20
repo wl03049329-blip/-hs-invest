@@ -61,7 +61,7 @@ result=movement(storedRankLatest,storedRankPrevious);assert.strictEqual(result.r
 console.log("TEST 9 PASS: previous rank is read from its saved snapshot without recomputation");
 
 assert.match(html,/const dailyPair=dailyLongRankPair\(\)/);assert.doesNotMatch(html,/const longPrevious=previousLongRanks\(\)/);
-assert.match(html,/const snapshotAsOf=intradayLongRankAsOf\(longs\)/);assert.match(html,/longRankSnapshot\(longs,saved,version,snapshotAsOf,snapshotSlot\)/);
+assert.match(html,/const snapshotAsOf=intradayLongRankAsOf\(longs\)/);assert.match(html,/isVerifiedLongRankSnapshot\(liveRadarRefresh,candidateSnapshot\)/);assert.match(html,/longRankSnapshot\(rankedLongs,saved,snapshotIdentity,snapshotAsOf,snapshotSlot\)/);
 console.log("TEST 10 PASS: P2 homepage intraday snapshot pipeline remains present and separate");
 
 for(const key of ["ticker","symbol","trading_date","final_core_score","display_score","status","data_as_of","calculated_at","engine_version","weekly_j"])assert.ok(key in latestSameRank.items["00830"],`missing traceability field ${key}`);
