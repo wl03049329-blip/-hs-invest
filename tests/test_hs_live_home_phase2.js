@@ -34,6 +34,7 @@ assert.match(css, /grid-template-areas:"rank identity score delta" "rank tier sc
 assert.match(css, /hsLiveRank:not\(\.is-wait\)\{width:40px;height:45px;font-size:30px/);
 assert.match(css, /hsLiveScore>b\{font-size:44px/);
 assert.match(html, /hsLiveWeeklyJ/);
+assert.match(html, /hsLiveMetaGroup/);
 assert.match(html, /const weeklyJ=Number\.isFinite\(x\.j\)\?fmt\(x\.j\):"—"/);
 assert.doesNotMatch(html.slice(html.indexOf("function longRankRow"), html.indexOf("function renderTodayHighlights")), /calculateWeekly|buildIntradayRadarBatch|computeCoreScore/);
 assert.match(html, /hsLiveSection hsLiveNextSection/);
@@ -44,6 +45,8 @@ assert.match(css, /hsLiveWeeklyJ b\{color:#f0d696;font-size:15px/);
 assert.match(css, /hsLiveSection h3\{margin:0 0 9px[^}]*font-size:15px/);
 assert.match(css, /hsLiveNextSection p b\{color:#f5d37f;font-size:23px/);
 assert.match(css, /hsLiveActions \.miniBtn\{min-height:46px/);
+assert.match(css, /grid-template-areas:"rank identity meta score delta" "rank identity meta score open"/);
+assert.match(css, /hsLiveMetaGroup\{grid-area:meta/);
 assert.match(css, /@media\(max-width:700px\)\{#homeEtfBrief\.hsLivePanel \.hsLiveGrid\{grid-template-columns:1fr/);
 assert.match(css, /white-space:nowrap/);
 

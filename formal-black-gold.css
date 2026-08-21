@@ -1408,6 +1408,16 @@ footer{color:#746f67}
 #homeEtfBrief.hsLivePanel .hsLiveOpen{align-self:end}
 @media(max-width:430px){#homeEtfBrief.hsLivePanel .hsLiveCard>summary{grid-template-columns:38px minmax(0,1fr) 74px 100px;column-gap:5px;padding:7px 8px}#homeEtfBrief.hsLivePanel .hsLiveRank:not(.is-wait){width:38px;height:43px;font-size:29px}#homeEtfBrief.hsLivePanel .hsLiveScore>b{font-size:42px}#homeEtfBrief.hsLivePanel .hsLiveTier{min-height:27px;padding:6px 9px;font-size:12px!important}}
 
+/* Final collapsed flow: rank → identity → weekly/status → score → close comparison. */
+#homeEtfBrief.hsLivePanel .hsLiveCard>summary{grid-template-columns:42px minmax(110px,1fr) 104px 84px 116px;grid-template-areas:"rank identity meta score delta" "rank identity meta score open";grid-template-rows:auto auto;column-gap:8px;row-gap:3px;padding:6px 9px;align-items:center}
+#homeEtfBrief.hsLivePanel .hsLiveRank:not(.is-wait){align-self:center}
+#homeEtfBrief.hsLivePanel .hsLiveMetaGroup{grid-area:meta;min-width:0;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:3px}
+#homeEtfBrief.hsLivePanel .hsLiveMetaGroup .hsLiveTier{max-width:100%;min-height:27px;padding:6px 8px;font-size:12px}
+#homeEtfBrief.hsLivePanel .hsLiveWeeklyJ{margin-top:0;white-space:nowrap}
+#homeEtfBrief.hsLivePanel .hsLiveScore{align-self:center}
+#homeEtfBrief.hsLivePanel .hsLiveDelta{align-self:center}
+@media(max-width:430px){#homeEtfBrief.hsLivePanel .hsLiveCard>summary{grid-template-columns:38px minmax(72px,1fr) 94px 64px 94px;column-gap:5px;row-gap:2px;padding:6px 7px}#homeEtfBrief.hsLivePanel .hsLiveMetaGroup .hsLiveTier{min-height:27px;padding:6px 7px;font-size:12px!important}#homeEtfBrief.hsLivePanel .hsLiveDelta{padding-left:2px}}
+
 /* HS LIVE final detail hierarchy: readable decisions first, technical metadata last. */
 #homeEtfBrief.hsLivePanel .hsLiveWeeklyJ{display:block;margin-top:3px;color:#c9b98f;font-size:13px;line-height:1.05;font-weight:600}
 #homeEtfBrief.hsLivePanel .hsLiveWeeklyJ b{color:#f0d696;font-size:15px;font-weight:700}
