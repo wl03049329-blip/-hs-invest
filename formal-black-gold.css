@@ -1371,3 +1371,13 @@ footer{color:#746f67}
 #homeEtfBrief.hsLivePanel .hsLiveIdentity em{margin-top:6px}
 #homeEtfBrief.hsLivePanel .hsLiveScore{padding-top:1px}
 @media(max-width:430px){#homeEtfBrief.hsLivePanel .hsLiveCard>summary{grid-template-columns:38px minmax(0,1fr) 62px;gap:8px 8px}#homeEtfBrief.hsLivePanel .hsLiveRank.rank-1,#homeEtfBrief.hsLivePanel .hsLiveRank.rank-2,#homeEtfBrief.hsLivePanel .hsLiveRank.rank-3{width:35px;height:42px}.hsLiveTier{font-size:10px!important;min-height:25px!important;padding:6px 9px!important}}
+
+/* HS LIVE compact layout: keep identity and score as the two deliberate zones. */
+#homeEtfBrief.hsLivePanel .hsLiveCard>summary{grid-template-columns:38px minmax(0,1fr) 104px;column-gap:8px}
+#homeEtfBrief.hsLivePanel .hsLiveIdentity{min-width:0;padding-right:2px}
+#homeEtfBrief.hsLivePanel .hsLiveScore,#homeEtfBrief.hsLivePanel .hsLiveDelta{min-width:0}
+#homeEtfBrief.hsLivePanel .hsLiveDelta{padding-left:4px}
+#homeEtfBrief.hsLivePanel .hsLiveRank.rank-1{border:1px solid transparent;background:linear-gradient(#171006,#090806) padding-box,linear-gradient(145deg,#ffe7a0,#c9953d 55%,#8b6427) border-box;box-shadow:inset 0 0 0 1px rgba(255,240,190,.16),inset 0 -9px 14px rgba(214,155,46,.1),0 6px 15px rgba(120,78,18,.24);text-shadow:0 0 9px rgba(255,218,127,.24)}
+#homeEtfBrief.hsLivePanel .hsLiveRank.rank-2{border-color:#d5c08e;color:#f1e5c9;background:linear-gradient(155deg,#2b261b 0%,#0b0a08 66%,#1b160d 100%);box-shadow:inset 0 0 0 1px rgba(255,239,194,.1),inset 0 -8px 12px rgba(190,158,90,.08),0 5px 13px rgba(0,0,0,.28)}
+#homeEtfBrief.hsLivePanel .hsLiveRank.rank-3{border-color:#bd9061;color:#e9c9a0;background:linear-gradient(155deg,#2b1d13 0%,#0a0907 66%,#1d120b 100%);box-shadow:inset 0 0 0 1px rgba(255,218,173,.08),inset 0 -8px 12px rgba(170,99,43,.08),0 5px 13px rgba(0,0,0,.28)}
+@media(max-width:430px){#homeEtfBrief.hsLivePanel .hsLiveCard>summary{grid-template-columns:38px minmax(0,1fr) 92px;column-gap:7px}}

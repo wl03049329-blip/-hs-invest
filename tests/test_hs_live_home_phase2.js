@@ -24,6 +24,8 @@ assert.match(css, /\.hsLiveRank\.rank-1/);
 assert.match(css, /\.hsLiveRank\.rank-2/);
 assert.match(css, /\.hsLiveRank\.rank-3/);
 assert.match(css, /\.hsLiveTier[^}]*font-size:11px/);
+assert.match(css, /hsLiveCard>summary\{grid-template-columns:38px minmax\(0,1fr\) 104px/);
+assert.match(css, /hsLiveRank\.rank-1\{border:1px solid transparent/);
 assert.match(css, /@media\(max-width:700px\)\{#homeEtfBrief\.hsLivePanel \.hsLiveGrid\{grid-template-columns:1fr/);
 assert.match(css, /white-space:nowrap/);
 
