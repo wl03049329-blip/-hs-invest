@@ -58,6 +58,10 @@ assert.match(css, /grid-template-areas:"score delta" "score open"/);
 assert.match(css, /grid-template-columns:38px minmax\(48px,1fr\) 89px minmax\(143px,1\.8fr\)/);
 assert.match(css, /hsLiveDelta>b,#homeEtfBrief\.hsLivePanel \.hsLiveDelta small\{white-space:normal/);
 assert.match(css, /Keep the composite model active at every width/);
+assert.match(css, /grid-template-columns:34px minmax\(84px,1fr\) 76px minmax\(122px,1\.5fr\)/);
+assert.match(css, /hsLiveRank:not\(\.is-wait\)\{width:34px;height:38px;font-size:25px/);
+assert.match(css, /hsLiveScore>b\{font-size:36px;line-height:\.84/);
+assert.match(css, /hsLiveDelta>i\{font-size:16px;line-height:1/);
 assert.match(css, /@media\(max-width:700px\)\{#homeEtfBrief\.hsLivePanel \.hsLiveGrid\{grid-template-columns:1fr/);
 assert.match(css, /white-space:nowrap/);
 
