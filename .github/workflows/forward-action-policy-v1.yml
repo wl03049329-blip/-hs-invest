@@ -1,0 +1,50 @@
+name: Forward Action Policy V1 Research Sidecar
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Validate the append-only research sidecar without accumulating signals.
+        required: true
+        default: true
+        type: boolean
+      daily_input_path:
+        description: Optional repository-relative, as-of feature input JSON for a reviewed manual append.
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: forward-action-policy-v1-research
+  cancel-in-progress: false
+
+jobs:
+  validate-sidecar:
+    if: inputs.dry_run == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}
+          ref: research/forward-action-policy-v1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate research ledger implementation
+        run: node tests/test_forward_action_policy_v1.js
+      - name: Build frozen Core and append reviewed daily sidecar record
+        if: inputs.dry_run == false && inputs.daily_input_path != ''
+        env:
+          INPUT_PATH: ${{ inputs.daily_input_path }}
+        run: node scripts/append_forward_action_policy_v1.js --ledger research/forward-action-policy-v1/ledger.jsonl --daily-input "$INPUT_PATH"
+      - name: Confirm production files are untouched
+        run: |
+          test -z "$(git diff --name-only -- buy-point-core.js intraday-buy-point-core.js persistence-core.js portfolio-v6.js index.html market-quotes.json market-quotes-meta.json market-overview.json tx-futures-quote.json)"
+
+# The definition remains on the default branch so workflow_dispatch is available,
+# while every job explicitly checks out the dedicated research branch. It has no
+# schedule, production-updater dependency, or publishing step. Any ledger change
+# stays in the runner until a separately approved research-only commit process.
