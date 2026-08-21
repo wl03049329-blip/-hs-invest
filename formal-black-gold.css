@@ -1381,3 +1381,17 @@ footer{color:#746f67}
 #homeEtfBrief.hsLivePanel .hsLiveRank.rank-2{border-color:#d5c08e;color:#f1e5c9;background:linear-gradient(155deg,#2b261b 0%,#0b0a08 66%,#1b160d 100%);box-shadow:inset 0 0 0 1px rgba(255,239,194,.1),inset 0 -8px 12px rgba(190,158,90,.08),0 5px 13px rgba(0,0,0,.28)}
 #homeEtfBrief.hsLivePanel .hsLiveRank.rank-3{border-color:#bd9061;color:#e9c9a0;background:linear-gradient(155deg,#2b1d13 0%,#0a0907 66%,#1d120b 100%);box-shadow:inset 0 0 0 1px rgba(255,218,173,.08),inset 0 -8px 12px rgba(170,99,43,.08),0 5px 13px rgba(0,0,0,.28)}
 @media(max-width:430px){#homeEtfBrief.hsLivePanel .hsLiveCard>summary{grid-template-columns:38px minmax(0,1fr) 92px;column-gap:7px}}
+
+/* HS LIVE three-zone card: identity/status left, score center, comparison right. */
+#homeEtfBrief.hsLivePanel .hsLiveCard>summary{grid-template-columns:42px minmax(0,1fr) 92px 116px;grid-template-areas:"rank identity score delta" "rank tier score delta" "rank open open open";column-gap:8px;align-items:center}
+#homeEtfBrief.hsLivePanel .hsLiveRank:not(.is-wait){width:42px;height:52px;font-size:15px;border-radius:11px}
+#homeEtfBrief.hsLivePanel .hsLiveIdentity{align-self:center}
+#homeEtfBrief.hsLivePanel .hsLiveTier{min-height:30px;padding:7px 12px;font-size:12px;line-height:1}
+#homeEtfBrief.hsLivePanel .hsLiveScore{align-self:center;justify-items:center;text-align:center}
+#homeEtfBrief.hsLivePanel .hsLiveScore>b{font-size:36px}
+#homeEtfBrief.hsLivePanel .hsLiveDelta{align-self:center;justify-items:end;padding-left:8px}
+#homeEtfBrief.hsLivePanel .hsLiveDelta>b{font-size:8px}
+#homeEtfBrief.hsLivePanel .hsLiveDelta>i{font-size:13px}
+#homeEtfBrief.hsLivePanel .hsLiveDelta small{font-size:9px}
+#homeEtfBrief.hsLivePanel .hsLiveOpen{grid-area:open;justify-self:end}
+@media(max-width:430px){#homeEtfBrief.hsLivePanel .hsLiveCard>summary{grid-template-columns:40px minmax(0,1fr) 78px 104px;column-gap:6px;padding:11px}#homeEtfBrief.hsLivePanel .hsLiveRank:not(.is-wait){width:40px;height:48px;font-size:14px}#homeEtfBrief.hsLivePanel .hsLiveTier{min-height:29px;padding:7px 10px;font-size:12px!important}#homeEtfBrief.hsLivePanel .hsLiveScore>b{font-size:34px}#homeEtfBrief.hsLivePanel .hsLiveDelta{padding-left:5px}}

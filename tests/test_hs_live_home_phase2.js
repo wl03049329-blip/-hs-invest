@@ -26,6 +26,9 @@ assert.match(css, /\.hsLiveRank\.rank-3/);
 assert.match(css, /\.hsLiveTier[^}]*font-size:11px/);
 assert.match(css, /hsLiveCard>summary\{grid-template-columns:38px minmax\(0,1fr\) 104px/);
 assert.match(css, /hsLiveRank\.rank-1\{border:1px solid transparent/);
+assert.match(css, /hsLiveCard>summary\{grid-template-columns:42px minmax\(0,1fr\) 92px 116px;grid-template-areas:/);
+assert.match(css, /hsLiveRank:not\(\.is-wait\)\{width:42px;height:52px/);
+assert.match(css, /hsLiveTier\{min-height:30px;padding:7px 12px;font-size:12px/);
 assert.match(css, /@media\(max-width:700px\)\{#homeEtfBrief\.hsLivePanel \.hsLiveGrid\{grid-template-columns:1fr/);
 assert.match(css, /white-space:nowrap/);
 
