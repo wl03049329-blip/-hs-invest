@@ -32,7 +32,18 @@ assert.match(css, /hsLiveTier\{min-height:30px;padding:7px 12px;font-size:12px/)
 assert.match(html, /<span class="hsLiveRank rank-\$\{rank\}" aria-label="第\$\{rank\}名">\$\{String\(rank\)\}<\/span>/);
 assert.match(css, /grid-template-areas:"rank identity score delta" "rank tier score open"/);
 assert.match(css, /hsLiveRank:not\(\.is-wait\)\{width:40px;height:45px;font-size:30px/);
-assert.match(css, /hsLiveScore>b\{font-size:42px/);
+assert.match(css, /hsLiveScore>b\{font-size:44px/);
+assert.match(html, /hsLiveWeeklyJ/);
+assert.match(html, /const weeklyJ=Number\.isFinite\(x\.j\)\?fmt\(x\.j\):"—"/);
+assert.doesNotMatch(html.slice(html.indexOf("function longRankRow"), html.indexOf("function renderTodayHighlights")), /calculateWeekly|buildIntradayRadarBatch|computeCoreScore/);
+assert.match(html, /hsLiveSection hsLiveNextSection/);
+assert.match(html, /hsLiveTimelineEmpty"><b>目前尚無新的盤中快照/);
+assert.match(html, /<h3>HS 判讀<\/h3>/);
+assert.match(html, /技術資料<\/summary>/);
+assert.match(css, /hsLiveWeeklyJ b\{color:#f0d696;font-size:15px/);
+assert.match(css, /hsLiveSection h3\{margin:0 0 9px[^}]*font-size:15px/);
+assert.match(css, /hsLiveNextSection p b\{color:#f5d37f;font-size:23px/);
+assert.match(css, /hsLiveActions \.miniBtn\{min-height:46px/);
 assert.match(css, /@media\(max-width:700px\)\{#homeEtfBrief\.hsLivePanel \.hsLiveGrid\{grid-template-columns:1fr/);
 assert.match(css, /white-space:nowrap/);
 

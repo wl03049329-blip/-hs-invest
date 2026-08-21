@@ -1399,11 +1399,32 @@ footer{color:#746f67}
 /* Final compact pass: two tight rows, oversized decision cues, no leading-zero rank. */
 #homeEtfBrief.hsLivePanel .hsLiveCard>summary{grid-template-areas:"rank identity score delta" "rank tier score open";grid-template-rows:auto auto;row-gap:4px;padding:8px 10px}
 #homeEtfBrief.hsLivePanel .hsLiveRank:not(.is-wait){width:40px;height:45px;font-size:30px;line-height:.82;letter-spacing:-.04em}
-#homeEtfBrief.hsLivePanel .hsLiveScore>b{font-size:42px;line-height:.78}
+#homeEtfBrief.hsLivePanel .hsLiveScore>b{font-size:44px;line-height:.78}
 #homeEtfBrief.hsLivePanel .hsLiveScore small{margin-top:2px;font-size:7px}
 #homeEtfBrief.hsLivePanel .hsLiveIdentity small{margin-top:1px}
 #homeEtfBrief.hsLivePanel .hsLiveIdentity em{margin-top:3px}
 #homeEtfBrief.hsLivePanel .hsLiveTier{min-height:28px;padding:6px 10px;font-size:12px;line-height:1}
 #homeEtfBrief.hsLivePanel .hsLiveDelta{gap:0;align-self:center}
 #homeEtfBrief.hsLivePanel .hsLiveOpen{align-self:end}
-@media(max-width:430px){#homeEtfBrief.hsLivePanel .hsLiveCard>summary{grid-template-columns:38px minmax(0,1fr) 74px 100px;column-gap:5px;padding:7px 8px}#homeEtfBrief.hsLivePanel .hsLiveRank:not(.is-wait){width:38px;height:43px;font-size:29px}#homeEtfBrief.hsLivePanel .hsLiveScore>b{font-size:40px}#homeEtfBrief.hsLivePanel .hsLiveTier{min-height:27px;padding:6px 9px;font-size:12px!important}}
+@media(max-width:430px){#homeEtfBrief.hsLivePanel .hsLiveCard>summary{grid-template-columns:38px minmax(0,1fr) 74px 100px;column-gap:5px;padding:7px 8px}#homeEtfBrief.hsLivePanel .hsLiveRank:not(.is-wait){width:38px;height:43px;font-size:29px}#homeEtfBrief.hsLivePanel .hsLiveScore>b{font-size:42px}#homeEtfBrief.hsLivePanel .hsLiveTier{min-height:27px;padding:6px 9px;font-size:12px!important}}
+
+/* HS LIVE final detail hierarchy: readable decisions first, technical metadata last. */
+#homeEtfBrief.hsLivePanel .hsLiveWeeklyJ{display:block;margin-top:3px;color:#c9b98f;font-size:13px;line-height:1.05;font-weight:600}
+#homeEtfBrief.hsLivePanel .hsLiveWeeklyJ b{color:#f0d696;font-size:15px;font-weight:700}
+#homeEtfBrief.hsLivePanel .hsLiveCardDetail{gap:0;padding:0 14px 14px}
+#homeEtfBrief.hsLivePanel .hsLiveSection{padding:15px 0;border-top:1px solid rgba(122,101,60,.25)}
+#homeEtfBrief.hsLivePanel .hsLiveSection h3{margin:0 0 9px;color:#d8c18b;font-size:15px;line-height:1.2;font-weight:800}
+#homeEtfBrief.hsLivePanel .hsLiveNextSection p{margin:0 0 10px;color:#f1e5cb;font-size:18px;line-height:1.35;font-weight:600}
+#homeEtfBrief.hsLivePanel .hsLiveNextSection p b{color:#f5d37f;font-size:23px}
+#homeEtfBrief.hsLivePanel .hsLiveProgress{display:block;height:7px;border-radius:99px;background:rgba(118,94,48,.28);overflow:hidden}
+#homeEtfBrief.hsLivePanel .hsLiveProgress b{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#9d7634,#f0cc75)}
+#homeEtfBrief.hsLivePanel .hsLiveDrivers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+#homeEtfBrief.hsLivePanel .hsLiveDriver{min-height:62px;padding:11px 10px;display:flex;flex-direction:column;justify-content:space-between;border:1px solid rgba(139,111,52,.38);border-radius:10px;background:rgba(22,17,9,.8)}
+#homeEtfBrief.hsLivePanel .hsLiveDriver b{color:#a99b83;font-size:13px;font-weight:700}
+#homeEtfBrief.hsLivePanel .hsLiveDriver i{color:#f0d696;font-size:16px;font-style:normal;font-weight:700}
+#homeEtfBrief.hsLivePanel .hsLiveTimelineEmpty{margin:0;display:grid;gap:5px;color:#eee1c7;font-size:16px;line-height:1.35}.hsLiveTimelineEmpty small{color:#a99b83;font-size:13px}
+#homeEtfBrief.hsLivePanel .hsLiveTimeline{display:flex;gap:7px;flex-wrap:wrap}.hsLiveTimeline span{min-width:62px;padding:8px 9px;display:grid;gap:3px;border:1px solid rgba(139,111,52,.38);border-radius:9px}.hsLiveTimeline b{font-size:13px;color:#b8aa8e}.hsLiveTimeline i{font-size:17px;color:#f0d696;font-style:normal;font-weight:700}.hsLiveTimeline .is-missing{opacity:.55}
+#homeEtfBrief.hsLivePanel .hsLiveDecision strong{display:block;color:#f1e5cb;font-size:18px;line-height:1.4;font-weight:700}.hsLiveDecision p{margin:8px 0 0;color:#b9ac93;font-size:15px;line-height:1.4}
+#homeEtfBrief.hsLivePanel .hsLiveTech{border-top:1px solid rgba(122,101,60,.25);padding:13px 0}.hsLiveTech>summary{color:#a99b83;font-size:14px;cursor:pointer}.hsLiveTech .hsLiveDetailMeta{margin-top:10px;display:grid;gap:7px}.hsLiveTech .hsLiveDetailMeta span{font-size:13px;color:#9f927d}.hsLiveTech .hsLiveDetailMeta b{color:#e2d0a5;font-size:14px}
+#homeEtfBrief.hsLivePanel .hsLiveActions{padding-top:13px;gap:8px}.hsLiveActions .miniBtn{min-height:46px;padding:12px 8px;font-size:15px;font-weight:700}
+@media(max-width:430px){#homeEtfBrief.hsLivePanel .hsLiveCardDetail{padding:0 12px 12px}.hsLiveSection{padding:14px 0!important}.hsLiveDrivers{grid-template-columns:repeat(2,minmax(0,1fr))!important}.hsLiveDriver{min-height:60px!important}.hsLiveDrivers .hsLiveDriver:last-child{grid-column:1 / -1}.hsLiveNextSection p{font-size:17px!important}.hsLiveNextSection p b{font-size:22px!important}.hsLiveDecision strong{font-size:17px!important}.hsLiveActions{grid-template-columns:1fr!important}.hsLiveActions .miniBtn{min-height:46px;font-size:15px!important}}
