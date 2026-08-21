@@ -35,6 +35,7 @@ assert.match(css, /hsLiveRank:not\(\.is-wait\)\{width:40px;height:45px;font-size
 assert.match(css, /hsLiveScore>b\{font-size:44px/);
 assert.match(html, /hsLiveWeeklyJ/);
 assert.match(html, /hsLiveMetaGroup/);
+assert.match(html, /hsLiveDecisionComposite/);
 assert.match(html, /const weeklyJ=Number\.isFinite\(x\.j\)\?fmt\(x\.j\):"—"/);
 assert.doesNotMatch(html.slice(html.indexOf("function longRankRow"), html.indexOf("function renderTodayHighlights")), /calculateWeekly|buildIntradayRadarBatch|computeCoreScore/);
 assert.match(html, /hsLiveSection hsLiveNextSection/);
@@ -51,6 +52,12 @@ assert.match(css, /hsLiveMetaGroup\{align-items:flex-start;justify-self:start;te
 assert.match(css, /hsLiveDelta\{grid-area:delta;justify-self:stretch/);
 assert.match(css, /hsLiveDelta>b\{font-size:13px/);
 assert.match(css, /grid-template-columns:38px minmax\(58px,1fr\) 94px 62px 104px/);
+assert.match(css, /grid-template-columns:38px minmax\(0,1fr\) 94px minmax\(138px,1fr\)/);
+assert.match(css, /hsLiveDecisionComposite\{grid-area:composite;display:grid/);
+assert.match(css, /grid-template-areas:"score delta" "score open"/);
+assert.match(css, /grid-template-columns:38px minmax\(48px,1fr\) 89px minmax\(143px,1\.8fr\)/);
+assert.match(css, /hsLiveDelta>b,#homeEtfBrief\.hsLivePanel \.hsLiveDelta small\{white-space:normal/);
+assert.match(css, /Keep the composite model active at every width/);
 assert.match(css, /@media\(max-width:700px\)\{#homeEtfBrief\.hsLivePanel \.hsLiveGrid\{grid-template-columns:1fr/);
 assert.match(css, /white-space:nowrap/);
 

@@ -1426,6 +1426,33 @@ footer{color:#746f67}
 #homeEtfBrief.hsLivePanel .hsLiveDelta small{font-size:13px;line-height:1.05}
 @media(max-width:430px){#homeEtfBrief.hsLivePanel .hsLiveCard>summary{grid-template-columns:38px minmax(58px,1fr) 94px 62px 104px;column-gap:4px;padding:6px 6px}#homeEtfBrief.hsLivePanel .hsLiveDelta{padding-left:3px}}
 
+/* P0 responsive guard: mobile uses four zones with a flexible Score + close composite. */
+#homeEtfBrief.hsLivePanel .hsLiveDecisionComposite{display:contents}
+@media(max-width:430px){#homeEtfBrief.hsLivePanel .hsLiveCard>summary{grid-template-columns:38px minmax(0,1fr) 94px minmax(138px,1fr);grid-template-areas:"rank identity meta composite" "rank identity meta composite";column-gap:4px;row-gap:2px;min-width:0;padding:6px}#homeEtfBrief.hsLivePanel .hsLiveIdentity,#homeEtfBrief.hsLivePanel .hsLiveMetaGroup,#homeEtfBrief.hsLivePanel .hsLiveDecisionComposite{min-width:0}#homeEtfBrief.hsLivePanel .hsLiveDecisionComposite{grid-area:composite;display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr);grid-template-areas:"score delta" "score open";gap:2px 6px;align-items:center;min-width:0}#homeEtfBrief.hsLivePanel .hsLiveDecisionComposite .hsLiveScore{grid-area:score;min-width:0}#homeEtfBrief.hsLivePanel .hsLiveDecisionComposite .hsLiveDelta{grid-area:delta;min-width:0;overflow-wrap:anywhere}#homeEtfBrief.hsLivePanel .hsLiveDecisionComposite .hsLiveOpen{grid-area:open;justify-self:end;min-width:0}}
+
+/* Keep the composite model active at every width so the right edge never relies on overflow. */
+#homeEtfBrief.hsLivePanel .hsLiveCard>summary{grid-template-columns:42px minmax(0,1.1fr) 104px minmax(150px,1.4fr);grid-template-areas:"rank identity meta composite" "rank identity meta composite";min-width:0}
+#homeEtfBrief.hsLivePanel .hsLiveDecisionComposite{grid-area:composite;display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr);grid-template-areas:"score delta" "score open";gap:2px 8px;align-items:center;min-width:0}
+#homeEtfBrief.hsLivePanel .hsLiveDecisionComposite .hsLiveScore{grid-area:score;min-width:0}
+#homeEtfBrief.hsLivePanel .hsLiveDecisionComposite .hsLiveDelta{grid-area:delta;min-width:0;overflow-wrap:anywhere}
+#homeEtfBrief.hsLivePanel .hsLiveDecisionComposite .hsLiveOpen{grid-area:open;justify-self:end;min-width:0}
+@media(max-width:430px){#homeEtfBrief.hsLivePanel .hsLiveCard>summary{grid-template-columns:38px minmax(0,1fr) 94px minmax(138px,1fr)}}
+
+@media(max-width:430px){#homeEtfBrief.hsLivePanel .hsLiveGrid{width:100%;min-width:0}#homeEtfBrief.hsLivePanel .hsLiveCard{width:100%;max-width:100%;min-width:0}#homeEtfBrief.hsLivePanel .hsLiveDecisionComposite{width:100%;max-width:100%;min-width:0}#homeEtfBrief.hsLivePanel .hsLiveDelta>b,#homeEtfBrief.hsLivePanel .hsLiveDelta small{white-space:normal;overflow-wrap:anywhere;word-break:break-all}}
+
+@media(max-width:430px){#homeEtfBrief.hsLivePanel .hsLiveCard>summary{grid-template-columns:38px minmax(56px,1fr) 78px minmax(180px,1fr)}#homeEtfBrief.hsLivePanel .hsLiveDecisionComposite{grid-template-columns:minmax(0,72px) minmax(0,1fr)}}
+
+@media(max-width:430px){#homeEtfBrief.hsLivePanel .hsLiveDecisionComposite{display:grid!important;grid-area:composite!important;width:auto!important;max-width:100%!important;overflow:visible}#homeEtfBrief.hsLivePanel .hsLiveDecisionComposite .hsLiveScore,#homeEtfBrief.hsLivePanel .hsLiveDecisionComposite .hsLiveDelta,#homeEtfBrief.hsLivePanel .hsLiveDecisionComposite .hsLiveOpen{min-width:0;max-width:100%}}
+
+#homeEtfBrief.hsLivePanel .hsLiveGrid,#homeEtfBrief.hsLivePanel .hsLiveCard,#homeEtfBrief.hsLivePanel .hsLiveCard>summary{box-sizing:border-box;width:100%;max-width:100%;min-width:0}
+
+/* P0 responsive correction: fit the four-zone summary inside the real card width. */
+@media(max-width:430px){
+  #homeEtfBrief.hsLivePanel .hsLiveCard>summary{grid-template-columns:38px minmax(48px,1fr) 89px minmax(143px,1.8fr);column-gap:0;overflow:visible}
+  #homeEtfBrief.hsLivePanel .hsLiveDecisionComposite{grid-template-columns:minmax(56px,.8fr) minmax(0,1.2fr);column-gap:4px;overflow:visible}
+  #homeEtfBrief.hsLivePanel .hsLiveDelta>b,#homeEtfBrief.hsLivePanel .hsLiveDelta small{white-space:normal;overflow-wrap:break-word;word-break:normal}
+}
+
 /* HS LIVE final detail hierarchy: readable decisions first, technical metadata last. */
 #homeEtfBrief.hsLivePanel .hsLiveWeeklyJ{display:block;margin-top:3px;color:#c9b98f;font-size:13px;line-height:1.05;font-weight:600}
 #homeEtfBrief.hsLivePanel .hsLiveWeeklyJ b{color:#f0d696;font-size:15px;font-weight:700}
