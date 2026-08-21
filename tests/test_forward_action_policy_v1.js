@@ -20,7 +20,7 @@ function daily(date, score, options = {}) {
     etf: options.etf || "00830",
     trading_date: date,
     source_date: date,
-    appended_at: `${date}T13:31:00+08:00`,
+    appended_at: options.appended_at || `${date}T13:31:00+08:00`,
     data_quality: options.data_quality || "PASS",
     source: { provider: "canonical-adjusted-ohlc", source_snapshot_hash: "abc" },
     dataset: { id: "historical-adjusted", revision: "test" },
@@ -50,6 +50,9 @@ try {
   assert.equal(Object.hasOwn(first, "future_return"), false, "daily signal must not persist future data");
   assert.equal(append(first).status, "APPENDED");
   assert.equal(append(first).status, "NOOP_IDENTICAL", "same deterministic payload is idempotent");
+  const retriedAtDifferentRuntime = daily("2025-04-07", 66, { appended_at: "2025-04-07T14:00:00+08:00" });
+  assert.equal(retriedAtDifferentRuntime.appended_at, "2025-04-07T13:30:00+08:00");
+  assert.equal(append(retriedAtDifferentRuntime).status, "NOOP_IDENTICAL", "runtime retries normalize to the logical timestamp");
   assert.throws(() => ledger.appendRecord(ledgerPath, { record_id: "bad", record_type: "UNKNOWN" }), /RECORD_TYPE_INVALID/);
 
   const conflicting = { ...first, factors: { ...first.factors, dd52: { ...first.factors.dd52, mapped_component: 67 } } };
@@ -79,12 +82,18 @@ try {
   const signalBeforeExecution = JSON.stringify(first);
   const execution = ledger.buildExecutionReference({
     etf: "00830", signal_record_id: first.record_id, signal_date: "2025-04-07", execution_date: "2025-04-08",
-    adjusted_open: 101.25, appended_at: "2025-04-08T13:31:00+08:00", source: { provider: "canonical-adjusted-ohlc" }
+    adjusted_open: 101.25, appended_at: "2025-04-08T13:31:00+08:00", source: { provider: "canonical-adjusted-ohlc" }, trading_calendar: ["2025-04-08", "2025-04-09"]
   });
   assert.equal(execution.record_id, "FAPV1:EXECUTION_REFERENCE:00830:2025-04-07:2025-04-08:ADJUSTED_OPEN");
   assert.equal(JSON.stringify(first), signalBeforeExecution, "T+1 reference cannot mutate the prior signal");
   assert.equal(append(execution).status, "APPENDED");
   assert.equal(append(execution).status, "NOOP_IDENTICAL", "candidate and baseline share one execution reference");
+  assert.throws(() => ledger.buildExecutionReference({ ...execution, execution_date: "2025-04-12", trading_calendar: ["2025-04-08", "2025-04-09"] }), /EXECUTION_REFERENCE_INVALID/, "weekend execution is rejected");
+  assert.throws(() => ledger.buildExecutionReference({ ...execution, execution_date: "2025-04-09", trading_calendar: ["2025-04-08", "2025-04-09"] }), /EXECUTION_REFERENCE_INVALID/, "T+2 is rejected when T+1 exists");
+  const fridayExecution = ledger.buildExecutionReference({ ...execution, signal_date: "2026-08-21", execution_date: "2026-08-24", trading_calendar: ["2026-08-24", "2026-08-25"], signal_record_id: "friday-signal" });
+  assert.equal(fridayExecution.execution_date, "2026-08-24", "weekend is skipped using the canonical trading calendar");
+  assert.throws(() => ledger.buildExecutionReference({ ...fridayExecution, execution_date: "2026-08-25", trading_calendar: ["2026-08-24", "2026-08-25"] }), /EXECUTION_REFERENCE_INVALID/, "holiday/T+2 cannot skip the first available trading day");
+  assert.throws(() => ledger.buildExecutionReference({ ...fridayExecution, trading_calendar: [] }), /NEXT_TRADING_DAY_UNAVAILABLE/, "missing next-day OHLC leaves execution unavailable");
 
   const close = ledger.buildEpisodeClose({
     etf: "00830", episode_id: first.episode.episode_id, closed_on: "2025-04-14", appended_at: "2025-04-14T13:31:00+08:00"
@@ -100,6 +109,12 @@ try {
   assert.equal(records.find(record => record.record_id === first.record_id).core.internal_score, 66, "corrections are appended and never rewrite originals");
 
   assert.doesNotThrow(() => ledger.verifyChain(ledger.readLedger(ledgerPath)));
+  assert.throws(() => ledger.assertActivationTransition({ status: "IMPLEMENTED_NOT_STARTED" }, [], "FORWARD_ACCUMULATION_ACTIVE"), /ACTIVATION_REQUIRES_VALID_DAILY_SIGNAL/);
+  assert.equal(ledger.assertActivationTransition({ status: "IMPLEMENTED_NOT_STARTED" }, records, "FORWARD_ACCUMULATION_ACTIVE").atomic, true);
+  const batchA = path.join(tempDirectory, "batch-a.jsonl"), batchB = path.join(tempDirectory, "batch-b.jsonl");
+  const batchDrafts = [daily("2025-05-03", 10, { etf: "00935", highDate: "2025-05-01" }), daily("2025-05-03", 10, { etf: "0050", highDate: "2025-05-01" })];
+  ledger.appendDailySignalBatch(batchA, batchDrafts); ledger.appendDailySignalBatch(batchB, [...batchDrafts].reverse());
+  assert.equal(fs.readFileSync(batchA, "utf8"), fs.readFileSync(batchB, "utf8"), "same-date daily batches sort by ETF code before hashing");
   const brokenPath = path.join(tempDirectory, "broken.jsonl");
   const broken = ledger.readLedger(ledgerPath);
   broken[1].previous_record_hash = "corrupted";

@@ -23,6 +23,7 @@ const RECORD_TYPES = new Set(["DAILY_SIGNAL", "EXECUTION_REFERENCE", "EPISODE_CL
 
 function isFiniteScore(value){ return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 100; }
 function isDate(value){ return /^\d{4}-\d{2}-\d{2}$/.test(String(value || "")); }
+function logicalSignalTimestamp(date){ if(!isDate(date)) throw Error("SIGNAL_TIMESTAMP_DATE_INVALID"); return `${date}T13:30:00+08:00`; }
 function stable(value){
   if(Array.isArray(value)) return value.map(stable);
   if(value && typeof value === "object") return Object.fromEntries(Object.keys(value).sort().map(key => [key,stable(value[key])]));
@@ -63,6 +64,12 @@ function appendRecord(ledgerPath,draft){
   fs.appendFileSync(ledgerPath,`${canonicalJson(record)}\n`,"utf8");
   return {status:"APPENDED",record};
 }
+function appendDailySignalBatch(ledgerPath,drafts){
+  if(!Array.isArray(drafts)||!drafts.every(record=>record?.record_type==="DAILY_SIGNAL")) throw Error("DAILY_BATCH_INVALID");
+  const ordered=[...drafts].sort((a,b)=>a.trading_date.localeCompare(b.trading_date)||a.etf.localeCompare(b.etf));
+  if(new Set(ordered.map(record=>record.record_id)).size!==ordered.length) throw Error("DAILY_BATCH_DUPLICATE_ID");
+  return ordered.map(record=>appendRecord(ledgerPath,record));
+}
 function episodeId(etf,highDate){
   if(!etf || !isDate(highDate)) throw Error("EPISODE_ID_INPUT_INVALID");
   return `FAPV1:EPISODE:${etf}:${highDate}`;
@@ -87,9 +94,19 @@ function nextDecision(coreScore,fired,ledger){
   const cumulative = [...fired].reduce((sum,tier) => sum + ledger.allocations[tier - 1],0) + allocation;
   return {newly_crossed_tier:tierIndex < 0 ? null : tierIndex + 1,virtual_allocation:allocation,cumulative_allocation:cumulative,remaining_cash:1-cumulative,action_status:tierIndex < 0 ? "NO_NEW_TIER" : "VIRTUAL_ACTION"};
 }
+function nextTradingDate(signalDate,tradingCalendar){
+  if(!isDate(signalDate)||!Array.isArray(tradingCalendar)) throw Error("TRADING_CALENDAR_INVALID");
+  const dates=[...new Set(tradingCalendar.filter(isDate))].sort();
+  const next=dates.find(date=>date>signalDate); if(!next) throw Error("NEXT_TRADING_DAY_UNAVAILABLE"); return next;
+}
+function assertActivationTransition(meta,records,nextStatus){
+  if(!meta||meta.status!=="IMPLEMENTED_NOT_STARTED"||nextStatus!=="FORWARD_ACCUMULATION_ACTIVE") throw Error("ACTIVATION_TRANSITION_INVALID");
+  if(!Array.isArray(records)||!records.some(record=>record.record_type==="DAILY_SIGNAL"&&record.core?.core_valid===true)) throw Error("ACTIVATION_REQUIRES_VALID_DAILY_SIGNAL");
+  return {staged_paths:["research/forward-action-policy-v1/ledger.jsonl","research/forward-action-policy-v1/meta.json"],atomic:true};
+}
 function buildDailySignal(input,existingRecords=[]){
   const {etf,trading_date,appended_at,source_date,data_quality="PASS",mapping_version="FROZEN_PRODUCTION_FACTOR_MAPPING_V1",source={},dataset={}} = input;
-  if(!etf || !isDate(trading_date) || !appended_at || !isDate(source_date)) throw Error("DAILY_SIGNAL_IDENTITY_INVALID");
+  if(!etf || !isDate(trading_date) || !isDate(source_date)) throw Error("DAILY_SIGNAL_IDENTITY_INVALID");
   const factors = input.factors || {}, weeklyJ = factors.weekly_j || {}, dd52 = factors.dd52 || {}, crash = factors.crash || {};
   const canonical=input.canonical_snapshot||{};
   const canonicalValid=typeof canonical.data_branch_commit==="string" && /^[0-9a-f]{40}$/.test(canonical.data_branch_commit) && canonical.snapshot_date===trading_date && typeof canonical.snapshot_path==="string" && /^research\/forward-action-policy-data\/snapshots\/\d{4}-\d{2}-\d{2}\/$/.test(canonical.snapshot_path) && [canonical.dataset_sha256,canonical.manifest_sha256,canonical.producer_sha256].every(value=>typeof value==="string"&&/^[0-9a-f]{64}$/.test(value));
@@ -97,8 +114,9 @@ function buildDailySignal(input,existingRecords=[]){
   const internalCore = valid ? finalCore.calculateFinalCoreScoreV1(weeklyJ.mapped_component,dd52.mapped_component,crash.mapped_component) : null;
   const highDate = input.episode?.asof_52w_high_date;
   const id = episodeId(etf,highDate);
-  const candidateState = replayTierState(existingRecords,etf,id,"candidate");
-  const baselineState = replayTierState(existingRecords,etf,id,"baseline");
+  const historyRecords=existingRecords.filter(record=>record.record_id!==dailySignalId(etf,trading_date));
+  const candidateState = replayTierState(historyRecords,etf,id,"candidate");
+  const baselineState = replayTierState(historyRecords,etf,id,"baseline");
   const candidate = nextDecision(internalCore,candidateState,LEDGERS.CANDIDATE);
   const baseline = nextDecision(internalCore,baselineState,LEDGERS.BASELINE);
   const contribution = (score,weight) => isFiniteScore(score) ? score * weight / 100 : null;
@@ -109,7 +127,7 @@ function buildDailySignal(input,existingRecords=[]){
   };
   return {
     record_id:dailySignalId(etf,trading_date),record_type:"DAILY_SIGNAL",research_version:RESEARCH_VERSION,core_version:CORE_VERSION,mapping_version,
-    etf,trading_date,appended_at,signal_timing:SIGNAL_TIMING,source:{...source,source_date},dataset,canonical_snapshot:canonical,provenance,
+    etf,trading_date,appended_at:logicalSignalTimestamp(trading_date),signal_timing:SIGNAL_TIMING,source:{...source,source_date},dataset,canonical_snapshot:canonical,provenance,
     factors:{weekly_j:{...weeklyJ,weighted_contribution:contribution(weeklyJ.mapped_component,30)},dd52:{...dd52,weighted_contribution:contribution(dd52.mapped_component,55)},crash:{...crash,weighted_contribution:contribution(crash.mapped_component,15)},adjusted_ohlc:input.adjusted_ohlc || null},
     core:{internal_score:internalCore,display_score:finalCore.displayFinalCoreScoreV1(internalCore),core_valid:internalCore !== null,validity:internalCore === null ? "NO_ACTION_CORE_UNAVAILABLE" : "AVAILABLE"},
     episode:{episode_id:id,status:"PROVISIONAL",asof_52w_high_date:highDate,new_asof_52w_high:Boolean(input.episode?.new_asof_52w_high),prior_tier_state:{candidate:[...candidateState].sort(),baseline:[...baselineState].sort()}},
@@ -117,8 +135,8 @@ function buildDailySignal(input,existingRecords=[]){
   };
 }
 function buildExecutionReference(input){
-  const {etf,signal_record_id,signal_date,execution_date,adjusted_open,appended_at,source={}} = input;
-  if(!etf || !signal_record_id || !isDate(signal_date) || !isDate(execution_date) || execution_date <= signal_date || !(typeof adjusted_open === "number" && Number.isFinite(adjusted_open) && adjusted_open > 0) || !appended_at) throw Error("EXECUTION_REFERENCE_INVALID");
+  const {etf,signal_record_id,signal_date,execution_date,adjusted_open,appended_at,source={},trading_calendar} = input;
+  if(!etf || !signal_record_id || !isDate(signal_date) || !isDate(execution_date) || execution_date!==nextTradingDate(signal_date,trading_calendar) || !(typeof adjusted_open === "number" && Number.isFinite(adjusted_open) && adjusted_open > 0) || !appended_at) throw Error("EXECUTION_REFERENCE_INVALID");
   return {record_id:executionReferenceId(etf,signal_date,execution_date),record_type:"EXECUTION_REFERENCE",research_version:RESEARCH_VERSION,etf,signal_record_id,signal_date,execution_date,adjusted_open,appended_at,source};
 }
 function buildEpisodeClose(input,existingRecords=[]){
@@ -158,4 +176,4 @@ function cli(){
   process.stdout.write(`${JSON.stringify(appendRecord(ledgerPath,draft))}\n`);
 }
 if(require.main === module) cli();
-module.exports={RESEARCH_VERSION,CORE_VERSION,SIGNAL_TIMING,TIERS,LEDGERS,canonicalJson,sha256,recordHash,readLedger,verifyChain,appendRecord,episodeId,dailySignalId,executionReferenceId,episodeCloseId,evaluationId,replayTierState,buildDailySignal,buildExecutionReference,buildEpisodeClose,buildEvaluation,buildCorrection};
+module.exports={RESEARCH_VERSION,CORE_VERSION,SIGNAL_TIMING,TIERS,LEDGERS,canonicalJson,sha256,recordHash,readLedger,verifyChain,appendRecord,appendDailySignalBatch,logicalSignalTimestamp,nextTradingDate,assertActivationTransition,episodeId,dailySignalId,executionReferenceId,episodeCloseId,evaluationId,replayTierState,buildDailySignal,buildExecutionReference,buildEpisodeClose,buildEvaluation,buildCorrection};
