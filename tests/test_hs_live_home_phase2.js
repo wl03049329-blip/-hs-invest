@@ -12,6 +12,7 @@ assert.match(html, /function hsLiveTimeline\(symbol,snapshot\)/);
 assert.match(html, /liveCanonicalCoreSnapshots=canonicalCoreSnapshots/);
 assert.match(html, /delta_vs_previous_close/);
 assert.match(html, /data-core-score-history=/);
+assert.match(html, /hsLiveRank rank-\$\{rank\}/);
 assert.match(html, /WAIT_NATIVE；資料不夠，不假裝有正式 Core Score/);
 
 const liveSection = html.slice(html.indexOf("function applyHomeDelayedQuotes"), html.indexOf("function renderMarket"));
@@ -19,6 +20,10 @@ assert.doesNotMatch(liveSection, /buildIntradayRadarBatch/);
 assert.match(css, /#homeEtfBrief\.hsLivePanel/);
 assert.match(css, /\.hsLiveGrid/);
 assert.match(css, /\.hsLiveTimeline/);
+assert.match(css, /\.hsLiveRank\.rank-1/);
+assert.match(css, /\.hsLiveRank\.rank-2/);
+assert.match(css, /\.hsLiveRank\.rank-3/);
+assert.match(css, /\.hsLiveTier[^}]*font-size:11px/);
 assert.match(css, /@media\(max-width:700px\)\{#homeEtfBrief\.hsLivePanel \.hsLiveGrid\{grid-template-columns:1fr/);
 assert.match(css, /white-space:nowrap/);
 

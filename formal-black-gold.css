@@ -1357,3 +1357,17 @@ footer{color:#746f67}
 @media(max-width:700px){#homeEtfBrief.hsLivePanel .hsLiveGrid{grid-template-columns:1fr}.hsLiveCard>summary{grid-template-columns:32px minmax(0,1fr) 62px;grid-template-areas:"rank identity score" "rank tier delta" "rank open open"}.hsLiveScore>b{font-size:34px}}
 @media(max-width:430px){#homeEtfBrief.hsLivePanel .panelTitle{gap:4px 8px}#homeEtfBrief.hsLivePanel .panelTitle h2{font-size:22px}.hsLiveReadScore{min-height:28px;padding:6px 8px;font-size:9px}.hsLiveCard>summary{padding:11px}.hsLiveTier{font-size:8px}.hsLiveDelta small{font-size:7px}.hsLiveCardDetail{padding:0 11px 11px}.hsLiveActions .miniBtn{font-size:8px}}
 @media(prefers-reduced-motion:reduce){.hsLiveOpen{transition:none}}
+
+/* HS LIVE visual polish: restrained hierarchy for leaders and readable state pills. */
+#homeEtfBrief.hsLivePanel .hsLiveCard>summary{grid-template-columns:38px minmax(0,1fr) auto;gap:8px 10px}
+#homeEtfBrief.hsLivePanel .hsLiveRank.rank-1,#homeEtfBrief.hsLivePanel .hsLiveRank.rank-2,#homeEtfBrief.hsLivePanel .hsLiveRank.rank-3{width:35px;height:42px;font-size:13px;border-radius:10px;background:linear-gradient(155deg,#2b200c 0%,#0b0906 62%,#241707 100%);box-shadow:inset 0 0 0 1px rgba(255,234,171,.11),inset 0 -8px 13px rgba(180,125,32,.08),0 5px 12px rgba(0,0,0,.28)}
+#homeEtfBrief.hsLivePanel .hsLiveRank.rank-1{border-color:#e5bf67;color:#ffe5a2;text-shadow:0 0 8px rgba(238,197,103,.18)}
+#homeEtfBrief.hsLivePanel .hsLiveRank.rank-2{border-color:#bca979;color:#e3d7b9;background:linear-gradient(155deg,#211d14 0%,#0b0a08 66%,#17140d 100%)}
+#homeEtfBrief.hsLivePanel .hsLiveRank.rank-3{border-color:#a78052;color:#d5b88c;background:linear-gradient(155deg,#20170f 0%,#0a0907 66%,#181009 100%)}
+#homeEtfBrief.hsLivePanel .hsLiveTier{min-height:26px;padding:6px 10px;font-size:11px;font-weight:900;letter-spacing:.01em}
+#homeEtfBrief.hsLivePanel .hsLiveTier.status-tier-1{border-color:rgba(190,177,148,.42)!important;color:#d4cfc5!important;background:rgba(112,96,62,.07)!important}
+#homeEtfBrief.hsLivePanel .hsLiveTier.status-tier-3,#homeEtfBrief.hsLivePanel .hsLiveTier.status-tier-4,#homeEtfBrief.hsLivePanel .hsLiveTier.status-tier-5,#homeEtfBrief.hsLivePanel .hsLiveTier.status-tier-6,#homeEtfBrief.hsLivePanel .hsLiveTier.status-tier-7,#homeEtfBrief.hsLivePanel .hsLiveTier.status-tier-8,#homeEtfBrief.hsLivePanel .hsLiveTier.status-tier-9{box-shadow:inset 0 0 0 1px rgba(255,228,159,.06),0 0 10px var(--status-glow)!important}
+#homeEtfBrief.hsLivePanel .hsLiveIdentity small{margin-top:3px}
+#homeEtfBrief.hsLivePanel .hsLiveIdentity em{margin-top:6px}
+#homeEtfBrief.hsLivePanel .hsLiveScore{padding-top:1px}
+@media(max-width:430px){#homeEtfBrief.hsLivePanel .hsLiveCard>summary{grid-template-columns:38px minmax(0,1fr) 62px;gap:8px 8px}#homeEtfBrief.hsLivePanel .hsLiveRank.rank-1,#homeEtfBrief.hsLivePanel .hsLiveRank.rank-2,#homeEtfBrief.hsLivePanel .hsLiveRank.rank-3{width:35px;height:42px}.hsLiveTier{font-size:10px!important;min-height:25px!important;padding:6px 9px!important}}
