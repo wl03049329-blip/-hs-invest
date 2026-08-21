@@ -29,6 +29,10 @@ assert.match(css, /hsLiveRank\.rank-1\{border:1px solid transparent/);
 assert.match(css, /hsLiveCard>summary\{grid-template-columns:42px minmax\(0,1fr\) 92px 116px;grid-template-areas:/);
 assert.match(css, /hsLiveRank:not\(\.is-wait\)\{width:42px;height:52px/);
 assert.match(css, /hsLiveTier\{min-height:30px;padding:7px 12px;font-size:12px/);
+assert.match(html, /<span class="hsLiveRank rank-\$\{rank\}" aria-label="第\$\{rank\}名">\$\{String\(rank\)\}<\/span>/);
+assert.match(css, /grid-template-areas:"rank identity score delta" "rank tier score open"/);
+assert.match(css, /hsLiveRank:not\(\.is-wait\)\{width:40px;height:45px;font-size:30px/);
+assert.match(css, /hsLiveScore>b\{font-size:42px/);
 assert.match(css, /@media\(max-width:700px\)\{#homeEtfBrief\.hsLivePanel \.hsLiveGrid\{grid-template-columns:1fr/);
 assert.match(css, /white-space:nowrap/);
 

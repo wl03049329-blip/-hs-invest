@@ -1395,3 +1395,15 @@ footer{color:#746f67}
 #homeEtfBrief.hsLivePanel .hsLiveDelta small{font-size:9px}
 #homeEtfBrief.hsLivePanel .hsLiveOpen{grid-area:open;justify-self:end}
 @media(max-width:430px){#homeEtfBrief.hsLivePanel .hsLiveCard>summary{grid-template-columns:40px minmax(0,1fr) 78px 104px;column-gap:6px;padding:11px}#homeEtfBrief.hsLivePanel .hsLiveRank:not(.is-wait){width:40px;height:48px;font-size:14px}#homeEtfBrief.hsLivePanel .hsLiveTier{min-height:29px;padding:7px 10px;font-size:12px!important}#homeEtfBrief.hsLivePanel .hsLiveScore>b{font-size:34px}#homeEtfBrief.hsLivePanel .hsLiveDelta{padding-left:5px}}
+
+/* Final compact pass: two tight rows, oversized decision cues, no leading-zero rank. */
+#homeEtfBrief.hsLivePanel .hsLiveCard>summary{grid-template-areas:"rank identity score delta" "rank tier score open";grid-template-rows:auto auto;row-gap:4px;padding:8px 10px}
+#homeEtfBrief.hsLivePanel .hsLiveRank:not(.is-wait){width:40px;height:45px;font-size:30px;line-height:.82;letter-spacing:-.04em}
+#homeEtfBrief.hsLivePanel .hsLiveScore>b{font-size:42px;line-height:.78}
+#homeEtfBrief.hsLivePanel .hsLiveScore small{margin-top:2px;font-size:7px}
+#homeEtfBrief.hsLivePanel .hsLiveIdentity small{margin-top:1px}
+#homeEtfBrief.hsLivePanel .hsLiveIdentity em{margin-top:3px}
+#homeEtfBrief.hsLivePanel .hsLiveTier{min-height:28px;padding:6px 10px;font-size:12px;line-height:1}
+#homeEtfBrief.hsLivePanel .hsLiveDelta{gap:0;align-self:center}
+#homeEtfBrief.hsLivePanel .hsLiveOpen{align-self:end}
+@media(max-width:430px){#homeEtfBrief.hsLivePanel .hsLiveCard>summary{grid-template-columns:38px minmax(0,1fr) 74px 100px;column-gap:5px;padding:7px 8px}#homeEtfBrief.hsLivePanel .hsLiveRank:not(.is-wait){width:38px;height:43px;font-size:29px}#homeEtfBrief.hsLivePanel .hsLiveScore>b{font-size:40px}#homeEtfBrief.hsLivePanel .hsLiveTier{min-height:27px;padding:6px 9px;font-size:12px!important}}
