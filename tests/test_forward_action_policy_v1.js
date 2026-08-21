@@ -24,6 +24,7 @@ function daily(date, score, options = {}) {
     data_quality: options.data_quality || "PASS",
     source: { provider: "canonical-adjusted-ohlc", source_snapshot_hash: "abc" },
     dataset: { id: "historical-adjusted", revision: "test" },
+    canonical_snapshot: { data_branch_commit: "a".repeat(40), snapshot_date: date, snapshot_path: `research/forward-action-policy-data/snapshots/${date}/`, dataset_sha256: "b".repeat(64), manifest_sha256: "c".repeat(64), producer_sha256: "d".repeat(64) },
     adjusted_ohlc: { close: 100, asof_available_at: `${date}T13:30:00+08:00` },
     episode: { asof_52w_high_date: options.highDate || "2025-01-02", new_asof_52w_high: Boolean(options.newHigh) },
     factors: {

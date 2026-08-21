@@ -91,7 +91,9 @@ function buildDailySignal(input,existingRecords=[]){
   const {etf,trading_date,appended_at,source_date,data_quality="PASS",mapping_version="FROZEN_PRODUCTION_FACTOR_MAPPING_V1",source={},dataset={}} = input;
   if(!etf || !isDate(trading_date) || !appended_at || !isDate(source_date)) throw Error("DAILY_SIGNAL_IDENTITY_INVALID");
   const factors = input.factors || {}, weeklyJ = factors.weekly_j || {}, dd52 = factors.dd52 || {}, crash = factors.crash || {};
-  const valid = source_date === trading_date && data_quality === "PASS" && isFiniteScore(weeklyJ.mapped_component) && isFiniteScore(dd52.mapped_component) && isFiniteScore(crash.mapped_component);
+  const canonical=input.canonical_snapshot||{};
+  const canonicalValid=typeof canonical.data_branch_commit==="string" && /^[0-9a-f]{40}$/.test(canonical.data_branch_commit) && canonical.snapshot_date===trading_date && typeof canonical.snapshot_path==="string" && /^research\/forward-action-policy-data\/snapshots\/\d{4}-\d{2}-\d{2}\/$/.test(canonical.snapshot_path) && [canonical.dataset_sha256,canonical.manifest_sha256,canonical.producer_sha256].every(value=>typeof value==="string"&&/^[0-9a-f]{64}$/.test(value));
+  const valid = canonicalValid && source_date === trading_date && data_quality === "PASS" && isFiniteScore(weeklyJ.mapped_component) && isFiniteScore(dd52.mapped_component) && isFiniteScore(crash.mapped_component);
   const internalCore = valid ? finalCore.calculateFinalCoreScoreV1(weeklyJ.mapped_component,dd52.mapped_component,crash.mapped_component) : null;
   const highDate = input.episode?.asof_52w_high_date;
   const id = episodeId(etf,highDate);
@@ -107,7 +109,7 @@ function buildDailySignal(input,existingRecords=[]){
   };
   return {
     record_id:dailySignalId(etf,trading_date),record_type:"DAILY_SIGNAL",research_version:RESEARCH_VERSION,core_version:CORE_VERSION,mapping_version,
-    etf,trading_date,appended_at,signal_timing:SIGNAL_TIMING,source:{...source,source_date},dataset,provenance,
+    etf,trading_date,appended_at,signal_timing:SIGNAL_TIMING,source:{...source,source_date},dataset,canonical_snapshot:canonical,provenance,
     factors:{weekly_j:{...weeklyJ,weighted_contribution:contribution(weeklyJ.mapped_component,30)},dd52:{...dd52,weighted_contribution:contribution(dd52.mapped_component,55)},crash:{...crash,weighted_contribution:contribution(crash.mapped_component,15)},adjusted_ohlc:input.adjusted_ohlc || null},
     core:{internal_score:internalCore,display_score:finalCore.displayFinalCoreScoreV1(internalCore),core_valid:internalCore !== null,validity:internalCore === null ? "NO_ACTION_CORE_UNAVAILABLE" : "AVAILABLE"},
     episode:{episode_id:id,status:"PROVISIONAL",asof_52w_high_date:highDate,new_asof_52w_high:Boolean(input.episode?.new_asof_52w_high),prior_tier_state:{candidate:[...candidateState].sort(),baseline:[...baselineState].sort()}},
