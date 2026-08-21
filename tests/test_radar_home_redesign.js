@@ -36,7 +36,7 @@ assert.match(html,/mode==="long_term_core"\?null:x\.score/);
 assert.deepEqual(strategy.SWING_WEIGHTS,{stopConfirmation:30,trendStrength:25,technicalLow:15,momentum:10,historicalStats:10,valuationBackground:5,marketLiquidity:5});
 assert.deepEqual(strategy.LONG_TERM_WEIGHTS,{weeklyKdj:45,drawdown:20,weeklyBias:15,marketFear:15,valuation:5});
 
-assert.match(workflow,/cron: "27,32,37,42,47 1,2,3,4,5 \* \* 1-5"/);assert.match(workflow,/run_intraday_radar_session\.py --scheduled-once/);
+assert.match(workflow,/cron: "27,30,35,40,45 1,2,3,4,5 \* \* 1-5"/);assert.match(workflow,/run_intraday_radar_session\.py --scheduled-once/);
 assert.match(html,/minute>=30&&minute<=49/);
 assert.match(html,/setTimeout\(async\(\)=>/);
 assert.match(html,/60000/);

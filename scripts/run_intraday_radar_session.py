@@ -35,6 +35,7 @@ CACHE_FILES = (
     "market-quotes-meta.json",
     "market-overview.json",
     "tx-futures-quote.json",
+    "intraday-core-snapshots-v1.json",
 )
 
 
@@ -243,6 +244,19 @@ def execute_slot(trading_date: str, slot: str, python: str = sys.executable) -> 
         and attempt.get("trading_date") == trading_date
         and attempt.get("slot") == slot
     )
+    if success:
+        # The raw quote cache is only an input.  A slot is successful only
+        # after the single canonical JS Core publisher has atomically emitted
+        # its scored artifact.  This avoids browser-local Core publication.
+        published = run(["node", "scripts/build_intraday_core_snapshots.js", "--trading-date", trading_date, "--slot", slot], check=False)
+        success = published.returncode == 0
+        if not success:
+            attempt = {
+                **attempt,
+                "verified": False,
+                "status": "failed",
+                "error": "canonical_intraday_core_snapshot_failed",
+            }
     print(f"[{slot}] {'SUCCESS' if success else 'FAILED'} {json.dumps(attempt, ensure_ascii=False)}", flush=True)
     return success, attempt
 
