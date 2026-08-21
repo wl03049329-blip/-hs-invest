@@ -47,6 +47,10 @@ assert.match(css, /hsLiveNextSection p b\{color:#f5d37f;font-size:23px/);
 assert.match(css, /hsLiveActions \.miniBtn\{min-height:46px/);
 assert.match(css, /grid-template-areas:"rank identity meta score delta" "rank identity meta score open"/);
 assert.match(css, /hsLiveMetaGroup\{grid-area:meta/);
+assert.match(css, /hsLiveMetaGroup\{align-items:flex-start;justify-self:start;text-align:left;gap:6px/);
+assert.match(css, /hsLiveDelta\{grid-area:delta;justify-self:stretch/);
+assert.match(css, /hsLiveDelta>b\{font-size:13px/);
+assert.match(css, /grid-template-columns:38px minmax\(58px,1fr\) 94px 62px 104px/);
 assert.match(css, /@media\(max-width:700px\)\{#homeEtfBrief\.hsLivePanel \.hsLiveGrid\{grid-template-columns:1fr/);
 assert.match(css, /white-space:nowrap/);
 
