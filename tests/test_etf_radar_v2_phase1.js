@@ -27,7 +27,8 @@ assert.match(core,/crash[\s\S]{0,120}weight:15/);
 assert.match(html,/function radarScoreTrendHtml\(ticker,history=loadDailyLongRankHistory\(\)\)/);
 assert.match(html,/if\(ticker==="009815"\)return.*WAIT_NATIVE；原生正式 Core Score 歷史尚未建立/s);
 assert.match(html,/officialCoreScoreHistory\(history,ticker,10\)/);
-assert.match(html,/僅使用已保存的 FINALIZED_CLOSE；不納入盤中 Core。/);
+assert.match(html,/正式盤後分數/);
+assert.match(html,/盤中 Core 不納入此趨勢/);
 assert.match(html,/if\(rows\.length>=Math\.max\(1,Math\.min\(10,Number\(limit\)\|\|10\)\)\)break/);
 assert.match(html,/snapshotType&&snapshotType!=="FINALIZED_CLOSE"/);
 
