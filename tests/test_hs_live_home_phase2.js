@@ -64,5 +64,12 @@ assert.match(css, /hsLiveScore>b\{font-size:36px;line-height:\.84/);
 assert.match(css, /hsLiveDelta>i\{font-size:16px;line-height:1/);
 assert.match(css, /@media\(max-width:700px\)\{#homeEtfBrief\.hsLivePanel \.hsLiveGrid\{grid-template-columns:1fr/);
 assert.match(css, /white-space:nowrap/);
+assert.match(html, /hsLivePrimary/);
+assert.match(html, /hsLiveSecondary/);
+assert.match(html, /hsLiveLatest/);
+assert.match(css, /hsLivePrimary\{display:grid;grid-template-columns:42px minmax\(0,1\.1fr\) minmax\(150px,1\.4fr\)/);
+assert.match(css, /hsLiveSecondary\{display:grid;grid-template-columns:auto minmax\(0,1fr\) auto/);
+assert.ok(css.includes("#homeEtfBrief.hsLivePanel .hsLivePrimary{grid-template-columns:34px minmax(84px,1fr) minmax(180px,1.2fr)"));
+assert.match(css, /hsLiveLatest\{min-width:0;color:#9d917c;font-size:11px/);
 
 console.log("HS LIVE Phase 2 UI contract: PASS");
