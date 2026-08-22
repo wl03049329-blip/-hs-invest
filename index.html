@@ -2470,6 +2470,7 @@ function strategyScoreDelta(x,mode){
   return Number.isFinite(current)&&Number.isFinite(formal)?current-formal:null;
 }
 function strategyScoreLabel(x,mode){
+  if(mode==="leveraged"){const state=leverageV1State(x);return state.available?(state.trigger?"HS LEVERAGE V1 TRIGGER":"HS LEVERAGE 待命"):"HS LEVERAGE 資料不足"}
   const score=displayScore(x,mode),prefix=mode==="long_term_core"?"長期加碼分數":mode==="swing00733"?"強勢拉回分數":mode==="swing006201"?"低檔轉折分數":mode==="swing"||mode==="leveraged"?"波段買點":"綜合買點";
   if(!Number.isFinite(score))return`${prefix}資料不足`;
   const delta=strategyScoreDelta(x,mode);
@@ -2712,6 +2713,11 @@ function leverageV1State(item){
   const core=window.HSLeverageV1Core;
   return core?.evaluateCrashVelocity?.(item?.officialRows)||{strategy:"HS_LEVERAGE_C_V1",threshold:null,trainingEnd:"2025-12-31",forwardStart:"2026-08-24",status:"DATA_UNAVAILABLE",available:false,trigger:false,value:null,dataAsOf:null};
 }
+function leverageRadarDashboardHtml(item){
+  const v1=leverageV1State(item),threshold=Number(v1.threshold),velocity=Number(v1.value),available=v1.available&&Number.isFinite(velocity)&&Number.isFinite(threshold)&&threshold>0,progress=available?clamp(velocity/threshold*100,0,100):0,status=v1.trigger?"V1 TRIGGER":available?"待命":"資料不足",distance=available?Math.round(progress):null;
+  const velocityText=available?fmt(velocity):"資料不足",thresholdText=Number.isFinite(threshold)?fmt(threshold):"資料不足",copy=v1.trigger?"歷史極端急跌條件已達成，仍依正式 V1 狀態與 Forward Shadow 規則觀察。":available?"目前尚未進入歷史極端急跌區，不主動出手，等待真正罕見的恐慌機會。":"Crash Velocity 或正式門檻資料不足，維持 FAIL CLOSED，不以舊波段分數替代。";
+  return`<section class="radarLeverageDashboard hsLeverageCard ${v1.trigger?"is-trigger":"is-standby"}" data-leverage-status="${esc(v1.status)}"><header class="hsLeverageQuote"><div><span>HS LEVERAGE <i aria-hidden="true">ϟ</i></span><b>00631L <small>極端恐慌後的超車工具</small></b></div><strong>${esc(status)}</strong></header><p class="radarLeverageSubtitle">不追漲、不猜底，只等待歷史罕見的快速急跌機會。</p><div class="radarLeverageMetrics"><article><span>目前急跌速度</span><b>${velocityText}</b><small>5D Crash Velocity</small></article><article><span>極端觸發門檻</span><b>${thresholdText}</b><small>2026 Frozen Threshold</small></article></div><section class="radarLeverageDistance"><div><span>距離極端觸發</span><b>${available?`${distance}%`:"資料不足"}</b></div><i class="hsLeverageProgress" aria-label="Crash Velocity 相對 Frozen threshold"><b style="width:${progress}%"></b></i><div class="radarLeverageScale"><span>一般波動</span><span>快速下跌</span><span>極端恐慌</span></div></section><article class="radarLeverageStatus"><small>目前策略狀態</small><b>${esc(status)}</b><p>${esc(copy)}</p></article><footer class="hsLeverageForward"><b>HS_LEVERAGE_C_V1</b><span>Forward Shadow 驗證中｜資料日期 ${esc(v1.dataAsOf||"—")}</span></footer></section>`;
+}
 function leverageHomeCard(item){
   if(!item)return '<div class="newsEmpty">00631L 資料載入中。</div>';
   const v1=leverageV1State(item),tactical=item.swingDecision||item.strategyDecisions?.leveraged?.result||null;
@@ -2857,7 +2863,7 @@ function scoreFactorValue(swing,...keys){for(const key of keys){const item=swing
 function scoreGaugeHtml(label,value){const safe=Number.isFinite(value)?Math.max(0,Math.min(100,value)):0;return`<div class="scoreGauge" style="--gauge:${safe}"><div><b>${Number.isFinite(value)?Math.round(value):"—"}</b><small>/100</small></div><span>${esc(label)}</span></div>`}
 function swingUiMeta(x){
   const s=x.swingDecision||{},mode=strategyModeFor(x);
-  if(mode==="leveraged")return{title:"00631L｜極端機會時的超車工具",subtitle:"市場極端恐慌並確認止跌後，才考慮提高一段行情的資金效率。",left:["恐慌機會分",s.panicOpportunity?.score],right:["反轉確認分",s.reversalConfirmation?.score]};
+  if(mode==="leveraged")return{title:"00631L｜極端恐慌後的超車工具",subtitle:"不追漲、不猜底，只等待歷史罕見的快速急跌機會。",left:["5D Crash Velocity",null],right:["極端觸發門檻",null]};
   if(mode==="swing00733")return{title:"00733｜強勢趨勢拉回型",subtitle:"我要買強者的休息，不買弱者的便宜。",left:["趨勢強度分",scoreFactorValue(s,"trend","relativeStrength")],right:["拉回修復分",scoreFactorValue(s,"pullback","weeklyKd","priceVolume")]};
   return{title:"006201｜低檔止跌轉折型",subtitle:"我要買修正後的止跌，不接還在掉的刀。",left:["低檔機會分",scoreFactorValue(s,"bottom")],right:["止跌確認分",s.stopConfirmation]};
 }
@@ -2873,7 +2879,8 @@ function swingChecklistHtml(x){
   return`<div class="swingChecklist">${items.join("")}</div>`;
 }
 function swingOverviewHtml(x){
-  const s=x.swingDecision||{},meta=swingUiMeta(x),score=s.buyScore,stage=s.stage||strategyDecisionFor(x,strategyModeFor(x))?.stage,mode=strategyModeFor(x),note=mode==="swing006201"?'<p class="swingSetupNotice">70–79 分代表 Setup 成立／等待止跌，不等於正式買點。</p>':"";
+  const mode=strategyModeFor(x);if(mode==="leveraged")return leverageRadarDashboardHtml(x);
+  const s=x.swingDecision||{},meta=swingUiMeta(x),score=s.buyScore,stage=s.stage||strategyDecisionFor(x,mode)?.stage,note=mode==="swing006201"?'<p class="swingSetupNotice">70–79 分代表 Setup 成立／等待止跌，不等於正式買點。</p>':"";
   return`<section class="swingDashboard"><div class="swingDashboardHead"><div><p class="eyebrow">SWING STRATEGY</p><h3>${esc(meta.title)}</h3><small>${esc(meta.subtitle)}</small></div><span>${esc(stage?.label||"資料不足")}</span></div><div class="dualGauge">${scoreGaugeHtml(meta.left[0],meta.left[1])}${scoreGaugeHtml(meta.right[0],meta.right[1])}</div><div class="swingTotalScore"><span>綜合波段買點分</span><b>${Number.isFinite(score)?Math.round(score):"—"}<small>／100</small></b><i><em style="width:${Number.isFinite(score)?Math.max(0,Math.min(100,score)):0}%"></em></i><small>觀望　／　低　／　中　／　中高　／　高</small></div><article class="swingStageCard"><small>目前階段</small><b>${esc(stage?.label||"資料不足")}</b><p>${esc(dedicatedSwingStageRecommendation(s)||s.recommendedAction||stage?.recommendation||"等待資料更新")}</p></article>${note}<h4 class="checklistTitle">條件檢核</h4>${swingChecklistHtml(x)}</section>`;
 }
 function longScoreChangeReason(x,scoreChange){
@@ -2939,6 +2946,10 @@ function detailAdvancedHtml(x){return`<details class="detailAdvanced"><summary>�
 function buildRadarV2Card({x,mode,decision,stage,score,longRank,longRankChange,longScoreChange,formal,detailScoreState,tradeState,dailyPair}){
   const cardClass=`card signalCard radarV2Card ${x.signal.className} strategy-${mode}`,scoreText=Number.isFinite(score)?score:"—";
   if(mode==="long_term_core")return`<details class="${cardClass}" data-etf-id="${esc(x.id)}"><summary class="radarDetailSummary">${rankBadgeHtml(longRank)}<span><b>${esc(x.id)} ${esc(x.name)}</b><small>${esc(stage?.label||"資料不足")}｜週 J ${fmt(x.j)}</small></span><strong>${scoreText}<small>分</small></strong></summary><div class="signalCardDetails"><div class="detailTabs" role="tablist"><button class="active" type="button" data-detail-view="score" aria-selected="true">決策資訊</button><button type="button" data-detail-view="drawdown" aria-selected="false">高點回落</button></div><div data-detail-panel="score"><div class="signalDetailHero"><span>長期核心模式</span><b>${scoreText}<small>／100</small></b><strong>${esc(stage?.label||"資料不足")}</strong><em>${esc(detailScoreState)}｜${esc(x.quoteTime||x.date||"資料時間待更新")}</em></div>${radarTodayHtml(x,decision,score,dailyPair)}${radarWhyScoreHtml(x,decision)}${radarScoreTrendHtml(x.id)}${radarMarketPositionHtml(x)}<div class="radarCoreMetrics detailCoreMetrics"><span><small>週 J</small><b>${fmt(x.j)}</b><em>${uiMetricStatus("j",x.j)}</em></span><span><small>週乖離</small><b>${Number.isFinite(x.weekBias)?fmt(x.weekBias)+"%":"—"}</b><em>${uiMetricStatus("bias",x.weekBias)}</em></span><span><small>距高點</small><b>${Number.isFinite(x.fromHigh)?fmt(x.fromHigh)+"%":"—"}</b><em>${uiMetricStatus("drawdown",x.fromHigh)}</em></span><span><small>當日漲跌</small><b class="${x.changePct>=0?"up":"down"}">${signed(x.changePct)}</b><em>${uiMetricStatus("change",x.changePct)}</em></span></div><section class="detailSection scoreReason"><h4>分數變化原因</h4><p>${esc(longScoreChangeReason(x,longScoreChange))}</p></section><div class="detailGrandTotal"><span>總分</span><b>${scoreText}<small>／100</small></b></div>${detailAdvancedHtml(x)}</div><div data-detail-panel="drawdown" hidden>${longTermDrawdownTableHtml(x)}<div class="drawdownConclusion"><span>目前跌幅</span><b>${Number.isFinite(x.fromHigh)?fmt(x.fromHigh)+"%":"—"}</b><p>${esc(uiMetricStatus("drawdown",x.fromHigh))}；亮金框標示目前所在區間。</p></div></div></div></details>`;
+  if(mode==="leveraged"){
+    const leverage=leverageV1State(x),status=leverage.trigger?"V1 TRIGGER":leverage.available?"待命":"資料不足";
+    return`<details class="${cardClass}" data-etf-id="${esc(x.id)}"><summary class="radarDetailSummary swingSummary leverageSummary"><span class="strategyBadge">HS LEVERAGE</span><span><b>${esc(x.id)}｜極端恐慌後的超車工具</b><small>${esc(status)}｜5D Crash Velocity</small></span><strong>${Number.isFinite(leverage.value)?fmt(leverage.value):"—"}<small>急跌速度</small></strong></summary><div class="signalCardDetails"><div data-detail-panel="overview">${leverageRadarDashboardHtml(x)}</div></div></details>`;
+  }
   const s=x.swingDecision||{},exit=s.exitPressure?.score;
   return`<details class="${cardClass}" data-etf-id="${esc(x.id)}"><summary class="radarDetailSummary swingSummary"><span class="strategyBadge">${esc(strategyModeLabel(mode))}</span><span><b>${esc(x.id)} ${esc(x.name)}</b><small>${esc(stage?.label||"資料不足")}｜Exit Pressure ${metricScore(exit)}</small></span><strong>${scoreText}<small>分</small></strong></summary><div class="signalCardDetails"><div class="detailTabs swingDetailTabs" role="tablist"><button class="active" type="button" data-detail-view="overview" aria-selected="true">總覽</button><button type="button" data-detail-view="breakdown" aria-selected="false">分數拆解</button><button type="button" data-detail-view="action" aria-selected="false">操作分層</button></div><div data-detail-panel="overview">${swingOverviewHtml(x)}</div><div data-detail-panel="breakdown" hidden>${strategyBreakdownHtml(x,mode)}<div class="detailGrandTotal"><span>綜合波段買點分</span><b>${scoreText}<small>／100</small></b></div></div><div data-detail-panel="action" hidden><section class="swingActionLayer"><div><small>目前位置</small><b>${esc(stage?.label||"資料不足")}</b></div><div><small>建議行動</small><b>${esc(s.recommendedAction||stage?.recommendation||"等待資料更新")}</b></div><div><small>下一個確認條件</small><b>${mode==="leveraged"?"等待恐慌與反轉條件同步改善":mode==="swing00733"?"依既有 Setup／Stage 等待拉回修復或重新加速":"依既有止跌與突破條件等待確認"}</b></div><div><small>主要風險</small><b>Exit Pressure ${metricScore(exit)}｜建議部位 ${Number.isFinite(stage?.targetPosition)?stage.targetPosition+"%":"—"}</b></div></section></div>${detailAdvancedHtml(x)}</div></details>`;
 }
@@ -2957,8 +2968,8 @@ function renderCards(){
     const longRankChange=dailyMovement?.rankDelta??null,longScoreChange=dailyMovement?.scoreDelta??null;
     const radarRankUi=longRank?`<div class="signalRadarRank"><b>第${longRank}名</b><span class="${longRankChange>0?"is-up":longRankChange<0?"is-down":"is-flat"}">${esc(dailyMovement.displayRankChange)}</span><span class="${longScoreChange>0?"is-up":longScoreChange<0?"is-down":"is-flat"}">${esc(dailyMovement.displayScoreChange)}</span></div>`:"";
     const previousMode=index?strategyModeFor(radar[index-1]):null;
-    const groupTitle=mode==="long_term_core"?"長期 ETF":mode==="leveraged"?"槓桿":mode==="swing00733"?"00733｜強勢趨勢拉回":mode==="swing006201"?"006201｜上櫃低檔轉折":mode==="swing"?"一般波段":"使用者自訂策略";
-    const groupIntro=mode==="long_term_core"?"既有長期加碼引擎維持不變。":mode==="leveraged"?"既有 00631L 高波動與每日重設防護維持不變。":mode==="swing00733"?"買強者的休息；RS、拉回品質、週 KD 與 Market Gate。":mode==="swing006201"?"買修正後的止跌；70–79 分仍等待確認。":mode==="swing"?"止跌、均線、趨勢與動能確認優先。":"依自選策略呈現決策層。";
+    const groupTitle=mode==="long_term_core"?"長期 ETF":mode==="leveraged"?"HS LEVERAGE":mode==="swing00733"?"00733｜強勢趨勢拉回":mode==="swing006201"?"006201｜上櫃低檔轉折":mode==="swing"?"一般波段":"使用者自訂策略";
+    const groupIntro=mode==="long_term_core"?"既有長期加碼引擎維持不變。":mode==="leveraged"?"00631L 獨立使用 HS_LEVERAGE_C_V1，等待正式極端急跌條件。":mode==="swing00733"?"買強者的休息；RS、拉回品質、週 KD 與 Market Gate。":mode==="swing006201"?"買修正後的止跌；70–79 分仍等待確認。":mode==="swing"?"止跌、均線、趨勢與動能確認優先。":"依自選策略呈現決策層。";
     const groupHead=mode!==previousMode?`<div class="radarGroupHead"><div><b>${esc(groupTitle)}</b><small>${esc(groupIntro)}</small></div><span>${radar.filter(item=>strategyModeFor(item)===mode).length} 檔</span></div>`:"";
     const next=mode==="long_term_core"?nextDrawdownSummary(x):"";
     const proxy=x.valuation?.isProxy?`${x.valuation.primaryProxy} 代理`:x.valuation?.benchmark||"估值資料建立中";
@@ -2972,7 +2983,7 @@ function renderCards(){
   }).join(""):'<div class="watchEmpty">我的自選尚未加入 ETF。</div>';
   const longOverview=radar.filter(item=>strategyModeFor(item)==="long_term_core").sort(longRankComparator);
   $("#radarOverviewLong").innerHTML=longOverview.map((item,index)=>longOverviewCardHtml(item,index,dailyLongRankMovement(dailyPair,item.id))).join("")||'<div class="newsEmpty">長期 ETF 資料載入中</div>';
-  const swingRoles={"00631L":"恐慌反轉型","00733":"強勢趨勢拉回型","006201":"低檔止跌轉折型"};
+  const swingRoles={"00631L":"HS LEVERAGE","00733":"強勢趨勢拉回型","006201":"低檔止跌轉折型"};
   const swingOverviewItems=["00631L","00733","006201"].map(id=>radar.find(item=>item.id===id)).filter(Boolean);
   $("#radarOverviewSwingTabs").innerHTML=swingOverviewItems.map((x,index)=>`<button class="${index===0?"active":""}" type="button" role="tab" aria-selected="${index===0}" data-swing-overview="${esc(x.id)}">${x.id} ${esc(swingRoles[x.id])}</button>`).join("");
   $("#radarOverviewSwing").innerHTML=swingOverviewItems.map((x,index)=>`<div class="swingOverviewPane" data-swing-overview-panel="${esc(x.id)}" ${index===0?"":"hidden"}>${swingOverviewHtml(x)}<button class="swingDetailEntry" type="button" data-open-radar-detail="${esc(x.id)}">查看 ${esc(x.id)} 完整詳情</button></div>`).join("")||'<div class="newsEmpty">波段 ETF 資料載入中</div>';

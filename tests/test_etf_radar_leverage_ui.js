@@ -1,0 +1,27 @@
+"use strict";
+const assert=require("node:assert/strict");
+const fs=require("node:fs");
+const html=fs.readFileSync("index.html","utf8");
+const core=fs.readFileSync("leverage-v1-core.js","utf8");
+
+assert.match(html,/function leverageV1State\(item\)/);
+assert.match(html,/core\?\.evaluateCrashVelocity\?\.\(item\?\.officialRows\)/);
+assert.match(html,/function leverageRadarDashboardHtml\(item\)/);
+assert.match(html,/HS LEVERAGE/);
+assert.match(html,/00631L <small>極端恐慌後的超車工具/);
+assert.match(html,/5D Crash Velocity/);
+assert.match(html,/極端觸發門檻/);
+assert.match(html,/距離極端觸發/);
+assert.match(html,/一般波動/);
+assert.match(html,/快速下跌/);
+assert.match(html,/極端恐慌/);
+assert.match(html,/目前策略狀態/);
+assert.match(html,/Forward Shadow 驗證中/);
+assert.match(html,/if\(mode==="leveraged"\)return leverageRadarDashboardHtml\(x\)/);
+const leverageDashboard=html.slice(html.indexOf("function leverageRadarDashboardHtml"),html.indexOf("function leverageHomeCard"));
+assert.doesNotMatch(leverageDashboard,/綜合波段買點分|恐慌機會分|反轉確認分/);
+assert.match(core,/threshold:2\.033335/);
+assert.match(core,/const return5d=\(close\/priorClose-1\)\*100,value=Math\.max\(0,-return5d\)\/5,trigger=value>=threshold/);
+assert.match(html,/00733｜強勢趨勢拉回型/);
+assert.match(html,/006201｜低檔止跌轉折型/);
+console.log("PASS ETF Radar 00631L HS LEVERAGE UI integration contract");
