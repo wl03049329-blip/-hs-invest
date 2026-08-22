@@ -394,6 +394,11 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
     <div id="rankList" class="rankList"><div class="skeleton">載入排名中…</div></div>
   </section>
 
+  <section id="homeLeverageBrief" class="panel homeLeverageBrief" data-tab-section="today" aria-labelledby="homeLeverageBriefTitle">
+    <div class="panelTitle compactTitle"><div><p class="eyebrow">HS LEVERAGE</p><h2 id="homeLeverageBriefTitle">00631L 槓桿戰術雷達</h2></div><small>獨立戰術觀察</small></div>
+    <div id="homeLeverageCard"><div class="skeleton">載入 00631L 槓桿戰術資料中…</div></div>
+  </section>
+
   <section id="hsStoryEntry" class="hsStoryEntry tabHidden" data-tab-section="more" aria-labelledby="hsStoryEntryTitle">
     <button id="openHsStory" class="hsStoryCard" type="button" aria-haspopup="dialog" aria-controls="hsStoryModal">
       <img data-brand-logo class="app-brand-logo" alt="HS ETF股市雷達正式標誌" width="76" height="76">
@@ -963,6 +968,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 <script src="backtest/long-term/final-core-score-v1.js?v=20260813-phase6b"></script>
 <script src="final-core-production.js?v=20260813-phase6b"></script>
 <script src="swing-strategy-core.js?v=20260809a"></script>
+<script src="leverage-v1-core.js?v=20260822-l1"></script>
 <script src="generic-etf-diagnostics.js?v=20260815-phase2e"></script>
 <script src="persistence-core.js?v=20260809a"></script>
 <script src="drawdown-price-core.js"></script>
@@ -1936,7 +1942,7 @@ function updateHomeFastFacts(){
 }
 function todayBuyDecisionText(){
   if(!all.length)return"買點資料載入中，暫不做判斷。";
-  const longIds=new Set(["0050","00830","00662","00757","009815","00935"]),swingIds=new Set(["00631L","00733","006201"]);
+  const longIds=new Set(["0050","00830","00662","00757","009815","00935"]),swingIds=new Set(["00733","006201"]);
   const longs=all.filter(x=>longIds.has(x.id)).map(x=>({x,d:strategyDecisionFor(x,"long_term_core")})).filter(row=>Number.isFinite(row.d?.score)).sort((a,b)=>b.d.score-a.d.score);
   const swings=all.filter(x=>swingIds.has(x.id)).map(x=>({x,d:strategyDecisionFor(x,"swing")})).filter(row=>Number.isFinite(row.d?.score)).sort((a,b)=>b.d.score-a.d.score);
   const longReady=longs.filter(row=>row.d.score>=60).slice(0,2),swingReady=swings.filter(row=>["first","confirmed"].includes(row.d.stage?.key));
@@ -2695,8 +2701,24 @@ function renderTodayHighlights(longs,swings){
     profile.innerHTML=`<span>價格資料：${esc(all[0]?.date||"尚未更新")}</span><span>週 KD：${esc(all[0]?.kdDataDate||"尚未更新")}</span><span>估值資料：${esc(etfValuationUpdatedAt?formatTaipeiDateTime(etfValuationUpdatedAt):"尚未更新")}</span><span>Forward Test：${forwardCount} 筆｜僅記錄 2026/08/08 起正式訊號</span>`;
   }
 }
+function leverageV1State(item){
+  const core=window.HSLeverageV1Core;
+  return core?.evaluateCrashVelocity?.(item?.officialRows)||{strategy:"HS_LEVERAGE_C_V1",threshold:null,trainingEnd:"2025-12-31",forwardStart:"2026-08-24",status:"DATA_UNAVAILABLE",available:false,trigger:false,value:null,dataAsOf:null};
+}
+function leverageHomeCard(item){
+  if(!item)return '<div class="newsEmpty">00631L 資料載入中。</div>';
+  const v1=leverageV1State(item),tactical=item.swingDecision||item.strategyDecisions?.leveraged?.result||null;
+  const tacticalScore=Number(tactical?.buyScore),panicScore=Number(tactical?.panicOpportunity?.score),drawdown=Number(tactical?.underlying?.drawdown60);
+  const v1Value=Number.isFinite(v1.value)?fmt(v1.value):"資料不足",threshold=Number.isFinite(v1.threshold)?String(v1.threshold):"資料不足";
+  const progress=Number.isFinite(v1.value)&&Number.isFinite(v1.threshold)?clamp(v1.value/v1.threshold*100,0,100):0;
+  const v1Label=v1.trigger?"V1 TRIGGER":v1.available?"待命":"資料不足";
+  const v1Copy=v1.trigger?"極端急跌正式訊號成立":v1.available?"正式極端急跌訊號尚未觸發":"Crash Velocity 資料不足，正式訊號維持 FAIL CLOSED。";
+  const tacticalAction=tactical?.stage?.label||tactical?.recommendedAction||"資料觀察中";
+  const quoteClass=Number(item.changePct)>=0?"up":"down",quoteText=Number.isFinite(item.changePct)?signed(item.changePct):"—";
+  return `<article class="hsLeverageCard ${v1.trigger?"is-trigger":"is-standby"}" data-v1-status="${esc(v1.status)}"><header class="hsLeverageQuote"><div><span>HS LEVERAGE <i aria-hidden="true">ϟ</i></span><b>${esc(item.id)} <small>${esc(item.name)}</small></b></div><strong>$${fmt(item.price)}<small class="${quoteClass}">${esc(quoteText)}</small></strong></header><section class="hsLeverageV1"><div class="hsLeverageV1Head"><span>正式 V1</span><b>${v1Label}</b></div><div class="hsLeverageVelocity"><span>5D Crash Velocity</span><b>${v1Value} <small>/ ${threshold}</small></b></div><i class="hsLeverageProgress" aria-label="Crash Velocity 相對 Frozen threshold"><b style="width:${progress}%"></b></i><p>${v1Copy}</p></section><section class="hsLeverageTactical"><div><span>戰術觀察</span><b>${Number.isFinite(tacticalScore)?tacticalScore:"資料不足"}</b></div><p><b>機會環境</b>${Number.isFinite(panicScore)?`恐慌觀察 ${fmt(panicScore)}｜0050 回檔 ${Number.isFinite(drawdown)?fmt(drawdown)+"%":"資料不足"}`:"資料觀察中"}</p><p><b>執行確認</b>${esc(tacticalAction)}</p></section><footer class="hsLeverageForward"><b>FORWARD SHADOW · ${esc(v1.strategy)}</b><span>Frozen threshold ${threshold}｜Training end ${esc(v1.trainingEnd)}｜Forward start ${esc(v1.forwardStart)}</span><em>等待首筆 Forward Observation</em></footer></article>`;
+}
 function renderTop(){
-  const longIds=new Set(["0050","00830","00662","00757","009815","00935"]),swingIds=new Set(["00631L","00733","006201"]);
+  const longIds=new Set(["0050","00830","00662","00757","009815","00935"]),swingIds=new Set(["00733","006201"]);
   const longs=all.filter(x=>longIds.has(x.id)).sort(longRankComparator);
   const rankedLongs=longs.filter(item=>LONG_RADAR_SCORED_CODES.has(item.id)&&Number.isFinite(strategyDecisionFor(item,"long_term_core")?.coreScore));
   const waitingLongs=longs.filter(item=>!rankedLongs.includes(item));
@@ -2708,6 +2730,7 @@ function renderTop(){
   $("#homeEtfBriefSummary").textContent=rankedLongs.length>=2?`最高決策優先：${rankedLongs[0].id}｜${displayScore(rankedLongs[0],"long_term_core")}分｜${strategyDecisionFor(rankedLongs[0],"long_term_core")?.label||"資料更新中"}；次順位：${rankedLongs[1].id}｜${displayScore(rankedLongs[1],"long_term_core")}分。`:"等待 canonical 盤中 Core Snapshot。";
   const rankList=$("#rankList");rankList.classList.add("hsLiveGrid");rankList.innerHTML=displayedLongs.map((x,index)=>longRankRow(x,index,previous,rankedLongs.indexOf(x)>=0?rankedLongs.indexOf(x)+1:null)).join("")||'<div class="newsEmpty">資料載入中</div>';
   const liveReadScore=$("#hsLiveReadScore");if(liveReadScore)liveReadScore.dataset.readCoreScore=rankedLongs[0]?.id||"0050";
+  $("#homeLeverageCard").innerHTML=leverageHomeCard(all.find(x=>x.id==="00631L"));
   $("#homeSwingList").innerHTML=`<div class="homeOpportunityGroup">${swings.map(x=>compactOpportunityRow(x,strategyModeFor(x))).join("")||'<div class="newsEmpty">資料載入中</div>'}</div>`;
   if(verifiedSnapshot&&snapshotIdentity&&snapshotIdentity!==lastRankSnapshotIdentity){localStorage.setItem(LONG_RANK_STORAGE_KEY,JSON.stringify(longRankSnapshot(rankedLongs,saved,snapshotIdentity,snapshotAsOf,snapshotSlot)));lastRankSnapshotIdentity=snapshotIdentity}
   const radar=activeRadarItems(),sorted=[...radar].sort((a,b)=>(displayScore(b)??-1)-(displayScore(a)??-1)),low=[...radar].sort((a,b)=>a.j-b.j)[0],best=sorted.find(x=>Number.isFinite(displayScore(x)));
