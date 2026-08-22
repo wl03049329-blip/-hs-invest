@@ -37,3 +37,10 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
       - name: Run one idempotent intraday radar scheduler tick
         run: python scripts/run_intraday_radar_session.py --scheduled-once
+      - name: Finalize official EOD Core Score history
+        run: node scripts/finalize_core_score_history.js
+      - name: Commit finalized EOD Core Score history
+        run: |
+          git add finalized-core-score-snapshots-v1.json
+          git diff --cached --quiet || git commit -m "Update official ETF radar score history"
+          git push

@@ -660,6 +660,7 @@ def write_market_cache(
     existing: dict[str, Any],
     radar_refresh: dict[str, Any] | None = None,
     refresh_attempt: dict[str, Any] | None = None,
+    official_eod_snapshot: dict[str, Any] | None = None,
 ) -> None:
     items = sorted({item["code"]: item for item in items}.values(), key=lambda item: item["code"])
     validate_quote_items(items)
@@ -691,6 +692,8 @@ def write_market_cache(
             payload["intraday_completeness"] = existing["intraday_completeness"]
         if isinstance(existing.get("intraday_quote_snapshots"), dict):
             payload["intraday_quote_snapshots"] = existing["intraday_quote_snapshots"]
+        if official_eod_snapshot:
+            payload["official_eod_snapshot"] = official_eod_snapshot
         if radar_refresh:
             payload["radar_refresh"] = radar_refresh
         elif isinstance(existing.get("radar_refresh"), dict):
@@ -734,6 +737,8 @@ def write_market_cache(
         }
     elif isinstance(existing.get("intraday_snapshot_meta"), dict):
         payload["intraday_snapshot_meta"] = existing["intraday_snapshot_meta"]
+    if official_eod_snapshot:
+        payload["official_eod_snapshot"] = official_eod_snapshot
     if refresh_attempt:
         payload["radar_refresh_attempt"] = refresh_attempt
     elif isinstance(existing.get("radar_refresh_attempt"), dict):
@@ -750,6 +755,7 @@ def write_market_cache(
         "intraday_completeness": payload.get("intraday_completeness"),
         "intraday_snapshot_meta": payload.get("intraday_snapshot_meta"),
         "intraday_quote_snapshots": payload.get("intraday_quote_snapshots"),
+        "official_eod_snapshot": payload.get("official_eod_snapshot"),
     }
     write_atomic(META_OUTPUT, meta)
 
@@ -783,6 +789,26 @@ def main() -> None:
     # per-symbol last known close only for a source row that is individually
     # absent; never let an intraday Radar validation failure roll back this set.
     items = merge_official_close_with_lkg(items_by_market, existing_quotes.get("items", []))
+    # Preserve the verified close set before MIS can replace display quotes with
+    # intraday values.  It is consumed only by the separate EOD history finalizer.
+    required_core = ("0050", "00662", "00757", "00830", "00935")
+    official_by_code = {str(item.get("code", "")): item for item in items}
+    official_dates = {str(official_by_code.get(code, {}).get("date", "")) for code in required_core}
+    official_eod_snapshot: dict[str, Any] | None = None
+    if (
+        statuses.get("TWSE") == "official_closing_data"
+        and statuses.get("TPEx") == "official_closing_data"
+        and len(official_dates) == 1
+        and next(iter(official_dates), "")
+    ):
+        official_date = next(iter(official_dates))
+        official_eod_snapshot = {
+            "snapshot_type": "OFFICIAL_CLOSE_INPUT",
+            "date": official_date,
+            "observed_at": now.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
+            "source_status": "official_closing_data",
+            "items": {code: official_by_code[code] for code in required_core},
+        }
 
     mis_rows: list[dict[str, Any]] = []
     mis_diagnostics: dict[str, Any] = {}
@@ -836,7 +862,7 @@ def main() -> None:
         else:
             items = [item for rows in items_by_market.values() for item in rows]
 
-    write_market_cache(items, statuses, now, existing_quotes, radar_refresh, refresh_attempt)
+    write_market_cache(items, statuses, now, existing_quotes, radar_refresh, refresh_attempt, official_eod_snapshot)
 
     try:
         if not mis_rows:

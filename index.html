@@ -1106,6 +1106,8 @@ const LIVE_QUOTE_PUBLIC_CODES=new Set(["0050","00830","00662","00757","009815","
 const LONG_RADAR_CODES=new Set(["0050","00662","00757","00830","00935","009815"]);
 const LONG_RADAR_SCORED_CODES=new Set(["0050","00662","00757","00830","00935"]);
 const LONG_TERM_CORE_SCORE_VERSION=window.HS_LONG_TERM_CORE_SCORE_VERSION||"FINAL_CORE_WEIGHT_V1";
+let finalizedCoreScoreHistoryArtifact={schema_version:1,core_score_version:LONG_TERM_CORE_SCORE_VERSION,snapshots:[]};
+const coreScoreTrendRanges=new Map();
 
 const $=s=>document.querySelector(s);
 const fmt=n=>n!==null&&n!==undefined&&n!==""&&Number.isFinite(Number(n))?new Intl.NumberFormat("zh-TW",{maximumFractionDigits:2}).format(Number(n)):"—";
@@ -2800,7 +2802,19 @@ function isCompletedTradingDate(date){
   const [year,month,day]=String(date).split("-").map(Number),weekday=new Date(Date.UTC(year,month-1,day)).getUTCDay();
   return weekday>=1&&weekday<=5;
 }
-function officialCoreScoreHistory(history,ticker,limit=10){
+function officialArtifactCoreScoreHistory(artifact,ticker,limit=66){
+  if(artifact?.schema_version!==1||artifact?.core_score_version!==LONG_TERM_CORE_SCORE_VERSION||!Array.isArray(artifact?.snapshots))return [];
+  const rows=[],seen=new Set();
+  for(const snapshot of [...artifact.snapshots].sort((a,b)=>String(b?.date||"").localeCompare(String(a?.date||"")))){
+    const tradingDate=String(snapshot?.date||"");if(!isCompletedTradingDate(tradingDate)||seen.has(tradingDate)||snapshot?.snapshot_type!=="FINALIZED_CLOSE"||snapshot?.finalized!==true)continue;
+    const item=(snapshot.rows||[]).find(row=>row?.symbol===ticker);if(!item||item?.status==="WAIT_NATIVE")continue;
+    const score=Number(item.final_core_score),dataAsOf=String(item.data_as_of||snapshot?.source?.data_as_of||"");
+    if(!Number.isFinite(score)||score<0||score>100||item.core_score_version!==LONG_TERM_CORE_SCORE_VERSION||!dataAsOf.startsWith(`${tradingDate}T`))continue;
+    rows.push({symbol:ticker,tradingDate,finalCoreScore:score,displayScore:Math.floor(score),status:String(item.tier||HSFinalCoreProduction.labelFor(score).label),weeklyJ:Number(item?.factors?.weekly_j?.raw),dataAsOf,calculatedAt:snapshot.finalized_at||null,engineVersion:item.core_score_version});seen.add(tradingDate);
+    if(rows.length>=limit)break;
+  }return rows;
+}
+function localCoreScoreHistory(history,ticker,limit=10){
   const snapshots=Array.isArray(history?.snapshots)?history.snapshots:[],seen=new Set(),rows=[];
   for(const snapshot of [...snapshots].sort((a,b)=>String(b?.tradingDate||"").localeCompare(String(a?.tradingDate||"")))){
     const tradingDate=String(snapshot?.tradingDate||""),snapshotType=String(snapshot?.snapshot_type||"").toUpperCase();
@@ -2819,10 +2833,20 @@ function officialCoreScoreHistory(history,ticker,limit=10){
   }
   return rows;
 }
+function officialCoreScoreHistory(history,ticker,limit=10){
+  const artifact=typeof finalizedCoreScoreHistoryArtifact!=="undefined"?finalizedCoreScoreHistoryArtifact:null,official=officialArtifactCoreScoreHistory(artifact,ticker,limit),local=localCoreScoreHistory(history,ticker,limit);
+  return official.length>=limit||!local.length?official:local;
+}
 function coreScoreHistoryState(ticker,history=loadDailyLongRankHistory()){
   if(ticker==="009815")return{kind:"wait_native",rows:[]};
-  const rows=officialCoreScoreHistory(history,ticker,10);
-  return{kind:rows.length?"ready":"empty",rows};
+  const artifact=typeof finalizedCoreScoreHistoryArtifact!=="undefined"?finalizedCoreScoreHistoryArtifact:null,officialRows=officialArtifactCoreScoreHistory(artifact,ticker,66),localRows=localCoreScoreHistory(history,ticker,10),range=(typeof coreScoreTrendRanges!=="undefined"?coreScoreTrendRanges.get(ticker):null)||"10D";
+  if(range==="1M"&&officialRows.length>=20)return{kind:"ready",rows:officialRows.slice(0,23),source:"official",officialCount:officialRows.length,range};
+  if(range==="3M"&&officialRows.length>=60)return{kind:"ready",rows:officialRows.slice(0,66),source:"official",officialCount:officialRows.length,range};
+  const source=officialRows.length>=10||!localRows.length?"official":"local",rows=source==="official"?officialRows.slice(0,10):localRows;
+  return{kind:rows.length?"ready":"empty",rows,source,officialCount:officialRows.length,range:"10D"};
+}
+async function loadFinalizedCoreScoreHistory(){
+  try{const response=await fetch("finalized-core-score-snapshots-v1.json",{cache:"no-store"});if(!response.ok)throw new Error("history unavailable");const payload=await response.json();if(payload?.schema_version===1&&payload?.core_score_version===LONG_TERM_CORE_SCORE_VERSION&&Array.isArray(payload?.snapshots))finalizedCoreScoreHistoryArtifact=payload;}catch{finalizedCoreScoreHistoryArtifact={schema_version:1,core_score_version:LONG_TERM_CORE_SCORE_VERSION,snapshots:[]}}
 }
 function longOverviewCardHtml(x,index,dailyMovement){
   const rank=index+1,decision=strategyDecisionFor(x,"long_term_core"),score=displayScore(x,"long_term_core"),stage=decision?.stage,rankChange=dailyMovement?.rankDelta,scoreChange=dailyMovement?.scoreDelta;
@@ -2884,7 +2908,7 @@ function radarWhyScoreHtml(x,decision){
 }
 function radarScoreTrendHtml(ticker,history=loadDailyLongRankHistory()){
   if(ticker==="009815")return`<section class="radarV2Section radarScoreTrend"><header><span>SCORE TREND</span><h3>近 10 個正式盤後交易日</h3></header><div class="radarTrendEmpty">009815 維持 WAIT_NATIVE；原生正式 Core Score 歷史尚未建立。</div></section>`;
-  const rows=officialCoreScoreHistory(history,ticker,10);
+  const state=coreScoreHistoryState(ticker,history),rows=state.rows,officialCount=state.officialCount||0;
   if(!rows.length)return`<section class="radarV2Section radarScoreTrend"><header><span>SCORE TREND</span><h3>近 10 個正式盤後交易日</h3></header><div class="radarTrendEmpty">正式盤後紀錄累積中；目前尚無可安全呈現的正式 Core Score。</div></section>`;
   const chronological=[...rows].reverse(),latest=rows[0],oldest=rows.at(-1),latestScore=latest.displayScore,oldestScore=oldest.displayScore,delta=chronological.length>1?latestScore-oldestScore:null;
   const thresholds=[{value:40,label:"40 回檔"},{value:50,label:"50 小額"},{value:65,label:"65 分批"},{value:80,label:"80 罕見"},{value:70,label:"70 深跌"},{value:90,label:"90 極端"}];
@@ -2895,7 +2919,8 @@ function radarScoreTrendHtml(ticker,history=loadDailyLongRankHistory()){
   const guides=thresholds.map(item=>{const y=padY+(100-item.value)/100*plotHeight,visible=item.value<=65||item.value===80;return`<g class="${visible?"is-visible":"is-secondary"}"><line x1="${padX}" x2="${width-padX}" y1="${y}" y2="${y}"/><text x="${width-padX-2}" y="${y-3}" text-anchor="end">${esc(item.label)}</text></g>`}).join("");
   const labels=chronological.map((row,index)=>{const p=pointAt(index),labelY=p.y<=padY+14?p.y+13:p.y-8,latestClass=index===chronological.length-1?" latest":"";return`<g class="radarTrendPoint${latestClass}"><circle cx="${p.x}" cy="${p.y}" r="${index===chronological.length-1?4.5:3}"/><text class="radarTrendScoreLabel" x="${p.x}" y="${labelY}" text-anchor="middle">${row.displayScore}</text><text class="radarTrendDate" x="${p.x}" y="${height-3}" text-anchor="middle">${esc(row.tradingDate.slice(5).replace("-","/"))}</text></g>`}).join("");
   const aria=chronological.length>1?`${ticker} 近 ${chronological.length} 筆正式盤後 Core Score，由 ${oldestScore} ${delta>0?"上升":delta<0?"下降":"維持"}至 ${latestScore}，${delta>0?"增加":delta<0?"減少":"變化"} ${Math.abs(delta)} 分。`:`${ticker} 目前有 1 筆正式盤後 Core Score ${latestScore}，趨勢累積中。`;
-  return`<section class="radarV2Section radarScoreTrend"><header><span>SCORE TREND</span><h3>近 10 個正式盤後交易日</h3><p class="radarTrendSummary"><b>最新正式盤後 ${latestScore}</b><span>${summaryDelta}</span><span>${nextText}</span></p><small class="radarTrendTechnical">正式盤後分數<span>｜盤中 Core 不納入此趨勢</span></small></header><svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${esc(aria)}"><g class="radarTrendGuides">${guides}</g><polyline class="radarTrendLine" points="${points}"/><g class="radarTrendPoints">${labels}</g></svg><p class="radarTrendFootnote">${chronological.length<10?`已累積 ${chronological.length} / 10 筆正式盤後紀錄｜持續累積中`:`最近 10 個正式盤後交易日`}</p></section>`;
+  const controls=`<span class="radarTrendRanges"><button type="button" class="${state.range==="10D"?"active":""}" data-core-trend-range="10D" data-core-trend-ticker="${esc(ticker)}">10D</button>${officialCount>=20?`<button type="button" class="${state.range==="1M"?"active":""}" data-core-trend-range="1M" data-core-trend-ticker="${esc(ticker)}">1M</button>`:""}${officialCount>=60?`<button type="button" class="${state.range==="3M"?"active":""}" data-core-trend-range="3M" data-core-trend-ticker="${esc(ticker)}">3M</button>`:""}</span>`,sourceLabel=state.source==="official"?"正式盤後紀錄":"本機盤後紀錄",progress=officialCount<20?`｜1M 正式紀錄 ${officialCount} / 20`:officialCount<60?`｜3M 正式紀錄 ${officialCount} / 60`:"";
+  return`<section class="radarV2Section radarScoreTrend"><header><span>SCORE TREND</span><h3>近 ${state.range} 正式盤後交易日 ${controls}</h3><p class="radarTrendSummary"><b>最新正式盤後 ${latestScore}</b><span>${summaryDelta}</span><span>${nextText}</span></p><small class="radarTrendTechnical">${sourceLabel}<span>｜盤中 Core 不納入此趨勢${progress}</span></small></header><svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${esc(aria)}"><g class="radarTrendGuides">${guides}</g><polyline class="radarTrendLine" points="${points}"/><g class="radarTrendPoints">${labels}</g></svg><p class="radarTrendFootnote">${chronological.length<10?`已累積 ${chronological.length} / 10 筆正式盤後紀錄｜持續累積中`:`最近 ${chronological.length} 個正式盤後交易日`}</p></section>`;
 }
 function featuredDiagnosticFor(x){
   const evaluator=window.HSGenericEtfDiagnostics;if(!evaluator?.evaluate)return null;
@@ -3419,6 +3444,7 @@ document.addEventListener("click",event=>{const button=event.target.closest("[da
 $("#closeCoreScoreHistoryModal").addEventListener("click",closeCoreScoreHistoryModal);
 $("#coreScoreHistoryModal").addEventListener("click",event=>{if(event.target===$("#coreScoreHistoryModal"))closeCoreScoreHistoryModal()});
 document.addEventListener("click",event=>{const button=event.target.closest("[data-core-score-history]");if(!button)return;event.preventDefault();event.stopPropagation();openCoreScoreHistoryModal(button.dataset.coreScoreHistory,button)});
+document.addEventListener("click",event=>{const button=event.target.closest("[data-core-trend-range]");if(!button)return;event.preventDefault();coreScoreTrendRanges.set(button.dataset.coreTrendTicker,button.dataset.coreTrendRange);renderCards()});
 let lastHsStoryTrigger=$("#openHsStory");
 function renderHsCanonicalScoreGuide(){
   const target=$("#hsCanonicalScoreGuide");if(!target)return;
@@ -3553,6 +3579,7 @@ $("#drawdownForm").addEventListener("submit",async event=>{
 async function load(){
   const m=$("#message"),b=$("#reload"),buttonLabel=b.querySelector("span");syncWatchlistState();renderWatchlist();m.className="message info";m.textContent="正在更新最新資料…";b.disabled=true;b.setAttribute("aria-busy","true");if(buttonLabel)buttonLabel.textContent="更新中…";
   try{
+    await loadFinalizedCoreScoreHistory();
     await Promise.all([loadCorporateActionTables(),loadEtfValuation()]);
     const settled=await Promise.allSettled(ids.map(one));
     all=settled.filter(x=>x.status==="fulfilled").map(x=>x.value);

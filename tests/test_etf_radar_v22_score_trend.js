@@ -7,7 +7,7 @@ const html=fs.readFileSync(path.join(root,"index.html"),"utf8");
 const css=fs.readFileSync(path.join(root,"formal-black-gold.css"),"utf8");
 
 assert.match(html,/function radarScoreTrendHtml\(ticker,history=loadDailyLongRankHistory\(\)\)/);
-assert.match(html,/officialCoreScoreHistory\(history,ticker,10\)/);
+assert.match(html,/coreScoreHistoryState\(ticker,history\)/);
 assert.match(html,/latest\.displayScore/);
 assert.match(html,/summaryDelta/);
 assert.match(html,/latestScore-oldestScore/);
@@ -24,7 +24,7 @@ assert.match(html,/value:90,label:"90 極端"/);
 assert.match(html,/radarTrendScoreLabel/);
 assert.match(html,/radarTrendPoint\$\{latestClass\}/);
 assert.match(html,/role="img" aria-label="\$\{esc\(aria\)\}"/);
-assert.match(html,/正式盤後分數<span>｜盤中 Core 不納入此趨勢/);
+assert.match(html,/盤中 Core 不納入此趨勢/);
 assert.match(html,/已累積 \$\{chronological\.length\} \/ 10 筆正式盤後紀錄/);
 assert.match(css,/\.radarTrendGuides \.is-secondary\{display:none\}/);
 assert.match(css,/\.radarTrendPoint\.latest circle/);
