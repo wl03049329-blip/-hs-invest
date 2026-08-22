@@ -748,7 +748,12 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       <div><p class="eyebrow">STRATEGY RADAR</p><h2>ETF 策略雷達</h2></div>
       <small>長期加碼｜波段持有｜週 KD 依最近完成資料或目前週線試算</small>
     </div>
-    <button id="radarDetailBack" class="radarDetailBack" type="button">← 返回 ETF 雷達總覽</button>
+    <nav id="radarDetailStickyNav" class="radarDetailStickyNav" aria-label="ETF 詳情導覽" hidden>
+      <button id="radarDetailStickyBack" class="radarDetailStickyBack" type="button">← ETF 雷達</button>
+      <span class="radarDetailStickyMeta"><b id="radarDetailStickySymbol">—</b><small id="radarDetailStickyScore">Core Score —</small></span>
+      <button id="radarDetailStickyCollapse" class="radarDetailStickyCollapse" type="button" aria-label="收合 ETF 詳情" title="收合 ETF 詳情">⌃</button>
+    </nav>
+    <button id="radarDetailBack" class="radarDetailBack" type="button" hidden>← 返回 ETF 雷達總覽</button>
     <div id="cards" class="cards radarDetailDeck"><div class="skeleton">資料載入中…</div></div>
   </section>
 
@@ -2950,11 +2955,20 @@ function renderCards(){
   document.querySelectorAll("[data-swing-overview]").forEach(btn=>btn.addEventListener("click",()=>switchSwingOverview(btn.dataset.swingOverview)));
   const selectedId=$("#cards").dataset.selectedId;if(selectedId)showRadarDetail(selectedId,false);
 }
+function syncRadarDetailStickyNav(id,visible){
+  const nav=$("#radarDetailStickyNav");if(!nav)return;
+  nav.hidden=!visible;
+  if(!visible)return;
+  const item=all.find(x=>String(x.id)===String(id||"")),mode=item?strategyModeFor(item):"long_term_core",decision=item?strategyDecisionFor(item,mode):null,score=item?displayScore(item,mode):null;
+  const symbol=$("#radarDetailStickySymbol"),scoreNode=$("#radarDetailStickyScore");
+  if(symbol)symbol.textContent=item?.id||String(id||"—");
+  if(scoreNode)scoreNode.textContent=item?.id==="009815"||decision?.scoreStatus==="wait_native"?"Core Score WAIT_NATIVE":Number.isFinite(score)?`Core Score ${score}`:"Core Score —";
+}
 function showRadarDetail(id,scroll=true){
   const deck=$("#cards"),target=deck?[...deck.querySelectorAll(".signalCard")].find(card=>card.dataset.etfId===String(id||"")):null;if(!deck||!target)return;
-  deck.dataset.selectedId=String(id);deck.classList.add("is-open");deck.querySelectorAll(".signalCard").forEach(card=>card.classList.toggle("is-selected",card===target));target.open=true;$("#radarDetailBack")?.classList.add("is-visible");$("#radarOverview")?.classList.add("detail-active");if(scroll)target.scrollIntoView({behavior:"smooth",block:"start"});
+  deck.dataset.selectedId=String(id);deck.classList.add("is-open");deck.querySelectorAll(".signalCard").forEach(card=>card.classList.toggle("is-selected",card===target));target.open=true;$("#radarDetailBack")?.classList.add("is-visible");syncRadarDetailStickyNav(id,true);$("#radarOverview")?.classList.add("detail-active");if(scroll)target.scrollIntoView({behavior:"smooth",block:"start"});
 }
-function closeRadarDetail(){const deck=$("#cards");if(!deck)return;deck.classList.remove("is-open");delete deck.dataset.selectedId;deck.querySelectorAll(".signalCard").forEach(card=>{card.classList.remove("is-selected");card.open=false});$("#radarDetailBack")?.classList.remove("is-visible");$("#radarOverview")?.classList.remove("detail-active");$("#radarOverview")?.scrollIntoView({behavior:"smooth",block:"start"})}
+function closeRadarDetail(){const deck=$("#cards");if(!deck)return;deck.classList.remove("is-open");delete deck.dataset.selectedId;deck.querySelectorAll(".signalCard").forEach(card=>{card.classList.remove("is-selected");card.open=false});$("#radarDetailBack")?.classList.remove("is-visible");syncRadarDetailStickyNav(null,false);$("#radarOverview")?.classList.remove("detail-active");$("#radarOverview")?.scrollIntoView({behavior:"smooth",block:"start"})}
 function formatYi(n){return `${fmt(n/1e8)} 億`}
 function signedYi(n){
   if(!Number.isFinite(n))return"—";
@@ -3216,7 +3230,8 @@ function renderWatchlist(){
   $("#watchPanel").hidden=!isMy;
   $("#radarOverview").hidden=isMy;
   $("#cards").hidden=isMy;
-  $("#radarDetailBack").hidden=isMy;
+  $("#radarDetailBack").hidden=true;
+  $("#radarDetailStickyNav").hidden=isMy||!$("#cards").classList.contains("is-open");
   document.querySelector("#signals>.radarDetailHeading")?.toggleAttribute("hidden",isMy);
   document.querySelector("#signals>.signalLegend")?.toggleAttribute("hidden",isMy);
   $("#watchManageDetails").open=isMy;
@@ -3511,6 +3526,8 @@ document.querySelectorAll("[data-chip-tab]").forEach(button=>button.addEventList
 document.querySelectorAll("[data-radar-view]").forEach(button=>button.addEventListener("click",()=>switchRadarOverviewView(button.dataset.radarView)));
 $("#homeSwingBrief").addEventListener("click",event=>{if(event.target.closest("[data-open-etf-radar]"))switchTab("signals")});
 $("#radarDetailBack").addEventListener("click",closeRadarDetail);
+$("#radarDetailStickyBack").addEventListener("click",closeRadarDetail);
+$("#radarDetailStickyCollapse").addEventListener("click",closeRadarDetail);
 $("#radarSentimentShortcut").addEventListener("click",()=>switchTab("sentiment"));
 document.querySelectorAll("[data-buy-plan-mode]").forEach(button=>button.addEventListener("click",()=>{
   buyPlanMode=["conservative","balanced","aggressive"].includes(button.dataset.buyPlanMode)?button.dataset.buyPlanMode:"balanced";

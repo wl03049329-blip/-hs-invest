@@ -355,6 +355,7 @@ footer{color:#746f67}
 #signals>#radarOverview{order:0}
 #signals>.radarDetailHeading{order:1;display:none}
 #signals>#radarDetailBack{order:2}
+#signals>#radarDetailStickyNav{order:2}
 #signals>#cards{order:3}
 #signals>.watchPanel{order:4}
 #signals>.signalLegend{order:5}
@@ -382,8 +383,13 @@ footer{color:#746f67}
 .radarSentimentShortcut{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:11px 13px;border:1px solid #332b20;border-radius:12px;background:#090807;color:inherit;text-align:left;cursor:pointer}
 .radarSentimentShortcut span small,.radarSentimentShortcut span b{display:block}.radarSentimentShortcut span small{color:#a58444;font-size:7px;font-weight:900;letter-spacing:.15em}.radarSentimentShortcut span b{margin-top:3px;color:#d6cec0;font-size:11px;line-height:1.45}
 .radarSentimentShortcut>strong{color:#d9b969;font-size:9px;white-space:nowrap}
-.radarDetailBack{display:none;width:max-content;margin:4px 0 8px;padding:8px 11px;border:1px solid #5a4625;border-radius:999px;background:#100c07;color:#d9bd78;font-size:10px;font-weight:900}
-.radarDetailBack.is-visible{display:block}
+.radarDetailBack{display:none!important}
+.radarDetailStickyNav{position:sticky;top:max(6px,env(safe-area-inset-top));z-index:8;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;min-height:52px;margin:4px 0 10px;padding:7px 10px;border:1px solid #5a4625;border-radius:13px;background:linear-gradient(105deg,#141006f5,#080807f2 72%);box-shadow:0 8px 22px #0009,inset 0 0 0 1px #e4c47312;backdrop-filter:blur(10px)}
+.radarDetailStickyNav[hidden]{display:none!important}
+.radarDetailStickyBack,.radarDetailStickyCollapse{min-height:34px;border:1px solid #6c552b;border-radius:9px;background:#0b0a08;color:#e1c47e;font:inherit;font-size:11px;font-weight:900;white-space:nowrap;cursor:pointer}
+.radarDetailStickyBack{padding:0 10px}.radarDetailStickyCollapse{width:34px;padding:0;font-size:18px;line-height:1}
+.radarDetailStickyBack:hover,.radarDetailStickyBack:focus-visible,.radarDetailStickyCollapse:hover,.radarDetailStickyCollapse:focus-visible{outline:2px solid #d9b96b;outline-offset:2px}
+.radarDetailStickyMeta{display:flex;align-items:baseline;min-width:0;gap:8px}.radarDetailStickyMeta b{min-width:0;overflow:hidden;color:#f1e6d1;font-size:14px;text-overflow:ellipsis;white-space:nowrap}.radarDetailStickyMeta small{color:#d7b967;font-size:11px;font-weight:850;white-space:nowrap}
 .radarDetailDeck{display:none!important}
 .radarDetailDeck.is-open{display:grid!important;grid-template-columns:1fr}
 .radarDetailDeck.is-open .radarGroupHead,.radarDetailDeck.is-open .signalCard:not(.is-selected){display:none!important}
@@ -1245,6 +1251,7 @@ footer{color:#746f67}
 #signals>#radarOverview{order:4}
 #signals>.radarDetailHeading{order:5}
 #signals>#radarDetailBack{order:6}
+#signals>#radarDetailStickyNav{order:6}
 #signals>#cards{order:7}
 #signals>.signalLegend{order:8}
 #signals>.watchPanel[hidden]{display:none!important}
@@ -1307,6 +1314,8 @@ footer{color:#746f67}
   .radarModeCard{min-height:84px;border-radius:15px}
   .radarModeCard small{max-width:100%}
   .radarModeContext{padding:7px 10px}.radarModeContext h2{font-size:15px}.radarModeContext p{font-size:8px}
+  .radarDetailStickyNav{top:max(4px,env(safe-area-inset-top));gap:6px;min-height:48px;margin:3px 0 8px;padding:6px 7px}
+  .radarDetailStickyBack{padding:0 8px;font-size:10px}.radarDetailStickyMeta{gap:5px}.radarDetailStickyMeta b{font-size:13px}.radarDetailStickyMeta small{font-size:10px}.radarDetailStickyCollapse{width:32px;min-height:32px}
 }
 
 /* Phase 2E Lite: transparent Generic ETF diagnostics for MY WATCHLIST only. */
