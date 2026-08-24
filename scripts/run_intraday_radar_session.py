@@ -215,8 +215,28 @@ def persist_completeness(state: dict) -> None:
             write_json_atomic(path, payload)
 
 
+def stageable_cache_files() -> tuple[str, ...]:
+    """Return only cache artifacts emitted by this scheduler invocation.
+
+    Some failure paths intentionally do not create the canonical snapshot
+    artifact.  A missing optional artifact must not hide the real upstream
+    failure by turning persistence into a Git pathspec error.
+    """
+    stageable: list[str] = []
+    for filename in CACHE_FILES:
+        if (ROOT / filename).is_file():
+            stageable.append(filename)
+        else:
+            print(f"[staging] skip unavailable cache artifact: {filename}", flush=True)
+    return tuple(stageable)
+
+
 def commit_slot(trading_date: str, slot: str, success: bool) -> None:
-    run(["git", "add", *CACHE_FILES])
+    stageable = stageable_cache_files()
+    if stageable:
+        run(["git", "add", "--", *stageable])
+    else:
+        print(f"[{slot}] no cache artifacts available to stage", flush=True)
     staged = subprocess.run(["git", "diff", "--cached", "--quiet"], cwd=ROOT)
     if staged.returncode == 0:
         print(f"[{slot}] no cache metadata change to commit", flush=True)
