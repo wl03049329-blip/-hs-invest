@@ -117,10 +117,11 @@ check("期貨部位 JSON 與推估公式維持有效", () => {
   assert.match(futuresScript, /if estimated_long < 0 or estimated_short < 0/);
 });
 
-check("期貨籌碼盤後補抓保留，首頁正式 fallback 由同一 Actions 更新", () => {
+check("期貨籌碼官方來源多時段補抓保留，首頁正式 fallback 由同一 Actions 更新", () => {
   assert.match(futuresRaw.methodology, /相同交易日/);
-  assert.match(futuresWorkflow, /cron: "20 10 \* \* 1-5"/);
-  assert.match(futuresWorkflow, /cron: "0 11 \* \* 1-5"/);
+  for (const cron of ["30 7 * * 1-5", "30 8 * * 1-5", "0 10 * * 1-5", "0 12 * * 1-5", "0 23 * * 0-4"]) {
+    assert.ok(futuresWorkflow.includes(`cron: "${cron}"`));
+  }
   assert.match(marketWorkflow, /cron: "27,30,35,40,45 1,2,3,4,5 \* \* 1-5"/);
   assert.match(marketWorkflow, /run_intraday_radar_session\.py/);
   assert.match(marketRunner, /tx-futures-quote\.json/);

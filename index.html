@@ -2150,6 +2150,13 @@ function positionCard(title,subtitle,item,changeAvailable){
   const comparison=changeAvailable?`較前日 ${item.net_change>=0?"+":""}${fmt(item.net_change)}`:"較前日：建立比較基準";
   return `<article class="futuresPositionCard"><h3>${esc(title)}</h3><small>${esc(subtitle)}</small><div class="futuresPositionNumbers"><div><span>多方未平倉</span><b>${fmt(item.long)} 口</b></div><div><span>空方未平倉</span><b>${fmt(item.short)} 口</b></div></div><div class="futuresNet"><b class="${netTone}">淨 ${item.net>=0?"+":""}${fmt(item.net)} 口</b><span class="${changeTone}">${comparison}</span></div></article>`;
 }
+function futuresFreshnessLabel(position){
+  const state=position?.sourceStatus?.freshness;
+  if(state==="SOURCE_NOT_READY")return"官方待更新";
+  if(state==="SOURCE_FALLBACK")return"官方備援來源";
+  if(state==="UPDATE_FAILED"||state==="SOURCE_CONFLICT")return"更新異常";
+  return"最新";
+}
 function renderFuturesPosition(){
   if(!futuresPosition){
     $("#futuresPositionContent").innerHTML='<div class="newsEmpty sentimentUnavailable">期貨籌碼暫時無法取得，未以 0 代替。</div>';
@@ -2162,8 +2169,8 @@ function renderFuturesPosition(){
     renderChipOverview();
     return;
   }
-  const changeAvailable=f.sourceStatus?.net_change_available===true;
-  $("#futuresPositionContent").innerHTML=`<p class="dataSourceNote">盤後資料｜資料日期 ${esc(f.dataDate)}｜更新 ${esc(formatHomeQuoteTime(f.updatedAt))}</p><div class="futuresPositionGrid">${positionCard("外資臺股期貨部位","期交所外資及陸資未平倉",f.foreign_tx,changeAvailable)}${positionCard("小型臺指期貨 MTX","非三大法人部位推估",f.estimated_non_institutional_mtx,changeAvailable)}${positionCard("微型臺指期貨 TMF","非三大法人部位推估",f.estimated_non_institutional_tmf,changeAvailable)}</div><details class="methodFold"><summary>方法說明與推估口徑</summary><p class="futuresMethod">市場常稱為散戶部位，但此數值為全市場扣除三大法人後的推估，不等同官方公布的純自然人持倉。${esc(f.methodology)}</p></details>`;
+  const changeAvailable=f.sourceStatus?.net_change_available===true,freshness=futuresFreshnessLabel(f);
+  $("#futuresPositionContent").innerHTML=`<p class="dataSourceNote">盤後資料｜${esc(freshness)}｜資料日期 ${esc(f.dataDate)}｜更新 ${esc(formatHomeQuoteTime(f.updatedAt))}</p><div class="futuresPositionGrid">${positionCard("外資臺股期貨部位","期交所外資及陸資未平倉",f.foreign_tx,changeAvailable)}${positionCard("小型臺指期貨 MTX","非三大法人部位推估",f.estimated_non_institutional_mtx,changeAvailable)}${positionCard("微型臺指期貨 TMF","非三大法人部位推估",f.estimated_non_institutional_tmf,changeAvailable)}</div><details class="methodFold"><summary>方法說明與推估口徑</summary><p class="futuresMethod">市場常稱為散戶部位，但此數值為全市場扣除三大法人後的推估，不等同官方公布的純自然人持倉。${esc(f.methodology)}</p></details>`;
   renderChipOverview();
 }
 function setHomeQuoteStatus(text,isError=false){
@@ -3146,9 +3153,10 @@ function renderHomeSentimentCards(){
   setHomeSentimentCard("#homeMarginBalanceCard",{value:Number.isFinite(values.financingPrincipal)?formatYi(values.financingPrincipal):"—",status:risk?.interpretation?.label||"資料尚未更新",date:values.dataDate,snapshot:marginSnapshot});
   setHomeSentimentCard("#homeMaintenanceCard",{value:Number.isFinite(values.maintenanceRatio)?`${fmt(values.maintenanceRatio)}%`:"—",status:maintenanceDisplayLabel(values.maintenanceRatio),date:values.dataDate,snapshot:marginSnapshot});
   setHomeSentimentCard("#homeCnnCard",{value:Number.isFinite(cnn?.score)?fmt(cnn.score):"—",status:cnn?.label||"資料尚未更新",date:cnnSnapshot.data_date,snapshot:cnnSnapshot});
-  setHomeSentimentCard("#homeForeignFuturesCard",{value:Number.isFinite(foreign?.net)?`${foreign.net<0?"淨空":"淨多"} ${fmt(Math.abs(foreign.net))} 口`:"—",status:Number.isFinite(foreign?.net)?foreign.net>0?"偏多":"偏空":"資料尚未更新",date:futuresPosition?.dataDate,snapshot:futuresSnapshot});
+  const futuresFreshness=futuresFreshnessLabel(futuresPosition);
+  setHomeSentimentCard("#homeForeignFuturesCard",{value:Number.isFinite(foreign?.net)?`${foreign.net<0?"淨空":"淨多"} ${fmt(Math.abs(foreign.net))} 口`:"—",status:Number.isFinite(foreign?.net)?`${foreign.net>0?"偏多":"偏空"}｜${futuresFreshness}`:"資料尚未更新",date:futuresPosition?.dataDate,snapshot:futuresSnapshot});
   const ratio=Number.isFinite(tmf?.long)&&Number.isFinite(tmf?.short)&&tmf.short>0?tmf.long/tmf.short:null;
-  setHomeSentimentCard("#homeTmfRatioCard",{value:Number.isFinite(ratio)?ratio.toFixed(2):"—",status:Number.isFinite(ratio)?ratio>1.1?"偏多":ratio<.9?"偏空":"中性":"資料尚未更新",date:futuresPosition?.dataDate,snapshot:futuresSnapshot});
+  setHomeSentimentCard("#homeTmfRatioCard",{value:Number.isFinite(ratio)?ratio.toFixed(2):"—",status:Number.isFinite(ratio)?`${ratio>1.1?"偏多":ratio<.9?"偏空":"中性"}｜${futuresFreshness}`:"資料尚未更新",date:futuresPosition?.dataDate,snapshot:futuresSnapshot});
   const overviewValue=cnn?.label||risk?.interpretation?.label||"資料更新中";
   const overviewHint=/貪婪|偏熱/.test(overviewValue)?"避免追高":/恐懼|偏冷|壓力/.test(overviewValue)?"分批觀察":"等待回檔";
   setHomeSentimentCard("#homeSentimentOverviewCard",{value:overviewValue,status:overviewHint,date:values.dataDate||futuresPosition?.dataDate||cnnSnapshot.data_date,snapshot:marginSnapshot});

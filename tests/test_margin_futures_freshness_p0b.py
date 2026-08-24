@@ -47,20 +47,18 @@ class FreshnessTests(unittest.TestCase):
                 output.write_text(json.dumps(payload), encoding="utf-8")
                 before = output.read_bytes()
                 with mock.patch.object(FUTURES, "OUTPUT", output), \
-                        mock.patch.object(FUTURES, "fetch_json", return_value=[]), \
                         mock.patch.object(
-                            FUTURES,
-                            "rows_by_date",
-                            side_effect=[{source_date: []}, {source_date: []}],
+                            FUTURES, "resolve_official_candidate",
+                            return_value=({"data_date": source_date}, FUTURES.SOURCE_NOT_READY, ["fixture"]),
                         ):
                     FUTURES.main()
                 self.assertEqual(output.read_bytes(), before)
 
-    def test_workflows_have_late_and_next_morning_retries(self):
-        for name in ("update-margin-data.yml", "update-futures-position.yml"):
-            workflow = (ROOT / ".github" / "workflows" / name).read_text(encoding="utf-8")
-            self.assertIn('cron: "0 13 * * 1-5"', workflow)
-            self.assertIn('cron: "30 23 * * 1-5"', workflow)
+    def test_futures_workflow_has_low_cost_official_source_retries(self):
+        workflow = (ROOT / ".github" / "workflows" / "update-futures-position.yml").read_text(encoding="utf-8")
+        for cron in ('30 7 * * 1-5', '30 8 * * 1-5', '0 10 * * 1-5', '0 12 * * 1-5', '0 23 * * 0-4'):
+            self.assertIn(f'cron: "{cron}"', workflow)
+        self.assertIn("cancel-in-progress: false", workflow)
 
 
 if __name__ == "__main__":
