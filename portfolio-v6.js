@@ -396,6 +396,7 @@
     drawAllocation();
     renderRebalance(focusTarget);
     renderQuoteStatus();
+    window.dispatchEvent(new CustomEvent("hs:portfolio-state"));
     if (animate) {
       const page = $v6("#portfolio");
       page.classList.remove("portfolioFlash");
@@ -1049,6 +1050,8 @@
     storageKey: HOLDINGS_KEY,
     quoteStorageKey: QUOTES_KEY,
     quoteSources: Object.freeze([TWSE_URL, TPEX_URL]),
-    refresh: () => updateQuotes({force: true, applyPortfolio: true})
+    refresh: () => updateQuotes({force: true, applyPortfolio: true}),
+    getState: () => ({holdings: holdings.map(item => ({...item})), quotes: new Map([...quoteMap].map(([code, quote]) => [code, {...quote}]))})
   });
+  window.dispatchEvent(new CustomEvent("hs:portfolio-state"));
 })();
