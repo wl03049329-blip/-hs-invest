@@ -101,7 +101,7 @@ class FuturesSourceV2Tests(unittest.TestCase):
 
     def test_frontend_has_distinct_official_freshness_labels(self):
         html = (ROOT / "index.html").read_text(encoding="utf-8")
-        for label in ("官方待更新", "官方備援來源", "更新異常", "futuresFreshnessLabel"):
+        for label in ("官方待更新", "官方備援來源", "更新異常", "futuresFreshnessLabel", "raw.source_status"):
             self.assertIn(label, html)
 
 

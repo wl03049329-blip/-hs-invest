@@ -2140,7 +2140,10 @@ async function loadFuturesPosition(){
   try{
     const response=await fetch("futures-position.json?ts="+Date.now(),{cache:"no-store"});
     if(!response.ok)throw new Error("futures positioning unavailable");
-    futuresPosition=HSMarketV61Core.validateFuturesPosition(await response.json());
+    const raw=await response.json();
+    futuresPosition=HSMarketV61Core.validateFuturesPosition(raw);
+    // Preserve V2 provenance even when a browser retains an older core bundle.
+    futuresPosition.sourceStatus=raw.source_status||futuresPosition.sourceStatus||{};
     futuresPosition.snapshot=HSDataFreshnessCore.normalize({value:futuresPosition.foreign_tx?.net,data_date:futuresPosition.dataDate,updated_at:futuresPosition.updatedAt,source:"臺灣期貨交易所 OpenAPI"},{maxTradingDayAge:3});
   }catch{futuresPosition=previous}
   renderFuturesPosition();
