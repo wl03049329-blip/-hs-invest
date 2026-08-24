@@ -5,6 +5,8 @@ const portfolioCore=require("../portfolio-core.js");
 let passed=0;
 function test(name,fn){fn();passed++;process.stdout.write(`PASS ${name}\n`);}
 const now=new Date("2026-08-24T04:30:00Z"); // 12:30 Taipei, Sunday: Friday close is one trading day old.
+const realDateNow=Date.now;
+Date.now=()=>now.getTime();
 const holding=(code="0050",targetAllocation=60)=>({code,shares:100,averageCost:90,targetAllocation});
 const quote=(overrides={})=>({price:100,previousClose:99,date:"2026-08-21",fetchedAt:"2026-08-21T06:00:00Z",quoteMode:"close",...overrides});
 const formal=(overrides={})=>({score:70,scoreStatus:"complete",coverage:100,stage:{key:"add"},metrics:{weeklyKdj:70},breakdown:[],...overrides});
@@ -12,8 +14,20 @@ const formalItem=(overrides={})=>({id:"0050",scoreMode:"formal",formalState:{dat
 const input=(overrides={})=>({symbol:"0050",holdings:[holding()],quotes:{"0050":quote()},radarItem:formalItem(),now,...overrides});
 test("valid fresh formal 0050 is READY",()=>assert.equal(core.normalizeSymbol(input()).eligibility,"READY"));
 test("valid fresh intraday 0050 is READY",()=>{
-  const time="2026-08-24T04:25:00Z",i=input({quotes:{"0050":quote({date:"2026-08-24",quoteMode:"delayed",fetchedAt:time,quoteAsOf:time})},radarItem:{id:"0050",scoreMode:"intraday",intraday:{asOf:time,quoteDate:"2026-08-24"},formalState:{date:"2026-08-21"},strategyDecisions:{long_term_core:formal()}}});
+  const time="2026-08-24T04:25:00Z",i=input({quotes:{"0050":quote({date:"2026-08-24",quoteMode:"delayed",quoteTime:"12:25:00",fetchedAt:time,quoteAsOf:time})},radarItem:{id:"0050",scoreMode:"intraday",intraday:{asOf:time,quoteDate:"2026-08-24"},formalState:{date:"2026-08-21"},strategyDecisions:{long_term_core:formal()}}});
   assert.equal(core.normalizeSymbol(i).eligibility,"READY");
+});
+test("intraday quote genuinely future relative to controlled now fails closed",()=>{
+  const time="2026-08-24T05:00:00Z",i=input({quotes:{"0050":quote({date:"2026-08-24",quoteMode:"delayed",quoteTime:"13:00:00",fetchedAt:time,quoteAsOf:time})},radarItem:{id:"0050",scoreMode:"intraday",intraday:{asOf:time,quoteDate:"2026-08-24"},strategyDecisions:{long_term_core:formal()}}});
+  assert.ok(core.normalizeSymbol(i).reasons.includes("PORTFOLIO_QUOTE_FUTURE"));
+});
+test("radar intraday as-of genuinely future fails closed",()=>{
+  const quoteTime="2026-08-24T04:25:00Z",radarTime="2026-08-24T05:00:00Z",i=input({quotes:{"0050":quote({date:"2026-08-24",quoteMode:"delayed",quoteTime:"12:25:00",fetchedAt:quoteTime,quoteAsOf:quoteTime})},radarItem:{id:"0050",scoreMode:"intraday",intraday:{asOf:radarTime,quoteDate:"2026-08-24"},strategyDecisions:{long_term_core:formal()}}});
+  assert.ok(core.normalizeSymbol(i).reasons.includes("RADAR_ASOF_INVALID"));
+});
+test("intraday quote older than 90 minutes fails closed",()=>{
+  const time="2026-08-24T02:00:00Z",i=input({quotes:{"0050":quote({date:"2026-08-24",quoteMode:"delayed",quoteTime:"10:00:00",fetchedAt:time,quoteAsOf:time})},radarItem:{id:"0050",scoreMode:"intraday",intraday:{asOf:time,quoteDate:"2026-08-24"},strategyDecisions:{long_term_core:formal()}}});
+  assert.ok(core.normalizeSymbol(i).reasons.includes("PORTFOLIO_QUOTE_STALE"));
 });
 test("stale and future portfolio quotes fail closed",()=>{
   assert.ok(core.normalizeSymbol(input({quotes:{"0050":quote({date:"2026-08-18",fetchedAt:"2026-08-18T06:00:00Z"})}})).reasons.includes("PORTFOLIO_QUOTE_STALE"));
@@ -54,4 +68,5 @@ test("adapter introduces no Core Score calculation",()=>{
   const source=fs.readFileSync(require.resolve("../personal-capital-input-core.js"),"utf8");
   assert.doesNotMatch(source,/longTermDecision\s*\(|weightedScore\s*\(|scoreModel\s*\(/);
 });
+Date.now=realDateNow;
 process.stdout.write(`PASS ${passed} focused personal-capital input tests\n`);
