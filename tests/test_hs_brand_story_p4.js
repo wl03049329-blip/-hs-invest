@@ -62,4 +62,10 @@ for(const [zh,en] of [["未來驗證","Forward Test"],["未來模擬驗證","For
 assert.match(story,/不知道的時候，就讓它保持不知道。/);assert.match(story,/我要讓未來的市場來回答。/);assert.match(story,/data-story-target="hs-story-/);
 console.log("TEST 15 PASS: Chinese-first research terms, 00631L lab and continuation CTAs are present");
 
-console.log("HS Story V2 tests: 15/15 PASS");
+assert.match(story,/class="hsStoryHeroLine"/);assert.match(story,/跌得夠深嗎？/);assert.match(story,/這種狀況罕見嗎？/);assert.match(story,/現在值得提高投入嗎？/);
+for(const role of ["台灣核心","台灣新科技","半導體核心","美國科技"])assert.match(story,new RegExp(role));
+for(const node of ["權重","重新比較","門檻","重新設定","因子","接受淘汰","計算","必要時重做"])assert.match(story,new RegExp(node));
+assert.match(css,/\.hsStoryReflection/);assert.match(css,/\.hsResearchNodes/);assert.match(css,/\.hsStoryHeroLine\{[^}]*white-space:nowrap/);
+console.log("TEST 16 PASS: V2.1 hero, ETF roles, reflection chips and research nodes are present");
+
+console.log("HS Story V2.1 tests: 16/16 PASS");
