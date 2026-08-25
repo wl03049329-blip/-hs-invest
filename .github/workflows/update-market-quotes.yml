@@ -45,6 +45,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
       - name: Configure EOD history committer
         run: |
           git config user.name "github-actions[bot]"
@@ -53,7 +56,12 @@ jobs:
       - name: Finalize official EOD Core Score history
         run: |
           expected_date="$(TZ=Asia/Taipei date +%F)"
-          node scripts/finalize_core_score_history.js --expected-date "$expected_date"
+          python scripts/fetch_official_eod_market.py \
+            --expected-date "$expected_date" \
+            --output "${RUNNER_TEMP}/official-eod-market.json"
+          node scripts/finalize_core_score_history.js \
+            --eod "${RUNNER_TEMP}/official-eod-market.json" \
+            --expected-date "$expected_date"
       - name: Commit finalized EOD Core Score history
         run: |
           git add finalized-core-score-snapshots-v1.json

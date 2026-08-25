@@ -4,7 +4,9 @@ on:
   schedule:
     # Limited Taipei evening retries. Holidays and not-yet-published sources
     # remain SOURCE_NOT_READY and never publish or backfill a snapshot.
-    - cron: "30 7,10,12,14 * * 1-5"
+    # 23:30 is the final bounded retry; on 2026-08-25 the official fallback
+    # had matured after the 22:30 retry while the primary was still stale.
+    - cron: "30 7,10,12,14,15 * * 1-5"
   workflow_dispatch:
 
 permissions:
@@ -34,15 +36,17 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git pull --rebase origin main
-      - name: Probe official close sources without changing production quote artifacts
-        env:
-          HS_MARKET_OUTPUT_DIR: ${{ runner.temp }}/hs-eod-probe
-        run: python scripts/update_market_quotes.py
+      - name: Fetch validated official EOD market input
+        run: |
+          expected_date="$(TZ=Asia/Taipei date +%F)"
+          python scripts/fetch_official_eod_market.py \
+            --expected-date "$expected_date" \
+            --output "${RUNNER_TEMP}/official-eod-market.json"
       - name: Finalize expected Taipei trading date only
         run: |
           expected_date="$(TZ=Asia/Taipei date +%F)"
           node scripts/finalize_core_score_history.js \
-            --market "${RUNNER_TEMP}/hs-eod-probe/market-quotes.json" \
+            --eod "${RUNNER_TEMP}/official-eod-market.json" \
             --expected-date "$expected_date"
       - name: Commit finalized EOD history only
         run: |
