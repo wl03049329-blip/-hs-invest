@@ -2085,6 +2085,11 @@ function parseCanonicalCoreSnapshots(payload){
 function latestCanonicalCoreSnapshot(payload,today=taipeiToday()){
   return parseCanonicalCoreSnapshots(payload).filter(snapshot=>snapshot.trading_date<=today).sort((a,b)=>`${b.trading_date} ${b.slot}`.localeCompare(`${a.trading_date} ${a.slot}`))[0]||null;
 }
+async function loadCanonicalCoreLedger(signal){
+  const payload=await fetchNoStore(`intraday-core-snapshots-v1.json?ts=${Date.now()}`,signal);
+  liveCanonicalCoreSnapshots=parseCanonicalCoreSnapshots(payload);
+  return latestCanonicalCoreSnapshot(payload);
+}
 function canonicalCoreItem(snapshot,symbol){
   const item=snapshot?.items?.[symbol],score=Number(item?.score),asOf=Date.parse(String(item?.market_as_of||""));
   return item&&item.status==="SUCCESS"&&Number.isFinite(score)&&score>=0&&score<=100&&Number.isFinite(asOf)?item:null;
@@ -2168,8 +2173,8 @@ async function refreshLiveQuotes({force=false}={}){
       const metaTime=String(metaResult.value?.updated_at||"");
       if(metaTime&&metaTime!==liveMarketCacheVersion){
         try{
-          const [cache,coreSnapshots]=await Promise.all([fetchNoStore(`market-quotes.json?ts=${now}`,signal),fetchNoStore(`intraday-core-snapshots-v1.json?ts=${now}`,signal).catch(()=>null)]),quotes=parsePublicQuoteCache(cache),canonicalCoreSnapshot=latestCanonicalCoreSnapshot(coreSnapshots),canonicalCoreSnapshots=parseCanonicalCoreSnapshots(coreSnapshots);
-          if(quotes.size){livePublicQuotes=quotes;liveMarketCacheVersion=String(cache.updated_at||metaTime);liveCanonicalCoreSnapshots=canonicalCoreSnapshots;liveRadarRefresh=cache.radar_refresh||liveRadarRefresh;liveRadarRefreshAttempt=cache.radar_refresh_attempt||liveRadarRefreshAttempt;liveRadarCompleteness=cache.intraday_completeness||liveRadarCompleteness;window.dispatchEvent(new CustomEvent("hs:delayed-quotes",{detail:{quotes,sourceUpdatedAt:liveMarketCacheVersion,checkedAt:new Date().toISOString(),source:"github_actions_cache",radarRefresh:liveRadarRefresh,radarRefreshAttempt:liveRadarRefreshAttempt,radarCompleteness:liveRadarCompleteness,canonicalCoreSnapshot,canonicalCoreSnapshots}}));successes++}
+          const [cache,canonicalCoreSnapshot]=await Promise.all([fetchNoStore(`market-quotes.json?ts=${now}`,signal),loadCanonicalCoreLedger(signal).catch(()=>null)]),quotes=parsePublicQuoteCache(cache),canonicalCoreSnapshots=liveCanonicalCoreSnapshots;
+          if(quotes.size){livePublicQuotes=quotes;liveMarketCacheVersion=String(cache.updated_at||metaTime);liveRadarRefresh=cache.radar_refresh||liveRadarRefresh;liveRadarRefreshAttempt=cache.radar_refresh_attempt||liveRadarRefreshAttempt;liveRadarCompleteness=cache.intraday_completeness||liveRadarCompleteness;window.dispatchEvent(new CustomEvent("hs:delayed-quotes",{detail:{quotes,sourceUpdatedAt:liveMarketCacheVersion,checkedAt:new Date().toISOString(),source:"github_actions_cache",radarRefresh:liveRadarRefresh,radarRefreshAttempt:liveRadarRefreshAttempt,radarCompleteness:liveRadarCompleteness,canonicalCoreSnapshot,canonicalCoreSnapshots}}));successes++}
         }catch{}
       }else window.dispatchEvent(new CustomEvent("hs:quote-cache-checked",{detail:{sourceUpdatedAt:metaTime,checkedAt:new Date().toISOString()}}));
     }
@@ -3744,7 +3749,11 @@ async function load(){
     if(!all.length)throw new Error("目前清單內的 ETF 都無法取得價格資料");
     refreshAllDecisionModels();all.forEach(captureFormalState);renderTop();renderCards();renderChecks();renderTable();renderEvents();
     await Promise.allSettled([loadNews(all[0].date),loadChipData(),loadMarginRisk(),loadTrumpNews(),refreshCnnFearGreed(),loadFuturesPosition(),loadMarketEvents()]);
-    refreshAllDecisionModels();all.forEach(captureFormalState);recordSuccessfulMarketAsOf(formalCloseMarketAsOf(all));saveDailyLongRankSnapshot(all.filter(item=>LONG_RADAR_CODES.has(item.id)));renderMarket();renderTrump();renderSentiment();renderEvents();renderTop();renderCards();renderTable();
+    refreshAllDecisionModels();all.forEach(captureFormalState);recordSuccessfulMarketAsOf(formalCloseMarketAsOf(all));saveDailyLongRankSnapshot(all.filter(item=>LONG_RADAR_CODES.has(item.id)));
+    let canonicalForHome=liveCanonicalCoreSnapshot||latestCanonicalCoreSnapshot({snapshots:liveCanonicalCoreSnapshots});
+    if(!canonicalForHome)canonicalForHome=await loadCanonicalCoreLedger().catch(()=>null);
+    if(canonicalForHome&&!applyCanonicalCoreSnapshot(canonicalForHome))liveRadarRefreshAttempt={verified:false,status:"failed",trading_date:canonicalForHome?.trading_date||"",slot:canonicalForHome?.slot||"",error:"canonical_core_snapshot_invalid"};
+    renderMarket();renderTrump();renderSentiment();renderEvents();renderTop();renderCards();renderTable();
     if(pendingDelayedQuotes)applyHomeDelayedQuotes(pendingDelayedQuotes);
     const chipStatus=marketChip.marginRisk&&marketChip.institutional&&cnnFearGreed?"融資風險、法人與 CNN 情緒已更新":"部分籌碼或情緒資料尚未更新";
     renderHeaderMarketUpdate(failed.length);
