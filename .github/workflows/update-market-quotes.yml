@@ -51,7 +51,9 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git pull --rebase origin main
       - name: Finalize official EOD Core Score history
-        run: node scripts/finalize_core_score_history.js
+        run: |
+          expected_date="$(TZ=Asia/Taipei date +%F)"
+          node scripts/finalize_core_score_history.js --expected-date "$expected_date"
       - name: Commit finalized EOD Core Score history
         run: |
           git add finalized-core-score-snapshots-v1.json

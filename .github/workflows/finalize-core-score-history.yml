@@ -1,0 +1,52 @@
+name: Finalize official EOD Core Score history
+
+on:
+  schedule:
+    # Limited Taipei evening retries. Holidays and not-yet-published sources
+    # remain SOURCE_NOT_READY and never publish or backfill a snapshot.
+    - cron: "30 7,10,12,14 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: hs-eod-core-history
+  cancel-in-progress: false
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Configure EOD history committer
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin main
+      - name: Probe official close sources without changing production quote artifacts
+        env:
+          HS_MARKET_OUTPUT_DIR: ${{ runner.temp }}/hs-eod-probe
+        run: python scripts/update_market_quotes.py
+      - name: Finalize expected Taipei trading date only
+        run: |
+          expected_date="$(TZ=Asia/Taipei date +%F)"
+          node scripts/finalize_core_score_history.js \
+            --market "${RUNNER_TEMP}/hs-eod-probe/market-quotes.json" \
+            --expected-date "$expected_date"
+      - name: Commit finalized EOD history only
+        run: |
+          git add finalized-core-score-snapshots-v1.json
+          git diff --cached --quiet || git commit -m "Update official ETF radar score history"
+          git pull --rebase
+          git push

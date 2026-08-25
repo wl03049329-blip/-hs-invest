@@ -22,10 +22,11 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parents[1]
-OUTPUT = ROOT / "market-quotes.json"
-META_OUTPUT = ROOT / "market-quotes-meta.json"
-OVERVIEW_OUTPUT = ROOT / "market-overview.json"
-FUTURES_OUTPUT = ROOT / "tx-futures-quote.json"
+OUTPUT_ROOT = Path(os.environ.get("HS_MARKET_OUTPUT_DIR", ROOT)).resolve()
+OUTPUT = OUTPUT_ROOT / "market-quotes.json"
+META_OUTPUT = OUTPUT_ROOT / "market-quotes-meta.json"
+OVERVIEW_OUTPUT = OUTPUT_ROOT / "market-overview.json"
+FUTURES_OUTPUT = OUTPUT_ROOT / "tx-futures-quote.json"
 
 TWSE_CLOSE_URL = "https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL"
 TPEX_CLOSE_URL = "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_quotes"
@@ -125,7 +126,8 @@ def write_atomic(path: Path, payload: dict[str, Any], *, compact: bool = False) 
         if compact
         else json.dumps(payload, ensure_ascii=False, indent=2)
     ) + "\n"
-    handle, temp_name = tempfile.mkstemp(prefix=f"{path.stem}-", suffix=".json", dir=ROOT)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    handle, temp_name = tempfile.mkstemp(prefix=f"{path.stem}-", suffix=".json", dir=path.parent)
     try:
         with os.fdopen(handle, "w", encoding="utf-8", newline="\n") as stream:
             stream.write(text)

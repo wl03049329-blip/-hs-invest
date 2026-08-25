@@ -11,7 +11,8 @@ const core=fs.readFileSync(path.join(root,"final-core-production.js"),"utf8");
 // TODAY: current decision stays canonical/current; comparison stays finalized-close history.
 assert.match(html,/function radarTodayHtml\(x,decision,score,dailyPair\)/);
 assert.match(html,/const latest=dailyPair\?\.latest\?\.items\?\.\[x\.id\],previous=dailyPair\?\.previous\?\.items\?\.\[x\.id\]/);
-assert.match(html,/正式盤後比較：首次／—/);
+assert.match(html,/sourceLabel=source==="official"\?"正式盤後":"本機盤後試算"/);
+assert.match(html,/`\$\{sourceLabel\}比較：首次／—`/);
 assert.match(html,/decision\?\.marketAsOf\|\|x\.intraday\?\.asOf/);
 
 // WHY SCORE is presentation over the frozen factors, not a new formula.
@@ -27,7 +28,8 @@ assert.match(core,/crash[\s\S]{0,120}weight:15/);
 assert.match(html,/function radarScoreTrendHtml\(ticker,history=loadDailyLongRankHistory\(\)\)/);
 assert.match(html,/if\(ticker==="009815"\)return.*WAIT_NATIVE；原生正式 Core Score 歷史尚未建立/s);
 assert.match(html,/coreScoreHistoryState\(ticker,history\)/);
-assert.match(html,/正式盤後分數/);
+assert.match(html,/historyLabel=state\.source==="official"\?"正式盤後":"本機盤後試算"/);
+assert.match(html,/本機盤後試算紀錄/);
 assert.match(html,/盤中 Core 不納入此趨勢/);
 assert.match(html,/if\(rows\.length>=Math\.max\(1,Math\.min\(10,Number\(limit\)\|\|10\)\)\)break/);
 assert.match(html,/snapshotType&&snapshotType!=="FINALIZED_CLOSE"/);
