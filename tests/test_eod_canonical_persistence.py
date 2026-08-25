@@ -7,7 +7,8 @@ fetcher = (ROOT / "scripts" / "fetch_official_eod_market.py").read_text(encoding
 finalizer = (ROOT / "scripts" / "finalize_core_score_history.js").read_text(encoding="utf-8")
 
 assert '--expected-date "$expected_date"' in intraday
-assert 'cron: "30 7,10,12,14,15 * * 1-5"' in eod
+assert 'cron: "30 7,12,14,15 * * 1-5"' in eod
+assert 'cron: "0 10 * * 1-5"' in eod
 assert "cancel-in-progress: false" in eod
 assert "fetch_official_eod_market.py" in eod
 assert "official-eod-market.json" in eod

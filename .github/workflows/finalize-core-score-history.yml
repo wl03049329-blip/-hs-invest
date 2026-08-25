@@ -6,7 +6,8 @@ on:
     # remain SOURCE_NOT_READY and never publish or backfill a snapshot.
     # 23:30 is the final bounded retry; on 2026-08-25 the official fallback
     # had matured after the 22:30 retry while the primary was still stale.
-    - cron: "30 7,10,12,14,15 * * 1-5"
+    - cron: "30 7,12,14,15 * * 1-5"
+    - cron: "0 10 * * 1-5"
   workflow_dispatch:
 
 permissions:
