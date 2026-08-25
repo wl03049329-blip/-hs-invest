@@ -1917,6 +1917,26 @@ function formatHomeQuoteTime(value){
   if(!Number.isFinite(time.getTime()))return"—";
   return new Intl.DateTimeFormat("zh-TW",{timeZone:"Asia/Taipei",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}).format(time);
 }
+function formatHomeMonthDay(value){
+  const match=String(value||"").match(/^\d{4}-(\d{2})-(\d{2})$/);
+  return match?`${Number(match[1])}/${Number(match[2])}`:"—";
+}
+function hsLiveSnapshotFreshness(snapshot,completeness,today=taipeiToday()){
+  const day=String(snapshot?.trading_date||""),slot=String(snapshot?.slot||"");
+  if(!day||!slot)return{label:"尚無成功盤中資料",isLkg:true};
+  const sameMonitoringDay=completeness?.trading_date===today;
+  const degraded=new Set([...(completeness?.missed_slots||[]),...(completeness?.failed_slots||[])]);
+  if(day===today){
+    return{label:`最新成功 今日 ${slot}${degraded.size?`｜已缺 ${degraded.size} 個時段`:""}`,isLkg:false};
+  }
+  const todayUnavailable=sameMonitoringDay&&Number(completeness?.success_count)===0;
+  return{label:`最近成功 ${formatHomeMonthDay(day)} ${slot}${todayUnavailable?"｜今日盤中資料尚未成功":"｜目前沿用可信快照"}`,isLkg:true};
+}
+function hsLiveCloseComparisonLabel(canonical,snapshot,today=taipeiToday()){
+  if(snapshot?.trading_date===today)return"vs 昨日正式收盤";
+  const baseline=formatHomeMonthDay(canonical?.previous_close_trading_date);
+  return baseline==="—"?"vs 前次正式收盤":`vs ${baseline} 正式收盤`;
+}
 function formatHeaderMarketAsOf(value){
   const time=new Date(value);if(!Number.isFinite(time.getTime()))return"—";
   const parts=Object.fromEntries(new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Taipei",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}).formatToParts(time).map(part=>[part.type,part.value]));
@@ -2733,9 +2753,9 @@ function longRankRow(x,index,previous,rank=index+1){
   const nextTier=hsLiveNextTier(Number(score)),marketAsOf=String(canonical?.market_as_of||decision?.marketAsOf||x.intraday?.asOf||""),time=marketAsOf?formatHomeQuoteTime(marketAsOf):"尚無成功行情";
   const scoreDelta=Number(canonical?.delta_vs_previous_close),rankDelta=Number(canonical?.rank_delta_vs_previous_close),hasScore=Number.isFinite(score),scoreChange=Number.isFinite(scoreDelta)?`${scoreDelta>=0?"+":""}${scoreDelta.toFixed(1)}`:"—",rankChange=Number.isFinite(rankDelta)?rankDelta>0?`↑${rankDelta}`:rankDelta<0?`↓${Math.abs(rankDelta)}`:"排名不變":"昨收基準暫缺";
   const rankBadge=ranked?`<span class="hsLiveRank rank-${rank}" aria-label="第${rank}名">${String(rank)}</span>`:`<span class="hsLiveRank is-wait" aria-label="原生資料尚未成熟">NA</span>`;
-  const snapshot=liveCanonicalCoreSnapshot?.items?.[x.id]===canonical?liveCanonicalCoreSnapshot:null;
+  const snapshot=liveCanonicalCoreSnapshot?.items?.[x.id]===canonical?liveCanonicalCoreSnapshot:null,freshness=hsLiveSnapshotFreshness(snapshot,liveRadarCompleteness),closeComparisonLabel=hsLiveCloseComparisonLabel(canonical,snapshot);
   const weeklyJ=Number.isFinite(x.j)?fmt(x.j):"—",nextSentence=nextTier.distance?`距「${esc(nextTier.label)}」還差 <b>${nextTier.distance} 分</b>`:"已進入極端參考區",decisionCopy=decision?.cta?.detail||decision?.stage?.recommendation||"等待下一筆正式資料";
-  return `<details class="hsLiveCard ${statusTier} ${ranked?"":"is-wait-native"}"><summary><div class="hsLivePrimary"><span class="hsLiveRankWrap">${rankBadge}</span><span class="hsLiveIdentity"><b>${esc(x.id)}</b><small>${esc(x.name)}</small></span><span class="hsLiveDecisionComposite"><span class="hsLiveScore"><b>${hasScore?score:"—"}</b><small>CORE SCORE</small></span><span class="hsLiveDelta"><b>vs 昨日正式收盤</b><i class="${scoreDelta>0?"is-up":scoreDelta<0?"is-down":""}">${scoreChange}</i><small>${esc(rankChange)}</small></span></span></div><div class="hsLiveSecondary"><span class="hsLiveMetaGroup"><span class="hsLiveWeeklyJ">週 J <b>${weeklyJ}</b></span><span class="hsLiveTier longRankStage ${statusTier}">${esc(stageLabel)}</span></span><span class="hsLiveLatest">${ranked?`最新成功 ${esc(time)}`:"WAIT_NATIVE｜原生資料尚未成熟"}</span><span class="hsLiveOpen" aria-hidden="true">⌄</span></div></summary><div class="hsLiveCardDetail">${hasScore?`<section class="hsLiveSection hsLiveNextSection"><h3>距下一階段</h3><p>${nextSentence}</p><i class="hsLiveProgress"><b style="width:${nextTier.progress}%"></b></i></section><section class="hsLiveSection"><h3>買點驅動</h3><div class="hsLiveDrivers">${hsLiveDriverSummary(canonical)}</div></section><section class="hsLiveSection hsLiveTimelineWrap"><h3>今日盤中變化</h3>${hsLiveTimeline(x.id,snapshot)}</section><section class="hsLiveSection hsLiveDecision"><h3>HS 判讀</h3><strong>${esc(decisionCopy)}</strong><p>目前 ${score} 分，${nextTier.distance?`距下一階段還差 ${nextTier.distance} 分。`:"已進入極端參考區。"}</p></section><details class="hsLiveTech"><summary>技術資料</summary><div class="hsLiveDetailMeta"><span>週 J <b>${weeklyJ}</b></span><span>52週回檔 <b>${Number.isFinite(x.fromHigh)?fmt(x.fromHigh)+"%":"—"}</b></span><span>行情時間 <b>${esc(time)}</b></span></div></details>`:`<section class="hsLiveSection hsLiveDecision"><h3>HS 判讀</h3><strong>009815 目前維持 WAIT_NATIVE；資料不夠，不假裝有正式 Core Score。</strong></section>`}<div class="hsLiveActions"><button class="miniBtn" type="button" data-read-core-score="${esc(x.id)}">讀懂你的分數</button><button class="miniBtn" type="button" data-core-score-history="${esc(x.id)}">近10日盤後分數</button></div></div></details>`;
+  return `<details class="hsLiveCard ${statusTier} ${ranked?"":"is-wait-native"} ${freshness.isLkg?"is-lkg":""}"><summary><div class="hsLivePrimary"><span class="hsLiveRankWrap">${rankBadge}</span><span class="hsLiveIdentity"><b>${esc(x.id)}</b><small>${esc(x.name)}</small></span><span class="hsLiveDecisionComposite"><span class="hsLiveScore"><b>${hasScore?score:"—"}</b><small>CORE SCORE</small></span><span class="hsLiveDelta"><b>${esc(closeComparisonLabel)}</b><i class="${scoreDelta>0?"is-up":scoreDelta<0?"is-down":""}">${scoreChange}</i><small>${esc(rankChange)}</small></span></span></div><div class="hsLiveSecondary"><span class="hsLiveMetaGroup"><span class="hsLiveWeeklyJ">週 J <b>${weeklyJ}</b></span><span class="hsLiveTier longRankStage ${statusTier}">${esc(stageLabel)}</span></span><span class="hsLiveLatest">${ranked?esc(freshness.label):"WAIT_NATIVE｜原生資料尚未成熟"}</span><span class="hsLiveOpen" aria-hidden="true">⌄</span></div></summary><div class="hsLiveCardDetail">${hasScore?`<section class="hsLiveSection hsLiveNextSection"><h3>距下一階段</h3><p>${nextSentence}</p><i class="hsLiveProgress"><b style="width:${nextTier.progress}%"></b></i></section><section class="hsLiveSection"><h3>買點驅動</h3><div class="hsLiveDrivers">${hsLiveDriverSummary(canonical)}</div></section><section class="hsLiveSection hsLiveTimelineWrap"><h3>今日盤中變化</h3>${hsLiveTimeline(x.id,snapshot)}</section><section class="hsLiveSection hsLiveDecision"><h3>HS 判讀</h3><strong>${esc(decisionCopy)}</strong><p>目前 ${score} 分，${nextTier.distance?`距下一階段還差 ${nextTier.distance} 分。`:"已進入極端參考區。"}</p></section><details class="hsLiveTech"><summary>技術資料</summary><div class="hsLiveDetailMeta"><span>週 J <b>${weeklyJ}</b></span><span>52週回檔 <b>${Number.isFinite(x.fromHigh)?fmt(x.fromHigh)+"%":"—"}</b></span><span>行情時間 <b>${esc(time)}</b></span></div></details>`:`<section class="hsLiveSection hsLiveDecision"><h3>HS 判讀</h3><strong>009815 目前維持 WAIT_NATIVE；資料不夠，不假裝有正式 Core Score。</strong></section>`}<div class="hsLiveActions"><button class="miniBtn" type="button" data-read-core-score="${esc(x.id)}">讀懂你的分數</button><button class="miniBtn" type="button" data-core-score-history="${esc(x.id)}">近10日盤後分數</button></div></div></details>`;
 }
 function renderTodayHighlights(longs,swings){
   const bestLong=longs.find(item=>Number.isFinite(displayScore(item,"long_term_core")));

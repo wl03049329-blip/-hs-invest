@@ -26,6 +26,9 @@ SNAPSHOT_SUCCESS = "SNAPSHOT_SUCCESS"
 SNAPSHOT_PARTIAL = "SNAPSHOT_PARTIAL"
 SNAPSHOT_MISSED = "SNAPSHOT_MISSED"
 SNAPSHOT_FAILED = "SNAPSHOT_FAILED"
+FAILURE_OPERATIONAL_SOURCE = "OPERATIONAL_SOURCE"
+FAILURE_OPERATIONAL_SCHEDULER = "OPERATIONAL_SCHEDULER"
+FAILURE_INTEGRITY = "INTEGRITY"
 DEFAULT_GRACE_MINUTES = 15
 # GitHub scheduled runs can arrive early or late.  A 15-minute prewake still
 # reaches the target plus settle period within this workflow's 20-minute cap.
@@ -54,6 +57,16 @@ def slot_action(now: datetime, target: datetime, grace_minutes: int = 15) -> str
 def run(command: list[str], *, env: dict[str, str] | None = None, check: bool = True) -> subprocess.CompletedProcess[str]:
     print("$", " ".join(command), flush=True)
     return subprocess.run(command, cwd=ROOT, env=env, text=True, check=check)
+
+
+def run_observed(command: list[str], *, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+    print("$", " ".join(command), flush=True)
+    completed = subprocess.run(command, cwd=ROOT, env=env, text=True, capture_output=True, check=False)
+    if completed.stdout:
+        print(completed.stdout.rstrip(), flush=True)
+    if completed.stderr:
+        print(completed.stderr.rstrip(), file=sys.stderr, flush=True)
+    return completed
 
 
 def read_refresh_attempt() -> dict:
@@ -87,11 +100,13 @@ def write_json_atomic(path: Path, payload: dict) -> None:
 
 def new_completeness(trading_date: str) -> dict:
     return {
-        "version": 1,
+        "version": 2,
+        "contract": "HS_LIVE_RELIABILITY_V2",
         "trading_date": trading_date,
         "expected_slots": list(TARGET_SLOTS),
         "slots": {slot: {"status": SLOT_PENDING} for slot in TARGET_SLOTS},
-        "workflow_status": "WORKFLOW_SUCCESS",
+        "workflow_status": "OPERATIONAL_OK",
+        "integrity_status": "PASS",
         "snapshot_status": SNAPSHOT_PARTIAL,
     }
 
@@ -125,7 +140,11 @@ def summarize_completeness(state: dict, updated_at: datetime | None = None) -> d
         snapshot_status = SNAPSHOT_FAILED
     else:
         snapshot_status = SNAPSHOT_PARTIAL
+    degraded = sorted(set(missed + failed), key=TARGET_SLOTS.index)
+    integrity_failed = any(str(slots.get(slot, {}).get("failure_class", "")).startswith(FAILURE_INTEGRITY) for slot in TARGET_SLOTS)
     state.update({
+        "version": 2,
+        "contract": "HS_LIVE_RELIABILITY_V2",
         "expected_slots": list(TARGET_SLOTS),
         "successful_slots": successful,
         "missed_slots": missed,
@@ -135,7 +154,10 @@ def summarize_completeness(state: dict, updated_at: datetime | None = None) -> d
         "success_count": len(successful),
         "completeness": f"{len(successful)}/{len(TARGET_SLOTS)}",
         "snapshot_status": snapshot_status,
-        "workflow_status": "WORKFLOW_SUCCESS",
+        "degraded_slots": degraded,
+        "degraded_count": len(degraded),
+        "workflow_status": "INTEGRITY_FAILURE" if integrity_failed else ("OPERATIONAL_DEGRADED" if degraded else "OPERATIONAL_OK"),
+        "integrity_status": "FAIL" if integrity_failed else "PASS",
     })
     if updated_at is not None:
         state["updated_at"] = updated_at.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
@@ -202,7 +224,15 @@ def record_slot_outcome(state: dict, slot: str, status: str, attempt: dict | Non
         row.pop("error", None)
         row.pop("reason", None)
     elif status == SLOT_FAILED:
-        row.update({"verified": False, "error": str(attempt.get("error") or "snapshot_update_failed")[:160]})
+        failure_class = str(attempt.get("failure_class") or FAILURE_OPERATIONAL_SOURCE)
+        row.update({
+            "verified": False,
+            "error": str(attempt.get("error") or "snapshot_update_failed")[:160],
+            "failure_class": failure_class,
+        })
+    diagnostic = attempt.get("slot_diagnostic")
+    if isinstance(diagnostic, dict):
+        row["diagnostic"] = diagnostic
     return summarize_completeness(state, now)
 
 
@@ -256,10 +286,35 @@ def commit_slot(trading_date: str, slot: str, success: bool) -> None:
 def execute_slot(trading_date: str, slot: str, python: str = sys.executable) -> tuple[bool, dict]:
     env = dict(os.environ)
     env.update({"HS_RADAR_SLOT": slot, "HS_RADAR_TRADING_DATE": trading_date})
-    run([python, "scripts/update_market_quotes.py"], env=env)
+    updater = run_observed([python, "scripts/update_market_quotes.py"], env=env)
     attempt = read_refresh_attempt()
+    if updater.returncode != 0:
+        output = "\n".join(part for part in (updater.stdout, updater.stderr) if part)
+        message = (output or "market_input_updater_failed").strip().splitlines()[-1][:160]
+        failure_class = FAILURE_INTEGRITY if "INTEGRITY_FAILURE" in output else FAILURE_OPERATIONAL_SOURCE
+        attempt = {
+            "verified": False,
+            "status": "failed",
+            "trading_date": trading_date,
+            "slot": slot,
+            "error": message,
+            "failure_class": failure_class,
+            "slot_diagnostic": {
+                "schema_version": 1,
+                "trading_date": trading_date,
+                "slot": slot,
+                "market_fetch": "FAIL",
+                "required_symbols": {},
+                "core_input": "NOT_RUN",
+                "score": "NOT_RUN",
+                "snapshot_append": "NOT_RUN",
+                "failure_class": failure_class,
+                "reason": message,
+            },
+        }
     success = (
-        attempt.get("verified") is True
+        updater.returncode == 0
+        and attempt.get("verified") is True
         and attempt.get("status") == "success"
         and attempt.get("trading_date") == trading_date
         and attempt.get("slot") == slot
@@ -268,24 +323,44 @@ def execute_slot(trading_date: str, slot: str, python: str = sys.executable) -> 
         # The raw quote cache is only an input.  A slot is successful only
         # after the single canonical JS Core publisher has atomically emitted
         # its scored artifact.  This avoids browser-local Core publication.
-        published = run(["node", "scripts/build_intraday_core_snapshots.js", "--trading-date", trading_date, "--slot", slot], check=False)
+        published = run_observed(["node", "scripts/build_intraday_core_snapshots.js", "--trading-date", trading_date, "--slot", slot])
         success = published.returncode == 0
-        if not success:
+        diagnostic = dict(attempt.get("slot_diagnostic") or {})
+        if success:
+            diagnostic.update({"core_input": "PASS", "score": "PASS", "snapshot_append": "PASS", "failure_class": None, "reason": None})
+            attempt = {**attempt, "slot_diagnostic": diagnostic}
+        else:
+            output = "\n".join(part for part in (published.stdout, published.stderr) if part)
+            failure_class = FAILURE_INTEGRITY if "INTRADAY_CORE_INTEGRITY" in output else FAILURE_OPERATIONAL_SOURCE
+            reason = (output.strip().splitlines()[-1] if output.strip() else "canonical_intraday_core_snapshot_failed")[:160]
+            diagnostic.update({
+                "core_input": "FAIL",
+                "score": "NOT_PUBLISHED",
+                "snapshot_append": "FAIL",
+                "failure_class": failure_class,
+                "reason": reason,
+            })
             attempt = {
                 **attempt,
                 "verified": False,
                 "status": "failed",
-                "error": "canonical_intraday_core_snapshot_failed",
+                "error": reason,
+                "failure_class": failure_class,
+                "slot_diagnostic": diagnostic,
             }
+    elif "failure_class" not in attempt:
+        attempt = {**attempt, "failure_class": FAILURE_OPERATIONAL_SOURCE}
+    print(f"SLOT_DIAGNOSTIC {json.dumps(attempt.get('slot_diagnostic', {}), ensure_ascii=False)}", flush=True)
     print(f"[{slot}] {'SUCCESS' if success else 'FAILED'} {json.dumps(attempt, ensure_ascii=False)}", flush=True)
     return success, attempt
 
 
 def workflow_should_fail(state: dict, now: datetime, attempted_success: bool | None = None, grace_minutes: int = DEFAULT_GRACE_MINUTES) -> bool:
-    if attempted_success is False or state.get("missed_slots"):
-        return True
-    last_deadline = slot_datetime(str(state["trading_date"]), TARGET_SLOTS[-1]) + timedelta(minutes=grace_minutes)
-    return now.astimezone(TAIPEI) > last_deadline and state.get("success_count") != len(TARGET_SLOTS)
+    del now, attempted_success, grace_minutes
+    return state.get("integrity_status") == "FAIL" or any(
+        str(state.get("slots", {}).get(slot, {}).get("failure_class", "")).startswith(FAILURE_INTEGRITY)
+        for slot in TARGET_SLOTS
+    )
 
 
 def run_scheduled_once(

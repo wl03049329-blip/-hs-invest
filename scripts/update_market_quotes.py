@@ -10,8 +10,10 @@ from __future__ import annotations
 import json
 import math
 import os
+import random
 import re
 import tempfile
+import time as time_module
 import urllib.parse
 import urllib.request
 from datetime import date, datetime, time, timedelta, timezone
@@ -54,7 +56,7 @@ RADAR_REQUIRED_LIVE_SYMBOLS = ("0050", "00662", "00757", "00830", "00935")
 RADAR_NON_BLOCKING_SYMBOLS = ("009815",)
 RADAR_CODES = RADAR_REQUIRED_LIVE_SYMBOLS + RADAR_NON_BLOCKING_SYMBOLS
 RADAR_SLOTS = ("09:30", "10:30", "11:30", "12:30", "13:30")
-RADAR_QUOTE_TOLERANCE_MINUTES = 20
+RADAR_QUOTE_TOLERANCE_MINUTES = 15
 MIS_BATCH_SIZE = 60
 
 
@@ -66,10 +68,10 @@ class MisSnapshotRows(list[dict[str, Any]]):
         self.diagnostics = diagnostics
 
 
-def fetch_json(url: str, *, timeout: int = 25) -> Any:
+def fetch_json(url: str, *, timeout: int = 25, headers: dict[str, str] | None = None) -> Any:
     request = urllib.request.Request(
         url,
-        headers={"Accept": "application/json"},
+        headers={"Accept": "application/json", **(headers or {})},
     )
     with urllib.request.urlopen(request, timeout=timeout) as response:
         if response.status != 200:
@@ -185,8 +187,20 @@ def mis_channel_code(channel: str) -> str:
 
 
 def fetch_mis_batch(channels: list[str]) -> list[dict[str, Any]]:
-    query = urllib.parse.urlencode({"ex_ch": "|".join(channels), "json": "1", "delay": "0"})
-    payload = fetch_json(f"{TWSE_MIS_URL}?{query}", timeout=20)
+    query = urllib.parse.urlencode({
+        "ex_ch": "|".join(channels),
+        "json": "1",
+        "delay": "0",
+        "_": str(int(time_module.time() * 1000)),
+    })
+    payload = fetch_json(
+        f"{TWSE_MIS_URL}?{query}",
+        timeout=20,
+        headers={
+            "Referer": "https://mis.twse.com.tw/stock/index.jsp",
+            "User-Agent": "Mozilla/5.0 (compatible; HS-ETF-Radar/2.0)",
+        },
+    )
     batch = payload.get("msgArray") if isinstance(payload, dict) else None
     if not isinstance(batch, list):
         raise ValueError("TWSE MIS response has no msgArray")
@@ -195,7 +209,10 @@ def fetch_mis_batch(channels: list[str]) -> list[dict[str, Any]]:
 
 def required_raw_fields(row: dict[str, Any] | None) -> dict[str, Any]:
     row = row if isinstance(row, dict) else {}
-    return {key: row.get(key) for key in ("c", "ex", "d", "^", "t", "%", "z", "y", "o", "h", "l", "v")}
+    return {
+        key: row.get(key)
+        for key in ("c", "ex", "d", "^", "t", "%", "tlong", "z", "pz", "y", "o", "h", "l", "v", "tv", "a", "b")
+    }
 
 
 def missing_or_invalid_reason(value: Any, *, missing: str, invalid: str, positive: bool = False) -> str | None:
@@ -273,7 +290,14 @@ def inspect_mis_batch(
     return parsed, raw_required, rejected
 
 
-def fetch_mis_snapshot() -> MisSnapshotRows:
+def fetch_mis_snapshot(
+    *,
+    deadline: datetime | None = None,
+    now_fn=lambda: datetime.now(TAIPEI),
+    sleep_fn=time_module.sleep,
+    jitter_fn=lambda: random.uniform(0.0, 0.15),
+    retry_delays: tuple[float, ...] = (0.35, 0.9),
+) -> MisSnapshotRows:
     channels = tracked_channels()
     batches = [channels[offset : offset + MIS_BATCH_SIZE] for offset in range(0, len(channels), MIS_BATCH_SIZE)]
     required_codes = set(RADAR_REQUIRED_LIVE_SYMBOLS)
@@ -310,12 +334,32 @@ def fetch_mis_snapshot() -> MisSnapshotRows:
     problem_codes = [code for code in RADAR_REQUIRED_LIVE_SYMBOLS if status_for(code) != "PRESENT_AND_PARSED"]
     retry_batch_indexes = sorted({required_locations[code]["batch"] for code in problem_codes if code in required_locations})
     retry_recovered: list[str] = []
-    for batch_index in retry_batch_indexes:
-        retry_parsed, retry_raw, retry_rejected = inspect_mis_batch(fetch_mis_batch(batches[batch_index - 1]), required_codes)
-        affected_codes = [
-            code for code in problem_codes if required_locations.get(code, {}).get("batch") == batch_index
-        ]
-        for code in affected_codes:
+    targeted_retry_attempts: dict[str, int] = {code: 0 for code in problem_codes}
+    retry_errors: dict[str, list[str]] = {code: [] for code in problem_codes}
+    # A required symbol is retried by its own official MIS request.  This avoids
+    # repeatedly refetching unrelated instruments and prevents a single odd
+    # batch response from becoming the only legal opportunity for the slot.
+    for delay in retry_delays:
+        remaining = [code for code in problem_codes if code not in parsed_by_code]
+        if not remaining:
+            break
+        wait_seconds = max(0.0, delay + float(jitter_fn()))
+        if deadline is not None and now_fn().astimezone(TAIPEI) + timedelta(seconds=wait_seconds) > deadline:
+            break
+        if wait_seconds:
+            sleep_fn(wait_seconds)
+        for code in remaining:
+            if deadline is not None and now_fn().astimezone(TAIPEI) > deadline:
+                break
+            request_key = required_locations.get(code, {}).get("request_key")
+            if not request_key:
+                continue
+            targeted_retry_attempts[code] += 1
+            try:
+                retry_parsed, retry_raw, retry_rejected = inspect_mis_batch(fetch_mis_batch([request_key]), {code})
+            except Exception as exc:  # noqa: BLE001
+                retry_errors[code].append(clean_text(exc, 120))
+                continue
             if code in retry_raw:
                 raw_required[code] = retry_raw[code]
             if code in retry_parsed:
@@ -346,12 +390,52 @@ def fetch_mis_snapshot() -> MisSnapshotRows:
         "initial_missing": initial_missing,
         "initial_parse_rejected": initial_rejected,
         "retried_batches": retry_batch_indexes,
+        "retry_strategy": "required_symbol_single_request",
+        "targeted_retry_attempts": targeted_retry_attempts,
+        "retry_errors": {code: errors for code, errors in retry_errors.items() if errors},
         "retry_recovered": sorted(set(retry_recovered)),
         "final_missing": final_missing,
         "final_parse_rejected": final_rejected,
         "symbols": symbol_diagnostics,
     }
     return MisSnapshotRows(list(parsed_by_code.values()), diagnostics)
+
+
+def build_slot_diagnostic(
+    trading_date: str,
+    slot: str,
+    diagnostics: dict[str, Any] | None,
+    *,
+    error: str | None = None,
+) -> dict[str, Any]:
+    diagnostics = diagnostics if isinstance(diagnostics, dict) else {}
+    symbols = diagnostics.get("symbols") if isinstance(diagnostics.get("symbols"), dict) else {}
+    required: dict[str, str] = {}
+    for code in RADAR_REQUIRED_LIVE_SYMBOLS:
+        row = symbols.get(code) if isinstance(symbols.get(code), dict) else {}
+        reason = clean_text(row.get("rejection_reason"), 40)
+        if row.get("parsed") is True:
+            required[code] = "PASS"
+        elif reason:
+            required[code] = f"FAIL_{reason.upper()}"
+        elif row.get("raw_present") is False:
+            required[code] = "FAIL_RAW_MISSING"
+        else:
+            required[code] = "NOT_REACHED"
+    source_reached = bool(symbols)
+    return {
+        "schema_version": 1,
+        "trading_date": trading_date,
+        "slot": slot,
+        "market_fetch": "PASS" if source_reached else "FAIL",
+        "required_symbols": required,
+        "core_input": "PENDING" if not error else "NOT_RUN",
+        "score": "NOT_RUN",
+        "snapshot_append": "NOT_RUN",
+        "failure_class": None if not error else "OPERATIONAL_SOURCE",
+        "reason": clean_text(error, 120) if error else None,
+        "source_attempts": diagnostics.get("targeted_retry_attempts", {}),
+    }
 
 
 def quote_datetime(data_date: str, quote_time: str) -> datetime | None:
@@ -385,6 +469,8 @@ def validate_radar_refresh(
     target = datetime.fromisoformat(f"{trading_date}T{slot}:00").replace(tzinfo=TAIPEI)
     minimum = target - timedelta(minutes=RADAR_QUOTE_TOLERANCE_MINUTES)
     maximum = target + timedelta(minutes=RADAR_QUOTE_TOLERANCE_MINUTES)
+    if verified_at.astimezone(TAIPEI) > maximum:
+        raise ValueError(f"radar legal as-of window expired: {slot}")
     by_code = {str(row.get("code", "")): row for row in rows}
     diagnostics = required_diagnostics or getattr(rows, "diagnostics", {})
     final_missing = set(diagnostics.get("final_missing") or []) if isinstance(diagnostics, dict) else set()
@@ -701,27 +787,34 @@ def write_market_cache(
     if radar_refresh:
         snapshots = dict(payload.get("intraday_quote_snapshots") or {})
         key = f'{radar_refresh["trading_date"]}_{radar_refresh["slot"].replace(":", "")}'
-        if key not in snapshots:
-            by_code = {item["code"]: item for item in payload["items"]}
-            snapshot_items = {
-                code: {
-                    field: by_code[code].get(field)
-                    for field in ("price", "open", "high", "low", "volume", "date", "quote_time")
-                }
-                for code in RADAR_REQUIRED_LIVE_SYMBOLS
-                if code in by_code
+        by_code = {item["code"]: item for item in payload["items"]}
+        snapshot_items = {
+            code: {
+                field: by_code[code].get(field)
+                for field in ("price", "open", "high", "low", "volume", "date", "quote_time")
             }
-            if len(snapshot_items) != len(RADAR_REQUIRED_LIVE_SYMBOLS):
-                raise ValueError("validated radar snapshot is missing a required ETF")
-            snapshots[key] = {
-                "market_date": radar_refresh["trading_date"],
-                "slot": radar_refresh["slot"],
-                "status": "SUCCESS",
-                "calculated_at": radar_refresh["verified_at"],
-                "market_as_of": radar_refresh["market_as_of"],
-                "items": snapshot_items,
-                "non_blocking_status": radar_refresh.get("non_blocking_status", {}),
-            }
+            for code in RADAR_REQUIRED_LIVE_SYMBOLS
+            if code in by_code
+        }
+        if len(snapshot_items) != len(RADAR_REQUIRED_LIVE_SYMBOLS):
+            raise ValueError("validated radar snapshot is missing a required ETF")
+        candidate_snapshot = {
+            "market_date": radar_refresh["trading_date"],
+            "slot": radar_refresh["slot"],
+            "status": "SUCCESS",
+            "calculated_at": radar_refresh["verified_at"],
+            "market_as_of": radar_refresh["market_as_of"],
+            "items": snapshot_items,
+            "non_blocking_status": radar_refresh.get("non_blocking_status", {}),
+        }
+        if key in snapshots:
+            comparable_fields = ("market_date", "slot", "status", "market_as_of", "items", "non_blocking_status")
+            existing_comparable = {field: snapshots[key].get(field) for field in comparable_fields}
+            candidate_comparable = {field: candidate_snapshot.get(field) for field in comparable_fields}
+            if existing_comparable != candidate_comparable:
+                raise ValueError(f"INTEGRITY_FAILURE conflicting immutable raw radar snapshot: {key}")
+        else:
+            snapshots[key] = candidate_snapshot
         successful = sorted(
             (row for row in snapshots.values() if row.get("status") == "SUCCESS"),
             key=lambda row: (str(row.get("market_date", "")), str(row.get("slot", ""))),
@@ -815,14 +908,21 @@ def main() -> None:
     radar_refresh: dict[str, Any] | None = None
     refresh_attempt: dict[str, Any] | None = None
     try:
-        mis_rows = fetch_mis_snapshot()
+        retry_deadline = None
+        if requested_slot and requested_slot in RADAR_SLOTS:
+            retry_deadline = datetime.fromisoformat(f"{requested_date}T{requested_slot}:00").replace(tzinfo=TAIPEI) + timedelta(minutes=15)
+        mis_rows = fetch_mis_snapshot(deadline=retry_deadline)
         mis_diagnostics = getattr(mis_rows, "diagnostics", {})
         if requested_slot:
+            verified_at = datetime.now(TAIPEI)
             radar_refresh = {
-                **validate_radar_refresh(mis_rows, requested_date, requested_slot, now, mis_diagnostics),
+                **validate_radar_refresh(mis_rows, requested_date, requested_slot, verified_at, mis_diagnostics),
                 "status": "success",
             }
-            refresh_attempt = dict(radar_refresh)
+            refresh_attempt = {
+                **radar_refresh,
+                "slot_diagnostic": build_slot_diagnostic(requested_date, requested_slot, mis_diagnostics),
+            }
         statuses["TWSE_MIS"] = "ok"
         item_map = {item["code"]: item for item in items}
         for row in mis_rows:
@@ -846,17 +946,26 @@ def main() -> None:
             }
         items = list(item_map.values())
     except Exception as exc:  # noqa: BLE001
+        attempted_at = datetime.now(TAIPEI)
         error_text = clean_text(exc, 100)
         statuses["TWSE_MIS"] = f"cached_after_error: {error_text}"
         if requested_slot:
+            slot_diagnostic = build_slot_diagnostic(
+                requested_date,
+                requested_slot,
+                mis_diagnostics,
+                error=error_text,
+            )
             refresh_attempt = {
                 "verified": False,
                 "status": "failed",
                 "trading_date": requested_date,
                 "slot": requested_slot,
-                "attempted_at": now.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
+                "attempted_at": attempted_at.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
                 "error": error_text,
+                "failure_class": "OPERATIONAL_SOURCE",
                 "required_symbol_diagnostics": mis_diagnostics,
+                "slot_diagnostic": slot_diagnostic,
             }
             mis_rows = []
         else:
@@ -881,7 +990,7 @@ def main() -> None:
         if existing_overview:
             print(f"Market overview kept after source failure: {exc}")
         else:
-            raise
+            print(f"OPTIONAL_ENRICHMENT_UNAVAILABLE market_overview: {exc}")
 
     try:
         taifex_payload = fetch_json(TAIFEX_DAILY_URL, timeout=30)
@@ -892,7 +1001,7 @@ def main() -> None:
         if existing_futures:
             print(f"TX official close fallback kept after source failure: {exc}")
         else:
-            raise
+            print(f"OPTIONAL_ENRICHMENT_UNAVAILABLE tx_futures: {exc}")
     print(f"Updated quote cache with {len(items)} symbols and validated market overview.")
 
 

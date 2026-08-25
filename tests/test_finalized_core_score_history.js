@@ -10,3 +10,7 @@ const conflict=input();conflict.decisions["0050"]=decision(51);assert.throws(()=
 result=publisher.append(result.artifact,input("2026-08-25"));assert.equal(result.artifact.snapshots.length,2);console.log("PASS conflict guard and next date append");
 for(const mutate of [x=>x.decisions["0050"].coreScore=101,x=>delete x.decisions["0050"].coreFactors.crash,x=>x.decisions["0050"].coreScoreVersion="WRONG",x=>x.snapshot_type="INTRADAY_CORE",x=>x.data_as_of="2026-08-23T13:30:00+08:00",x=>x.decisions["00631L"]=decision()]){const bad=input("2026-08-26");mutate(bad);assert.throws(()=>publisher.append(base,bad),/FINALIZED_CORE_HISTORY_REJECTED/)}
 console.log("PASS invalid score/factor/version/intraday/as-of/leverage rejection");
+publisher.inputFromOfficialCache({}).then(
+  ()=>{throw new Error("missing official close must not finalize")},
+  error=>{assert.ok(error instanceof publisher.SourceNotReady);assert.match(error.message,/SOURCE_NOT_READY/);console.log("PASS EOD source-not-ready is an operational no-publish state")}
+);

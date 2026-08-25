@@ -125,7 +125,9 @@ check("期貨籌碼官方來源多時段補抓保留，首頁正式 fallback 由
   assert.match(marketWorkflow, /cron: "27,30,35,40,45 1,2,3,4,5 \* \* 1-5"/);
   assert.match(marketWorkflow, /run_intraday_radar_session\.py/);
   assert.match(marketRunner, /tx-futures-quote\.json/);
-  assert.match(marketWorkflow, /cancel-in-progress: false/);
+  assert.doesNotMatch(marketWorkflow, /concurrency:/);
+  assert.match(marketWorkflow, /needs: intraday/);
+  assert.match(marketWorkflow, /if: \$\{\{ always\(\) \}\}/);
 });
 
 check("首頁重點與情緒結論存在", () => {

@@ -11,6 +11,7 @@
  */
 const fs = require("node:fs");
 const path = require("node:path");
+const crypto = require("node:crypto");
 const buy = require("../buy-point-core.js");
 const intraday = require("../intraday-buy-point-core.js");
 const core = require("../final-core-production.js");
@@ -22,6 +23,10 @@ const SYMBOLS = Object.freeze(["0050", "00662", "00757", "00830", "00935"]);
 const SLOTS = new Set(["09:30", "10:30", "11:30", "12:30", "13:30"]);
 const SCHEMA_VERSION = 1;
 const FINMIND_URL = "https://api.finmindtrade.com/api/v4/data";
+const SCORE_VERSION = core.LONG_TERM_CORE_SCORE_VERSION;
+
+function integrity(message) { throw new Error(`INTRADAY_CORE_INTEGRITY ${message}`); }
+function operational(message) { throw new Error(`INTRADAY_CORE_OPERATIONAL ${message}`); }
 
 function finite(value) {
   const number = Number(value);
@@ -44,6 +49,34 @@ function parseArgs(argv) {
     values[key.slice(2)] = argv[index + 1] && !argv[index + 1].startsWith("--") ? argv[++index] : true;
   }
   return values;
+}
+function stable(value) {
+  if (Array.isArray(value)) return `[${value.map(stable).join(",")}]`;
+  if (value && typeof value === "object") return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${stable(value[key])}`).join(",")}}`;
+  return JSON.stringify(value);
+}
+function rawFingerprint(raw, tradingDate, slot) {
+  if (!raw || raw.status !== "SUCCESS") return "";
+  const items = Object.fromEntries(SYMBOLS.map(symbol => {
+    const row = raw.items?.[symbol] || {};
+    return [symbol, Object.fromEntries(["price", "open", "high", "low", "volume", "date", "quote_time"].map(key => [key, row[key] ?? null]))];
+  }));
+  return crypto.createHash("sha256").update(stable({ trading_date: tradingDate, slot, items })).digest("hex");
+}
+function validateLedger(existing) {
+  if (!existing || existing.schema_version !== SCHEMA_VERSION || !Array.isArray(existing.snapshots)) integrity("malformed_canonical_artifact");
+  const keys = new Set();
+  for (const snapshot of existing.snapshots) {
+    const key = `${snapshot?.trading_date || ""}|${snapshot?.slot || ""}`;
+    if (!iso(snapshot?.trading_date) || !SLOTS.has(snapshot?.slot) || snapshot?.status !== "SUCCESS" || keys.has(key)) integrity("malformed_or_duplicate_snapshot");
+    keys.add(key);
+    if (snapshot.score_version && snapshot.score_version !== SCORE_VERSION) integrity("wrong_score_version");
+    for (const symbol of SYMBOLS) {
+      const item = snapshot?.items?.[symbol];
+      if (!item || item.status !== "SUCCESS" || item.score_version !== SCORE_VERSION || !Number.isFinite(finite(item.score))) integrity(`invalid_item_${symbol}`);
+      if (String(item.market_as_of || "").slice(0, 10) !== snapshot.trading_date) integrity(`trading_date_contamination_${symbol}`);
+    }
+  }
 }
 function quoteAsOf(quote) { return intraday.quoteAsOf({ date: quote?.date, quoteTime: quote?.quote_time ?? quote?.quoteTime }); }
 function toQuote(row) {
@@ -127,23 +160,30 @@ function attachBaselines(item, previousClose, previousIntraday) {
   };
 }
 function buildSnapshot({ quotes, histories, existing, tradingDate, slot, calculatedAt }) {
-  if (!SLOTS.has(slot)) throw new Error(`unsupported slot: ${slot}`);
-  const existingSnapshot = existing.snapshots.find(snapshot => snapshot.trading_date === tradingDate && snapshot.slot === slot && snapshot.status === "SUCCESS");
-  if (existingSnapshot) return { snapshot: existingSnapshot, published: false, reason: "already_published" };
+  if (!SLOTS.has(slot)) integrity(`unsupported_slot_${slot}`);
+  validateLedger(existing);
   const raw = quotes?.intraday_quote_snapshots?.[`${tradingDate}_${slot.replace(":", "")}`];
-  if (!raw || raw.status !== "SUCCESS") throw new Error("validated raw intraday quote snapshot is unavailable");
+  if (!raw || raw.status !== "SUCCESS") operational("validated_raw_intraday_quote_snapshot_unavailable");
+  const inputFingerprint = rawFingerprint(raw, tradingDate, slot);
+  const existingSnapshot = existing.snapshots.find(snapshot => snapshot.trading_date === tradingDate && snapshot.slot === slot && snapshot.status === "SUCCESS");
+  if (existingSnapshot) {
+    const existingFingerprint = String(existingSnapshot?.source?.input_fingerprint || "");
+    if (existingFingerprint && existingFingerprint !== inputFingerprint) integrity("same_slot_conflicting_payload");
+    return { snapshot: existingSnapshot, published: false, reason: "already_published_identical" };
+  }
   const current = {}, previousClose = {};
   for (const symbol of SYMBOLS) {
     const quote = toQuote(raw.items?.[symbol]);
-    if (!quote.date || quote.date !== tradingDate || !quoteAsOf(quote)) throw new Error(`required raw quote is invalid: ${symbol}`);
+    if (!quote.date || quote.date !== tradingDate || !quoteAsOf(quote)) operational(`required_raw_quote_invalid_${symbol}`);
     if (![quote.price, quote.open, quote.high, quote.low].every(value => Number.isFinite(value) && value > 0) || quote.high < quote.low || quote.price < quote.low * .999 || quote.price > quote.high * 1.001) {
-      throw new Error(`FAIL_CLOSED required quote OHLC invalid: ${symbol}`);
+      operational(`FAIL_CLOSED_required_quote_OHLC_invalid_${symbol}`);
     }
     const officialRows = cleanRows(histories[symbol] || [], tradingDate);
     const scored = scoreRows(symbol, officialRows, quote, slot, calculatedAt);
-    if (!scored) throw new Error(`FAIL_CLOSED core input unavailable: ${symbol}`);
+    if (!scored) operational(`FAIL_CLOSED_core_input_unavailable_${symbol}`);
     const close = scorePreviousClose(symbol, officialRows, tradingDate);
-    if (!close) throw new Error(`FAIL_CLOSED previous close unavailable: ${symbol}`);
+    if (!close) operational(`FAIL_CLOSED_previous_close_unavailable_${symbol}`);
+    if (scored.score_version !== SCORE_VERSION || !Number.isFinite(scored.score) || scored.score < 0 || scored.score > 100) integrity(`invalid_score_output_${symbol}`);
     current[symbol] = scored;
     previousClose[symbol] = close;
   }
@@ -151,16 +191,29 @@ function buildSnapshot({ quotes, histories, existing, tradingDate, slot, calcula
   rankRows(current); rankRows(previousClose);
   const items = Object.fromEntries(SYMBOLS.map(symbol => [symbol, attachBaselines(current[symbol], previousClose[symbol], latestEarlierSuccess(existing.snapshots, tradingDate, slot, symbol))]));
   const marketAsOf = Object.values(items).map(item => item.market_as_of).sort().at(-1);
-  const snapshot = { schema_version: SCHEMA_VERSION, snapshot_type: "INTRADAY_CORE", status: "SUCCESS", trading_date: tradingDate, slot, market_as_of: marketAsOf, calculated_at: calculatedAt, source_completeness: "5/5", items };
+  const snapshot = {
+    schema_version: SCHEMA_VERSION,
+    snapshot_type: "INTRADAY_CORE",
+    status: "SUCCESS",
+    trading_date: tradingDate,
+    slot,
+    market_as_of: marketAsOf,
+    calculated_at: calculatedAt,
+    score_version: SCORE_VERSION,
+    source_completeness: "5/5",
+    source: { provider: "TWSE_MIS", required_symbols: "5/5", input_fingerprint: inputFingerprint },
+    freshness: { status: "FRESH", trading_date: tradingDate, market_as_of: marketAsOf },
+    items,
+  };
   return { snapshot, published: true, reason: "published" };
 }
 async function fetchDataset(dataset, ticker, startDate) {
   const url = new URL(FINMIND_URL);
   url.searchParams.set("dataset", dataset); url.searchParams.set("data_id", ticker); url.searchParams.set("start_date", startDate);
   const response = await fetch(url, { headers: process.env.FINMIND_TOKEN ? { Authorization: `Bearer ${process.env.FINMIND_TOKEN}` } : {} });
-  if (!response.ok) throw new Error(`${ticker} ${dataset} HTTP ${response.status}`);
+  if (!response.ok) operational(`${ticker}_${dataset}_HTTP_${response.status}`);
   const payload = await response.json();
-  if (Number(payload?.status) !== 200 || !Array.isArray(payload.data)) throw new Error(`${ticker} ${dataset} invalid response`);
+  if (Number(payload?.status) !== 200 || !Array.isArray(payload.data)) operational(`${ticker}_${dataset}_invalid_response`);
   return payload.data;
 }
 async function loadHistory(ticker, tradingDate) {
@@ -186,9 +239,15 @@ async function main() {
   const slot = String(args.slot || refresh?.slot || "");
   if (!iso(tradingDate) || !SLOTS.has(slot) || refresh?.verified !== true || refresh?.status !== "success") throw new Error("a verified raw radar refresh is required");
   const existing = readJson(outputFile, { schema_version: SCHEMA_VERSION, snapshots: [] });
+  validateLedger(existing);
   const snapshotKey = `${tradingDate}_${slot.replace(":", "")}`;
-  if (existing.snapshots?.some(snapshot => snapshot.trading_date === tradingDate && snapshot.slot === slot && snapshot.status === "SUCCESS")) {
-    console.log(`INTRADAY_CORE_SNAPSHOT ${snapshotKey} already_published`);
+  const raw = quotes?.intraday_quote_snapshots?.[snapshotKey];
+  const existingSnapshot = existing.snapshots.find(snapshot => snapshot.trading_date === tradingDate && snapshot.slot === slot && snapshot.status === "SUCCESS");
+  if (existingSnapshot) {
+    const currentFingerprint = rawFingerprint(raw, tradingDate, slot);
+    const existingFingerprint = String(existingSnapshot?.source?.input_fingerprint || "");
+    if (existingFingerprint && currentFingerprint && existingFingerprint !== currentFingerprint) integrity("same_slot_conflicting_payload");
+    console.log(`INTRADAY_CORE_SNAPSHOT ${snapshotKey} already_published_identical`);
     return;
   }
   const histories = Object.fromEntries(await Promise.all(SYMBOLS.map(async symbol => [symbol, await loadHistory(symbol, tradingDate)])));
@@ -200,5 +259,5 @@ async function main() {
   console.log(`INTRADAY_CORE_SNAPSHOT ${snapshotKey} ${result.reason}`);
 }
 
-module.exports = { SYMBOLS, cleanRows, scoreRows, scorePreviousClose, attachBaselines, buildSnapshot };
+module.exports = { SYMBOLS, SCORE_VERSION, cleanRows, scoreRows, scorePreviousClose, attachBaselines, rawFingerprint, validateLedger, buildSnapshot };
 if (require.main === module) main().catch(error => { console.error(`INTRADAY_CORE_SNAPSHOT_FAILED ${error.message}`); process.exitCode = 1; });

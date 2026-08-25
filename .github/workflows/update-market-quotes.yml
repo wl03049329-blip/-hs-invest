@@ -10,15 +10,8 @@ on:
 permissions:
   contents: write
 
-concurrency:
-  group: update-delayed-market-quotes
-  cancel-in-progress: false
-  # Preserve the short retry ticks.  The default single pending run can replace
-  # an earlier tick before it reaches its legal as-of window.
-  queue: max
-
 jobs:
-  update:
+  intraday:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -37,10 +30,31 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
       - name: Run one idempotent intraday radar scheduler tick
         run: python scripts/run_intraday_radar_session.py --scheduled-once
+
+  eod:
+    name: Finalize official EOD independently
+    needs: intraday
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Configure EOD history committer
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin main
       - name: Finalize official EOD Core Score history
         run: node scripts/finalize_core_score_history.js
       - name: Commit finalized EOD Core Score history
         run: |
           git add finalized-core-score-snapshots-v1.json
           git diff --cached --quiet || git commit -m "Update official ETF radar score history"
+          git pull --rebase
           git push

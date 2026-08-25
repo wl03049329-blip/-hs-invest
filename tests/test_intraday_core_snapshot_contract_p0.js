@@ -66,10 +66,16 @@ for (const item of Object.values(third.snapshot.items)) {
 assert.equal(third.snapshot.items["0050"].previous_successful_intraday_slot, "09:30");
 console.log("C PASS: missing 10:30 creates no fake record; 11:30 uses 09:30");
 
-const rerun = build("09:30", { "09:30": rawSlot("09:30", 9) }, { schema_version: 1, snapshots: [first.snapshot] });
+const rerun = build("09:30", { "09:30": rawSlot("09:30") }, { schema_version: 1, snapshots: [first.snapshot] });
 assert.equal(rerun.published, false);
 assert.equal(rerun.snapshot, first.snapshot);
 console.log("D PASS: identity symbol/date/slot is append-once and idempotent");
+
+assert.throws(
+  () => build("09:30", { "09:30": rawSlot("09:30", 9) }, { schema_version: 1, snapshots: [first.snapshot] }),
+  /same_slot_conflicting_payload/
+);
+console.log("D2 PASS: same-slot conflicting source payload hard fails");
 
 const incomplete = rawSlot("12:30");
 delete incomplete.items["0050"].high;

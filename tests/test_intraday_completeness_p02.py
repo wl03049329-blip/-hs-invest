@@ -41,7 +41,8 @@ assert state["snapshot_status"] == runner.SNAPSHOT_SUCCESS
 assert state["successful_slots"] == list(runner.TARGET_SLOTS)
 
 
-# TEST 2: a first scheduler tick at 13:50 never backfills and is an abnormal 0/5.
+# TEST 2: a first scheduler tick at 13:50 never backfills; 0/5 is an
+# observable operational state, not an integrity failure.
 late = runner.reconcile_expired_slots(
     runner.new_completeness("2026-08-14"), at("2026-08-14T13:50:00")
 )
@@ -50,7 +51,8 @@ assert late["successful_slots"] == []
 assert late["completeness"] == "0/5"
 assert late["snapshot_status"] == runner.SNAPSHOT_MISSED
 assert runner.eligible_slot(late, at("2026-08-14T13:50:00")) is None
-assert runner.workflow_should_fail(late, at("2026-08-14T13:50:00")) is True
+assert runner.workflow_should_fail(late, at("2026-08-14T13:50:00")) is False
+assert late["workflow_status"] == "OPERATIONAL_DEGRADED"
 
 
 # TEST 3: a 10:30 failure can retry at 10:35 while the legal window remains open.
@@ -72,7 +74,7 @@ expired = runner.reconcile_expired_slots(
 )
 assert expired["slots"]["10:30"]["status"] == runner.SLOT_MISSED
 assert runner.eligible_slot(expired, at("2026-08-14T11:30:00")) == "11:30"
-assert runner.workflow_should_fail(expired, at("2026-08-14T11:30:00")) is True
+assert runner.workflow_should_fail(expired, at("2026-08-14T11:30:00")) is False
 
 
 # TEST 5: duplicate successful execution keeps the first production snapshot.
@@ -121,9 +123,23 @@ assert failed_expired["snapshot_status"] == runner.SNAPSHOT_FAILED
 print("TEST 7 PASS: failed reason survives expiration")
 
 
+# TEST 8: only integrity-class failures make the process fail.
+integrity = runner.new_completeness("2026-08-14")
+integrity = runner.record_slot_outcome(
+    integrity,
+    "10:30",
+    runner.SLOT_FAILED,
+    {"error": "same slot conflict", "failure_class": runner.FAILURE_INTEGRITY},
+    at("2026-08-14T10:32:00"),
+)
+assert runner.workflow_should_fail(integrity, at("2026-08-14T10:32:00")) is True
+assert integrity["integrity_status"] == "FAIL"
+print("TEST 8 PASS: only integrity failure is a non-zero workflow gate")
+
+
 workflow = (ROOT / ".github" / "workflows" / "update-market-quotes.yml").read_text(encoding="utf-8")
 assert 'cron: "27,30,35,40,45 1,2,3,4,5 * * 1-5"' in workflow
 assert "--scheduled-once" in workflow
-assert "cancel-in-progress: false" in workflow
-assert "queue: max" in workflow
-print("PASS P0.2 scheduler completeness tests 1-7")
+assert "concurrency:" not in workflow
+assert "needs: intraday" in workflow and "if: ${{ always() }}" in workflow
+print("PASS Reliability V2 scheduler completeness tests 1-8")

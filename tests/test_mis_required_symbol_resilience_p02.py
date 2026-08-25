@@ -40,7 +40,11 @@ def run_fixture(channels, attempts_by_batch):
     quotes.tracked_channels = lambda: channels
     quotes.fetch_json = fake_fetch
     try:
-        return quotes.fetch_mis_snapshot(), calls
+        return quotes.fetch_mis_snapshot(
+            sleep_fn=lambda _seconds: None,
+            jitter_fn=lambda: 0,
+            retry_delays=(0,),
+        ), calls
     finally:
         quotes.fetch_json, quotes.tracked_channels = old_fetch, old_channels
 
@@ -87,6 +91,12 @@ assert result.diagnostics["initial_parse_rejected"]["0050"]["reason"] == "missin
 assert result.diagnostics["final_parse_rejected"]["0050"]["reason"] == "missing_price"
 print("TEST 4 PASS: parse rejection has explicit reason")
 
+# A non-empty yesterday reference or undocumented adjacent field must not be
+# promoted into today's current price when official z is absent.
+parsed, reason = quotes.parse_mis_row(raw("0050", z="-", pz="101", y="99"), required=True)
+assert parsed is None and reason == "missing_price"
+print("TEST 4B PASS: no pz/y price fabrication")
+
 # TEST 5: retry can recover a parser-rejected required quote.
 result, _ = run_fixture(channels, {1: [invalid_0050, required_rows()]})
 assert result.diagnostics["retry_recovered"] == ["0050"]
@@ -131,13 +141,15 @@ assert calls.count(3) == 2 and all(calls.count(batch) == 1 for batch in (1, 2, 4
 assert result.diagnostics["retried_batches"] == [3]
 print("TEST 8 PASS: only the bad 0050 batch retries")
 
-# TEST 9: two bad required symbols in one batch still produce exactly one retry.
+# TEST 9: two bad required symbols in one batch are isolated into one official
+# single-symbol retry each.
 same_batch = dict(large_initial)
-same_batch[3] = [[], [raw("0050"), raw("00662")]]
+same_batch[3] = [[], [raw("0050")], [raw("00662")]]
 result, calls = run_fixture(large_channels, same_batch)
-assert calls.count(3) == 2 and result.diagnostics["retried_batches"] == [3]
+assert calls.count(3) == 3 and result.diagnostics["retried_batches"] == [3]
 assert set(result.diagnostics["retry_recovered"]) == {"0050", "00662"}
-print("TEST 9 PASS: same bad batch retries once")
+assert result.diagnostics["targeted_retry_attempts"] == {"0050": 1, "00662": 1}
+print("TEST 9 PASS: same bad batch is retried as isolated required symbols")
 
 # TEST 10: different bad batches retry independently, once per affected batch.
 two_batches = list(large_channels)

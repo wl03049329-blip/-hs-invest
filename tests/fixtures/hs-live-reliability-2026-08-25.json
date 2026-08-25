@@ -1,0 +1,48 @@
+{
+  "trading_date": "2026-08-25",
+  "last_known_good": {
+    "trading_date": "2026-08-24",
+    "slot": "13:30"
+  },
+  "slots": {
+    "09:30": {
+      "status": "MISSED",
+      "reason": "legal_asof_window_expired"
+    },
+    "10:30": {
+      "status": "FAILED",
+      "failure_class": "OPERATIONAL_SOURCE",
+      "error": "radar required quote parse rejected: 0050 reason=missing_price",
+      "required_symbols": {
+        "0050": "FAIL_MISSING_PRICE",
+        "00662": "FAIL_MISSING_PRICE",
+        "00757": "FAIL_MISSING_PRICE",
+        "00830": "FAIL_MISSING_PRICE",
+        "00935": "FAIL_MISSING_PRICE"
+      },
+      "raw_evidence": {
+        "0050": {
+          "request_key": "tse_0050.tw",
+          "date": "20260825",
+          "time": "10:38:09",
+          "z": "-",
+          "y": "103.8000"
+        }
+      }
+    },
+    "11:30": {
+      "status": "FAILED",
+      "failure_class": "OPERATIONAL_SOURCE",
+      "error": "radar required quote parse rejected: 0050 reason=missing_price"
+    },
+    "12:30": {
+      "status": "FAILED",
+      "failure_class": "OPERATIONAL_SOURCE",
+      "error": "urlopen error timed out"
+    },
+    "13:30": {
+      "status": "MISSED",
+      "reason": "legal_asof_window_expired"
+    }
+  }
+}

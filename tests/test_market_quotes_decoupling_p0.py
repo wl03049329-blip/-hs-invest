@@ -77,7 +77,8 @@ with tempfile.TemporaryDirectory() as temporary:
     # TEST 4: Radar failure metadata remains explicit and non-successful.
     attempt = payload["radar_refresh_attempt"]
     assert attempt["status"] == "failed" and attempt["verified"] is False
-    assert "0050" in attempt["error"]
+    assert attempt["error"] and attempt["failure_class"] == "OPERATIONAL_SOURCE"
+    assert attempt["slot_diagnostic"]["reason"] == attempt["error"]
     assert not payload.get("radar_refresh")
     print("TEST 4 PASS: Radar failure metadata remains failed")
 

@@ -49,6 +49,11 @@ assert refresh0930["verified"] is True
 assert refresh0930["codes"] == list(quotes.RADAR_REQUIRED_LIVE_SYMBOLS)
 assert refresh0930["non_blocking_status"] == {"009815": "WAIT_NATIVE"}
 assert refresh0930["slot"] == "09:30"
+try:
+    quotes.validate_radar_refresh(radar_rows("09:30"), "2026-08-13", "09:30", datetime.fromisoformat("2026-08-13T09:46:00+08:00"))
+    raise AssertionError("+16 minute completion must not publish an old slot")
+except ValueError as exc:
+    assert "legal as-of window expired" in str(exc)
 
 old_fetch_json, old_tracked_channels = quotes.fetch_json, quotes.tracked_channels
 mis_rows = [{
@@ -100,6 +105,14 @@ with tempfile.TemporaryDirectory() as temp:
     assert list(second["intraday_quote_snapshots"]) == ["2026-08-13_0930", "2026-08-13_1030"]
     assert second["intraday_snapshot_meta"]["previous_successful_slot"] == "09:30"
     assert second["intraday_snapshot_meta"]["last_successful_snapshot"] == "2026-08-13_1030"
+    conflicting_items = json.loads(json.dumps(items))
+    conflicting_items[0]["price"] += 1
+    conflicting_items[0]["high"] += 1
+    try:
+        quotes.write_market_cache(conflicting_items, statuses, at1030, second, refresh1030, {**refresh1030, "status": "success"})
+        raise AssertionError("same-slot raw conflict must fail")
+    except ValueError as exc:
+        assert "INTEGRITY_FAILURE conflicting immutable raw radar snapshot" in str(exc)
     failed = {"verified": False, "status": "failed", "trading_date": "2026-08-13", "slot": "11:30", "error": "fixture"}
     quotes.write_market_cache(items, statuses, datetime.fromisoformat("2026-08-13T11:32:00+08:00"), second, None, failed)
     third = json.loads(quotes.OUTPUT.read_text(encoding="utf-8"))
@@ -122,7 +135,8 @@ assert 'cron: "27,30,35,40,45 1,2,3,4,5 * * 1-5"' in workflow
 assert "run_intraday_radar_session.py" in workflow
 assert "--scheduled-once" in workflow
 assert "timeout-minutes: 20" in workflow
-assert "queue: max" in workflow
+assert "concurrency:" not in workflow
+assert "needs: intraday" in workflow and "if: ${{ always() }}" in workflow
 assert 'cron: "32 1,2,3,4,5 * * 1-5"' not in workflow
 
 print("PASS production intraday scheduler, five-ETF validation, WAIT_NATIVE isolation, 13:30 timestamp mode and cache version regression")
