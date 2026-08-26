@@ -17,8 +17,8 @@ from zoneinfo import ZoneInfo
 ROOT = Path(__file__).resolve().parents[1]
 TAIPEI = ZoneInfo("Asia/Taipei")
 TARGET_SLOTS = ("09:30", "10:30", "11:30", "12:30", "13:30")
-SLOT_CONTRACT = "HS_LIVE_INTRADAY_SLOT_V3"
-FINAL_SLOT_CLOSE = time(14, 30)
+SLOT_CONTRACT = "HS_LIVE_INTRADAY_SLOT_V4"
+FINAL_SLOT_CLOSE = time(14, 20)
 SLOT_PENDING = "PENDING"
 SLOT_SUCCESS = "SUCCESS"
 SLOT_FAILED = "FAILED"
@@ -51,7 +51,7 @@ def slot_end_datetime(trading_date: str, slot: str) -> datetime:
 
 
 def current_slot_for_time(now: datetime) -> str | None:
-    """Classify an actual Taipei runtime into one forward-only V3 slot."""
+    """Classify an actual Taipei runtime into one forward-only V4 slot."""
     local_now = now.astimezone(TAIPEI)
     trading_date = local_now.date().isoformat()
     for slot in TARGET_SLOTS:
@@ -182,7 +182,7 @@ def summarize_completeness(state: dict, updated_at: datetime | None = None) -> d
 
 
 def reconcile_closed_slots(state: dict, now: datetime) -> dict:
-    """Mark a slot MISSED only after its complete V3 window has closed."""
+    """Mark a slot MISSED only after its complete V4 window has closed."""
     trading_date = str(state.get("trading_date") or now.astimezone(TAIPEI).date().isoformat())
     for slot in TARGET_SLOTS:
         row = state["slots"][slot]

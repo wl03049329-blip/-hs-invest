@@ -137,10 +137,10 @@ check("行情 JSON 結構與價格有效", () => {
   }
 });
 
-check("Actions 以 P0 合法窗口重試排程更新同源行情", () => {
-  assert.match(workflow, /cron: "30,40,50 1 \* \* 1-5"/);
-  assert.match(workflow, /cron: "\*\/10 2,3,4,5 \* \* 1-5"/);
-  assert.match(workflow, /cron: "0,10,20,30 6 \* \* 1-5"/);
+check("Actions 以 V4 合法窗口重試排程更新同源行情", () => {
+  assert.match(workflow, /cron: "\*\/5 1 \* \* 1-5"/);
+  assert.match(workflow, /cron: "\*\/5 2,3,4,5 \* \* 1-5"/);
+  assert.match(workflow, /cron: "0,5,10,15,20,30 6 \* \* 1-5"/);
   assert.match(workflow, /scripts\/run_intraday_radar_session\.py --scheduled-once/);
   const sessionRunner = fs.readFileSync(path.join(root, "scripts", "run_intraday_radar_session.py"), "utf8");
   assert.match(sessionRunner, /"market-quotes\.json"[\s\S]*"market-quotes-meta\.json"[\s\S]*"market-overview\.json"[\s\S]*"tx-futures-quote\.json"/);

@@ -57,11 +57,12 @@ RADAR_REQUIRED_LIVE_SYMBOLS = ("0050", "00662", "00757", "00830", "00935")
 RADAR_NON_BLOCKING_SYMBOLS = ("009815",)
 RADAR_CODES = RADAR_REQUIRED_LIVE_SYMBOLS + RADAR_NON_BLOCKING_SYMBOLS
 RADAR_SLOTS = ("09:30", "10:30", "11:30", "12:30", "13:30")
-RADAR_FINAL_SLOT_CLOSE = time(14, 30)
+SLOT_CONTRACT = "HS_LIVE_INTRADAY_SLOT_V4"
+RADAR_FINAL_SLOT_CLOSE = time(14, 20)
 MIS_BATCH_SIZE = 60
 # TWSE MIS may legitimately return ``z: "-"`` between transactions.  Retry
 # required radar symbols independently and accumulate only real, parsed quotes
-# inside the currently open V3 slot.  The bounded budget stays well below one
+# inside the currently open V4 slot.  The bounded budget stays well below one
 # slot and never permits stale or synthetic price fallback.
 MIS_REQUIRED_RETRY_DELAYS = (0.35, 0.9, 1.5, 2.5, 4.0, 6.0, 9.0, 13.0, 18.0)
 
@@ -432,7 +433,7 @@ def build_slot_diagnostic(
     source_reached = bool(symbols)
     return {
         "schema_version": 3,
-        "contract": "HS_LIVE_INTRADAY_SLOT_V3",
+        "contract": SLOT_CONTRACT,
         "trading_date": trading_date,
         "classified_slot": slot,
         "actual_run_time": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
@@ -534,6 +535,7 @@ def validate_radar_refresh(
         "trading_date": trading_date,
         "slot": slot,
         "verified_at": verified_at.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "captured_at": verified_at.astimezone(TAIPEI).isoformat(),
         "codes": list(RADAR_REQUIRED_LIVE_SYMBOLS),
         "non_blocking_codes": list(RADAR_NON_BLOCKING_SYMBOLS),
         "non_blocking_status": {code: "WAIT_NATIVE" for code in RADAR_NON_BLOCKING_SYMBOLS},
@@ -764,7 +766,7 @@ def merge_official_close_with_lkg(
             and market in available_markets
         ):
             # A real MIS transaction from today remains a valid candidate for
-            # its V3 slot even when a later poll temporarily reports ``z: -``.
+            # its V4 slot even when a later poll temporarily reports ``z: -``.
             # Preserve only a newer delayed observation; the slot validator
             # below still rejects prior-slot, prior-day and future timestamps.
             if (
@@ -906,9 +908,11 @@ def write_market_cache(
         if len(snapshot_items) != len(RADAR_REQUIRED_LIVE_SYMBOLS):
             raise ValueError("validated radar snapshot is missing a required ETF")
         candidate_snapshot = {
+            "contract": SLOT_CONTRACT,
             "market_date": radar_refresh["trading_date"],
             "slot": radar_refresh["slot"],
             "status": "SUCCESS",
+            "captured_at": radar_refresh.get("captured_at") or radar_refresh["verified_at"],
             "calculated_at": radar_refresh["verified_at"],
             "market_as_of": radar_refresh["market_as_of"],
             "items": snapshot_items,
@@ -1026,7 +1030,7 @@ def main() -> None:
         mis_diagnostics = getattr(mis_rows, "diagnostics", {})
         # Persist every genuine source observation even when the atomic radar
         # set is not complete yet.  Later scheduled attempts may combine only
-        # observations that the V3 validator proves belong to the same slot.
+        # observations that the V4 validator proves belong to the same slot.
         items = merge_mis_items(items, mis_rows, now)
         if requested_slot:
             verified_at = datetime.now(TAIPEI)

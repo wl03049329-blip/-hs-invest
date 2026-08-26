@@ -22,6 +22,7 @@ const OUTPUT_FILE = path.join(ROOT, "intraday-core-snapshots-v1.json");
 const SYMBOLS = Object.freeze(["0050", "00662", "00757", "00830", "00935"]);
 const SLOTS = new Set(["09:30", "10:30", "11:30", "12:30", "13:30"]);
 const SCHEMA_VERSION = 1;
+const SLOT_CONTRACT = "HS_LIVE_INTRADAY_SLOT_V4";
 const FINMIND_URL = "https://api.finmindtrade.com/api/v4/data";
 const SCORE_VERSION = core.LONG_TERM_CORE_SCORE_VERSION;
 
@@ -67,6 +68,7 @@ function validateLedger(existing) {
   if (!existing || existing.schema_version !== SCHEMA_VERSION || !Array.isArray(existing.snapshots)) integrity("malformed_canonical_artifact");
   const keys = new Set();
   for (const snapshot of existing.snapshots) {
+    if (snapshot.contract && snapshot.contract !== SLOT_CONTRACT) integrity("wrong_slot_contract");
     const key = `${snapshot?.trading_date || ""}|${snapshot?.slot || ""}`;
     if (!iso(snapshot?.trading_date) || !SLOTS.has(snapshot?.slot) || snapshot?.status !== "SUCCESS" || keys.has(key)) integrity("malformed_or_duplicate_snapshot");
     keys.add(key);
@@ -193,10 +195,12 @@ function buildSnapshot({ quotes, histories, existing, tradingDate, slot, calcula
   const marketAsOf = Object.values(items).map(item => item.market_as_of).sort().at(-1);
   const snapshot = {
     schema_version: SCHEMA_VERSION,
+    contract: SLOT_CONTRACT,
     snapshot_type: "INTRADAY_CORE",
     status: "SUCCESS",
     trading_date: tradingDate,
     slot,
+    captured_at: raw.captured_at || calculatedAt,
     market_as_of: marketAsOf,
     calculated_at: calculatedAt,
     score_version: SCORE_VERSION,
@@ -259,5 +263,5 @@ async function main() {
   console.log(`INTRADAY_CORE_SNAPSHOT ${snapshotKey} ${result.reason}`);
 }
 
-module.exports = { SYMBOLS, SCORE_VERSION, cleanRows, scoreRows, scorePreviousClose, attachBaselines, rawFingerprint, validateLedger, buildSnapshot };
+module.exports = { SYMBOLS, SCORE_VERSION, SLOT_CONTRACT, cleanRows, scoreRows, scorePreviousClose, attachBaselines, rawFingerprint, validateLedger, buildSnapshot };
 if (require.main === module) main().catch(error => { console.error(`INTRADAY_CORE_SNAPSHOT_FAILED ${error.message}`); process.exitCode = 1; });

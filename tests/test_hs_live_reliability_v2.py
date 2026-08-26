@@ -62,7 +62,7 @@ assert state["completeness"] == "0/5"
 assert state["successful_slots"] == []
 assert state["missed_slots"] == list(runner.TARGET_SLOTS)
 assert state["failed_slots"] == []
-assert state["contract"] == "HS_LIVE_INTRADAY_SLOT_V3"
+assert state["contract"] == "HS_LIVE_INTRADAY_SLOT_V4"
 assert runner.workflow_should_fail(state, at("2026-08-25T14:30:00")) is False
 assert state["slots"]["10:30"]["last_failure"]["reason"].endswith("reason=missing_price")
 assert state["slots"]["12:30"]["last_failure"]["reason"] == "urlopen error timed out"
@@ -108,12 +108,12 @@ print("SOURCE PASS: missing z stays fail-closed; pz/y are not fabricated into a 
 
 
 workflow = (ROOT / ".github" / "workflows" / "update-market-quotes.yml").read_text(encoding="utf-8")
-assert "group: hs-live-intraday-slot-v3" in workflow
+assert "group: hs-live-intraday-slot-v4" in workflow
 assert "cancel-in-progress: false" in workflow
 assert "needs: intraday" in workflow
 assert "if: ${{ always() }}" in workflow
 assert "node scripts/finalize_core_score_history.js" in workflow
-assert 'cron: "30,40,50 1 * * 1-5"' in workflow
-assert 'cron: "*/10 2,3,4,5 * * 1-5"' in workflow
-assert 'cron: "0,10,20,30 6 * * 1-5"' in workflow
+assert 'cron: "*/5 1 * * 1-5"' in workflow
+assert 'cron: "*/5 2,3,4,5 * * 1-5"' in workflow
+assert 'cron: "0,5,10,15,20,30 6 * * 1-5"' in workflow
 print("EOD PASS: finalizer remains always-run; intraday retries are serialized without cancellation")

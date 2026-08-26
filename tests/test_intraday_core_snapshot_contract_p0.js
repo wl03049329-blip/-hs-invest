@@ -19,7 +19,7 @@ function rows(seed) {
 const histories = Object.fromEntries(symbols.map((symbol, index) => [symbol, rows(90 + index * 3)]));
 function rawSlot(slot, priceOffset = 0) {
   return {
-    status: "SUCCESS", items: Object.fromEntries(symbols.map((symbol, index) => [symbol, {
+    status: "SUCCESS", captured_at: `2026-08-21T${slot}:31+08:00`, items: Object.fromEntries(symbols.map((symbol, index) => [symbol, {
       price: 100 + index + priceOffset, open: 99 + index, high: Math.max(102 + index, 101 + index + priceOffset),
       low: Math.min(98 + index, 99 + index + priceOffset), volume: 1_200_000, date: "2026-08-21", quote_time: `${slot}:00`
     }]))
@@ -32,6 +32,8 @@ function build(slot, slots, existing = { schema_version: 1, snapshots: [] }) {
 
 const first = build("09:30", { "09:30": rawSlot("09:30") });
 assert.equal(first.published, true);
+assert.equal(first.snapshot.contract, publisher.SLOT_CONTRACT);
+assert.equal(first.snapshot.captured_at, "2026-08-21T09:30:31+08:00");
 for (const item of Object.values(first.snapshot.items)) {
   assert.equal(item.previous_successful_intraday_score, null);
   assert.equal(item.delta_vs_previous_successful_intraday, null);
@@ -70,6 +72,11 @@ const rerun = build("09:30", { "09:30": rawSlot("09:30") }, { schema_version: 1,
 assert.equal(rerun.published, false);
 assert.equal(rerun.snapshot, first.snapshot);
 console.log("D PASS: identity symbol/date/slot is append-once and idempotent");
+
+const deterministicA = build("09:30", { "09:30": rawSlot("09:30") });
+const deterministicB = build("09:30", { "09:30": rawSlot("09:30") });
+assert.deepEqual(deterministicA.snapshot, deterministicB.snapshot);
+console.log("D1 PASS: frozen snapshot produces deterministic scores and ranking");
 
 assert.throws(
   () => build("09:30", { "09:30": rawSlot("09:30", 9) }, { schema_version: 1, snapshots: [first.snapshot] }),

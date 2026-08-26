@@ -49,6 +49,7 @@ assert refresh0930["verified"] is True
 assert refresh0930["codes"] == list(quotes.RADAR_REQUIRED_LIVE_SYMBOLS)
 assert refresh0930["non_blocking_status"] == {"009815": "WAIT_NATIVE"}
 assert refresh0930["slot"] == "09:30"
+assert refresh0930["captured_at"] == "2026-08-13T09:32:00+08:00"
 late0930 = quotes.validate_radar_refresh(
     radar_rows("10:18"), "2026-08-13", "09:30", datetime.fromisoformat("2026-08-13T10:18:30+08:00")
 )
@@ -106,6 +107,7 @@ with tempfile.TemporaryDirectory() as temp:
     assert list(first["intraday_quote_snapshots"]) == ["2026-08-13_0930"]
     assert set(first["intraday_quote_snapshots"]["2026-08-13_0930"]["items"]) == set(quotes.RADAR_REQUIRED_LIVE_SYMBOLS)
     assert first["intraday_quote_snapshots"]["2026-08-13_0930"]["non_blocking_status"] == {"009815": "WAIT_NATIVE"}
+    assert first["intraday_quote_snapshots"]["2026-08-13_0930"]["captured_at"] == refresh0930["captured_at"]
     assert first["intraday_snapshot_meta"]["current_slot"] == "09:30"
     assert first["intraday_snapshot_meta"]["previous_successful_slot"] is None
     at1030 = datetime.fromisoformat("2026-08-13T10:32:00+08:00")
@@ -142,18 +144,19 @@ assert session.slot_action(datetime.fromisoformat("2026-08-13T08:25:00+08:00"), 
 assert session.slot_action(datetime.fromisoformat("2026-08-13T09:35:00+08:00"), target) == "run"
 assert session.slot_action(datetime.fromisoformat("2026-08-13T10:29:59+08:00"), target) == "run"
 assert session.slot_action(datetime.fromisoformat("2026-08-13T10:30:00+08:00"), target) == "skip"
-assert session.current_slot_for_time(datetime.fromisoformat("2026-08-13T14:20:00+08:00")) == "13:30"
+assert session.current_slot_for_time(datetime.fromisoformat("2026-08-13T14:19:59+08:00")) == "13:30"
+assert session.current_slot_for_time(datetime.fromisoformat("2026-08-13T14:20:00+08:00")) is None
 
 workflow = (ROOT / ".github" / "workflows" / "update-market-quotes.yml").read_text(encoding="utf-8")
-assert 'cron: "30,40,50 1 * * 1-5"' in workflow
-assert 'cron: "*/10 2,3,4,5 * * 1-5"' in workflow
-assert 'cron: "0,10,20,30 6 * * 1-5"' in workflow
+assert 'cron: "*/5 1 * * 1-5"' in workflow
+assert 'cron: "*/5 2,3,4,5 * * 1-5"' in workflow
+assert 'cron: "0,5,10,15,20,30 6 * * 1-5"' in workflow
 assert "run_intraday_radar_session.py" in workflow
 assert "--scheduled-once" in workflow
 assert "timeout-minutes: 20" in workflow
-assert "group: hs-live-intraday-slot-v3" in workflow
+assert "group: hs-live-intraday-slot-v4" in workflow
 assert "cancel-in-progress: false" in workflow
 assert "needs: intraday" in workflow and "if: ${{ always() }}" in workflow
 assert 'cron: "32 1,2,3,4,5 * * 1-5"' not in workflow
 
-print("PASS Slot V3 scheduler, five-ETF validation, WAIT_NATIVE isolation, timestamp preservation and cache version regression")
+print("PASS Slot V4 scheduler, five-ETF validation, WAIT_NATIVE isolation, timestamp preservation and cache version regression")

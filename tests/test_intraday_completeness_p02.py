@@ -9,7 +9,7 @@ from zoneinfo import ZoneInfo
 ROOT = Path(__file__).resolve().parents[1]
 TAIPEI = ZoneInfo("Asia/Taipei")
 spec = importlib.util.spec_from_file_location(
-    "intraday_slot_v3", ROOT / "scripts" / "run_intraday_radar_session.py"
+    "intraday_slot_v4", ROOT / "scripts" / "run_intraday_radar_session.py"
 )
 runner = importlib.util.module_from_spec(spec)
 assert spec and spec.loader
@@ -29,13 +29,14 @@ def successful_attempt(slot, as_of=None):
         "slot": slot,
         "trading_date": "2026-08-26",
         "verified_at": market_as_of,
+        "captured_at": market_as_of,
         "market_as_of": {code: market_as_of for code in ("0050", "00662", "00757", "00830", "00935")},
         "source": "TWSE_MIS",
         "slot_diagnostic": {"market_fetch": "PASS", "core_input": "PASS", "score": "PASS", "snapshot_append": "PASS"},
     }
 
 
-# TEST 1: exact V3 boundary classification uses full slot windows.
+# TEST 1: exact V4 boundary classification uses full slot windows.
 boundaries = {
     "2026-08-26T09:29:59+08:00": None,
     "2026-08-26T09:30:00+08:00": "09:30",
@@ -47,20 +48,21 @@ boundaries = {
     "2026-08-26T12:30:00+08:00": "12:30",
     "2026-08-26T13:29:59+08:00": "12:30",
     "2026-08-26T13:30:00+08:00": "13:30",
-    "2026-08-26T14:20:00+08:00": "13:30",
-    "2026-08-26T14:29:59+08:00": "13:30",
+    "2026-08-26T14:19:59+08:00": "13:30",
+    "2026-08-26T14:20:00+08:00": None,
+    "2026-08-26T14:29:59+08:00": None,
     "2026-08-26T14:30:00+08:00": None,
 }
 for timestamp, expected in boundaries.items():
     assert runner.current_slot_for_time(at(timestamp)) == expected
-print("TEST 1 PASS: V3 slot boundary classification")
+print("TEST 1 PASS: V4 slot boundary classification")
 
 
-# TEST 2: every slot can reach 5/5 and publishes the V3 contract.
+# TEST 2: every slot can reach 5/5 and publishes the V4 contract.
 state = runner.new_completeness("2026-08-26")
 for slot in runner.TARGET_SLOTS:
     state = runner.record_slot_outcome(state, slot, runner.SLOT_SUCCESS, successful_attempt(slot), at(f"2026-08-26T{slot}:31"))
-assert state["contract"] == runner.SLOT_CONTRACT == "HS_LIVE_INTRADAY_SLOT_V3"
+assert state["contract"] == runner.SLOT_CONTRACT == "HS_LIVE_INTRADAY_SLOT_V4"
 assert state["completeness"] == "5/5" and state["snapshot_status"] == runner.SNAPSHOT_SUCCESS
 print("TEST 2 PASS: five immutable successes produce 5/5")
 
@@ -102,13 +104,13 @@ assert missed["slots"]["09:30"]["last_failure"]["reason"] == "temporary source e
 print("TEST 5 PASS: MISSED waits for window close and retains source evidence")
 
 
-# TEST 6: final 13:30 slot retries through 14:29:59 and closes at 14:30.
+# TEST 6: final 13:30 slot retries through 14:19:59 and closes at 14:20.
 final_slot = runner.new_completeness("2026-08-26")
+final_slot = runner.reconcile_closed_slots(final_slot, at("2026-08-26T14:19:59"))
+assert runner.eligible_slot(final_slot, at("2026-08-26T14:19:59")) == "13:30"
 final_slot = runner.reconcile_closed_slots(final_slot, at("2026-08-26T14:20:00"))
-assert runner.eligible_slot(final_slot, at("2026-08-26T14:20:00")) == "13:30"
-final_slot = runner.reconcile_closed_slots(final_slot, at("2026-08-26T14:30:00"))
 assert final_slot["slots"]["13:30"]["status"] == runner.SLOT_MISSED
-assert runner.eligible_slot(final_slot, at("2026-08-26T14:30:00")) is None
+assert runner.eligible_slot(final_slot, at("2026-08-26T14:20:00")) is None
 print("TEST 6 PASS: 13:30 extended retry window")
 
 
@@ -174,8 +176,8 @@ print("TEST 10 PASS: scheduler retries, succeeds, and locks first success")
 
 
 workflow = (ROOT / ".github" / "workflows" / "update-market-quotes.yml").read_text(encoding="utf-8")
-for cron in ('cron: "30,40,50 1 * * 1-5"', 'cron: "*/10 2,3,4,5 * * 1-5"', 'cron: "0,10,20,30 6 * * 1-5"'):
+for cron in ('cron: "*/5 1 * * 1-5"', 'cron: "*/5 2,3,4,5 * * 1-5"', 'cron: "0,5,10,15,20,30 6 * * 1-5"'):
     assert cron in workflow
-assert "hs-live-intraday-slot-v3" in workflow and "cancel-in-progress: false" in workflow
+assert "hs-live-intraday-slot-v4" in workflow and "cancel-in-progress: false" in workflow
 assert "--scheduled-once" in workflow and "needs: intraday" in workflow and "if: ${{ always() }}" in workflow
-print("PASS HS_LIVE_INTRADAY_SLOT_V3 completeness tests 1-10")
+print("PASS HS_LIVE_INTRADAY_SLOT_V4 completeness tests 1-10")
