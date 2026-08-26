@@ -21,7 +21,7 @@ test('crash contribution',()=>approx(result.coreFactors.crash.contribution,4.908
 test('exact score',()=>approx(result.coreScore,63.1082787,1e-6));
 test('display floor',()=>assert.equal(result.coreScoreDisplay,63));
 test('label',()=>assert.equal(result.label,'正式加碼訊號'));
-test('trigger',()=>assert.equal(result.historicalTriggerRate,9));
+test('trigger',()=>assert.equal(result.historicalTriggerRate,9.04));
 test('fail closed missing J',()=>assert.equal(core.buildFinal({...fixture,j:null}).coreScore,null));
 test('fail closed missing DD52',()=>assert.equal(core.buildFinal({...fixture,dd52:null}).coreScore,null));
 test('fail closed missing crash',()=>assert.equal(core.buildFinal({...fixture,crashRaw:null,rows:[]}).coreScore,null));
@@ -29,6 +29,7 @@ test('no renormalization',()=>assert.equal(core.buildFinal({...fixture,crashRaw:
 test('009815 unavailable',()=>assert.equal(core.buildFinal({...fixture,ticker:'009815'}).score,null));
 test('auxiliary excluded',()=>assert.equal(core.buildFinal({...fixture,valuation:0,marketFear:0,weeklyBias:99}).coreScore,result.coreScore));
 test('all labels exact',()=>assert.deepEqual([0,30,40,45,50,65,70,80,90].map(x=>core.labelFor(x).label),['一般持有','回檔訊號出現','加碼條件浮現','試探加碼','正式加碼訊號','積極加碼訊號','強力加碼訊號','重大加碼機會','歷史極端機會']));
+test('frozen historical trigger thresholds',()=>assert.deepEqual([49.999,50,64.999,65,69.999,70,79.999,80,89.999,90].map(x=>core.historicalTriggerForScore(x)),[11.6,9.04,9.04,3.62,3.62,2.8,2.8,1.32,1.32,.27]));
 test('threshold exact not display',()=>assert.equal(canonical.meetsFinalCoreThresholdV1(49.999,50),false));
 test('ranking exact score',()=>assert(core.compare({ticker:'B',coreScore:50.9},{ticker:'A',coreScore:50.1})<0));
 test('ranking deterministic tie',()=>assert(core.compare({ticker:'A',coreScore:50},{ticker:'B',coreScore:50})<0));
@@ -40,4 +41,4 @@ test('UI canonical scripts',()=>assert(html.includes('final-core-score-v1.js')&&
 test('UI score sheet',()=>assert(html.includes('讀懂你的分數')&&html.includes('coreScoreLadder')));
 test('P2/P3 stores preserved',()=>assert(html.includes('schema_version:3')&&html.includes('dailyLongRank.v1')));
 test('P1/P4 marketAsOf preserved',()=>assert(html.includes('latestSuccessfulMarketAsOf')&&html.includes('intraday.asOf')));
-console.log(`Phase 6B production guards: ${passed}/30 PASS`);
+console.log(`Phase 6B production guards: ${passed}/${passed} PASS`);

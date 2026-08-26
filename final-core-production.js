@@ -10,11 +10,11 @@
   const LEGACY_VERSION="LEGACY_LONG_TERM_V62";
   const SUPPORTED_TICKERS=Object.freeze(["0050","00662","00757","00830","00935"]);
   const LABELS=Object.freeze([
-    {min:90,label:"歷史極端機會",triggerRate:.3},
-    {min:80,label:"重大加碼機會",triggerRate:1.3},
-    {min:70,label:"強力加碼訊號",triggerRate:2.8},
-    {min:65,label:"積極加碼訊號",triggerRate:3.6},
-    {min:50,label:"正式加碼訊號",triggerRate:9.0},
+    {min:90,label:"歷史極端機會",triggerRate:.27},
+    {min:80,label:"重大加碼機會",triggerRate:1.32},
+    {min:70,label:"強力加碼訊號",triggerRate:2.80},
+    {min:65,label:"積極加碼訊號",triggerRate:3.62},
+    {min:50,label:"正式加碼訊號",triggerRate:9.04},
     {min:45,label:"試探加碼",triggerRate:11.6},
     {min:40,label:"加碼條件浮現",triggerRate:14.8},
     {min:30,label:"回檔訊號出現",triggerRate:22.1},
@@ -27,6 +27,7 @@
     const exact=finite(score);if(exact===null)return{label:"資料不足",triggerRate:null};
     return LABELS.find(item=>exact>=item.min)||LABELS[LABELS.length-1];
   }
+  function historicalTriggerForScore(score){return labelFor(score).triggerRate;}
   function ctaFor(score){
     const exact=finite(score);
     if(exact===null)return{headline:"資料不足",detail:"核心因子尚未齊備，暫不提供長期加碼分。"};
@@ -80,5 +81,5 @@
     if(av===null)return 1;if(bv===null)return-1;
     return bv-av||String(a?.ticker||"").localeCompare(String(b?.ticker||""));
   }
-  return{LONG_TERM_CORE_SCORE_VERSION,LEGACY_VERSION,SUPPORTED_TICKERS,LABELS,resolveVersion,labelFor,ctaFor,crashRawFromRows,crashScore,buildFinal,buildDecision,compare};
+  return{LONG_TERM_CORE_SCORE_VERSION,LEGACY_VERSION,SUPPORTED_TICKERS,LABELS,resolveVersion,labelFor,historicalTriggerForScore,ctaFor,crashRawFromRows,crashScore,buildFinal,buildDecision,compare};
 });
