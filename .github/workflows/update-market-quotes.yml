@@ -2,9 +2,14 @@ name: Update delayed market quotes
 
 on:
   schedule:
-    # 台北週一至週五每個 slot 的預喚醒、正點與合法重試窗口。
-    # 最後一次為 slot +15 分鐘；不可在窗口外回填未來行情。
-    - cron: "27,30,35,40,45 1,2,3,4,5 * * 1-5"
+    # HS_LIVE_INTRADAY_SLOT_V3 — UTC cron / Asia-Taipei 09:30–14:20.
+    # Each delayed run classifies itself from the actual Taipei runtime; cron
+    # is only a retry cadence and never assigns or backfills a historical slot.
+    - cron: "30,40,50 1 * * 1-5"
+    - cron: "*/10 2,3,4,5 * * 1-5"
+    # 14:30 is an audit-only boundary tick: it may mark 13:30 MISSED but can
+    # never fetch or backfill that now-closed slot.
+    - cron: "0,10,20,30 6 * * 1-5"
   workflow_dispatch:
 
 permissions:
@@ -14,6 +19,9 @@ jobs:
   intraday:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    concurrency:
+      group: hs-live-intraday-slot-v3
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
         with:

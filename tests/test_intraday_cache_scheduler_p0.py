@@ -49,11 +49,23 @@ assert refresh0930["verified"] is True
 assert refresh0930["codes"] == list(quotes.RADAR_REQUIRED_LIVE_SYMBOLS)
 assert refresh0930["non_blocking_status"] == {"009815": "WAIT_NATIVE"}
 assert refresh0930["slot"] == "09:30"
+late0930 = quotes.validate_radar_refresh(
+    radar_rows("10:18"), "2026-08-13", "09:30", datetime.fromisoformat("2026-08-13T10:18:30+08:00")
+)
+assert late0930["verified"] is True
+assert late0930["market_as_of"]["0050"] == "2026-08-13T10:18:00+08:00"
 try:
-    quotes.validate_radar_refresh(radar_rows("09:30"), "2026-08-13", "09:30", datetime.fromisoformat("2026-08-13T09:46:00+08:00"))
-    raise AssertionError("+16 minute completion must not publish an old slot")
+    quotes.validate_radar_refresh(
+        radar_rows("10:19"), "2026-08-13", "09:30", datetime.fromisoformat("2026-08-13T10:18:30+08:00")
+    )
+    raise AssertionError("future source timestamps must fail closed")
 except ValueError as exc:
-    assert "legal as-of window expired" in str(exc)
+    assert "future quote rejected" in str(exc)
+try:
+    quotes.validate_radar_refresh(radar_rows("09:30"), "2026-08-13", "09:30", datetime.fromisoformat("2026-08-13T10:30:00+08:00"))
+    raise AssertionError("a closed 09:30 slot must never be backfilled")
+except ValueError as exc:
+    assert "slot window is not open" in str(exc)
 
 old_fetch_json, old_tracked_channels = quotes.fetch_json, quotes.tracked_channels
 mis_rows = [{
@@ -128,15 +140,20 @@ assert session.TARGET_SLOTS == ("09:30", "10:30", "11:30", "12:30", "13:30")
 target = session.slot_datetime("2026-08-13", "09:30")
 assert session.slot_action(datetime.fromisoformat("2026-08-13T08:25:00+08:00"), target) == "wait"
 assert session.slot_action(datetime.fromisoformat("2026-08-13T09:35:00+08:00"), target) == "run"
-assert session.slot_action(datetime.fromisoformat("2026-08-13T09:46:00+08:00"), target) == "skip"
+assert session.slot_action(datetime.fromisoformat("2026-08-13T10:29:59+08:00"), target) == "run"
+assert session.slot_action(datetime.fromisoformat("2026-08-13T10:30:00+08:00"), target) == "skip"
+assert session.current_slot_for_time(datetime.fromisoformat("2026-08-13T14:20:00+08:00")) == "13:30"
 
 workflow = (ROOT / ".github" / "workflows" / "update-market-quotes.yml").read_text(encoding="utf-8")
-assert 'cron: "27,30,35,40,45 1,2,3,4,5 * * 1-5"' in workflow
+assert 'cron: "30,40,50 1 * * 1-5"' in workflow
+assert 'cron: "*/10 2,3,4,5 * * 1-5"' in workflow
+assert 'cron: "0,10,20,30 6 * * 1-5"' in workflow
 assert "run_intraday_radar_session.py" in workflow
 assert "--scheduled-once" in workflow
 assert "timeout-minutes: 20" in workflow
-assert "concurrency:" not in workflow
+assert "group: hs-live-intraday-slot-v3" in workflow
+assert "cancel-in-progress: false" in workflow
 assert "needs: intraday" in workflow and "if: ${{ always() }}" in workflow
 assert 'cron: "32 1,2,3,4,5 * * 1-5"' not in workflow
 
-print("PASS production intraday scheduler, five-ETF validation, WAIT_NATIVE isolation, 13:30 timestamp mode and cache version regression")
+print("PASS Slot V3 scheduler, five-ETF validation, WAIT_NATIVE isolation, timestamp preservation and cache version regression")

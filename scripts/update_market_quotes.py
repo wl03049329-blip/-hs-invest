@@ -57,8 +57,13 @@ RADAR_REQUIRED_LIVE_SYMBOLS = ("0050", "00662", "00757", "00830", "00935")
 RADAR_NON_BLOCKING_SYMBOLS = ("009815",)
 RADAR_CODES = RADAR_REQUIRED_LIVE_SYMBOLS + RADAR_NON_BLOCKING_SYMBOLS
 RADAR_SLOTS = ("09:30", "10:30", "11:30", "12:30", "13:30")
-RADAR_QUOTE_TOLERANCE_MINUTES = 15
+RADAR_FINAL_SLOT_CLOSE = time(14, 30)
 MIS_BATCH_SIZE = 60
+# TWSE MIS may legitimately return ``z: "-"`` between transactions.  Retry
+# required radar symbols independently and accumulate only real, parsed quotes
+# inside the currently open V3 slot.  The bounded budget stays well below one
+# slot and never permits stale or synthetic price fallback.
+MIS_REQUIRED_RETRY_DELAYS = (0.35, 0.9, 1.5, 2.5, 4.0, 6.0, 9.0, 13.0, 18.0)
 
 
 class MisSnapshotRows(list[dict[str, Any]]):
@@ -298,7 +303,7 @@ def fetch_mis_snapshot(
     now_fn=lambda: datetime.now(TAIPEI),
     sleep_fn=time_module.sleep,
     jitter_fn=lambda: random.uniform(0.0, 0.15),
-    retry_delays: tuple[float, ...] = (0.35, 0.9),
+    retry_delays: tuple[float, ...] = MIS_REQUIRED_RETRY_DELAYS,
 ) -> MisSnapshotRows:
     channels = tracked_channels()
     batches = [channels[offset : offset + MIS_BATCH_SIZE] for offset in range(0, len(channels), MIS_BATCH_SIZE)]
@@ -426,14 +431,19 @@ def build_slot_diagnostic(
             required[code] = "NOT_REACHED"
     source_reached = bool(symbols)
     return {
-        "schema_version": 1,
+        "schema_version": 3,
+        "contract": "HS_LIVE_INTRADAY_SLOT_V3",
         "trading_date": trading_date,
-        "slot": slot,
+        "classified_slot": slot,
+        "actual_run_time": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "market_fetch": "PASS" if source_reached else "FAIL",
         "required_symbols": required,
+        "market_as_of": diagnostics.get("candidate_market_as_of") or None,
         "core_input": "PENDING" if not error else "NOT_RUN",
         "score": "NOT_RUN",
         "snapshot_append": "NOT_RUN",
+        "existing_slot_success": False,
+        "retry_number": None,
         "failure_class": None if not error else "OPERATIONAL_SOURCE",
         "reason": clean_text(error, 120) if error else None,
         "source_attempts": diagnostics.get("targeted_retry_attempts", {}),
@@ -449,6 +459,18 @@ def quote_datetime(data_date: str, quote_time: str) -> datetime | None:
         return datetime.fromisoformat(f"{data_date}T{quote_time}").replace(tzinfo=TAIPEI)
     except ValueError:
         return None
+
+
+def radar_slot_window(trading_date: str, slot: str) -> tuple[datetime, datetime]:
+    if slot not in RADAR_SLOTS:
+        raise ValueError(f"unsupported radar slot: {slot}")
+    start = datetime.fromisoformat(f"{trading_date}T{slot}:00").replace(tzinfo=TAIPEI)
+    index = RADAR_SLOTS.index(slot)
+    if index + 1 < len(RADAR_SLOTS):
+        end = datetime.fromisoformat(f"{trading_date}T{RADAR_SLOTS[index + 1]}:00").replace(tzinfo=TAIPEI)
+    else:
+        end = datetime.combine(datetime.fromisoformat(trading_date).date(), RADAR_FINAL_SLOT_CLOSE, tzinfo=TAIPEI)
+    return start, end
 
 
 def spot_quote_mode(now: datetime, data_date: str, quote_time: str = "") -> str:
@@ -468,11 +490,10 @@ def validate_radar_refresh(
         raise ValueError(f"unsupported radar slot: {slot}")
     if trading_date != verified_at.astimezone(TAIPEI).date().isoformat():
         raise ValueError("radar trading date is not Taipei today")
-    target = datetime.fromisoformat(f"{trading_date}T{slot}:00").replace(tzinfo=TAIPEI)
-    minimum = target - timedelta(minutes=RADAR_QUOTE_TOLERANCE_MINUTES)
-    maximum = target + timedelta(minutes=RADAR_QUOTE_TOLERANCE_MINUTES)
-    if verified_at.astimezone(TAIPEI) > maximum:
-        raise ValueError(f"radar legal as-of window expired: {slot}")
+    minimum, maximum = radar_slot_window(trading_date, slot)
+    local_verified = verified_at.astimezone(TAIPEI)
+    if not minimum <= local_verified < maximum:
+        raise ValueError(f"radar slot window is not open: {slot}")
     by_code = {str(row.get("code", "")): row for row in rows}
     diagnostics = required_diagnostics or getattr(rows, "diagnostics", {})
     final_missing = set(diagnostics.get("final_missing") or []) if isinstance(diagnostics, dict) else set()
@@ -502,8 +523,10 @@ def validate_radar_refresh(
         if price < low * 0.999 or price > high * 1.001:
             raise ValueError(f"radar price outside high/low: {code}")
         quote_at = quote_datetime(trading_date, str(row.get("quote_time", "")))
-        if quote_at is None or quote_at < minimum or quote_at > maximum:
+        if quote_at is None or quote_at < minimum or quote_at >= maximum:
             raise ValueError(f"radar quote time outside {slot} window: {code}")
+        if quote_at > local_verified:
+            raise ValueError(f"radar future quote rejected: {code}")
         quote_times[code] = quote_at.strftime("%H:%M:%S")
         market_as_of[code] = quote_at.isoformat()
     return {
@@ -715,7 +738,10 @@ def validate_quote_items(items: list[dict[str, Any]]) -> None:
 
 
 def merge_official_close_with_lkg(
-    items_by_market: dict[str, list[dict[str, Any]]], existing_items: list[dict[str, Any]]
+    items_by_market: dict[str, list[dict[str, Any]]],
+    existing_items: list[dict[str, Any]],
+    *,
+    preserve_intraday_date: str | None = None,
 ) -> list[dict[str, Any]]:
     """Keep a symbol's last known close only when its current official row is absent.
 
@@ -732,13 +758,92 @@ def merge_official_close_with_lkg(
     for item in existing_items:
         code = item.get("code")
         market = item.get("market")
+        current_item = current.get(code) if isinstance(code, str) else None
         if (
             isinstance(code, str)
             and market in available_markets
-            and code not in current
         ):
-            current[code] = item
+            # A real MIS transaction from today remains a valid candidate for
+            # its V3 slot even when a later poll temporarily reports ``z: -``.
+            # Preserve only a newer delayed observation; the slot validator
+            # below still rejects prior-slot, prior-day and future timestamps.
+            if (
+                isinstance(current_item, dict)
+                and item.get("quote_mode") == "delayed"
+                and str(item.get("date", "")) >= str(current_item.get("date", ""))
+                and str(item.get("date", "")) == str(preserve_intraday_date or "")
+            ):
+                current[code] = item
+            elif code not in current:
+                current[code] = item
     return list(current.values())
+
+
+def merge_mis_items(
+    items: list[dict[str, Any]], mis_rows: list[dict[str, Any]], now: datetime
+) -> list[dict[str, Any]]:
+    """Overlay only real parsed MIS observations onto the market cache."""
+    item_map = {item["code"]: item for item in items}
+    for row in mis_rows:
+        if not CODE_RE.fullmatch(row["code"]):
+            continue
+        old = item_map.get(row["code"], {})
+        item_map[row["code"]] = {
+            "code": row["code"],
+            "name": row["name"] or old.get("name", row["code"]),
+            "price": row["price"],
+            "previous_close": row["previous_close"],
+            "date": row["date"],
+            "market": row["market"],
+            "quote_mode": spot_quote_mode(now, row["date"], row["quote_time"]),
+            "quote_time": row["quote_time"],
+            "open": row.get("open"),
+            "high": row.get("high"),
+            "low": row.get("low"),
+            "volume": row.get("volume"),
+            "source": row.get("source"),
+        }
+    return list(item_map.values())
+
+
+def candidate_diagnostics(
+    diagnostics: dict[str, Any], candidate_rows: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """Mark same-slot persisted observations without hiding current failures."""
+    result = dict(diagnostics) if isinstance(diagnostics, dict) else {}
+    candidate_codes = {str(row.get("code", "")) for row in candidate_rows}
+    source_symbols = result.get("symbols") if isinstance(result.get("symbols"), dict) else {}
+    result["current_attempt_symbols"] = source_symbols
+    result["candidate_cache_recovered"] = sorted(
+        code for code in candidate_codes
+        if not isinstance(source_symbols.get(code), dict) or source_symbols[code].get("parsed") is not True
+    )
+    reconciled_symbols = {
+        code: dict(value) if isinstance(value, dict) else {}
+        for code, value in source_symbols.items()
+    }
+    candidate_market_as_of: dict[str, str] = {}
+    for row in candidate_rows:
+        code = str(row.get("code", ""))
+        observed_at = quote_datetime(str(row.get("date", "")), str(row.get("quote_time", "")))
+        if observed_at is None:
+            continue
+        candidate_market_as_of[code] = observed_at.isoformat()
+        reconciled_symbols[code] = {
+            **reconciled_symbols.get(code, {}),
+            "parsed": True,
+            "candidate_cache": code in result["candidate_cache_recovered"],
+            "candidate_market_as_of": observed_at.isoformat(),
+        }
+    result["symbols"] = reconciled_symbols
+    result["candidate_market_as_of"] = candidate_market_as_of
+    result["final_missing"] = [code for code in result.get("final_missing", []) if code not in candidate_codes]
+    result["final_parse_rejected"] = {
+        code: value
+        for code, value in (result.get("final_parse_rejected") or {}).items()
+        if code not in candidate_codes
+    }
+    return result
 
 
 def write_market_cache(
@@ -883,7 +988,11 @@ def main() -> None:
     # Official closing data owns the production quote cache.  Preserve a
     # per-symbol last known close only for a source row that is individually
     # absent; never let an intraday Radar validation failure roll back this set.
-    items = merge_official_close_with_lkg(items_by_market, existing_quotes.get("items", []))
+    items = merge_official_close_with_lkg(
+        items_by_market,
+        existing_quotes.get("items", []),
+        preserve_intraday_date=requested_date if requested_slot else None,
+    )
     # Preserve the verified close set before MIS can replace display quotes with
     # intraday values.  It is consumed only by the separate EOD history finalizer.
     required_core = ("0050", "00662", "00757", "00830", "00935")
@@ -912,41 +1021,42 @@ def main() -> None:
     try:
         retry_deadline = None
         if requested_slot and requested_slot in RADAR_SLOTS:
-            retry_deadline = datetime.fromisoformat(f"{requested_date}T{requested_slot}:00").replace(tzinfo=TAIPEI) + timedelta(minutes=15)
+            _, retry_deadline = radar_slot_window(requested_date, requested_slot)
         mis_rows = fetch_mis_snapshot(deadline=retry_deadline)
         mis_diagnostics = getattr(mis_rows, "diagnostics", {})
+        # Persist every genuine source observation even when the atomic radar
+        # set is not complete yet.  Later scheduled attempts may combine only
+        # observations that the V3 validator proves belong to the same slot.
+        items = merge_mis_items(items, mis_rows, now)
         if requested_slot:
             verified_at = datetime.now(TAIPEI)
+            item_map = {item["code"]: item for item in items}
+            slot_start, slot_end = radar_slot_window(requested_date, requested_slot)
+            candidate_rows = [
+                item_map[code]
+                for code in RADAR_REQUIRED_LIVE_SYMBOLS
+                if code in item_map
+                and (candidate_at := quote_datetime(
+                    str(item_map[code].get("date", "")),
+                    str(item_map[code].get("quote_time", "")),
+                )) is not None
+                and slot_start <= candidate_at < slot_end
+                and candidate_at <= verified_at
+            ]
+            mis_diagnostics = candidate_diagnostics(mis_diagnostics, candidate_rows)
             radar_refresh = {
-                **validate_radar_refresh(mis_rows, requested_date, requested_slot, verified_at, mis_diagnostics),
+                **validate_radar_refresh(candidate_rows, requested_date, requested_slot, verified_at, mis_diagnostics),
                 "status": "success",
             }
             refresh_attempt = {
                 **radar_refresh,
-                "slot_diagnostic": build_slot_diagnostic(requested_date, requested_slot, mis_diagnostics),
+                "slot_diagnostic": {
+                    **build_slot_diagnostic(requested_date, requested_slot, mis_diagnostics),
+                    "actual_run_time": radar_refresh["verified_at"],
+                    "market_as_of": radar_refresh["market_as_of"],
+                },
             }
         statuses["TWSE_MIS"] = "ok"
-        item_map = {item["code"]: item for item in items}
-        for row in mis_rows:
-            if not CODE_RE.fullmatch(row["code"]):
-                continue
-            old = item_map.get(row["code"], {})
-            mode = spot_quote_mode(now, row["date"], row["quote_time"])
-            item_map[row["code"]] = {
-                "code": row["code"],
-                "name": row["name"] or old.get("name", row["code"]),
-                "price": row["price"],
-                "previous_close": row["previous_close"],
-                "date": row["date"],
-                "market": row["market"],
-                "quote_mode": mode,
-                "quote_time": row["quote_time"],
-                "open": row.get("open"),
-                "high": row.get("high"),
-                "low": row.get("low"),
-                "volume": row.get("volume"),
-            }
-        items = list(item_map.values())
     except Exception as exc:  # noqa: BLE001
         attempted_at = datetime.now(TAIPEI)
         error_text = clean_text(exc, 100)
@@ -969,7 +1079,6 @@ def main() -> None:
                 "required_symbol_diagnostics": mis_diagnostics,
                 "slot_diagnostic": slot_diagnostic,
             }
-            mis_rows = []
         else:
             items = [item for rows in items_by_market.values() for item in rows]
 

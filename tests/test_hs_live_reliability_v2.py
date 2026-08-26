@@ -57,14 +57,15 @@ state["slots"]["09:30"].update(fixture["slots"]["09:30"])
 for slot in ("10:30", "11:30", "12:30"):
     state = runner.record_slot_outcome(state, slot, runner.SLOT_FAILED, attempt(slot, fixture["slots"][slot]), at(f"2026-08-25T{slot}:30"))
 state["slots"]["13:30"].update(fixture["slots"]["13:30"])
-state = runner.reconcile_expired_slots(state, at("2026-08-25T13:50:00"))
+state = runner.reconcile_closed_slots(state, at("2026-08-25T14:30:00"))
 assert state["completeness"] == "0/5"
 assert state["successful_slots"] == []
 assert state["missed_slots"] == list(runner.TARGET_SLOTS)
-assert state["failed_slots"] == ["10:30", "11:30", "12:30"]
-assert runner.workflow_should_fail(state, at("2026-08-25T13:50:00")) is False
-assert state["slots"]["10:30"]["error"].endswith("reason=missing_price")
-assert state["slots"]["12:30"]["error"] == "urlopen error timed out"
+assert state["failed_slots"] == []
+assert state["contract"] == "HS_LIVE_INTRADAY_SLOT_V3"
+assert runner.workflow_should_fail(state, at("2026-08-25T14:30:00")) is False
+assert state["slots"]["10:30"]["last_failure"]["reason"].endswith("reason=missing_price")
+assert state["slots"]["12:30"]["last_failure"]["reason"] == "urlopen error timed out"
 assert fixture["last_known_good"] == {"trading_date": "2026-08-24", "slot": "13:30"}
 print("REPLAY PASS: 2026-08-25 0/5 remains operational telemetry; LKG stays 2026-08-24 13:30")
 
@@ -107,9 +108,12 @@ print("SOURCE PASS: missing z stays fail-closed; pz/y are not fabricated into a 
 
 
 workflow = (ROOT / ".github" / "workflows" / "update-market-quotes.yml").read_text(encoding="utf-8")
-assert "concurrency:" not in workflow
+assert "group: hs-live-intraday-slot-v3" in workflow
+assert "cancel-in-progress: false" in workflow
 assert "needs: intraday" in workflow
 assert "if: ${{ always() }}" in workflow
 assert "node scripts/finalize_core_score_history.js" in workflow
-assert 'cron: "27,30,35,40,45 1,2,3,4,5 * * 1-5"' in workflow
-print("EOD PASS: finalizer is an independent always-run job; cron ticks are not collapsed by a shared concurrency group")
+assert 'cron: "30,40,50 1 * * 1-5"' in workflow
+assert 'cron: "*/10 2,3,4,5 * * 1-5"' in workflow
+assert 'cron: "0,10,20,30 6 * * 1-5"' in workflow
+print("EOD PASS: finalizer remains always-run; intraday retries are serialized without cancellation")
