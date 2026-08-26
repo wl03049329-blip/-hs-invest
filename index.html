@@ -2922,25 +2922,41 @@ function saveDailyLongRankSnapshot(items,finalizedAt=new Date().toISOString()){
   const snapshots=[...history.snapshots,snapshot].sort((a,b)=>a.tradingDate.localeCompare(b.tradingDate)).slice(-370);
   localStorage.setItem(DAILY_LONG_RANK_STORAGE_KEY,JSON.stringify({schema_version:1,snapshots}));return snapshot;
 }
-function officialDailyLongRankPair(artifact=typeof finalizedCoreScoreHistoryArtifact!=="undefined"?finalizedCoreScoreHistoryArtifact:null){
-  if(artifact?.schema_version!==1||artifact?.core_score_version!==LONG_TERM_CORE_SCORE_VERSION||!Array.isArray(artifact?.snapshots))return null;
-  const snapshots=artifact.snapshots.filter(snapshot=>snapshot?.snapshot_type==="FINALIZED_CLOSE"&&snapshot?.finalized===true&&isCompletedTradingDate(String(snapshot?.date||""))).map(snapshot=>{
-    const ranked=(snapshot.rows||[]).filter(row=>row?.status!=="WAIT_NATIVE"&&Number.isFinite(Number(row?.final_core_score))&&row?.core_score_version===LONG_TERM_CORE_SCORE_VERSION).sort((a,b)=>Number(b.final_core_score)-Number(a.final_core_score)||String(a.symbol).localeCompare(String(b.symbol)));
-    return{snapshot_type:"FINALIZED_CLOSE",tradingDate:String(snapshot.date),items:Object.fromEntries(ranked.map((row,index)=>[row.symbol,{ticker:row.symbol,longTermScore:Math.floor(Number(row.final_core_score)),rank:index+1,data_as_of:row.data_as_of}]))};
+function canonicalDailyLongRankSnapshots(artifact,history){
+  const officialSnapshots=artifact?.schema_version===1&&artifact?.core_score_version===LONG_TERM_CORE_SCORE_VERSION&&Array.isArray(artifact?.snapshots)?artifact.snapshots.filter(snapshot=>snapshot?.snapshot_type==="FINALIZED_CLOSE"&&snapshot?.finalized===true&&isCompletedTradingDate(String(snapshot?.date||""))):[];
+  const officialKeys=new Set(),symbols=new Set();
+  for(const snapshot of officialSnapshots)for(const row of snapshot.rows||[]){const symbol=String(row?.symbol||"");if(symbol){symbols.add(symbol);officialKeys.add(`${symbol}|${snapshot.date}`)}}
+  for(const snapshot of Array.isArray(history?.snapshots)?history.snapshots:[])for(const symbol of Object.keys(snapshot?.items||{}))symbols.add(symbol);
+  const grouped=new Map();
+  for(const symbol of symbols){
+    const rows=mergeCoreScoreHistoryRows(officialArtifactCoreScoreHistory(artifact,symbol,66),localCoreScoreHistory(history,symbol,10),66);
+    for(const row of rows){
+      if(row.historySource!=="official"&&officialKeys.has(`${symbol}|${row.tradingDate}`))continue;
+      if(!grouped.has(row.tradingDate))grouped.set(row.tradingDate,[]);
+      grouped.get(row.tradingDate).push(row);
+    }
+  }
+  return [...grouped.entries()].map(([tradingDate,rows])=>{
+    const ranked=[...rows].sort((a,b)=>b.finalCoreScore-a.finalCoreScore||a.symbol.localeCompare(b.symbol));
+    const items=Object.fromEntries(ranked.map((row,index)=>[row.symbol,{ticker:row.symbol,longTermScore:row.displayScore,rank:index+1,data_as_of:row.dataAsOf,historySource:row.historySource}]));
+    const sources=new Set(ranked.map(row=>row.historySource)),source=sources.size===1?[...sources][0]:"mixed";
+    return{snapshot_type:"FINALIZED_CLOSE",tradingDate,items,source};
   }).filter(snapshot=>Object.keys(snapshot.items).length).sort((a,b)=>a.tradingDate.localeCompare(b.tradingDate));
+}
+function officialDailyLongRankPair(artifact=typeof finalizedCoreScoreHistoryArtifact!=="undefined"?finalizedCoreScoreHistoryArtifact:null){
+  const snapshots=canonicalDailyLongRankSnapshots(artifact,{schema_version:1,snapshots:[]});
   return snapshots.length>=2?{latest:snapshots.at(-1),previous:snapshots.at(-2),source:"official"}:null;
 }
 function dailyLongRankPair(history=loadDailyLongRankHistory()){
-  const official=officialDailyLongRankPair();if(official)return official;
-  const snapshots=(history?.snapshots||[]).filter(row=>/^\d{4}-\d{2}-\d{2}$/.test(String(row?.tradingDate||""))).sort((a,b)=>a.tradingDate.localeCompare(b.tradingDate));
-  return{latest:snapshots.at(-1)||null,previous:snapshots.at(-2)||null,source:"local"};
+  const artifact=typeof finalizedCoreScoreHistoryArtifact!=="undefined"?finalizedCoreScoreHistoryArtifact:null,snapshots=canonicalDailyLongRankSnapshots(artifact,history),latest=snapshots.at(-1)||null,previous=snapshots.at(-2)||null;
+  return{latest,previous,source:latest?.source||"local",latestSource:latest?.source||"local",previousSource:previous?.source||null};
 }
 function dailyLongRankMovement(pair,ticker){
   const latest=pair?.latest?.items?.[ticker],previous=pair?.previous?.items?.[ticker];
-  const official=pair?.source==="official",rankLabel=official?"正式日排名":"本機日排名",scoreLabel=official?"正式日分數":"本機盤後";
-  if(!latest||!previous||!Number.isFinite(latest.longTermScore)||!Number.isFinite(latest.rank)||!Number.isFinite(previous.longTermScore)||!Number.isFinite(previous.rank))return{rankDelta:null,scoreDelta:null,source:official?"official":"local",displayRankChange:`${rankLabel}首次`,displayScoreChange:"—"};
+  const latestSource=latest?.historySource||pair?.latestSource||pair?.source||"local",previousSource=previous?.historySource||pair?.previousSource||null,official=latestSource==="official",rankLabel=official?"正式日排名":"本機日排名",scoreLabel=official?"正式日分數":"本機盤後";
+  if(!latest||!previous||!Number.isFinite(latest.longTermScore)||!Number.isFinite(latest.rank)||!Number.isFinite(previous.longTermScore)||!Number.isFinite(previous.rank))return{rankDelta:null,scoreDelta:null,source:latestSource,previousSource,displayRankChange:`${rankLabel}首次`,displayScoreChange:"—"};
   const rankDelta=previous.rank-latest.rank,scoreDelta=latest.longTermScore-previous.longTermScore;
-  return{rankDelta,scoreDelta,source:official?"official":"local",displayRankChange:rankDelta>0?`${rankLabel} ↑${rankDelta}`:rankDelta<0?`${rankLabel} ↓${Math.abs(rankDelta)}`:`${rankLabel}不變`,displayScoreChange:scoreDelta>0?`${scoreLabel} +${scoreDelta}`:scoreDelta<0?`${scoreLabel} ${scoreDelta}`:`${scoreLabel} ±0`};
+  return{rankDelta,scoreDelta,source:latestSource,previousSource,displayRankChange:rankDelta>0?`${rankLabel} ↑${rankDelta}`:rankDelta<0?`${rankLabel} ↓${Math.abs(rankDelta)}`:`${rankLabel}不變`,displayScoreChange:scoreDelta>0?`${scoreLabel} +${scoreDelta}`:scoreDelta<0?`${scoreLabel} ${scoreDelta}`:`${scoreLabel} ±0`};
 }
 function isCompletedTradingDate(date){
   if(!/^\d{4}-\d{2}-\d{2}$/.test(String(date||"")))return false;
@@ -2966,7 +2982,7 @@ function localCoreScoreHistory(history,ticker,limit=10){
     if(!isCompletedTradingDate(tradingDate)||seen.has(tradingDate)||(snapshotType&&snapshotType!=="FINALIZED_CLOSE"))continue;
     const item=snapshot?.items?.[ticker];
     if(!item)continue;
-    const finalRaw=item.final_core_score??item.coreScore,displayRaw=item.display_score??item.coreScoreDisplay;
+    const finalRaw=item.final_core_score??item.coreScore??item.longTermScore,displayRaw=item.display_score??item.coreScoreDisplay??item.longTermScore;
     const finalCoreScore=finalRaw===null||finalRaw===undefined||finalRaw===""?NaN:Number(finalRaw),storedDisplay=displayRaw===null||displayRaw===undefined||displayRaw===""?NaN:Number(displayRaw);
     if(!Number.isFinite(finalCoreScore)||finalCoreScore<0||finalCoreScore>100)continue;
     const dataAsOf=String(item.data_as_of||item.dataAsOf||"");
@@ -3045,8 +3061,8 @@ function radarTodayHtml(x,decision,score,dailyPair){
   const latest=dailyPair?.latest?.items?.[x.id],previous=dailyPair?.previous?.items?.[x.id],latestScore=officialDisplayScore(latest),previousScore=officialDisplayScore(previous);
   const delta=Number.isFinite(latestScore)&&Number.isFinite(previousScore)?latestScore-previousScore:null;
   const change=Number.isFinite(delta)?`${delta>0?"+":""}${delta}`:"—";
-  const source=dailyPair?.source==="official"?"official":"local",sourceLabel=source==="official"?"正式盤後":"本機盤後試算";
-  const comparison=Number.isFinite(latestScore)&&Number.isFinite(previousScore)?`前一${sourceLabel} ${previousScore} → 最新${sourceLabel} ${latestScore}　${change}`:`${sourceLabel}比較：首次／—`;
+  const source=latest?.historySource||dailyPair?.latestSource||dailyPair?.source||"local",previousSource=previous?.historySource||dailyPair?.previousSource||source,sourceLabel=source==="official"?"正式盤後":"本機盤後試算",previousSourceLabel=previousSource==="official"?"正式盤後":"本機盤後試算";
+  const comparison=Number.isFinite(latestScore)&&Number.isFinite(previousScore)?`前一${previousSourceLabel} ${previousScore} → 最新${sourceLabel} ${latestScore}　${change}`:`${sourceLabel}比較：首次／—`;
   const asOf=decision?.marketAsOf||x.intraday?.asOf||(x.quoteTime?`${x.date||""} ${x.quoteTime}`:x.date)||"資料時間待更新";
   return`<section class="radarV2Section radarToday"><header><span>TODAY</span><h3>今日狀態</h3></header><div class="radarTodayGrid"><div class="radarTodayIdentity"><b>${esc(x.id)}</b><small>${esc(x.name)}</small><em>${esc(decision?.label||"資料不足")}</em></div><div class="radarTodayScore"><small>CORE SCORE</small><b>${Number.isFinite(score)?score:"—"}</b></div><div class="radarTodayCompare"><span>${esc(comparison)}</span><small>資料截至 ${esc(asOf)}</small></div></div><p>${esc(radarTodaySummary(score,decision?.label,delta,source))}</p></section>`;
 }
