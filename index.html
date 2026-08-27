@@ -1001,6 +1001,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 <script src="strategy-mode-core.js?v=20260804a"></script>
 <script src="backtest/long-term/final-core-score-v1.js?v=20260813-phase6b"></script>
 <script src="final-core-production.js?v=20260826-trigger-p0"></script>
+<script src="canonical-score-resolver.js?v=20260827-p0"></script>
 <script src="hs-decision-layer-v1.js?v=20260823-dl1"></script>
 <script src="swing-strategy-core.js?v=20260809a"></script>
 <script src="leverage-v1-core.js?v=20260822-l1"></script>
@@ -2090,6 +2091,9 @@ function parseCanonicalCoreSnapshots(payload){
 function latestCanonicalCoreSnapshot(payload,today=taipeiToday()){
   return parseCanonicalCoreSnapshots(payload).filter(snapshot=>snapshot.trading_date<=today).sort((a,b)=>`${b.trading_date} ${b.slot}`.localeCompare(`${a.trading_date} ${a.slot}`))[0]||null;
 }
+function currentCanonicalCoreSnapshot(targetDate=taipeiToday()){
+  return window.HSCanonicalScoreResolver?.resolve({finalizedArtifact:finalizedCoreScoreHistoryArtifact,intradaySnapshots:liveCanonicalCoreSnapshots,targetDate,scoreVersion:LONG_TERM_CORE_SCORE_VERSION,symbols:LONG_RADAR_SCORED_CODES})||null;
+}
 async function loadCanonicalCoreLedger(signal){
   const payload=await fetchNoStore(`intraday-core-snapshots-v1.json?ts=${Date.now()}`,signal);
   liveCanonicalCoreSnapshots=parseCanonicalCoreSnapshots(payload);
@@ -2099,8 +2103,15 @@ function canonicalCoreItem(snapshot,symbol){
   const item=snapshot?.items?.[symbol],score=Number(item?.score),asOf=Date.parse(String(item?.market_as_of||""));
   return item&&item.status==="SUCCESS"&&Number.isFinite(score)&&score>=0&&score<=100&&Number.isFinite(asOf)?item:null;
 }
+function canonicalScoreProductionInvariant(snapshot){
+  if(String(snapshot?.source_status||"")!=="FINALIZED_EOD")return true;
+  return [...LONG_RADAR_SCORED_CODES].every(symbol=>{
+    const current=canonicalCoreItem(snapshot,symbol),latestTrend=officialArtifactCoreScoreHistory(finalizedCoreScoreHistoryArtifact,symbol,1)[0];
+    return current&&latestTrend&&latestTrend.tradingDate===snapshot.trading_date&&Math.abs(Number(latestTrend.finalCoreScore)-Number(current.score))<1e-9;
+  });
+}
 function applyCanonicalCoreSnapshot(snapshot){
-  if(!snapshot)return false;
+  if(!snapshot||!canonicalScoreProductionInvariant(snapshot))return false;
   const candidates=[...LONG_RADAR_SCORED_CODES].map(code=>[all.find(item=>item.id===code),canonicalCoreItem(snapshot,code)]);
   if(candidates.some(([item,record])=>!item||!record))return false;
   for(const [item,record] of candidates){
@@ -2110,10 +2121,11 @@ function applyCanonicalCoreSnapshot(snapshot){
     item.price=Number.isFinite(Number(record.price))?Number(record.price):item.price;
     item.j=Number.isFinite(Number(record.weekly_j))?Number(record.weekly_j):item.j;
     item.fromHigh=Number.isFinite(Number(record.dd52))?Number(record.dd52):item.fromHigh;
-    item.date=String(record.trading_date);item.quoteMode="delayed";item.quoteTime=String(record.market_as_of).slice(11,19);
+    const sourceStatus=String(record.source_status||snapshot.source_status||"INTRADAY_CANONICAL");
+    item.date=String(record.trading_date);item.quoteMode=sourceStatus==="FINALIZED_EOD"?"close":"delayed";item.quoteTime=String(record.market_as_of).slice(11,19);
     item.strategyDecisions={...item.strategyDecisions,long_term_core:{...formal,score:display,coreScore:Number(record.score),coreScoreDisplay:display,finalScore:Number(record.score),normalizedScore:Number(record.score),weightedRawTotal:Number(record.score),coreScoreVersion:String(record.score_version||formal.coreScoreVersion||LONG_TERM_CORE_SCORE_VERSION),coreFactors:record.core_factors||formal.coreFactors,label:String(record.tier||classification.label),coreLabel:String(record.tier||classification.label),historicalTriggerRate:classification.triggerRate,stage:record.stage||formal.stage,cta:record.cta||formal.cta,marketAsOf:String(record.market_as_of),dataStatus:"ETF_NATIVE_HISTORY",scoreStatus:"complete",coverage:100,availableWeight:100}};
-    item.activeDecision=item.strategyDecisions.long_term_core;item.score=display;item.scoreMode="intraday";
-    item.intraday={score:display,coverage:100,quoteDate:item.date,quoteTime:item.quoteTime,asOf:String(record.market_as_of),radarSlot:String(snapshot.slot),status:"SUCCESS",calculatedAt:String(record.calculated_at),canonical:record,audit:{symbol:item.id,snapshot_slot:snapshot.slot,final_core_score:Number(record.score),data_as_of:String(record.market_as_of),calculated_at:String(record.calculated_at),status:"SUCCESS"}};
+    item.activeDecision=item.strategyDecisions.long_term_core;item.score=display;item.scoreMode=sourceStatus==="FINALIZED_EOD"?"finalized_eod":"intraday";
+    item.intraday={score:display,coverage:100,quoteDate:item.date,quoteTime:item.quoteTime,asOf:String(record.market_as_of),radarSlot:String(snapshot.slot),status:"SUCCESS",sourceStatus,calculatedAt:String(record.calculated_at),canonical:record,audit:{symbol:item.id,snapshot_slot:snapshot.slot,source_status:sourceStatus,final_core_score:Number(record.score),data_as_of:String(record.market_as_of),calculated_at:String(record.calculated_at),status:"SUCCESS"}};
   }
   liveCanonicalCoreSnapshot=snapshot;
   return true;
@@ -2412,7 +2424,7 @@ function applyHomeDelayedQuotes(detail){
     return false;
   }
   refreshAllDecisionModels();
-  const snapshotForRender=canonicalSnapshot||liveCanonicalCoreSnapshot;
+  const snapshotForRender=currentCanonicalCoreSnapshot(taipeiToday());
   if(snapshotForRender&&!applyCanonicalCoreSnapshot(snapshotForRender))liveRadarRefreshAttempt={verified:false,status:"failed",trading_date:snapshotForRender?.trading_date||"",slot:snapshotForRender?.slot||"",error:"canonical_core_snapshot_invalid"};
   renderMarket();
   renderTop();
@@ -3788,8 +3800,8 @@ async function load(){
     refreshAllDecisionModels();all.forEach(captureFormalState);renderTop();renderCards();renderChecks();renderTable();renderEvents();
     await Promise.allSettled([loadNews(all[0].date),loadChipData(),loadMarginRisk(),loadTrumpNews(),refreshCnnFearGreed(),loadFuturesPosition(),loadMarketEvents()]);
     refreshAllDecisionModels();all.forEach(captureFormalState);recordSuccessfulMarketAsOf(formalCloseMarketAsOf(all));saveDailyLongRankSnapshot(all.filter(item=>LONG_RADAR_CODES.has(item.id)));
-    let canonicalForHome=liveCanonicalCoreSnapshot||latestCanonicalCoreSnapshot({snapshots:liveCanonicalCoreSnapshots});
-    if(!canonicalForHome)canonicalForHome=await loadCanonicalCoreLedger().catch(()=>null);
+    if(!liveCanonicalCoreSnapshots.length)await loadCanonicalCoreLedger().catch(()=>null);
+    const canonicalForHome=currentCanonicalCoreSnapshot(taipeiToday());
     if(canonicalForHome&&!applyCanonicalCoreSnapshot(canonicalForHome))liveRadarRefreshAttempt={verified:false,status:"failed",trading_date:canonicalForHome?.trading_date||"",slot:canonicalForHome?.slot||"",error:"canonical_core_snapshot_invalid"};
     renderMarket();renderTrump();renderSentiment();renderEvents();renderTop();renderCards();renderTable();
     if(pendingDelayedQuotes)applyHomeDelayedQuotes(pendingDelayedQuotes);
