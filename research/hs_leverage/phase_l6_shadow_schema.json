@@ -1,0 +1,387 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "hs://research/hs_leverage/phase_l6_shadow_schema.json",
+  "title": "HS_LEVERAGE_C_V1 append-only shadow ledger",
+  "description": "Schema specification only. Records are append-only; realized outcomes are appended only after their horizons complete.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/evaluation_record"
+    },
+    {
+      "$ref": "#/$defs/outcome_record"
+    },
+    {
+      "$ref": "#/$defs/correction_record"
+    },
+    {
+      "$ref": "#/$defs/recovery_record"
+    }
+  ],
+  "x-ledger-mode": "APPEND_ONLY",
+  "x-silent-overwrite-allowed": false,
+  "$defs": {
+    "record_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "iso_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "iso_datetime": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "nullable_date": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date"
+    },
+    "nullable_number": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "state": {
+      "enum": [
+        "IDLE",
+        "SIGNAL_PENDING",
+        "ENTRY_ELIGIBLE",
+        "ACTIVE",
+        "COOLDOWN_HOLDING",
+        "CLOSED",
+        "FAIL_CLOSED"
+      ]
+    },
+    "evaluation_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_type",
+        "record_id",
+        "strategy_id",
+        "strategy_version",
+        "evaluation_date",
+        "symbol",
+        "adjusted_close",
+        "ret_5d",
+        "crash_velocity_5d",
+        "annual_threshold",
+        "threshold_version",
+        "threshold_training_end",
+        "signal_triggered",
+        "signal_status",
+        "market_regime",
+        "state_before",
+        "state_after",
+        "repeat_signal",
+        "data_as_of",
+        "data_source",
+        "data_version",
+        "adjustment_status",
+        "corporate_action_status",
+        "fail_closed_reason",
+        "planned_entry_date",
+        "planned_entry_reference",
+        "holding_policy_version",
+        "risk_policy_version",
+        "calculated_at"
+      ],
+      "properties": {
+        "record_type": {
+          "const": "SIGNAL_EVALUATION"
+        },
+        "record_id": {
+          "$ref": "#/$defs/record_id"
+        },
+        "strategy_id": {
+          "const": "HS_LEVERAGE_C_V1"
+        },
+        "strategy_version": {
+          "const": "V1"
+        },
+        "evaluation_date": {
+          "$ref": "#/$defs/iso_date"
+        },
+        "symbol": {
+          "const": "00631L"
+        },
+        "adjusted_close": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "ret_5d": {
+          "type": "number"
+        },
+        "crash_velocity_5d": {
+          "type": "number",
+          "minimum": 0
+        },
+        "annual_threshold": {
+          "type": "number",
+          "minimum": 0
+        },
+        "threshold_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "threshold_training_end": {
+          "$ref": "#/$defs/iso_date"
+        },
+        "signal_triggered": {
+          "type": "boolean"
+        },
+        "signal_status": {
+          "enum": [
+            "NO_SIGNAL",
+            "TRIGGERED"
+          ]
+        },
+        "market_regime": {
+          "enum": [
+            "BULL",
+            "TRANSITION",
+            "BEAR"
+          ]
+        },
+        "state_before": {
+          "$ref": "#/$defs/state"
+        },
+        "state_after": {
+          "$ref": "#/$defs/state"
+        },
+        "repeat_signal": {
+          "type": "boolean"
+        },
+        "data_as_of": {
+          "$ref": "#/$defs/iso_datetime"
+        },
+        "data_source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "data_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "adjustment_status": {
+          "enum": [
+            "VALIDATED_ADJUSTED",
+            "INVALID",
+            "UNCERTAIN"
+          ]
+        },
+        "corporate_action_status": {
+          "enum": [
+            "CLEAR",
+            "REVALIDATED",
+            "ANOMALY",
+            "UNKNOWN"
+          ]
+        },
+        "fail_closed_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "planned_entry_date": {
+          "$ref": "#/$defs/nullable_date"
+        },
+        "planned_entry_reference": {
+          "enum": [
+            "NEXT_OPEN",
+            null
+          ]
+        },
+        "holding_policy_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "risk_policy_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "calculated_at": {
+          "$ref": "#/$defs/iso_datetime"
+        }
+      }
+    },
+    "outcome_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_type",
+        "record_id",
+        "strategy_id",
+        "strategy_version",
+        "trigger_record_id",
+        "trigger_date",
+        "next_open_reference",
+        "horizon_trading_days",
+        "horizon_completed_on",
+        "realized_return_pct",
+        "mae_pct",
+        "mfe_pct",
+        "market_regime",
+        "threshold_version",
+        "data_version",
+        "calculated_at"
+      ],
+      "properties": {
+        "record_type": {
+          "const": "REALIZED_OUTCOME"
+        },
+        "record_id": {
+          "$ref": "#/$defs/record_id"
+        },
+        "strategy_id": {
+          "const": "HS_LEVERAGE_C_V1"
+        },
+        "strategy_version": {
+          "const": "V1"
+        },
+        "trigger_record_id": {
+          "$ref": "#/$defs/record_id"
+        },
+        "trigger_date": {
+          "$ref": "#/$defs/iso_date"
+        },
+        "next_open_reference": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "horizon_trading_days": {
+          "enum": [
+            5,
+            10,
+            20,
+            40,
+            60
+          ]
+        },
+        "horizon_completed_on": {
+          "$ref": "#/$defs/iso_date"
+        },
+        "realized_return_pct": {
+          "type": "number"
+        },
+        "mae_pct": {
+          "type": "number"
+        },
+        "mfe_pct": {
+          "type": "number"
+        },
+        "market_regime": {
+          "enum": [
+            "BULL",
+            "TRANSITION",
+            "BEAR"
+          ]
+        },
+        "threshold_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "data_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "calculated_at": {
+          "$ref": "#/$defs/iso_datetime"
+        }
+      }
+    },
+    "correction_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_type",
+        "record_id",
+        "original_record_id",
+        "correction_reason",
+        "new_data_version",
+        "corrected_payload",
+        "calculated_at"
+      ],
+      "properties": {
+        "record_type": {
+          "const": "CORRECTION"
+        },
+        "record_id": {
+          "$ref": "#/$defs/record_id"
+        },
+        "original_record_id": {
+          "$ref": "#/$defs/record_id"
+        },
+        "correction_reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "new_data_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "corrected_payload": {
+          "type": "object"
+        },
+        "calculated_at": {
+          "$ref": "#/$defs/iso_datetime"
+        }
+      }
+    },
+    "recovery_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_type",
+        "record_id",
+        "strategy_id",
+        "incident_id",
+        "recovery_steps_completed",
+        "new_data_version",
+        "integrity_review_status",
+        "approved_by",
+        "calculated_at"
+      ],
+      "properties": {
+        "record_type": {
+          "const": "CORPORATE_ACTION_RECOVERY"
+        },
+        "record_id": {
+          "$ref": "#/$defs/record_id"
+        },
+        "strategy_id": {
+          "const": "HS_LEVERAGE_C_V1"
+        },
+        "incident_id": {
+          "$ref": "#/$defs/record_id"
+        },
+        "recovery_steps_completed": {
+          "type": "array",
+          "minItems": 8,
+          "items": {
+            "type": "string"
+          }
+        },
+        "new_data_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "integrity_review_status": {
+          "const": "PASS"
+        },
+        "approved_by": {
+          "type": "string",
+          "minLength": 1
+        },
+        "calculated_at": {
+          "$ref": "#/$defs/iso_datetime"
+        }
+      }
+    }
+  }
+}

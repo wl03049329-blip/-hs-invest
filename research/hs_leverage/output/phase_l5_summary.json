@@ -1,0 +1,1219 @@
+{
+  "phase": "L5",
+  "research_interpretation": {
+    "risk_feasibility_phase": true,
+    "independent_oos": false
+  },
+  "reproduction": {
+    "status": "PASS",
+    "expected_events": 28,
+    "reproduced_events": 28,
+    "discrepancies": []
+  },
+  "data_safety": {
+    "status": "PASS",
+    "basis": "ADJUSTED_RESTORED_OHLC_ONLY",
+    "source": "research\\hs_leverage\\data\\00631L-historical-adjusted.json"
+  },
+  "base_case": {
+    "execution": "E1_NEXT_TRADING_DAY_OPEN",
+    "round_trip_friction_bps": 50,
+    "friction_sensitivity_bps": [
+      0,
+      20,
+      50,
+      100
+    ]
+  },
+  "event_downside_distribution": {
+    "5d": {
+      "n": 28,
+      "worst": -39.785394,
+      "p5": -28.505514,
+      "p10": -14.939536,
+      "p25": -7.839742,
+      "median": -4.978179,
+      "p75": -1.797797,
+      "severe_frequencies": {
+        "5": 50.0,
+        "10": 17.857143,
+        "15": 10.714286,
+        "20": 7.142857,
+        "30": 7.142857
+      }
+    },
+    "10d": {
+      "n": 28,
+      "worst": -39.785394,
+      "p5": -32.539997,
+      "p10": -19.520968,
+      "p25": -13.181094,
+      "median": -6.553505,
+      "p75": -3.003709,
+      "severe_frequencies": {
+        "5": 57.142857,
+        "10": 32.142857,
+        "15": 21.428571,
+        "20": 10.714286,
+        "30": 7.142857
+      }
+    },
+    "20d": {
+      "n": 27,
+      "worst": -39.785394,
+      "p5": -33.033503,
+      "p10": -27.328654,
+      "p25": -15.588245,
+      "median": -7.266995,
+      "p75": -2.712843,
+      "severe_frequencies": {
+        "5": 59.259259,
+        "10": 33.333333,
+        "15": 25.925926,
+        "20": 18.518519,
+        "30": 7.407407
+      }
+    },
+    "40d": {
+      "n": 25,
+      "worst": -47.205747,
+      "p5": -38.9096,
+      "p10": -32.130507,
+      "p25": -19.431791,
+      "median": -8.068125,
+      "p75": -3.993571,
+      "severe_frequencies": {
+        "5": 64.0,
+        "10": 44.0,
+        "15": 32.0,
+        "20": 24.0,
+        "30": 12.0
+      }
+    },
+    "60d": {
+      "n": 24,
+      "worst": -47.205747,
+      "p5": -39.128548,
+      "p10": -32.949486,
+      "p25": -18.217018,
+      "median": -7.858477,
+      "p75": -3.912731,
+      "severe_frequencies": {
+        "5": 66.666667,
+        "10": 41.666667,
+        "15": 33.333333,
+        "20": 20.833333,
+        "30": 12.5
+      }
+    }
+  },
+  "return_risk_joint_distribution": {
+    "20d": {
+      "A": 17,
+      "B": 2,
+      "C": 1,
+      "D": 7
+    },
+    "40d": {
+      "A": 14,
+      "B": 4,
+      "C": 0,
+      "D": 7
+    },
+    "60d": {
+      "A": 13,
+      "B": 5,
+      "C": 1,
+      "D": 5
+    }
+  },
+  "allocation_stress": {
+    "5": {
+      "20d": {
+        "n": 27,
+        "median": -0.36335,
+        "p10": -1.366433,
+        "worst": -1.98927,
+        "exceedance_pct": {
+          "1": 18.518519,
+          "2": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "7.5": 0.0,
+          "10": 0.0
+        }
+      },
+      "40d": {
+        "n": 25,
+        "median": -0.403406,
+        "p10": -1.606525,
+        "worst": -2.360287,
+        "exceedance_pct": {
+          "1": 24.0,
+          "2": 4.0,
+          "3": 0.0,
+          "5": 0.0,
+          "7.5": 0.0,
+          "10": 0.0
+        }
+      },
+      "60d": {
+        "n": 24,
+        "median": -0.392924,
+        "p10": -1.647474,
+        "worst": -2.360287,
+        "exceedance_pct": {
+          "1": 20.833333,
+          "2": 4.166667,
+          "3": 0.0,
+          "5": 0.0,
+          "7.5": 0.0,
+          "10": 0.0
+        }
+      }
+    },
+    "10": {
+      "20d": {
+        "n": 27,
+        "median": -0.7267,
+        "p10": -2.732865,
+        "worst": -3.978539,
+        "exceedance_pct": {
+          "1": 33.333333,
+          "2": 18.518519,
+          "3": 7.407407,
+          "5": 0.0,
+          "7.5": 0.0,
+          "10": 0.0
+        }
+      },
+      "40d": {
+        "n": 25,
+        "median": -0.806813,
+        "p10": -3.213051,
+        "worst": -4.720575,
+        "exceedance_pct": {
+          "1": 44.0,
+          "2": 24.0,
+          "3": 12.0,
+          "5": 0.0,
+          "7.5": 0.0,
+          "10": 0.0
+        }
+      },
+      "60d": {
+        "n": 24,
+        "median": -0.785848,
+        "p10": -3.294949,
+        "worst": -4.720575,
+        "exceedance_pct": {
+          "1": 41.666667,
+          "2": 20.833333,
+          "3": 12.5,
+          "5": 0.0,
+          "7.5": 0.0,
+          "10": 0.0
+        }
+      }
+    },
+    "15": {
+      "20d": {
+        "n": 27,
+        "median": -1.090049,
+        "p10": -4.099298,
+        "worst": -5.967809,
+        "exceedance_pct": {
+          "1": 51.851852,
+          "2": 33.333333,
+          "3": 18.518519,
+          "5": 7.407407,
+          "7.5": 0.0,
+          "10": 0.0
+        }
+      },
+      "40d": {
+        "n": 25,
+        "median": -1.210219,
+        "p10": -4.819576,
+        "worst": -7.080862,
+        "exceedance_pct": {
+          "1": 56.0,
+          "2": 40.0,
+          "3": 24.0,
+          "5": 12.0,
+          "7.5": 0.0,
+          "10": 0.0
+        }
+      },
+      "60d": {
+        "n": 24,
+        "median": -1.178771,
+        "p10": -4.942423,
+        "worst": -7.080862,
+        "exceedance_pct": {
+          "1": 54.166667,
+          "2": 41.666667,
+          "3": 20.833333,
+          "5": 12.5,
+          "7.5": 0.0,
+          "10": 0.0
+        }
+      }
+    },
+    "20": {
+      "20d": {
+        "n": 27,
+        "median": -1.453399,
+        "p10": -5.465731,
+        "worst": -7.957079,
+        "exceedance_pct": {
+          "1": 59.259259,
+          "2": 33.333333,
+          "3": 25.925926,
+          "5": 14.814815,
+          "7.5": 3.703704,
+          "10": 0.0
+        }
+      },
+      "40d": {
+        "n": 25,
+        "median": -1.613625,
+        "p10": -6.426101,
+        "worst": -9.441149,
+        "exceedance_pct": {
+          "1": 64.0,
+          "2": 44.0,
+          "3": 32.0,
+          "5": 16.0,
+          "7.5": 8.0,
+          "10": 0.0
+        }
+      },
+      "60d": {
+        "n": 24,
+        "median": -1.571695,
+        "p10": -6.589897,
+        "worst": -9.441149,
+        "exceedance_pct": {
+          "1": 66.666667,
+          "2": 41.666667,
+          "3": 33.333333,
+          "5": 16.666667,
+          "7.5": 8.333333,
+          "10": 0.0
+        }
+      }
+    },
+    "25": {
+      "20d": {
+        "n": 27,
+        "median": -1.816749,
+        "p10": -6.832163,
+        "worst": -9.946348,
+        "exceedance_pct": {
+          "1": 66.666667,
+          "2": 40.740741,
+          "3": 33.333333,
+          "5": 18.518519,
+          "7.5": 7.407407,
+          "10": 0.0
+        }
+      },
+      "40d": {
+        "n": 25,
+        "median": -2.017031,
+        "p10": -8.032627,
+        "worst": -11.801437,
+        "exceedance_pct": {
+          "1": 72.0,
+          "2": 52.0,
+          "3": 40.0,
+          "5": 24.0,
+          "7.5": 12.0,
+          "10": 4.0
+        }
+      },
+      "60d": {
+        "n": 24,
+        "median": -1.964619,
+        "p10": -8.237372,
+        "worst": -11.801437,
+        "exceedance_pct": {
+          "1": 75.0,
+          "2": 50.0,
+          "3": 41.666667,
+          "5": 20.833333,
+          "7.5": 12.5,
+          "10": 4.166667
+        }
+      }
+    },
+    "30": {
+      "20d": {
+        "n": 27,
+        "median": -2.180099,
+        "p10": -8.198596,
+        "worst": -11.935618,
+        "exceedance_pct": {
+          "1": 70.37037,
+          "2": 51.851852,
+          "3": 33.333333,
+          "5": 22.222222,
+          "7.5": 14.814815,
+          "10": 7.407407
+        }
+      },
+      "40d": {
+        "n": 25,
+        "median": -2.420438,
+        "p10": -9.639152,
+        "worst": -14.161724,
+        "exceedance_pct": {
+          "1": 76.0,
+          "2": 56.0,
+          "3": 44.0,
+          "5": 32.0,
+          "7.5": 16.0,
+          "10": 12.0
+        }
+      },
+      "60d": {
+        "n": 24,
+        "median": -2.357543,
+        "p10": -9.884846,
+        "worst": -14.161724,
+        "exceedance_pct": {
+          "1": 75.0,
+          "2": 54.166667,
+          "3": 41.666667,
+          "5": 29.166667,
+          "7.5": 16.666667,
+          "10": 12.5
+        }
+      }
+    }
+  },
+  "risk_budget_view": {
+    "1": {
+      "20d": {
+        "median_mae": 13.760846,
+        "p10_mae": 3.659163,
+        "worst_mae": 2.513485
+      },
+      "40d": {
+        "median_mae": 12.394453,
+        "p10_mae": 3.112307,
+        "worst_mae": 2.118386
+      },
+      "60d": {
+        "median_mae": 12.725113,
+        "p10_mae": 3.034949,
+        "worst_mae": 2.118386
+      }
+    },
+    "2": {
+      "20d": {
+        "median_mae": 27.521692,
+        "p10_mae": 7.318326,
+        "worst_mae": 5.02697
+      },
+      "40d": {
+        "median_mae": 24.788907,
+        "p10_mae": 6.224614,
+        "worst_mae": 4.236772
+      },
+      "60d": {
+        "median_mae": 25.450226,
+        "p10_mae": 6.069897,
+        "worst_mae": 4.236772
+      }
+    },
+    "3": {
+      "20d": {
+        "median_mae": 41.282538,
+        "p10_mae": 10.977489,
+        "worst_mae": 7.540456
+      },
+      "40d": {
+        "median_mae": 37.18336,
+        "p10_mae": 9.336921,
+        "worst_mae": 6.355158
+      },
+      "60d": {
+        "median_mae": 38.175338,
+        "p10_mae": 9.104846,
+        "worst_mae": 6.355158
+      }
+    },
+    "5": {
+      "20d": {
+        "median_mae": 68.804231,
+        "p10_mae": 18.295815,
+        "worst_mae": 12.567426
+      },
+      "40d": {
+        "median_mae": 61.972267,
+        "p10_mae": 15.561535,
+        "worst_mae": 10.591931
+      },
+      "60d": {
+        "median_mae": 63.625564,
+        "p10_mae": 15.174743,
+        "worst_mae": 10.591931
+      }
+    }
+  },
+  "regime_risk": {
+    "BULL": {
+      "event_n": 13,
+      "mae_basis": "40D adjusted-low path",
+      "median_mae": -4.118783,
+      "p10_mae": -27.216632,
+      "worst_mae": -47.205747,
+      "median_20d_return": 10.039802,
+      "median_40d_return": 22.404224,
+      "portfolio_impact": {
+        "10": {
+          "median": -0.411878,
+          "p10": -2.721663,
+          "worst": -4.720575
+        },
+        "20": {
+          "median": -0.823757,
+          "p10": -5.443326,
+          "worst": -9.441149
+        },
+        "30": {
+          "median": -1.235635,
+          "p10": -8.16499,
+          "worst": -14.161724
+        }
+      }
+    },
+    "TRANSITION": {
+      "event_n": 6,
+      "mae_basis": "40D adjusted-low path",
+      "median_mae": -9.692933,
+      "p10_mae": -30.507983,
+      "worst_mae": -39.785394,
+      "median_20d_return": 5.698637,
+      "median_40d_return": 2.867733,
+      "portfolio_impact": {
+        "10": {
+          "median": -0.969293,
+          "p10": -3.050798,
+          "worst": -3.978539
+        },
+        "20": {
+          "median": -1.938587,
+          "p10": -6.101597,
+          "worst": -7.957079
+        },
+        "30": {
+          "median": -2.90788,
+          "p10": -9.152395,
+          "worst": -11.935618
+        }
+      }
+    },
+    "BEAR": {
+      "event_n": 8,
+      "mae_basis": "40D adjusted-low path",
+      "median_mae": -11.301246,
+      "p10_mae": -24.224181,
+      "worst_mae": -35.406424,
+      "median_20d_return": 1.245739,
+      "median_40d_return": 7.250425,
+      "portfolio_impact": {
+        "10": {
+          "median": -1.130125,
+          "p10": -2.422418,
+          "worst": -3.540642
+        },
+        "20": {
+          "median": -2.260249,
+          "p10": -4.844836,
+          "worst": -7.081285
+        },
+        "30": {
+          "median": -3.390374,
+          "p10": -7.267254,
+          "worst": -10.621927
+        }
+      }
+    }
+  },
+  "overlap_capital": {
+    "20d": {
+      "signals": 28,
+      "maximum_overlap": 2,
+      "average_overlap": 0.266252,
+      "time_with_2plus_pct": 3.393881,
+      "capital_occupancy_pct": 23.231358,
+      "overlapping_signal_pct": 28.571429,
+      "one_position_trade_n": 21,
+      "policy_equivalence": "Equivalent exposure: both policies keep the existing position unchanged and add no capital; Policy B may still log the repeated signal."
+    },
+    "40d": {
+      "signals": 28,
+      "maximum_overlap": 4,
+      "average_overlap": 0.515296,
+      "time_with_2plus_pct": 10.516252,
+      "capital_occupancy_pct": 38.862333,
+      "overlapping_signal_pct": 42.857143,
+      "one_position_trade_n": 17,
+      "policy_equivalence": "Equivalent exposure: both policies keep the existing position unchanged and add no capital; Policy B may still log the repeated signal."
+    },
+    "60d": {
+      "signals": 28,
+      "maximum_overlap": 4,
+      "average_overlap": 0.75,
+      "time_with_2plus_pct": 18.499044,
+      "capital_occupancy_pct": 51.147228,
+      "overlapping_signal_pct": 53.571429,
+      "one_position_trade_n": 15,
+      "policy_equivalence": "Equivalent exposure: both policies keep the existing position unchanged and add no capital; Policy B may still log the repeated signal."
+    }
+  },
+  "holding_horizon_feasibility": {
+    "20d": {
+      "trade_n": 27,
+      "mean_net_return": 4.500659,
+      "median_net_return": 6.88625,
+      "win_rate": 70.37037,
+      "median_mae": -7.266995,
+      "capital_occupancy_pct": 23.231358,
+      "overlapping_signal_pct": 28.571429
+    },
+    "40d": {
+      "trade_n": 25,
+      "mean_net_return": 11.543039,
+      "median_net_return": 10.073759,
+      "win_rate": 72.0,
+      "median_mae": -8.068125,
+      "capital_occupancy_pct": 38.862333,
+      "overlapping_signal_pct": 42.857143
+    },
+    "60d": {
+      "trade_n": 24,
+      "mean_net_return": 15.625576,
+      "median_net_return": 11.775084,
+      "win_rate": 75.0,
+      "median_mae": -7.858477,
+      "capital_occupancy_pct": 51.147228,
+      "overlapping_signal_pct": 53.571429
+    }
+  },
+  "friction_sensitivity_bps": {
+    "0": {
+      "20d": {
+        "n": 27,
+        "mean": 5.000659,
+        "median": 7.38625,
+        "win_rate": 70.37037
+      },
+      "40d": {
+        "n": 25,
+        "mean": 12.043039,
+        "median": 10.573759,
+        "win_rate": 72.0
+      },
+      "60d": {
+        "n": 24,
+        "mean": 16.125576,
+        "median": 12.275084,
+        "win_rate": 75.0
+      }
+    },
+    "20": {
+      "20d": {
+        "n": 27,
+        "mean": 4.800659,
+        "median": 7.18625,
+        "win_rate": 70.37037
+      },
+      "40d": {
+        "n": 25,
+        "mean": 11.843039,
+        "median": 10.373759,
+        "win_rate": 72.0
+      },
+      "60d": {
+        "n": 24,
+        "mean": 15.925576,
+        "median": 12.075084,
+        "win_rate": 75.0
+      }
+    },
+    "50": {
+      "20d": {
+        "n": 27,
+        "mean": 4.500659,
+        "median": 6.88625,
+        "win_rate": 70.37037
+      },
+      "40d": {
+        "n": 25,
+        "mean": 11.543039,
+        "median": 10.073759,
+        "win_rate": 72.0
+      },
+      "60d": {
+        "n": 24,
+        "mean": 15.625576,
+        "median": 11.775084,
+        "win_rate": 75.0
+      }
+    },
+    "100": {
+      "20d": {
+        "n": 27,
+        "mean": 4.000659,
+        "median": 6.38625,
+        "win_rate": 70.37037
+      },
+      "40d": {
+        "n": 25,
+        "mean": 11.043039,
+        "median": 9.573759,
+        "win_rate": 72.0
+      },
+      "60d": {
+        "n": 24,
+        "mean": 15.125576,
+        "median": 11.275084,
+        "win_rate": 75.0
+      }
+    }
+  },
+  "isolated_tactical_sleeve_simulation": [
+    {
+      "horizon": 20,
+      "sleeve_pct": 5,
+      "trade_n": 21,
+      "cumulative_tactical_contribution_pct": 2.803968,
+      "annualized_contribution_pct": 0.32499,
+      "max_portfolio_drawdown_pct": -2.890965,
+      "drawdown_marking": "daily adjusted low against prior close-marked equity peak",
+      "worst_single_event_contribution_pct": -0.70051,
+      "positive_trade_rate": 66.666667,
+      "average_capital_utilization_pct": 1.003824,
+      "trade_contributions": [
+        0.344312,
+        0.371684,
+        -0.653648,
+        0.034645,
+        -0.277809,
+        -0.674084,
+        0.397129,
+        0.652747,
+        1.025188,
+        0.532725,
+        0.175551,
+        0.128526,
+        -0.429393,
+        -0.70051,
+        0.909361,
+        -0.386038,
+        0.576054,
+        -0.383711,
+        0.319953,
+        0.35449,
+        0.47699
+      ]
+    },
+    {
+      "horizon": 20,
+      "sleeve_pct": 10,
+      "trade_n": 21,
+      "cumulative_tactical_contribution_pct": 5.625951,
+      "annualized_contribution_pct": 0.644262,
+      "max_portfolio_drawdown_pct": -5.741844,
+      "drawdown_marking": "daily adjusted low against prior close-marked equity peak",
+      "worst_single_event_contribution_pct": -1.40102,
+      "positive_trade_rate": 66.666667,
+      "average_capital_utilization_pct": 2.007648,
+      "trade_contributions": [
+        0.688625,
+        0.743369,
+        -1.307296,
+        0.069291,
+        -0.555618,
+        -1.348168,
+        0.794258,
+        1.305493,
+        2.050377,
+        1.06545,
+        0.351102,
+        0.257052,
+        -0.858786,
+        -1.40102,
+        1.818723,
+        -0.772076,
+        1.152108,
+        -0.767421,
+        0.639905,
+        0.70898,
+        0.95398
+      ]
+    },
+    {
+      "horizon": 20,
+      "sleeve_pct": 15,
+      "trade_n": 21,
+      "cumulative_tactical_contribution_pct": 8.463492,
+      "annualized_contribution_pct": 0.957792,
+      "max_portfolio_drawdown_pct": -8.552861,
+      "drawdown_marking": "daily adjusted low against prior close-marked equity peak",
+      "worst_single_event_contribution_pct": -2.10153,
+      "positive_trade_rate": 66.666667,
+      "average_capital_utilization_pct": 3.011472,
+      "trade_contributions": [
+        1.032937,
+        1.115053,
+        -1.960944,
+        0.103936,
+        -0.833427,
+        -2.022252,
+        1.191387,
+        1.95824,
+        3.075565,
+        1.598176,
+        0.526653,
+        0.385578,
+        -1.288179,
+        -2.10153,
+        2.728084,
+        -1.158114,
+        1.728162,
+        -1.151132,
+        0.959858,
+        1.06347,
+        1.43097
+      ]
+    },
+    {
+      "horizon": 20,
+      "sleeve_pct": 20,
+      "trade_n": 21,
+      "cumulative_tactical_contribution_pct": 11.314048,
+      "annualized_contribution_pct": 1.265552,
+      "max_portfolio_drawdown_pct": -11.324236,
+      "drawdown_marking": "daily adjusted low against prior close-marked equity peak",
+      "worst_single_event_contribution_pct": -2.802039,
+      "positive_trade_rate": 66.666667,
+      "average_capital_utilization_pct": 4.015296,
+      "trade_contributions": [
+        1.37725,
+        1.486737,
+        -2.614592,
+        0.138582,
+        -1.111236,
+        -2.696337,
+        1.588516,
+        2.610986,
+        4.100753,
+        2.130901,
+        0.702205,
+        0.514105,
+        -1.717572,
+        -2.802039,
+        3.637445,
+        -1.544152,
+        2.304216,
+        -1.534843,
+        1.279811,
+        1.41796,
+        1.90796
+      ]
+    },
+    {
+      "horizon": 40,
+      "sleeve_pct": 5,
+      "trade_n": 17,
+      "cumulative_tactical_contribution_pct": 6.466213,
+      "annualized_contribution_pct": 0.740499,
+      "max_portfolio_drawdown_pct": -2.903316,
+      "drawdown_marking": "daily adjusted low against prior close-marked equity peak",
+      "worst_single_event_contribution_pct": -1.575654,
+      "positive_trade_rate": 58.823529,
+      "average_capital_utilization_pct": 1.625239,
+      "trade_contributions": [
+        0.149719,
+        0.214756,
+        -0.668299,
+        0.503688,
+        -1.575654,
+        1.298768,
+        1.095211,
+        1.383374,
+        0.851745,
+        -0.563126,
+        -0.746816,
+        0.794869,
+        2.068577,
+        -0.374723,
+        -0.284356,
+        2.34066,
+        -0.122045
+      ]
+    },
+    {
+      "horizon": 40,
+      "sleeve_pct": 10,
+      "trade_n": 17,
+      "cumulative_tactical_contribution_pct": 13.126161,
+      "annualized_contribution_pct": 1.462806,
+      "max_portfolio_drawdown_pct": -5.781077,
+      "drawdown_marking": "daily adjusted low against prior close-marked equity peak",
+      "worst_single_event_contribution_pct": -3.151308,
+      "positive_trade_rate": 58.823529,
+      "average_capital_utilization_pct": 3.250478,
+      "trade_contributions": [
+        0.299437,
+        0.429512,
+        -1.336598,
+        1.007376,
+        -3.151308,
+        2.597535,
+        2.190422,
+        2.766748,
+        1.703489,
+        -1.126252,
+        -1.493632,
+        1.589738,
+        4.137155,
+        -0.749447,
+        -0.568712,
+        4.68132,
+        -0.244091
+      ]
+    },
+    {
+      "horizon": 40,
+      "sleeve_pct": 15,
+      "trade_n": 17,
+      "cumulative_tactical_contribution_pct": 19.969922,
+      "annualized_contribution_pct": 2.166968,
+      "max_portfolio_drawdown_pct": -8.63326,
+      "drawdown_marking": "daily adjusted low against prior close-marked equity peak",
+      "worst_single_event_contribution_pct": -4.726962,
+      "positive_trade_rate": 58.823529,
+      "average_capital_utilization_pct": 4.875717,
+      "trade_contributions": [
+        0.449156,
+        0.644268,
+        -2.004898,
+        1.511064,
+        -4.726962,
+        3.896303,
+        3.285634,
+        4.150122,
+        2.555234,
+        -1.689378,
+        -2.240448,
+        2.384607,
+        6.205732,
+        -1.12417,
+        -0.853067,
+        7.02198,
+        -0.366136
+      ]
+    },
+    {
+      "horizon": 40,
+      "sleeve_pct": 20,
+      "trade_n": 17,
+      "cumulative_tactical_contribution_pct": 26.986331,
+      "annualized_contribution_pct": 2.853016,
+      "max_portfolio_drawdown_pct": -11.459835,
+      "drawdown_marking": "daily adjusted low against prior close-marked equity peak",
+      "worst_single_event_contribution_pct": -6.302617,
+      "positive_trade_rate": 58.823529,
+      "average_capital_utilization_pct": 6.500956,
+      "trade_contributions": [
+        0.598875,
+        0.859024,
+        -2.673197,
+        2.014752,
+        -6.302617,
+        5.19507,
+        4.380845,
+        5.533497,
+        3.406978,
+        -2.252504,
+        -2.987264,
+        3.179476,
+        8.27431,
+        -1.498894,
+        -1.137423,
+        9.362641,
+        -0.488182
+      ]
+    },
+    {
+      "horizon": 60,
+      "sleeve_pct": 5,
+      "trade_n": 14,
+      "cumulative_tactical_contribution_pct": 9.121033,
+      "annualized_contribution_pct": 1.053216,
+      "max_portfolio_drawdown_pct": -3.80694,
+      "drawdown_marking": "daily adjusted low against prior close-marked equity peak",
+      "worst_single_event_contribution_pct": -1.113164,
+      "positive_trade_rate": 71.428571,
+      "average_capital_utilization_pct": 2.007648,
+      "trade_contributions": [
+        0.117031,
+        -1.113164,
+        -0.627851,
+        1.843844,
+        0.350958,
+        1.402865,
+        1.344358,
+        -0.310947,
+        -0.216675,
+        0.384935,
+        2.469414,
+        0.111802,
+        0.484679,
+        2.597759
+      ]
+    },
+    {
+      "horizon": 60,
+      "sleeve_pct": 10,
+      "trade_n": 14,
+      "cumulative_tactical_contribution_pct": 18.818103,
+      "annualized_contribution_pct": 2.091158,
+      "max_portfolio_drawdown_pct": -7.532656,
+      "drawdown_marking": "daily adjusted low against prior close-marked equity peak",
+      "worst_single_event_contribution_pct": -2.226329,
+      "positive_trade_rate": 71.428571,
+      "average_capital_utilization_pct": 4.015296,
+      "trade_contributions": [
+        0.234062,
+        -2.226329,
+        -1.255702,
+        3.687688,
+        0.701916,
+        2.805731,
+        2.688715,
+        -0.621895,
+        -0.43335,
+        0.769869,
+        4.938828,
+        0.223604,
+        0.969358,
+        5.195518
+      ]
+    },
+    {
+      "horizon": 60,
+      "sleeve_pct": 15,
+      "trade_n": 14,
+      "cumulative_tactical_contribution_pct": 29.108753,
+      "annualized_contribution_pct": 3.114078,
+      "max_portfolio_drawdown_pct": -11.178146,
+      "drawdown_marking": "daily adjusted low against prior close-marked equity peak",
+      "worst_single_event_contribution_pct": -3.339493,
+      "positive_trade_rate": 71.428571,
+      "average_capital_utilization_pct": 6.022945,
+      "trade_contributions": [
+        0.351094,
+        -3.339493,
+        -1.883552,
+        5.531532,
+        1.052875,
+        4.208596,
+        4.033073,
+        -0.932842,
+        -0.650024,
+        1.154804,
+        7.408242,
+        0.335406,
+        1.454037,
+        7.793277
+      ]
+    },
+    {
+      "horizon": 60,
+      "sleeve_pct": 20,
+      "trade_n": 14,
+      "cumulative_tactical_contribution_pct": 40.009885,
+      "annualized_contribution_pct": 4.122207,
+      "max_portfolio_drawdown_pct": -14.744391,
+      "drawdown_marking": "daily adjusted low against prior close-marked equity peak",
+      "worst_single_event_contribution_pct": -4.452657,
+      "positive_trade_rate": 71.428571,
+      "average_capital_utilization_pct": 8.030593,
+      "trade_contributions": [
+        0.468125,
+        -4.452657,
+        -2.511403,
+        7.375376,
+        1.403833,
+        5.611461,
+        5.377431,
+        -1.24379,
+        -0.866699,
+        1.539738,
+        9.877656,
+        0.447207,
+        1.938715,
+        10.391036
+      ]
+    }
+  ],
+  "sequence_risk": {
+    "10": {
+      "20d": {
+        "horizon": 20,
+        "allocation_pct": 10,
+        "maximum_consecutive_losing_trades": 2,
+        "worst_2trade_sequence_pct": -2.247774,
+        "worst_3trade_sequence_pct": -1.9965,
+        "largest_sleeve_drawdown_pct": -5.741844
+      },
+      "40d": {
+        "horizon": 40,
+        "allocation_pct": 10,
+        "maximum_consecutive_losing_trades": 2,
+        "worst_2trade_sequence_pct": -2.603062,
+        "worst_3trade_sequence_pct": -3.483195,
+        "largest_sleeve_drawdown_pct": -5.781077
+      },
+      "60d": {
+        "horizon": 60,
+        "allocation_pct": 10,
+        "maximum_consecutive_losing_trades": 2,
+        "worst_2trade_sequence_pct": -3.454075,
+        "worst_3trade_sequence_pct": -3.228098,
+        "largest_sleeve_drawdown_pct": -7.532656
+      }
+    },
+    "20": {
+      "20d": {
+        "horizon": 20,
+        "allocation_pct": 20,
+        "maximum_consecutive_losing_trades": 2,
+        "worst_2trade_sequence_pct": -4.471484,
+        "worst_3trade_sequence_pct": -3.980367,
+        "largest_sleeve_drawdown_pct": -11.324236
+      },
+      "40d": {
+        "horizon": 40,
+        "allocation_pct": 20,
+        "maximum_consecutive_losing_trades": 2,
+        "worst_2trade_sequence_pct": -5.17248,
+        "worst_3trade_sequence_pct": -6.970027,
+        "largest_sleeve_drawdown_pct": -11.459835
+      },
+      "60d": {
+        "horizon": 60,
+        "allocation_pct": 20,
+        "maximum_consecutive_losing_trades": 2,
+        "worst_2trade_sequence_pct": -6.852236,
+        "worst_3trade_sequence_pct": -6.416188,
+        "largest_sleeve_drawdown_pct": -14.744391
+      }
+    }
+  },
+  "stop_loss_diagnostic": {
+    "20d": {
+      "profitable_events": 19,
+      "crossing_pct": {
+        "5": 42.105263,
+        "10": 10.526316,
+        "15": 5.263158,
+        "20": 0.0
+      }
+    },
+    "40d": {
+      "profitable_events": 18,
+      "crossing_pct": {
+        "5": 50.0,
+        "10": 22.222222,
+        "15": 11.111111,
+        "20": 5.555556
+      }
+    }
+  },
+  "live_signal_practicality": {
+    "required_data": "Daily adjusted/restored open, high, low and close plus at least five completed closes and the frozen annual threshold.",
+    "signal_known": "After the qualifying trading day's adjusted close and daily bar are final.",
+    "earliest_execution": "Next trading day open (E1).",
+    "threshold_update": "Once per calendar year using all completed eligible observations through the prior year-end; keep fixed during the new year.",
+    "missing_data": "NO SIGNAL; never infer or fabricate bars or thresholds.",
+    "corporate_actions": "Recompute affected adjusted history, validate continuity and rebuild the annual threshold before signals resume."
+  },
+  "fail_closed_spec": {
+    "action": "NO_SIGNAL",
+    "conditions": [
+      "missing adjusted OHLC",
+      "incomplete 5D history",
+      "stale or non-final quote",
+      "annual threshold unavailable",
+      "split/corporate-action inconsistency",
+      "source-data anomaly"
+    ]
+  },
+  "feasibility_gates": {
+    "SIGNAL": {
+      "status": "PASS",
+      "reason": "Uses completed daily data and a prior-year threshold without look-ahead."
+    },
+    "EXECUTION": {
+      "status": "PASS",
+      "reason": "E1 + 50 bps retains positive mean and median at 20D/40D/60D."
+    },
+    "RISK": {
+      "status": "PASS",
+      "reason": "Fixed small sleeves translate extreme ETF MAE into explicit, bounded portfolio impacts; strict controls remain necessary."
+    },
+    "CAPITAL": {
+      "status": "PASS",
+      "reason": "One-position/no-additional-capital policies cap exposure and prevent hidden leverage."
+    },
+    "DATA": {
+      "status": "PASS",
+      "reason": "Adjusted OHLC and annual threshold maintenance are operationally definable with fail-closed behavior."
+    }
+  },
+  "protected_files": {
+    "hashes_before": {
+      "research\\hs_leverage\\phase_l2_freeze.json": "34b941dbd5563afd72b80ae7a9d93bea1794b52b0df4e4f8baad8f1f4310cb8c",
+      "research\\hs_leverage\\phase_l3.py": "f0fdd858aeb5476b0ad06da6c4a0d2811c34fd6204460e14bd7d6f4e4ef8d9c7",
+      "research\\hs_leverage\\phase_l4.py": "55c9f6fe284b73c2f0cd1dbf06f86501a74fca84c241c091f0669ec753b3eb73",
+      "research\\hs_leverage\\output\\phase_l3_events.csv": "8692d607084f770a19a75c614857a120c3baa1c800915fabbf3a165fb40e49b2",
+      "research\\hs_leverage\\output\\phase_l3_yearly.csv": "a08fed561d71f06dd31e20bdabe1aeb71ea51e805f1f8227d9bc131a1f30a837",
+      "research\\hs_leverage\\output\\phase_l3_summary.json": "867191ea7b91849445e4b87060753dd9d465368acb26065c4ae16fa7f20eedec",
+      "research\\hs_leverage\\output\\phase_l3_report.md": "fead288c1b1a7cfcc7454bb62808ce3ce939066a7ddec1a66e477f8de5249bf1",
+      "research\\hs_leverage\\output\\phase_l4_execution.csv": "fd422faafe29273914d839c44422a2d4293b2dcde683571654feb7b4732c7e90",
+      "research\\hs_leverage\\output\\phase_l4_robustness.csv": "c95a4bbd2d86ddde5af350f9cb92f09a1b29d0edef36ec7a3b6b84024460f0e1",
+      "research\\hs_leverage\\output\\phase_l4_summary.json": "555b4cbac9a9d4d3b5683784ed3c291fe24f91f0d4e74fac5425addfb2a5cfb8",
+      "research\\hs_leverage\\output\\phase_l4_report.md": "6e537a34961170c3eccf6f605de65e2f25823c3590653b30ecc7cc2a8d8fcac5"
+    },
+    "hashes_after": {
+      "research\\hs_leverage\\phase_l2_freeze.json": "34b941dbd5563afd72b80ae7a9d93bea1794b52b0df4e4f8baad8f1f4310cb8c",
+      "research\\hs_leverage\\phase_l3.py": "f0fdd858aeb5476b0ad06da6c4a0d2811c34fd6204460e14bd7d6f4e4ef8d9c7",
+      "research\\hs_leverage\\phase_l4.py": "55c9f6fe284b73c2f0cd1dbf06f86501a74fca84c241c091f0669ec753b3eb73",
+      "research\\hs_leverage\\output\\phase_l3_events.csv": "8692d607084f770a19a75c614857a120c3baa1c800915fabbf3a165fb40e49b2",
+      "research\\hs_leverage\\output\\phase_l3_yearly.csv": "a08fed561d71f06dd31e20bdabe1aeb71ea51e805f1f8227d9bc131a1f30a837",
+      "research\\hs_leverage\\output\\phase_l3_summary.json": "867191ea7b91849445e4b87060753dd9d465368acb26065c4ae16fa7f20eedec",
+      "research\\hs_leverage\\output\\phase_l3_report.md": "fead288c1b1a7cfcc7454bb62808ce3ce939066a7ddec1a66e477f8de5249bf1",
+      "research\\hs_leverage\\output\\phase_l4_execution.csv": "fd422faafe29273914d839c44422a2d4293b2dcde683571654feb7b4732c7e90",
+      "research\\hs_leverage\\output\\phase_l4_robustness.csv": "c95a4bbd2d86ddde5af350f9cb92f09a1b29d0edef36ec7a3b6b84024460f0e1",
+      "research\\hs_leverage\\output\\phase_l4_summary.json": "555b4cbac9a9d4d3b5683784ed3c291fe24f91f0d4e74fac5425addfb2a5cfb8",
+      "research\\hs_leverage\\output\\phase_l4_report.md": "6e537a34961170c3eccf6f605de65e2f25823c3590653b30ecc7cc2a8d8fcac5"
+    },
+    "unchanged": true
+  },
+  "limitations": [
+    "Post-selection feasibility research, not fresh independent OOS validation.",
+    "Only 28 events with uneven year/regime coverage.",
+    "MAE uses adjusted intraday lows; daily bars cannot reveal intraday order within each bar.",
+    "The sleeve simulation holds the rest of the portfolio flat and is not a full portfolio backtest.",
+    "Generic friction is a stress assumption, not an exact tax or brokerage model."
+  ],
+  "verdict": "FEASIBLE_WITH_STRICT_RISK_CONTROLS"
+}

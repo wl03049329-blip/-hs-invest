@@ -1,0 +1,380 @@
+{
+  "specification": {
+    "phase": "L6",
+    "spec_version": "1.0.0",
+    "scope": "SPECIFICATION_ONLY",
+    "strategy_id": "HS_LEVERAGE_C_V1",
+    "strategy_version": "V1",
+    "instrument": "00631L",
+    "signal_family": "EXTREME_5D_CRASH_REBOUND",
+    "research_status": "RESEARCH_FROZEN",
+    "current_deployment_status": "NOT_READY_FOR_LIVE_CAPITAL",
+    "verdict": "SPEC_READY_FOR_SHADOW_IMPLEMENTATION"
+  },
+  "research_evidence": {
+    "L3": "PROMISING_OOS_EDGE",
+    "L4": "EDGE_ROBUST_ENOUGH_FOR_RISK_DESIGN",
+    "L5": "FEASIBLE_WITH_STRICT_RISK_CONTROLS",
+    "independent_fresh_oos_after_selection": false,
+    "interpretation": "Supported by historical OOS evidence, but not independently revalidated after selection, guaranteed, low risk, or approved for live capital."
+  },
+  "signal_identity": {
+    "candidate": "C",
+    "formula": {
+      "ret_5d": "adjusted_close_T / adjusted_close_T_minus_5 - 1",
+      "crash_velocity_5d": "max(0, -ret_5d) / 5"
+    },
+    "qualification_rule": "crash_velocity_5d >= frozen_annual_top_5pct_threshold",
+    "threshold_population": "eligible positive CrashVelocity5 observations through the prior calendar year-end",
+    "lookahead_allowed": false,
+    "signal_known_when": "The trading-day T adjusted daily bar is FINAL after session close."
+  },
+  "data_contract": {
+    "required_fields": [
+      "symbol",
+      "trading_date",
+      "adjusted_open",
+      "adjusted_high",
+      "adjusted_low",
+      "adjusted_close",
+      "data_as_of",
+      "source",
+      "adjustment_status",
+      "corporate_action_status"
+    ],
+    "minimum_history": "At least 5 completed trading days plus all history required to load or reproduce the frozen annual threshold.",
+    "price_basis": "ADJUSTED_RESTORED_OHLC_ONLY",
+    "raw_adjusted_series_mixing_allowed": false,
+    "bar_requirements": [
+      "completed session only",
+      "all adjusted OHLC fields non-null and positive",
+      "adjusted_low <= adjusted_open and adjusted_close <= adjusted_high",
+      "adjusted_low <= adjusted_close and adjusted_open <= adjusted_high",
+      "strictly increasing unique trading dates",
+      "expected trading-calendar continuity or an explicitly resolved exception",
+      "data_as_of and source freshness validated",
+      "symbol equals 00631L",
+      "schema and data version recognized"
+    ],
+    "missing_value_policy": "DO_NOT_INFER",
+    "integrity_failure_action": "FAIL_CLOSED_NO_SIGNAL"
+  },
+  "annual_threshold_policy": {
+    "frequency": "ONCE_PER_CALENDAR_YEAR",
+    "training_cutoff": "PRIOR_CALENDAR_YEAR_END",
+    "example": "The 2027 threshold uses eligible observations through 2026-12-31 only.",
+    "effective_period": "Frozen for the entire new calendar year.",
+    "intrayear_updates_allowed": false,
+    "reactive_performance_updates_allowed": false,
+    "required_fields": [
+      "threshold_value",
+      "threshold_training_end",
+      "threshold_effective_from",
+      "threshold_effective_to",
+      "threshold_version"
+    ],
+    "unavailable_or_invalid_action": "NO_SIGNAL"
+  },
+  "state_machine": {
+    "initial_state": "IDLE",
+    "states": {
+      "IDLE": "No active or shadow position and no pending qualifying signal.",
+      "SIGNAL_PENDING": "A qualifying completed daily signal has been detected and recorded.",
+      "ENTRY_ELIGIBLE": "The next valid trading session and NEXT_OPEN reference are available.",
+      "ACTIVE": "A logical tactical sleeve or shadow observation is open; this does not authorize an order.",
+      "COOLDOWN_HOLDING": "Existing exposure blocks additional capital until the fixed horizon completes.",
+      "CLOSED": "The fixed-horizon logical position has completed and its close record is appended.",
+      "FAIL_CLOSED": "Data, threshold, calendar, symbol, schema, or adjustment integrity is invalid."
+    },
+    "transitions": [
+      {
+        "from": "IDLE",
+        "to": "SIGNAL_PENDING",
+        "condition": "final_bar_valid AND threshold_valid AND signal_qualifies",
+        "action": "append evaluation record; do not send an order"
+      },
+      {
+        "from": "IDLE",
+        "to": "IDLE",
+        "condition": "final_bar_valid AND threshold_valid AND NOT signal_qualifies",
+        "action": "append non-trigger evaluation record"
+      },
+      {
+        "from": "SIGNAL_PENDING",
+        "to": "ENTRY_ELIGIBLE",
+        "condition": "next_trading_session_resolved AND entry_reference_available",
+        "action": "record planned_entry_date and NEXT_OPEN reference"
+      },
+      {
+        "from": "ENTRY_ELIGIBLE",
+        "to": "ACTIVE",
+        "condition": "shadow_or_future_approved_execution_record_opened",
+        "action": "open logical sleeve record only under the active operating mode"
+      },
+      {
+        "from": "ACTIVE",
+        "to": "COOLDOWN_HOLDING",
+        "condition": "logical_position_is_open",
+        "action": "block new capital and preserve the original entry and holding clock"
+      },
+      {
+        "from": "COOLDOWN_HOLDING",
+        "to": "COOLDOWN_HOLDING",
+        "condition": "repeat_signal_before_horizon_completion",
+        "action": "append repeat_signal=true; do not add capital, reset entry, or restart horizon"
+      },
+      {
+        "from": "COOLDOWN_HOLDING",
+        "to": "CLOSED",
+        "condition": "selected_fixed_horizon_completed",
+        "action": "append close and eligible realized-outcome records"
+      },
+      {
+        "from": "CLOSED",
+        "to": "IDLE",
+        "condition": "closure_record_persisted",
+        "action": "return to evaluation-ready state"
+      },
+      {
+        "from": "ANY_NON_FAIL_STATE",
+        "to": "FAIL_CLOSED",
+        "condition": "any_fail_closed_condition",
+        "action": "signal_status=NO_SIGNAL; append reason; prohibit entry"
+      },
+      {
+        "from": "FAIL_CLOSED",
+        "to": "IDLE",
+        "condition": "recovery_sequence_complete AND explicit_integrity_review_passed",
+        "action": "append recovery record before re-enabling evaluation"
+      }
+    ],
+    "automatic_order_execution": false
+  },
+  "execution_policy": {
+    "signal_date": "Completed qualifying trading day T",
+    "planned_entry_date": "Next valid trading session after T",
+    "planned_entry_reference": "NEXT_OPEN",
+    "same_day_close_live_executable": false,
+    "actual_entry_reference_if_later_implemented": "Required audit field; unresolved until a separately approved execution implementation exists.",
+    "research_friction_reference_bps": 50,
+    "research_friction_is_exact_cost_model": false
+  },
+  "overlap_policy": {
+    "pyramiding_allowed": false,
+    "one_position_at_a_time": true,
+    "on_repeat_signal_while_active": {
+      "repeat_signal": true,
+      "add_capital": false,
+      "reset_entry": false,
+      "restart_holding_period": false,
+      "increase_sleeve": false,
+      "purpose": "Audit information only"
+    }
+  },
+  "holding_policy": {
+    "status": "HOLDING_HORIZON_UNRESOLVED",
+    "final_selected_horizon": null,
+    "deployment_blocking": true,
+    "research_supported_candidates": {
+      "20D": [
+        "faster capital recycling",
+        "lower capital occupancy",
+        "positive historical OOS edge",
+        "lower cumulative tactical contribution"
+      ],
+      "40D": [
+        "stronger observed return profile",
+        "moderate capital occupancy",
+        "higher overlap pressure"
+      ],
+      "60D": [
+        "highest absolute observed return",
+        "approximately 51% research capital occupancy",
+        "more long-beta exposure",
+        "larger holding-time and path uncertainty"
+      ]
+    }
+  },
+  "risk_policy": {
+    "status": "FINAL_ALLOCATION_UNRESOLVED",
+    "final_selected_allocation_pct": null,
+    "evidence_label": "HISTORICAL_STRESS_REFERENCE_NOT_FUTURE_LOSS_LIMIT",
+    "reference_basis": "L5 conservative 60D adjusted-low MAE",
+    "bands": {
+      "S": {
+        "label": "SMALL",
+        "allocation_pct": 5,
+        "median_portfolio_mae_pct": -0.39,
+        "p10_portfolio_mae_pct": -1.65,
+        "worst_portfolio_mae_pct": -2.36
+      },
+      "M": {
+        "label": "MODERATE",
+        "allocation_pct": 10,
+        "median_portfolio_mae_pct": -0.79,
+        "p10_portfolio_mae_pct": -3.29,
+        "worst_portfolio_mae_pct": -4.72
+      },
+      "L": {
+        "label": "ELEVATED",
+        "allocation_pct": 15,
+        "median_portfolio_mae_pct": -1.18,
+        "p10_portfolio_mae_pct": -4.94,
+        "worst_portfolio_mae_pct": -7.08
+      },
+      "XL": {
+        "label": "HIGH",
+        "allocation_pct": 20,
+        "median_portfolio_mae_pct": -1.57,
+        "p10_portfolio_mae_pct": -6.59,
+        "worst_portfolio_mae_pct": -9.44
+      }
+    },
+    "default_posture": "Eligibility initially limited to SMALL or MODERATE exposure until shadow evidence accumulates; this is not a final allocation selection.",
+    "exposure_above_10pct": "Requires explicit additional risk approval.",
+    "automatic_band_xl_recommendation": false
+  },
+  "regime_policy": {
+    "role": "DIAGNOSTIC_ONLY",
+    "labels": [
+      "BULL",
+      "TRANSITION",
+      "BEAR"
+    ],
+    "bear_warning": "HIGHER_PATH_RISK",
+    "automatic_trade_block": false,
+    "automatic_allocation_change": false,
+    "automatic_threshold_change": false
+  },
+  "fail_closed_policy": {
+    "action": "NO_SIGNAL",
+    "conditions": [
+      "adjusted OHLC missing",
+      "adjusted OHLC stale",
+      "current daily bar incomplete",
+      "insufficient 5D lookback",
+      "annual threshold missing",
+      "threshold version invalid",
+      "corporate-action adjustment inconsistent",
+      "split anomaly detected",
+      "price discontinuity unresolved",
+      "duplicate date",
+      "invalid OHLC",
+      "source timestamp anomaly",
+      "trading calendar uncertainty",
+      "symbol mismatch",
+      "data schema mismatch"
+    ],
+    "prohibited_substitutions": [
+      "raw close",
+      "guessed or previous threshold",
+      "stale bar",
+      "current quote substituted for a completed adjusted daily bar"
+    ]
+  },
+  "corporate_action_recovery": {
+    "silent_repair_allowed": false,
+    "steps": [
+      "disable signal",
+      "rebuild the affected adjusted historical series",
+      "validate adjusted OHLC integrity",
+      "validate historical continuity",
+      "rerun threshold calculation if affected",
+      "compare pre/post-adjustment sanity checks",
+      "assign a new data version",
+      "append recovery audit record and explicitly re-enable signal"
+    ]
+  },
+  "audit_ledger": {
+    "mode": "APPEND_ONLY",
+    "schema_file": "research/hs_leverage/phase_l6_shadow_schema.json",
+    "silent_overwrite_allowed": false,
+    "correction_policy": "Append a correction record containing original_record_id, correction_reason and new_data_version; preserve the original record.",
+    "outcome_policy": "Append each realized horizon only after that horizon has completed; never backfill it early."
+  },
+  "shadow_mode": {
+    "required_before_live_decision": true,
+    "live_trading_enabled": false,
+    "ui_buy_recommendation_enabled": false,
+    "capital_allocation_enabled": false,
+    "daily_actions": [
+      "calculate signal from a final adjusted daily bar",
+      "append signal evaluation",
+      "record planned next-open reference when available",
+      "append realized outcomes only after each horizon completes"
+    ],
+    "parameter_changes_allowed": false,
+    "minimum_requirement": "At least one full annual threshold cycle OR a future explicit research decision.",
+    "arbitrary_minimum_event_count": null,
+    "methodological_defect_policy": "Create a new version; never mutate HS_LEVERAGE_C_V1 history."
+  },
+  "versioning": {
+    "current": "HS_LEVERAGE_C_V1",
+    "frozen_components": [
+      "signal formula",
+      "Top-5% positive-training-observation rule",
+      "annual expanding threshold policy",
+      "NEXT_OPEN execution reference",
+      "no pyramiding",
+      "one position at a time",
+      "adjusted/restored OHLC requirement",
+      "fail-closed data rules"
+    ],
+    "unresolved_components": [
+      "final holding horizon",
+      "final sleeve allocation",
+      "final UI representation",
+      "actual execution mechanism"
+    ],
+    "frozen_component_change_requires": "V2"
+  },
+  "monitoring_spec": {
+    "implementation_status": "NOT_IMPLEMENTED",
+    "data_health": [
+      "latest completed bar",
+      "threshold version",
+      "adjusted-history status"
+    ],
+    "signal_health": [
+      "current CrashVelocity5",
+      "distance to threshold",
+      "signal state"
+    ],
+    "position_or_shadow_health": [
+      "current state",
+      "entry reference",
+      "holding days",
+      "repeat signals"
+    ]
+  },
+  "production_acceptance_gates": {
+    "GATE_1_RESEARCH": {
+      "status": "PASS",
+      "requirement": "L3 OOS, L4 robustness and L5 risk feasibility complete"
+    },
+    "GATE_2_DATA": {
+      "status": "NOT_STARTED",
+      "requirement": "Adjusted OHLC pipeline reproducible and fail-closed behavior validated"
+    },
+    "GATE_3_SIGNAL": {
+      "status": "SPECIFIED_NOT_IMPLEMENTED",
+      "requirement": "Daily calculation reproducible with the frozen annual threshold"
+    },
+    "GATE_4_EXECUTION": {
+      "status": "SPECIFIED_NOT_VERIFIED",
+      "requirement": "NEXT_OPEN semantics verified in shadow operation"
+    },
+    "GATE_5_RISK_POLICY": {
+      "status": "BLOCKED_UNRESOLVED",
+      "requirement": "Final holding horizon selected and tactical exposure cap explicitly approved"
+    },
+    "GATE_6_SHADOW": {
+      "status": "NOT_STARTED",
+      "requirement": "Shadow mode operates without hindsight mutation for the minimum shadow requirement"
+    },
+    "GATE_7_REVIEW": {
+      "status": "NOT_APPROVED",
+      "requirement": "Explicit human approval before any live capital action"
+    }
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "version": "L2.0",
+  "status": "FROZEN_FOR_L3",
+  "freeze_timestamp": "2026-08-22T04:47:35.838997+00:00",
+  "price_requirement": {
+    "basis": "ADJUSTED_RESTORED_OHLC_ONLY",
+    "dataset": "research/hs_leverage/data/00631L-historical-adjusted.json",
+    "prohibited": "raw/unadjusted OHLC"
+  },
+  "candidates": {
+    "A": {
+      "name": "FAST_CRASH",
+      "signal": "5D Crash Velocity Top 10% of positive training observations",
+      "formula": "max(0, -5D adjusted-close return) / 5",
+      "threshold": "training-only positive-value 90th percentile"
+    },
+    "B": {
+      "name": "SUSTAINED_CRASH",
+      "signal": "10D Crash Velocity Top 10% of positive training observations",
+      "formula": "max(0, -10D adjusted-close return) / 10",
+      "threshold": "training-only positive-value 90th percentile"
+    },
+    "C": {
+      "name": "EXTREME_FAST_CRASH",
+      "signal": "5D Crash Velocity Top 5% of positive training observations",
+      "formula": "max(0, -5D adjusted-close return) / 5",
+      "threshold": "training-only positive-value 95th percentile"
+    },
+    "D": {
+      "name": "FAST_PLUS_DEEP",
+      "signal": "5D Crash Velocity Top 10% AND 20D drawdown-from-high deepest 20%",
+      "formula": "velocity=max(0, -5D adjusted-close return)/5; drawdown=close/trailing_20D_adjusted_close_high-1",
+      "threshold": "training-only positive velocity 90th percentile AND training-only drawdown 20th percentile"
+    }
+  },
+  "event_clustering": {
+    "rule": "For each candidate separately, qualifying observations separated by <=3 trading days are one event; an event ends after >3 trading days without another qualifying observation.",
+    "strategy_reference": "FIRST_QUALIFYING_DATE_CLOSE",
+    "trough": "descriptive only; prohibited as an entry"
+  },
+  "entry": {
+    "rule": "enter at first qualifying date adjusted close",
+    "confirmation": "diagnostic only; excluded from candidate selection"
+  },
+  "holding_horizons_trading_days": [
+    5,
+    10,
+    20,
+    40,
+    60
+  ],
+  "market_regime": {
+    "rule": "BULL close > MA200 and MA200 5D slope > 0; BEAR close < MA200 and MA200 5D slope < 0; otherwise TRANSITION",
+    "use": "diagnostic stratification only; not an entry filter"
+  },
+  "walk_forward": {
+    "type": "expanding window, annual fixed chronological OOS blocks",
+    "initial_training": "2014-10-31 through 2017-12-29",
+    "first_oos": "2018-01-01 through 2018-12-31",
+    "subsequent": "add each completed OOS year to training, then test the next calendar year",
+    "final_oos": "2026-01-01 through 2026-08-20 (available completed dataset period)",
+    "threshold_policy": "recompute every candidate percentile using only dates strictly before the OOS block"
+  },
+  "anti_tuning": {
+    "known_case_periods": [
+      "2024/08",
+      "2025/04",
+      "2025/11",
+      "2026/03",
+      "2026/07"
+    ],
+    "rule": "Known cases must not alter candidates, thresholds, clustering, entry, horizons, or walk-forward split."
+  },
+  "l3_constraints": "Do not add, discard, or alter candidates based on OOS results; report all A-D."
+}

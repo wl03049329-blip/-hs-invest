@@ -1,0 +1,59 @@
+{
+  "policy_id": "HS_LEVERAGE_C_V1_FORWARD_POLICY_2026",
+  "strategy_id": "HS_LEVERAGE_C_V1",
+  "strategy_version": "V1",
+  "status": "FORWARD_SHADOW_ACTIVE",
+  "manual_execution_only": true,
+  "live_capital": false,
+  "production_signal": false,
+  "capital_allocation_pct": 0,
+  "activation_date": "2026-08-22",
+  "forward_start_date": "2026-08-24",
+  "first_eligible_observation_date": null,
+  "historical_shadow_backfill": false,
+  "latest_historical_bar_at_activation": "2026-08-20",
+  "threshold": {
+    "threshold_value": 2.033335,
+    "threshold_training_end": "2025-12-31",
+    "threshold_effective_from": "2026-01-01",
+    "threshold_effective_to": "2026-12-31",
+    "threshold_version": "HS_LEVERAGE_C_V1_THRESHOLD_2026_TRAIN_END_2025-12-31",
+    "source_artifact": "research/hs_leverage/output/phase_l3_summary.json",
+    "candidate": "C",
+    "positive_training_observations": 1093
+  },
+  "data_contract": {
+    "price_basis": "ADJUSTED_RESTORED_OHLC_ONLY",
+    "source": "research/hs_leverage/data/00631L-historical-adjusted.json",
+    "symbol": "00631L",
+    "completed_bar_required": true,
+    "corporate_action_integrity_required": true,
+    "maximum_source_age_hours": 96
+  },
+  "paths": {
+    "forward_ledger": "research/hs_leverage/forward/hs_leverage_c_v1_forward_ledger.jsonl",
+    "outcomes_ledger": "research/hs_leverage/forward/hs_leverage_c_v1_outcomes.jsonl"
+  },
+  "protected_hashes": {
+    "research/hs_leverage/phase_l2_freeze.json": "34b941dbd5563afd72b80ae7a9d93bea1794b52b0df4e4f8baad8f1f4310cb8c",
+    "research/hs_leverage/phase_l3.py": "f0fdd858aeb5476b0ad06da6c4a0d2811c34fd6204460e14bd7d6f4e4ef8d9c7",
+    "research/hs_leverage/phase_l4.py": "55c9f6fe284b73c2f0cd1dbf06f86501a74fca84c241c091f0669ec753b3eb73",
+    "research/hs_leverage/phase_l5.py": "062f64874ed4a282f8637eecc976a264f5fa287c07c5419306d0125c46fa0757",
+    "research/hs_leverage/phase_l6_spec.json": "f3c3c4d3319b2436f3dc82da2c88f4dc308f7b7ae85ddac844341a4b9e2782ae",
+    "research/hs_leverage/phase_l6_risk_policy.md": "0043ac3d2052138f9431c4e6f6ebcdfeb2e79fef49356cb9a9b97434933518d4",
+    "research/hs_leverage/phase_l6_shadow_schema.json": "89129ccaf5c11f06b0671509b4afcff8f92ca7d62054e3382cabb37ab99acb55",
+    "research/hs_leverage/output/phase_l3_events.csv": "8692d607084f770a19a75c614857a120c3baa1c800915fabbf3a165fb40e49b2",
+    "research/hs_leverage/output/phase_l3_summary.json": "867191ea7b91849445e4b87060753dd9d465368acb26065c4ae16fa7f20eedec",
+    "research/hs_leverage/output/phase_l3_yearly.csv": "a08fed561d71f06dd31e20bdabe1aeb71ea51e805f1f8227d9bc131a1f30a837",
+    "research/hs_leverage/output/phase_l3_report.md": "fead288c1b1a7cfcc7454bb62808ce3ce939066a7ddec1a66e477f8de5249bf1",
+    "research/hs_leverage/output/phase_l4_execution.csv": "fd422faafe29273914d839c44422a2d4293b2dcde683571654feb7b4732c7e90",
+    "research/hs_leverage/output/phase_l4_summary.json": "555b4cbac9a9d4d3b5683784ed3c291fe24f91f0d4e74fac5425addfb2a5cfb8",
+    "research/hs_leverage/output/phase_l4_robustness.csv": "c95a4bbd2d86ddde5af350f9cb92f09a1b29d0edef36ec7a3b6b84024460f0e1",
+    "research/hs_leverage/output/phase_l4_report.md": "6e537a34961170c3eccf6f605de65e2f25823c3590653b30ecc7cc2a8d8fcac5",
+    "research/hs_leverage/output/phase_l5_summary.json": "ee229fa29403f480b54fcee8501aa9dab3382cebc3c1b586035d6ce8d2df8d60",
+    "research/hs_leverage/output/phase_l5_risk.csv": "f49c53ba665bac0df6dbd14800abd233ead899675d795473b25e306c9e6ccb0d",
+    "research/hs_leverage/output/phase_l5_sleeve_simulation.csv": "d596db9f86755e6e00b6688f7d2c105681d6148f6f684fc41862999b598eb8db",
+    "research/hs_leverage/output/phase_l5_report.md": "563659993ea1d176d19e74a18701540db18629010c8177357f6caced6724a0ac",
+    "research/hs_leverage/output/phase_l6_report.md": "eddf880721786e65d4a79d4b91b50e2b3a334105c442b11044dfc00188bf83f7"
+  }
+}
