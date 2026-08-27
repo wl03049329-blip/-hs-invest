@@ -296,7 +296,7 @@ def commit_slot(trading_date: str, slot: str, success: bool) -> None:
         print(f"[{slot}] no cache artifacts available to stage", flush=True)
     staged = subprocess.run(["git", "diff", "--cached", "--quiet"], cwd=ROOT)
     if staged.returncode == 0:
-        print(f"[{slot}] no cache metadata change to commit", flush=True)
+        print(f"[{slot}] COMMIT_NOT_NEEDED no cache metadata change", flush=True)
         return
     message = (
         f"Update intraday radar {trading_date} {slot}"
@@ -304,10 +304,12 @@ def commit_slot(trading_date: str, slot: str, success: bool) -> None:
         else f"Record failed intraday radar {trading_date} {slot}"
     )
     run(["git", "commit", "-m", message])
+    print(f"[{slot}] COMMIT_OK", flush=True)
     pushed = run(["git", "push"], check=False)
     if pushed.returncode != 0:
         run(["git", "pull", "--rebase"])
         run(["git", "push"])
+    print(f"[{slot}] PUSH_OK", flush=True)
 
 
 def complete_slot_diagnostic(
@@ -322,18 +324,26 @@ def complete_slot_diagnostic(
     source = attempt.get("slot_diagnostic") if isinstance(attempt.get("slot_diagnostic"), dict) else {}
     required_diagnostics = attempt.get("required_symbol_diagnostics") if isinstance(attempt.get("required_symbol_diagnostics"), dict) else {}
     success = attempt.get("verified") is True and attempt.get("status") == "success"
+    market_fetch = source.get("market_fetch") or ("PASS" if success else "FAIL")
+    core_input = source.get("core_input") or ("PASS" if success else "NOT_RUN")
+    score = source.get("score") or ("PASS" if success else "NOT_RUN")
+    snapshot_append = source.get("snapshot_append") or ("PASS" if success else "NOT_RUN")
     return {
         "schema_version": 3,
         "contract": SLOT_CONTRACT,
+        "trigger_status": "TRIGGERED",
         "trading_date": trading_date,
         "classified_slot": slot,
         "actual_run_time": attempt.get("attempted_at") or attempt.get("verified_at") or now.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
-        "market_fetch": source.get("market_fetch") or ("PASS" if success else "FAIL"),
+        "market_fetch": market_fetch,
+        "fetch_status": "FETCH_OK" if market_fetch == "PASS" else "FETCH_FAILED",
         "required_symbols": source.get("required_symbols") or required_diagnostics.get("symbols", {}),
         "market_as_of": attempt.get("market_as_of"),
-        "core_input": source.get("core_input") or ("PASS" if success else "NOT_RUN"),
-        "score": source.get("score") or ("PASS" if success else "NOT_RUN"),
-        "snapshot_append": source.get("snapshot_append") or ("PASS" if success else "NOT_RUN"),
+        "core_input": core_input,
+        "score": score,
+        "core_status": "CORE_OK" if core_input == "PASS" and score == "PASS" else "CORE_FAILED",
+        "snapshot_append": snapshot_append,
+        "snapshot_write_status": "SNAPSHOT_WRITTEN" if snapshot_append == "PASS" else "SNAPSHOT_NOT_WRITTEN",
         "existing_slot_success": existing_slot_success,
         "retry_number": retry_number,
         "failure_class": None if success else attempt.get("failure_class") or source.get("failure_class") or FAILURE_OPERATIONAL_SOURCE,
@@ -465,7 +475,7 @@ def run_scheduled_once(
             existing_slot_success=True,
             retry_number=int(state["slots"][classified_slot].get("attempts") or 1),
         )
-        locked.update({"market_fetch": "NOT_RUN", "core_input": "NOT_RUN", "score": "NOT_RUN", "snapshot_append": "FIRST_SUCCESS_LOCKED"})
+        locked.update({"market_fetch": "NOT_RUN", "fetch_status": "FETCH_NOT_RUN", "core_input": "NOT_RUN", "score": "NOT_RUN", "core_status": "CORE_NOT_RUN", "snapshot_append": "FIRST_SUCCESS_LOCKED", "snapshot_write_status": "FIRST_SUCCESS_LOCKED"})
         print(f"SLOT_DIAGNOSTIC {json.dumps(locked, ensure_ascii=False)}", flush=True)
     state = reconcile_closed_slots(state, now)
     persist_completeness(state)

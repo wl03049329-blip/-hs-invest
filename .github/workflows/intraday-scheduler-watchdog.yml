@@ -1,0 +1,39 @@
+name: HS LIVE intraday scheduler watchdog
+
+on:
+  schedule:
+    # Independent off-peak retries inside the existing Taipei V4 slot windows.
+    # Actual runtime classification remains forward-only; cron never assigns a slot.
+    - cron: "33,48 1 * * 1-5"
+    - cron: "3,18,33,48 2,3,4,5 * * 1-5"
+    - cron: "3,18 6 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  watchdog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: hs-live-intraday-slot-v4
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Configure watchdog committer
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin main
+      - name: Run one idempotent V4 scheduler tick
+        run: python scripts/run_intraday_radar_session.py --scheduled-once
