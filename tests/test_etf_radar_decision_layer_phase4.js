@@ -6,7 +6,9 @@ const html = fs.readFileSync("index.html", "utf8");
 const css = fs.readFileSync("formal-black-gold.css", "utf8");
 const decisionLayer = require("../hs-decision-layer-v1.js");
 const radarBlock = html.slice(html.indexOf("function radarDecisionLayerFor"), html.indexOf("function detailAdvancedHtml"));
-const longCard = html.slice(html.indexOf('if(mode==="long_term_core")return'), html.indexOf('if(mode==="leveraged")', html.indexOf('if(mode==="long_term_core")return')));
+const cardBuilderStart = html.indexOf("function buildRadarV2Card");
+const longCardStart = html.indexOf('if(mode==="long_term_core"){', cardBuilderStart);
+const longCard = html.slice(longCardStart, html.indexOf('if(mode==="leveraged")', longCardStart));
 
 // 1–2: the Radar has one adapter path and no financial decision implementation.
 assert.match(radarBlock, /interpreter\.interpret\(buildHSTodayDecisionInput\(x\)\)/);

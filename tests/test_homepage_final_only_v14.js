@@ -4,6 +4,7 @@ const assert=require("node:assert/strict");
 const fs=require("node:fs");
 const path=require("node:path");
 const resolver=require("../canonical-score-resolver.js");
+const decisionLayer=require("../hs-decision-layer-v1.js");
 
 const root=path.join(__dirname,"..");
 const html=fs.readFileSync(path.join(root,"index.html"),"utf8");
@@ -50,8 +51,8 @@ assert.match(html,/目前尚無有效盤後正式 Core Score；不使用盤中�
 assert.match(html,/盤後正式分數暫不可用/);
 console.log("PASS 7 homepage requires canonical FINAL and exposes explicit unavailable");
 
-const gateStart=html.indexOf("function homepageFinalDecision"),gateEnd=html.indexOf("function longRankRow",gateStart),gateContext={Number,Math,Set,LONG_RADAR_SCORED_CODES:new Set(symbols),LONG_TERM_CORE_SCORE_VERSION:version,strategyDecisionFor:item=>item?.strategyDecisions?.long_term_core||null};
-require("node:vm").createContext(gateContext);require("node:vm").runInContext(html.slice(gateStart,gateEnd),gateContext);
+const presentationStart=html.indexOf("function finalDecisionPresentation"),presentationEnd=html.indexOf("function applyCanonicalCoreSnapshot",presentationStart),gateStart=html.indexOf("function homepageFinalDecision"),gateEnd=html.indexOf("function longRankRow",gateStart),gateContext={Number,Math,Set,window:{HSDecisionLayerV1:decisionLayer},LONG_RADAR_SCORED_CODES:new Set(symbols),LONG_TERM_CORE_SCORE_VERSION:version,hsTodayFactorAdapter:factors=>({weeklyJ:factors?.weeklyJ||factors?.weekly_j||null,dd52:factors?.dd52||null,crash:factors?.crash||null}),strategyDecisionFor:item=>item?.strategyDecisions?.long_term_core||null};
+require("node:vm").createContext(gateContext);require("node:vm").runInContext(`${html.slice(presentationStart,presentationEnd)}\n${html.slice(gateStart,gateEnd)}`,gateContext);
 const localItem={id:"00830",scoreMode:"formal",strategyDecisions:{long_term_core:{score:99,coreScore:99}}};
 assert.equal(gateContext.homepageFinalDecision(localItem),null);
 const finalRecord=current.items["00830"],finalItem={id:"00830",scoreMode:"finalized_eod",intraday:{canonical:finalRecord},strategyDecisions:{long_term_core:{score:48,coreScore:48}}};
