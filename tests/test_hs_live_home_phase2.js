@@ -3,7 +3,7 @@ const fs = require("fs");
 const html = fs.readFileSync("index.html", "utf8");
 const css = fs.readFileSync("formal-black-gold.css", "utf8");
 
-assert.match(html, /HS LIVE · 盤中長期加碼雷達/);
+assert.match(html, /HS FINAL · 盤後正式長期加碼雷達/);
 assert.match(html, /長期加碼決策/);
 assert.match(html, /id="hsLiveReadScore"[^>]+data-read-core-score/);
 assert.match(html, /function hsLiveNextTier\(score\)/);

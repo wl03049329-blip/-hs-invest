@@ -385,13 +385,13 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 
   <section id="homeEtfBrief" class="panel homeEtfBrief hsLivePanel" data-tab-section="today" aria-labelledby="homeEtfBriefTitle">
     <div class="panelTitle compactTitle">
-      <div><p class="eyebrow">HS LIVE · 盤中長期加碼雷達</p><h2 id="homeEtfBriefTitle"><span class="headingEmoji" aria-hidden="true">◉</span>長期加碼決策</h2></div>
+      <div><p class="eyebrow">HS FINAL · 盤後正式長期加碼雷達</p><h2 id="homeEtfBriefTitle"><span class="headingEmoji" aria-hidden="true">◉</span>長期加碼決策</h2></div>
       <button id="hsLiveReadScore" class="hsLiveReadScore" type="button" data-read-core-score="0050">讀懂你的分數</button>
       <small id="updatedTop">載入最新排名</small>
     </div>
     <div id="homeEtfBriefSummary" class="homeEtfBriefSummary">買點資料載入中…</div>
     <section id="hsTodaySummary" class="hsTodaySummary" aria-live="polite"><div class="hsTodayLoading">今日決策摘要載入中…</div></section>
-    <div class="radarSchedule" aria-label="盤中長期加碼雷達更新時段"><span id="radarCurrentSlot">本次更新時段 —</span><span id="radarNextSlot">下一次更新 —</span><span>固定更新｜<b>09:30・10:30・11:30・12:30・13:30</b></span></div>
+    <div class="radarSchedule" aria-label="盤後正式長期加碼雷達資料狀態"><span id="radarCurrentSlot">目前顯示 盤後正式</span><span id="radarNextSlot">不使用舊盤中快照</span><span>正式來源｜<b>最新合法 FINALIZED_CLOSE</b></span></div>
     <div id="rankList" class="rankList"><div class="skeleton">載入排名中…</div></div>
   </section>
 
@@ -1001,7 +1001,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 <script src="strategy-mode-core.js?v=20260804a"></script>
 <script src="backtest/long-term/final-core-score-v1.js?v=20260813-phase6b"></script>
 <script src="final-core-production.js?v=20260826-trigger-p0"></script>
-<script src="canonical-score-resolver.js?v=20260827-p0"></script>
+<script src="canonical-score-resolver.js?v=20260902-v14-final-only"></script>
 <script src="hs-decision-layer-v1.js?v=20260823-dl1"></script>
 <script src="swing-strategy-core.js?v=20260809a"></script>
 <script src="leverage-v1-core.js?v=20260822-l1"></script>
@@ -2092,7 +2092,7 @@ function latestCanonicalCoreSnapshot(payload,today=taipeiToday()){
   return parseCanonicalCoreSnapshots(payload).filter(snapshot=>snapshot.trading_date<=today).sort((a,b)=>`${b.trading_date} ${b.slot}`.localeCompare(`${a.trading_date} ${a.slot}`))[0]||null;
 }
 function currentCanonicalCoreSnapshot(targetDate=taipeiToday()){
-  return window.HSCanonicalScoreResolver?.resolve({finalizedArtifact:finalizedCoreScoreHistoryArtifact,intradaySnapshots:liveCanonicalCoreSnapshots,targetDate,scoreVersion:LONG_TERM_CORE_SCORE_VERSION,symbols:LONG_RADAR_SCORED_CODES})||null;
+  return window.HSCanonicalScoreResolver?.resolveFinalOnly({finalizedArtifact:finalizedCoreScoreHistoryArtifact,targetDate,scoreVersion:LONG_TERM_CORE_SCORE_VERSION,symbols:LONG_RADAR_SCORED_CODES})||null;
 }
 async function loadCanonicalCoreLedger(signal){
   const payload=await fetchNoStore(`intraday-core-snapshots-v1.json?ts=${Date.now()}`,signal);
@@ -2771,14 +2771,19 @@ function hsLiveTimeline(symbol,snapshot){
   if(!day||!bySlot.size)return `<div class="hsLiveTimelineEmpty"><b>目前尚無新的盤中快照</b><small>行情截至 13:30</small></div>`;
   return `<div class="hsLiveTimeline" aria-label="${esc(symbol)} 盤中快照時序">${slots.map(slot=>{const row=bySlot.get(slot),item=row?.items?.[symbol],score=Number(item?.display_score);return `<span class="${item?.status==="SUCCESS"?"is-success":"is-missing"}"><b>${slot}</b><i>${Number.isFinite(score)?score:"—"}</i></span>`}).join("")}</div>`;
 }
+function homepageFinalDecision(item){
+  const canonical=item?.intraday?.canonical,decision=strategyDecisionFor(item,"long_term_core");
+  const score=Number(canonical?.score),decisionScore=Number(decision?.coreScore),date=String(canonical?.trading_date||""),asOf=String(canonical?.market_as_of||"");
+  return LONG_RADAR_SCORED_CODES.has(String(item?.id||""))&&item?.scoreMode==="finalized_eod"&&canonical?.source_status==="FINALIZED_EOD"&&canonical?.status==="SUCCESS"&&canonical?.score_version===LONG_TERM_CORE_SCORE_VERSION&&/^\d{4}-\d{2}-\d{2}$/.test(date)&&asOf.startsWith(`${date}T`)&&Number.isFinite(score)&&score>=0&&score<=100&&Number.isFinite(decisionScore)&&Math.abs(decisionScore-score)<1e-9?decision:null;
+}
 function longRankRow(x,index,previous,rank=index+1){
-  const decision=strategyDecisionFor(x,"long_term_core"),score=decision?.score,canonical=x.intraday?.canonical,ranked=Number.isFinite(rank),stageLabel=decision?.label||decision?.stage?.label||"資料不足",statusTier=coreStatusTier(Number.isFinite(decision?.coreScore)?decision.coreScore:score,stageLabel);
+  const decision=homepageFinalDecision(x),score=decision?.score,canonical=decision?x.intraday?.canonical:null,ranked=Number.isFinite(rank)&&Boolean(decision),stageLabel=decision?.label||decision?.stage?.label||"資料不足",statusTier=coreStatusTier(Number.isFinite(decision?.coreScore)?decision.coreScore:score,stageLabel);
   const nextTier=hsLiveNextTier(Number(score)),marketAsOf=String(canonical?.market_as_of||decision?.marketAsOf||x.intraday?.asOf||""),time=marketAsOf?formatHomeQuoteTime(marketAsOf):"尚無成功行情";
   const scoreDelta=Number(canonical?.delta_vs_previous_close),rankDelta=Number(canonical?.rank_delta_vs_previous_close),hasScore=Number.isFinite(score),scoreChange=Number.isFinite(scoreDelta)?`${scoreDelta>=0?"+":""}${scoreDelta.toFixed(1)}`:"—",rankChange=Number.isFinite(rankDelta)?rankDelta>0?`↑${rankDelta}`:rankDelta<0?`↓${Math.abs(rankDelta)}`:"排名不變":"昨收基準暫缺";
-  const rankBadge=ranked?`<span class="hsLiveRank rank-${rank}" aria-label="第${rank}名">${String(rank)}</span>`:`<span class="hsLiveRank is-wait" aria-label="原生資料尚未成熟">NA</span>`;
-  const snapshot=liveCanonicalCoreSnapshot?.items?.[x.id]===canonical?liveCanonicalCoreSnapshot:null,freshness=hsLiveSnapshotFreshness(snapshot,liveRadarCompleteness),closeComparisonLabel=hsLiveCloseComparisonLabel(canonical,snapshot);
-  const weeklyJ=Number.isFinite(x.j)?fmt(x.j):"—",nextSentence=nextTier.distance?`距「${esc(nextTier.label)}」還差 <b>${nextTier.distance} 分</b>`:"已進入極端參考區",decisionCopy=decision?.cta?.detail||decision?.stage?.recommendation||"等待下一筆正式資料";
-  return `<details class="hsLiveCard ${statusTier} ${ranked?"":"is-wait-native"} ${freshness.isLkg?"is-lkg":""}"><summary><div class="hsLivePrimary"><span class="hsLiveRankWrap">${rankBadge}</span><span class="hsLiveIdentity"><b>${esc(x.id)}</b><small>${esc(x.name)}</small></span><span class="hsLiveDecisionComposite"><span class="hsLiveScore"><b>${hasScore?score:"—"}</b><small>CORE SCORE</small></span><span class="hsLiveDelta"><b>${esc(closeComparisonLabel)}</b><i class="${scoreDelta>0?"is-up":scoreDelta<0?"is-down":""}">${scoreChange}</i><small>${esc(rankChange)}</small></span></span></div><div class="hsLiveSecondary"><span class="hsLiveMetaGroup"><span class="hsLiveWeeklyJ">週 J <b>${weeklyJ}</b></span><span class="hsLiveTier longRankStage ${statusTier}">${esc(stageLabel)}</span></span><span class="hsLiveLatest">${ranked?esc(freshness.label):"WAIT_NATIVE｜原生資料尚未成熟"}</span><span class="hsLiveOpen" aria-hidden="true">⌄</span></div></summary><div class="hsLiveCardDetail">${hasScore?`<section class="hsLiveSection hsLiveNextSection"><h3>距下一階段</h3><p>${nextSentence}</p><i class="hsLiveProgress"><b style="width:${nextTier.progress}%"></b></i></section><section class="hsLiveSection"><h3>買點驅動</h3><div class="hsLiveDrivers">${hsLiveDriverSummary(canonical)}</div></section><section class="hsLiveSection hsLiveTimelineWrap"><h3>今日盤中變化</h3>${hsLiveTimeline(x.id,snapshot)}</section><section class="hsLiveSection hsLiveDecision"><h3>HS 判讀</h3><strong>${esc(decisionCopy)}</strong><p>目前 ${score} 分，${nextTier.distance?`距下一階段還差 ${nextTier.distance} 分。`:"已進入極端參考區。"}</p></section><details class="hsLiveTech"><summary>技術資料</summary><div class="hsLiveDetailMeta"><span>週 J <b>${weeklyJ}</b></span><span>52週回檔 <b>${Number.isFinite(x.fromHigh)?fmt(x.fromHigh)+"%":"—"}</b></span><span>行情時間 <b>${esc(time)}</b></span></div></details>`:`<section class="hsLiveSection hsLiveDecision"><h3>HS 判讀</h3><strong>009815 目前維持 WAIT_NATIVE；資料不夠，不假裝有正式 Core Score。</strong></section>`}<div class="hsLiveActions"><button class="miniBtn" type="button" data-read-core-score="${esc(x.id)}">讀懂你的分數</button><button class="miniBtn" type="button" data-core-score-history="${esc(x.id)}">近10日盤後分數</button></div></div></details>`;
+  const rankBadge=ranked?`<span class="hsLiveRank rank-${rank}" aria-label="第${rank}名">${String(rank)}</span>`:`<span class="hsLiveRank is-wait" aria-label="${x.id==="009815"?"原生資料尚未成熟":"盤後正式分數暫不可用"}">NA</span>`;
+  const snapshot=liveCanonicalCoreSnapshot?.source_status==="FINALIZED_EOD"&&liveCanonicalCoreSnapshot?.items?.[x.id]===canonical?liveCanonicalCoreSnapshot:null,freshness=snapshot?{label:`盤後正式 ${formatHomeMonthDay(snapshot.trading_date)}｜FINAL`,isLkg:false}:{label:x.id==="009815"?"WAIT_NATIVE｜原生資料尚未成熟":"盤後正式分數暫不可用",isLkg:true},closeComparisonLabel=hsLiveCloseComparisonLabel(canonical,snapshot);
+  const weeklyJ=Number.isFinite(x.j)?fmt(x.j):"—",nextSentence=nextTier.distance?`距「${esc(nextTier.label)}」還差 <b>${nextTier.distance} 分</b>`:"已進入極端參考區",decisionCopy=decision?.cta?.detail||decision?.stage?.recommendation||"等待下一筆正式資料",unavailableCopy=x.id==="009815"?"009815 目前維持 WAIT_NATIVE；資料不夠，不假裝有正式 Core Score。":"目前尚無有效盤後正式 Core Score；不使用盤中或本機快取替代。";
+  return `<details class="hsLiveCard ${statusTier} ${ranked?"":"is-wait-native"} ${freshness.isLkg?"is-lkg":""}"><summary><div class="hsLivePrimary"><span class="hsLiveRankWrap">${rankBadge}</span><span class="hsLiveIdentity"><b>${esc(x.id)}</b><small>${esc(x.name)}</small></span><span class="hsLiveDecisionComposite"><span class="hsLiveScore"><b>${hasScore?score:"—"}</b><small>CORE SCORE</small></span><span class="hsLiveDelta"><b>${esc(closeComparisonLabel)}</b><i class="${scoreDelta>0?"is-up":scoreDelta<0?"is-down":""}">${scoreChange}</i><small>${esc(rankChange)}</small></span></span></div><div class="hsLiveSecondary"><span class="hsLiveMetaGroup"><span class="hsLiveWeeklyJ">週 J <b>${weeklyJ}</b></span><span class="hsLiveTier longRankStage ${statusTier}">${esc(stageLabel)}</span></span><span class="hsLiveLatest">${esc(freshness.label)}</span><span class="hsLiveOpen" aria-hidden="true">⌄</span></div></summary><div class="hsLiveCardDetail">${hasScore?`<section class="hsLiveSection hsLiveNextSection"><h3>距下一階段</h3><p>${nextSentence}</p><i class="hsLiveProgress"><b style="width:${nextTier.progress}%"></b></i></section><section class="hsLiveSection"><h3>買點驅動</h3><div class="hsLiveDrivers">${hsLiveDriverSummary(canonical)}</div></section><section class="hsLiveSection hsLiveTimelineWrap"><h3>今日盤中變化</h3>${hsLiveTimeline(x.id,snapshot)}</section><section class="hsLiveSection hsLiveDecision"><h3>HS 判讀</h3><strong>${esc(decisionCopy)}</strong><p>目前 ${score} 分，${nextTier.distance?`距下一階段還差 ${nextTier.distance} 分。`:"已進入極端參考區。"}</p></section><details class="hsLiveTech"><summary>技術資料</summary><div class="hsLiveDetailMeta"><span>週 J <b>${weeklyJ}</b></span><span>52週回檔 <b>${Number.isFinite(x.fromHigh)?fmt(x.fromHigh)+"%":"—"}</b></span><span>行情時間 <b>${esc(time)}</b></span></div></details>`:`<section class="hsLiveSection hsLiveDecision"><h3>HS 判讀</h3><strong>${esc(unavailableCopy)}</strong></section>`}<div class="hsLiveActions"><button class="miniBtn" type="button" data-read-core-score="${esc(x.id)}">讀懂你的分數</button><button class="miniBtn" type="button" data-core-score-history="${esc(x.id)}">近10日盤後分數</button></div></div></details>`;
 }
 function renderTodayHighlights(longs,swings){
   const bestLong=longs.find(item=>Number.isFinite(displayScore(item,"long_term_core")));
@@ -2846,7 +2851,7 @@ function buildHSTodayDecisionInput(item){
   if(item?.id==="009815")return {symbol:item.id,score:null,sourceStatus:"WAIT_NATIVE",asOf:item?.intraday?.asOf||null};
   if(!canonical||item?.intraday?.status!=="SUCCESS"||canonical?.status!=="SUCCESS")return {symbol:String(item?.id||""),score:null,sourceStatus:"FAIL_CLOSED",asOf:null};
   const sourceStatus=canonical?.freshness==="STALE"?"STALE":"SUCCESS",tradingDate=String(snapshot?.trading_date||canonical?.trading_date||item?.intraday?.quoteDate||"");
-  const baseline=hsTodayIntradayBaseline(item.id,snapshot)||hsTodayFinalizedBaseline(item.id,tradingDate);
+  const baseline=canonical?.source_status==="FINALIZED_EOD"?hsTodayFinalizedBaseline(item.id,tradingDate):hsTodayIntradayBaseline(item.id,snapshot)||hsTodayFinalizedBaseline(item.id,tradingDate);
   return {symbol:item.id,score:canonical.display_score??canonical.score,sourceStatus,asOf:canonical.market_as_of||item.intraday?.asOf||null,currentFactors:hsTodayFactorAdapter(canonical.core_factors),baseline:baseline||{type:"NONE"}};
 }
 function hsTodayDecisionFor(item,index){
@@ -2879,15 +2884,15 @@ function renderHSToday(longs){
 function renderTop(){
   const longIds=new Set(["0050","00830","00662","00757","009815","00935"]),swingIds=new Set(["00733","006201"]);
   const longs=all.filter(x=>longIds.has(x.id)).sort(longRankComparator);
-  const rankedLongs=longs.filter(item=>LONG_RADAR_SCORED_CODES.has(item.id)&&Number.isFinite(strategyDecisionFor(item,"long_term_core")?.coreScore));
+  const rankedLongs=longs.filter(item=>LONG_RADAR_SCORED_CODES.has(item.id)&&Boolean(homepageFinalDecision(item)));
   const waitingLongs=longs.filter(item=>!rankedLongs.includes(item));
   const displayedLongs=[...rankedLongs,...waitingLongs];
   const swings=all.filter(x=>swingIds.has(x.id)).sort((a,b)=>(displayScore(b,strategyModeFor(b))??-1)-(displayScore(a,strategyModeFor(a))??-1));
-  const longCount=longs.filter(x=>(strategyDecisionFor(x,"long_term_core")?.score??0)>=60).length;
+  const longCount=rankedLongs.filter(x=>(homepageFinalDecision(x)?.score??0)>=60).length;
   const swingCount=swings.filter(x=>(strategyDecisionFor(x,strategyModeFor(x))?.stage?.number??0)>0||["first","confirmed"].includes(strategyDecisionFor(x,strategyModeFor(x))?.stage?.key)).length;
   const snapshotAsOf=intradayLongRankAsOf(longs),snapshotSlot=intradayLongRankSlot(longs,snapshotAsOf),saved=previousLongRanks(),canonicalActive=rankedLongs.length===LONG_RADAR_SCORED_CODES.size&&rankedLongs.every(item=>Boolean(item.intraday?.canonical)),candidateSnapshot=canonicalActive?null:(snapshotAsOf?createLongRankSnapshot(rankedLongs,liveMarketCacheVersion||"",snapshotAsOf,snapshotSlot):null),verifiedSnapshot=canonicalActive?null:(isVerifiedLongRankSnapshot(liveRadarRefresh,candidateSnapshot)?candidateSnapshot:null),previous=canonicalActive?{}:comparisonLongRanks(saved,verifiedSnapshot),snapshotIdentity=longRankSnapshotIdentity(verifiedSnapshot);
-  $("#homeEtfBriefSummary").textContent=rankedLongs.length>=2?`最高決策優先：${rankedLongs[0].id}｜${displayScore(rankedLongs[0],"long_term_core")}分｜${strategyDecisionFor(rankedLongs[0],"long_term_core")?.label||"資料更新中"}；次順位：${rankedLongs[1].id}｜${displayScore(rankedLongs[1],"long_term_core")}分。`:"等待 canonical 盤中 Core Snapshot。";
-  renderHSToday(longs);
+  $("#homeEtfBriefSummary").textContent=rankedLongs.length>=2?`最高決策優先：${rankedLongs[0].id}｜${displayScore(rankedLongs[0],"long_term_core")}分｜${homepageFinalDecision(rankedLongs[0])?.label||"資料更新中"}；次順位：${rankedLongs[1].id}｜${displayScore(rankedLongs[1],"long_term_core")}分。`:"等待最新盤後正式 Core Score。";
+  renderHSToday(rankedLongs);
   const rankList=$("#rankList");rankList.classList.add("hsLiveGrid");rankList.innerHTML=displayedLongs.map((x,index)=>longRankRow(x,index,previous,rankedLongs.indexOf(x)>=0?rankedLongs.indexOf(x)+1:null)).join("")||'<div class="newsEmpty">資料載入中</div>';
   const liveReadScore=$("#hsLiveReadScore");if(liveReadScore)liveReadScore.dataset.readCoreScore=rankedLongs[0]?.id||"0050";
   $("#homeLeverageCard").innerHTML=leverageHomeCard(all.find(x=>x.id==="00631L"));
@@ -2895,13 +2900,13 @@ function renderTop(){
   if(verifiedSnapshot&&snapshotIdentity&&snapshotIdentity!==lastRankSnapshotIdentity){localStorage.setItem(LONG_RANK_STORAGE_KEY,JSON.stringify(longRankSnapshot(rankedLongs,saved,snapshotIdentity,snapshotAsOf,snapshotSlot)));lastRankSnapshotIdentity=snapshotIdentity}
   const radar=activeRadarItems(),sorted=[...radar].sort((a,b)=>(displayScore(b)??-1)-(displayScore(a)??-1)),low=[...radar].sort((a,b)=>a.j-b.j)[0],best=sorted.find(x=>Number.isFinite(displayScore(x)));
   $("#snapshotGrid").innerHTML=(best||low)?`<div class="snapshot"><span>最高策略分數</span><b>${best?`${best.id}｜${displayScore(best)} 分`:"資料不足"}</b></div><div class="snapshot"><span>最低週 J 值</span><b>${low?`${low.id}｜${fmt(low.j)}`:"—"}</b></div><div class="snapshot"><span>長期加碼區</span><b>${longCount} 檔</b></div><div class="snapshot"><span>波段已確認</span><b>${swingCount} 檔</b></div>`:'<div class="newsEmpty">尚無 ETF 資料。</div>';
-  const hasIntraday=longs.some(item=>item.scoreMode==="intraday"),schedule=longRankScheduleStatus(),radarDisplay=intradayRadarDisplayState(snapshotSlot,schedule,liveRadarRefreshAttempt,liveRadarCompleteness),actualSnapshotTime=radarDisplay.current,failedAttempt=radarDisplay.failed;
-  $("#updatedTop").textContent=hasIntraday?`盤中試算 ${actualSnapshotTime}｜週 KD 暫定`:radarDisplay.snapshotStatus&&radarDisplay.snapshotStatus!=="SNAPSHOT_SUCCESS"?`市場正式資料 ${esc(all[0]?.date||"—")}｜盤中雷達 ${radarDisplay.completeness||"未建立"}`:`盤後正式 ${esc(all[0]?.date||"—")}｜完成週 KD`;
-  $("#radarCurrentSlot").textContent=`本次更新時段 ${actualSnapshotTime}${failedAttempt?`｜${failedAttempt}`:""}`;
-  $("#radarNextSlot").textContent=radarDisplay.next;
+  const schedule=longRankScheduleStatus(),radarDisplay=intradayRadarDisplayState(snapshotSlot,schedule,liveRadarRefreshAttempt,liveRadarCompleteness),actualSnapshotTime=radarDisplay.current,failedAttempt=radarDisplay.failed,finalDate=rankedLongs.map(item=>String(item.intraday?.canonical?.trading_date||"")).filter(Boolean).sort().at(-1)||"";
+  $("#updatedTop").textContent=finalDate?`盤後正式 ${esc(finalDate)}｜FINAL`:`盤後正式分數暫不可用`;
+  $("#radarCurrentSlot").textContent=finalDate?`目前顯示 盤後正式 ${finalDate}`:"盤後正式分數暫不可用";
+  $("#radarNextSlot").textContent="不使用舊盤中快照";
   if($("#radarOverviewCurrent"))$("#radarOverviewCurrent").textContent=`本次更新時段：${actualSnapshotTime}${failedAttempt?`｜${failedAttempt}`:""}`;
   if($("#radarOverviewNext"))$("#radarOverviewNext").textContent=`下一次更新：${radarDisplay.next.replace(/^下一次更新\s*/,"")}`;
-  renderTodayHighlights(longs,swings);
+  renderTodayHighlights(rankedLongs,swings);
 }
 function uiMetricStatus(kind,value){
   if(!Number.isFinite(value))return"資料暫缺";

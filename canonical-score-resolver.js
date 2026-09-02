@@ -43,5 +43,14 @@
     return candidates.sort((a,b)=>b.trading_date.localeCompare(a.trading_date)||b.canonical_priority-a.canonical_priority||String(b.slot).localeCompare(String(a.slot)))[0]||null;
   }
 
-  return Object.freeze({normalizeFinalizedSnapshot,normalizeIntradaySnapshot,resolve});
+  function resolveFinalOnly({finalizedArtifact,targetDate,scoreVersion,symbols}){
+    if(!validDate(targetDate)||!scoreVersion||!(symbols instanceof Set||Array.isArray(symbols)))return null;
+    const options={scoreVersion,symbols:new Set(symbols),targetDate},candidates=[];
+    if(finalizedArtifact?.schema_version===1&&finalizedArtifact?.core_score_version===scoreVersion){
+      for(const snapshot of finalizedArtifact.snapshots||[]){const normalized=normalizeFinalizedSnapshot(snapshot,options);if(normalized)candidates.push(normalized)}
+    }
+    return candidates.sort((a,b)=>b.trading_date.localeCompare(a.trading_date))[0]||null;
+  }
+
+  return Object.freeze({normalizeFinalizedSnapshot,normalizeIntradaySnapshot,resolve,resolveFinalOnly});
 });
