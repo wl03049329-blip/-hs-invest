@@ -14,13 +14,14 @@ permissions:
 jobs:
   update:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - name: Fetch and validate CNN Fear and Greed
-        run: python scripts/update_cnn_fear_greed.py
+        run: python -u scripts/update_cnn_fear_greed.py
       - name: Commit changes
         run: |
           git config user.name "github-actions[bot]"

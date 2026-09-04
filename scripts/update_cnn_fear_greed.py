@@ -5,6 +5,10 @@ from __future__ import annotations
 import datetime as dt
 import json
 import math
+import os
+import tempfile
+import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -13,6 +17,8 @@ OUT = ROOT / "cnn-fear-greed.json"
 API_URL = "https://production.dataviz.cnn.io/index/fearandgreed/graphdata"
 SOURCE_URL = "https://www.cnn.com/markets/fear-and-greed"
 MAX_SOURCE_AGE = dt.timedelta(days=10)
+MAX_FETCH_ATTEMPTS = 5
+FETCH_BACKOFF_SECONDS = (2, 4, 8, 16)
 HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -20,6 +26,7 @@ HEADERS = {
         "Chrome/131.0.0.0 Safari/537.36"
     ),
     "Accept": "application/json, text/plain, */*",
+    "Accept-Language": "zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7",
     "Referer": SOURCE_URL,
     "Origin": "https://www.cnn.com",
 }
@@ -95,22 +102,111 @@ def build_payload(data: object, now: dt.datetime | None = None) -> dict:
     return payload
 
 
-def fetch_data() -> dict:
+def is_transient_fetch_error(exc: BaseException) -> bool:
+    if isinstance(exc, urllib.error.HTTPError):
+        return exc.code == 429 or 500 <= exc.code <= 599
+    return isinstance(exc, (urllib.error.URLError, ConnectionResetError, TimeoutError))
+
+
+def fetch_data(*, urlopen=None, sleeper=None) -> dict:
+    urlopen = urlopen or urllib.request.urlopen
+    sleeper = sleeper or time.sleep
     request = urllib.request.Request(API_URL, headers=HEADERS)
-    with urllib.request.urlopen(request, timeout=30) as response:
-        if response.status != 200:
-            raise RuntimeError(f"CNN API returned HTTP {response.status}")
-        return json.loads(response.read().decode("utf-8"))
+
+    for attempt in range(1, MAX_FETCH_ATTEMPTS + 1):
+        try:
+            with urlopen(request, timeout=30) as response:
+                status = getattr(response, "status", None)
+                if status is None:
+                    status = response.getcode()
+                if status != 200:
+                    raise urllib.error.HTTPError(
+                        API_URL, status, f"CNN API returned HTTP {status}", response.headers, None
+                    )
+                return json.loads(response.read().decode("utf-8"))
+        except Exception as exc:
+            if not is_transient_fetch_error(exc) or attempt == MAX_FETCH_ATTEMPTS:
+                raise
+            delay = FETCH_BACKOFF_SECONDS[attempt - 1]
+            print(
+                f"CNN_FETCH_RETRY attempt={attempt}/{MAX_FETCH_ATTEMPTS} "
+                f"backoff={delay}s error={type(exc).__name__}: {exc}"
+            )
+            sleeper(delay)
+
+    raise RuntimeError("CNN fetch retry loop ended unexpectedly")
 
 
-def main() -> None:
-    payload = build_payload(fetch_data())
-    OUT.write_text(
-        json.dumps(payload, ensure_ascii=False, indent=2, allow_nan=False) + "\n",
-        encoding="utf-8",
-    )
-    print(f"Wrote CNN Fear & Greed score {payload['score']} to {OUT}")
+def validate_existing_payload(data: object) -> dict:
+    if not isinstance(data, dict):
+        raise ValueError("existing CNN artifact is not an object")
+    if data.get("source") != "CNN Fear & Greed Index":
+        raise ValueError("existing CNN artifact source is invalid")
+    if data.get("source_url") != SOURCE_URL:
+        raise ValueError("existing CNN artifact source URL is invalid")
+    parse_timestamp(data.get("updated_at"))
+    parse_timestamp(data.get("source_updated_at"))
+    score = validated_score(data.get("score"), "existing.score")
+    previous = data.get("previous")
+    if not isinstance(previous, dict):
+        raise ValueError("existing CNN artifact previous values are missing")
+    validated_score(previous.get("day"), "existing.previous.day")
+    validated_score(previous.get("week"), "existing.previous.week")
+    validated_score(previous.get("month"), "existing.previous.month")
+    if data.get("sentiment") != sentiment_label(score):
+        raise ValueError("existing CNN artifact sentiment is inconsistent")
+    json.dumps(data, ensure_ascii=False, allow_nan=False)
+    return data
+
+
+def load_last_valid_data(out_path: Path) -> dict | None:
+    if not out_path.is_file():
+        return None
+    try:
+        return validate_existing_payload(json.loads(out_path.read_text(encoding="utf-8")))
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        print(f"LAST_VALID_DATA_INVALID error={type(exc).__name__}: {exc}")
+        return None
+
+
+def write_payload_atomic(out_path: Path, payload: dict) -> None:
+    serialized = json.dumps(payload, ensure_ascii=False, indent=2, allow_nan=False) + "\n"
+    temporary_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=out_path.parent,
+            prefix=f".{out_path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as temporary:
+            temporary.write(serialized)
+            temporary.flush()
+            os.fsync(temporary.fileno())
+            temporary_path = Path(temporary.name)
+        temporary_path.replace(out_path)
+    finally:
+        if temporary_path is not None and temporary_path.exists():
+            temporary_path.unlink()
+
+
+def main(*, out_path: Path = OUT, fetcher=None) -> int:
+    fetcher = fetcher or fetch_data
+    try:
+        payload = build_payload(fetcher())
+    except Exception as exc:
+        print(f"CNN_FETCH_FAILED error={type(exc).__name__}: {exc}")
+        if load_last_valid_data(out_path) is not None:
+            print(f"USING_LAST_VALID_DATA path={out_path}")
+            return 0
+        print(f"NO_LAST_VALID_DATA path={out_path}")
+        return 1
+
+    write_payload_atomic(out_path, payload)
+    print(f"Wrote CNN Fear & Greed score {payload['score']} to {out_path}")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
