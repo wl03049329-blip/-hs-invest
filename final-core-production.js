@@ -52,22 +52,62 @@
     const magnitude=Math.abs(Math.min(0,value));
     return clamp((magnitude-5)/25*100);
   }
-  function buildFinal(input={}){
-    const ticker=String(input.ticker||"");
-    const auxiliary={weeklyBias:finite(input.weeklyBias),marketFear:finite(input.marketFear),valuation:finite(input.valuation)};
-    if(!SUPPORTED_TICKERS.includes(ticker))return{mode:"long_term_core",modeLabel:"長期核心",score:null,coreScore:null,coreScoreDisplay:null,coreScoreVersion:LONG_TERM_CORE_SCORE_VERSION,scoreStatus:"unavailable",coreFactors:null,label:"資料不足",coreLabel:"資料不足",historicalTriggerRate:null,dataStatus:"FAIL_CLOSED",marketAsOf:String(input.marketAsOf||""),coverage:0,availableWeight:0,auxiliary,stage:{key:"unavailable",label:"資料不足",recommendation:"缺少 canonical 歷史校準，暫不提供分數。"}};
+  function calculateCanonicalCore(input={}){
     const jScore=strategy.weeklyKdjFactor(finite(input.j),finite(input.k),finite(input.d));
     const dd52Score=strategy.drawdownFactor(finite(input.dd52));
     const crashRaw=finite(input.crashRaw)??crashRawFromRows(input.rows);
     const crash=crashScore(crashRaw);
     const exact=canonical.calculateFinalCoreScoreV1(jScore,dd52Score,crash);
-    const display=canonical.displayFinalCoreScoreV1(exact);
-    const classification=labelFor(exact),cta=ctaFor(exact);
     const factors={
       weeklyJ:{raw:finite(input.j),score:jScore,weight:30,contribution:jScore===null?null:jScore*.30},
       dd52:{raw:finite(input.dd52),score:dd52Score,weight:55,contribution:dd52Score===null?null:dd52Score*.55},
       crash:{raw:crashRaw,score:crash,weight:15,contribution:crash===null?null:crash*.15}
     };
+    return{exact,display:canonical.displayFinalCoreScoreV1(exact),factors};
+  }
+  function normalizedDailyRows(rows){
+    const byDate=new Map();
+    for(const row of Array.isArray(rows)?rows:[]){
+      const date=String(row?.date||"").slice(0,10),close=Number(row?.close),open=Number(row?.open??close),high=Number(row?.max??row?.high??close),low=Number(row?.min??row?.low??close);
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||![close,open,high,low].every(Number.isFinite)||Math.min(close,open,high,low)<=0||high<low)continue;
+      byDate.set(date,{date,close,open,high,low});
+    }
+    return[...byDate.values()].sort((a,b)=>a.date.localeCompare(b.date));
+  }
+  function weeklyObservationCount(rows){
+    const weeks=new Set();
+    for(const row of rows){
+      const date=new Date(`${row.date}T00:00:00+08:00`),weekday=date.getDay()||7;
+      date.setDate(date.getDate()-weekday+1);weeks.add(date.toISOString().slice(0,10));
+    }
+    return weeks.size;
+  }
+  function adHocUnavailable(input,reason,details={}){
+    const ticker=String(input?.ticker||"").trim().toUpperCase(),metadata=input?.metadata||{};
+    return{ticker,name:String(metadata.name||ticker),available:false,score:null,displayScore:null,tier:"HS SCORE UNAVAILABLE",band:"HS SCORE UNAVAILABLE",components:null,scoreAsOf:null,priceDataAsOf:null,mode:"AD_HOC",source:"PROVIDER_EOD",officialEligible:SUPPORTED_TICKERS.includes(ticker),forwardEligible:false,reason,...details};
+  }
+  function buildAdHocScore(input={}){
+    const ticker=String(input.ticker||"").trim().toUpperCase(),metadata=input.metadata||{};
+    const code=String(metadata.id||metadata.code||"").trim().toUpperCase(),exchange=String(metadata.exchange||"").trim().toUpperCase(),officialType=String(metadata.officialType||metadata.official_type||metadata.type||"");
+    if(!/^[0-9A-Z]{4,10}$/.test(ticker))return adHocUnavailable({...input,ticker},"INVALID_TICKER");
+    if(code!==ticker||!["TWSE","TPEX"].includes(exchange)||!/ETF|指數股票型基金|基金/.test(officialType)||/ETN|指數投資證券|權證/.test(officialType))return adHocUnavailable({...input,ticker},"UNSUPPORTED_INSTRUMENT");
+    if(input.rowsAdjusted!==true)return adHocUnavailable({...input,ticker},"CANONICAL_INPUT_UNAVAILABLE");
+    const rows=normalizedDailyRows(input.rows),weeklyCount=weeklyObservationCount(rows),closeCount=rows.filter(row=>Number.isFinite(row.close)&&row.close>0).length;
+    if(rows.length<252)return adHocUnavailable({...input,ticker},"INSUFFICIENT_DAILY_HISTORY",{maturity:{daily:rows.length,weekly:weeklyCount,crash:closeCount}});
+    if(weeklyCount<9)return adHocUnavailable({...input,ticker},"INSUFFICIENT_WEEKLY_HISTORY",{maturity:{daily:rows.length,weekly:weeklyCount,crash:closeCount}});
+    if(closeCount<20)return adHocUnavailable({...input,ticker},"INSUFFICIENT_CRASH_HISTORY",{maturity:{daily:rows.length,weekly:weeklyCount,crash:closeCount}});
+    const calculated=calculateCanonicalCore({...input,ticker,rows});
+    if(calculated.exact===null)return adHocUnavailable({...input,ticker},"CANONICAL_INPUT_UNAVAILABLE",{maturity:{daily:rows.length,weekly:weeklyCount,crash:closeCount}});
+    const classification=labelFor(calculated.exact),scoreAsOf=rows.at(-1).date;
+    return{ticker,name:String(metadata.name||ticker),available:true,score:calculated.exact,displayScore:calculated.display,tier:classification.label,band:classification.label,components:calculated.factors,scoreAsOf,priceDataAsOf:scoreAsOf,mode:"AD_HOC",source:"PROVIDER_EOD",officialEligible:SUPPORTED_TICKERS.includes(ticker),forwardEligible:false,reason:null,maturity:{daily:rows.length,weekly:weeklyCount,crash:closeCount}};
+  }
+  function buildFinal(input={}){
+    const ticker=String(input.ticker||"");
+    const auxiliary={weeklyBias:finite(input.weeklyBias),marketFear:finite(input.marketFear),valuation:finite(input.valuation)};
+    if(!SUPPORTED_TICKERS.includes(ticker))return{mode:"long_term_core",modeLabel:"長期核心",score:null,coreScore:null,coreScoreDisplay:null,coreScoreVersion:LONG_TERM_CORE_SCORE_VERSION,scoreStatus:"unavailable",coreFactors:null,label:"資料不足",coreLabel:"資料不足",historicalTriggerRate:null,dataStatus:"FAIL_CLOSED",marketAsOf:String(input.marketAsOf||""),coverage:0,availableWeight:0,auxiliary,stage:{key:"unavailable",label:"資料不足",recommendation:"缺少 canonical 歷史校準，暫不提供分數。"}};
+    const calculated=calculateCanonicalCore(input),exact=calculated.exact,display=calculated.display;
+    const classification=labelFor(exact),cta=ctaFor(exact);
+    const factors=calculated.factors;
     return{mode:"long_term_core",modeLabel:"長期核心",score:display,coreScore:exact,coreScoreDisplay:display,coreScoreVersion:LONG_TERM_CORE_SCORE_VERSION,scoreStatus:exact===null?"unavailable":"complete",coreFactors:factors,label:classification.label,coreLabel:classification.label,historicalTriggerRate:classification.triggerRate,dataStatus:exact===null?"FAIL_CLOSED":"ETF_NATIVE_HISTORY",marketAsOf:String(input.marketAsOf||""),coverage:exact===null?0:100,availableWeight:exact===null?Object.values(factors).filter(item=>item.score!==null).reduce((sum,item)=>sum+item.weight,0):100,weightedRawTotal:exact,normalizedScore:exact,finalScore:exact,auxiliary,stage:{key:exact===null?"unavailable":classification.label,label:classification.label,recommendation:cta.detail},cta};
   }
   function buildDecision(input={},legacyDecision=null,requestedVersion){
@@ -81,5 +121,5 @@
     if(av===null)return 1;if(bv===null)return-1;
     return bv-av||String(a?.ticker||"").localeCompare(String(b?.ticker||""));
   }
-  return{LONG_TERM_CORE_SCORE_VERSION,LEGACY_VERSION,SUPPORTED_TICKERS,LABELS,resolveVersion,labelFor,historicalTriggerForScore,ctaFor,crashRawFromRows,crashScore,buildFinal,buildDecision,compare};
+  return{LONG_TERM_CORE_SCORE_VERSION,LEGACY_VERSION,SUPPORTED_TICKERS,LABELS,resolveVersion,labelFor,historicalTriggerForScore,ctaFor,crashRawFromRows,crashScore,buildAdHocScore,buildFinal,buildDecision,compare};
 });

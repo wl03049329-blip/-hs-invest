@@ -726,6 +726,11 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
         <div class="watchActions"><button class="miniBtn" id="addEtfBtn" type="button">＋ 新增 ETF</button><button class="miniBtn" id="resetEtfBtn" type="button">清除我的自選</button></div>
       </div>
       <p id="radarListHint" class="watchHint">弘昇精選固定追蹤 8 檔 ETF，不受任何使用者的自選清單影響，也不包含持股股數、均價或成本。</p>
+      <section class="watchAdHocPanel" aria-labelledby="watchAdHocTitle">
+        <div><span>AD_HOC 自選試算</span><h3 id="watchAdHocTitle">查詢 ETF 的 HS C4 分數</h3><p>使用正式 C4 計分引擎試算；不屬於正式 HS Eligible，也不寫入 Forward。</p></div>
+        <form id="watchAdHocForm" class="watchAdHocForm"><label for="watchAdHocTicker">輸入台股 ETF 代號</label><div><input id="watchAdHocTicker" name="ticker" type="text" inputmode="text" maxlength="10" autocomplete="off" autocapitalize="characters" placeholder="例如 00878"><button class="miniBtn" type="submit">查詢 HS</button></div></form>
+        <div id="watchAdHocResult" class="watchAdHocResult" aria-live="polite"><p>輸入代號後，只會載入該檔 ETF 的 Provider EOD 歷史資料。</p></div>
+      </section>
       <div id="watchList" class="watchList"><div class="skeleton">載入清單中…</div></div>
       <div class="buyPlanModes" role="group" aria-label="分批規劃模式">
         <span>分批規劃：</span>
@@ -1053,6 +1058,7 @@ let etfUniverseMeta=null;
 let marketEventsPayload={items:[]};
 let latestPublicQuotes=new Map();
 let drawdownLookupState=null;
+let watchAdHocQuery=null;
 const ETF_UNIVERSE_CACHE_KEY=HSStorage.keys.etfUniverseCache;
 function radarList(){return radarMode==="my"?watchlist:DEFAULT_WATCHLIST}
 function catalogItem(id){return stockCatalog.find(item=>item.id===id)}
@@ -1613,7 +1619,8 @@ async function loadEtfData(id){
     apiGet({dataset:"TaiwanStockDividendResult",data_id:id,start_date:startDate()},{soft:true})
   ]);
   if(!data.length)throw new Error(id+" 沒有價格資料");
-  const strategyType=(META[id]||{}).strategyType||"equity";
+  const metadata=META[id]||catalogItem(id)||{name:id,type:"ETF",risk:"高",market:"台灣ETF",strategyType:"equity",category:"other"};
+  const strategyType=metadata.strategyType||"equity";
   const adjusted=HSBuyPointCore.adjustPriceHistory(data,corporateEventsFor(id,dividends));
   const rows=adjusted.rows;
   const latest=rows.at(-1),price=+latest.close;
@@ -1627,7 +1634,7 @@ async function loadEtfData(id){
   const historicalPosition=HSBuyPointCore.historicalPosition(features,rows,x);
   const historyStats=HSBuyPointCore.similarSignalReport(rows,features,x,strategyType);
   const item={
-    id,...(META[id]||{name:id,type:"ETF",risk:"高",market:"台灣ETF",strategyType:"equity"}),price,date:latest.date,weekState:weekState(latest.date),
+    id,...metadata,price,date:latest.date,weekState:weekState(latest.date),
     changePct:rows.length>1?(price/+rows.at(-2).close-1)*100:0,
     ytd:(price/+firstY.close-1)*100,r1y:returnFrom(rows,252),r3y:returnFrom(rows,756),
     high52,low52,fromHigh:(price/high52-1)*100,fromLow:(price/low52-1)*100,
@@ -1651,8 +1658,8 @@ async function loadEtfData(id){
     priceUpdatedAt:`${latest.date} ${latest.quote_time||"收盤"}`,
     weekDataLabel:weekState(latest.date).short==="暫定"?"依目前週線試算":"依最近完成週線",
     modelLabel:"模型資料載入中",
-    valuation:valuationFor(id,(META[id]||{}).category||"other"),
-    officialRows:rows
+    valuation:valuationFor(id,metadata.category||"other"),
+    officialRows:rows,officialRowsAdjusted:true
   };
   item.legacyScore=calcBuyScore(item);item.scoreParts=scoreParts(item);refreshDecisionModel(item);item.action=actionFor(item);
   item.formalScore=item.score;
@@ -3510,6 +3517,31 @@ function renderWatchlist(){
 function watchMaturityLabel(state){return({MATURE:"資料完整",PARTIAL:"資料建立中",INSUFFICIENT_HISTORY:"歷史資料不足",WAIT_NATIVE:"原生資料成熟中",UNSUPPORTED_ASSET_CLASS:"不支援此資產類型",BENCHMARK_UNAVAILABLE:"比較基準待驗證"})[state]||"資料狀態待確認"}
 function watchMetric(value,suffix=""){return Number.isFinite(value)?`${fmt(value)}${suffix}`:"—"}
 function watchDirectionIcon(direction){return direction==="RISING"?"↑":direction==="FALLING"?"↓":"→"}
+function adHocScoreForItem(item,metadata=catalogItem(item?.id)||item){
+  if(!item||!window.HSFinalCoreProduction?.buildAdHocScore)return null;
+  return HSFinalCoreProduction.buildAdHocScore({ticker:item.id,metadata,j:item.j,k:item.k,d:item.d,dd52:item.fromHigh,rows:item.officialRows||[],rowsAdjusted:item.officialRowsAdjusted===true});
+}
+function adHocReasonText(reason){return({INVALID_TICKER:"代號格式無效。",UNSUPPORTED_INSTRUMENT:"找不到受支援的 TWSE／TPEx ETF。",PRICE_DATA_UNAVAILABLE:"價格資料暫時無法取得。",INSUFFICIENT_DAILY_HISTORY:"有效日線未滿 252 個交易日。",INSUFFICIENT_WEEKLY_HISTORY:"有效週線未滿 9 週。",INSUFFICIENT_CRASH_HISTORY:"Crash 所需收盤資料未滿 20 筆。",CANONICAL_INPUT_UNAVAILABLE:"Canonical C4 必要輸入不完整。"})[reason]||"目前無法完成 HS C4 自選試算。"}
+function adHocComponentRow(label,component){return`<div><span>${esc(label)}</span><b>${Number.isFinite(component?.contribution)?fmt(component.contribution):"—"} / ${component?.weight||"—"}</b><small>原始值 ${Number.isFinite(component?.raw)?fmt(component.raw):"—"}</small></div>`}
+function renderWatchAdHocResult(result=watchAdHocQuery){
+  const root=$("#watchAdHocResult");if(!root)return;
+  if(!result){root.innerHTML="<p>輸入代號後，只會載入該檔 ETF 的 Provider EOD 歷史資料。</p>";return}
+  if(result.kind==="loading"){root.innerHTML=`<div class="watchAdHocLoading">正在取得 ${esc(result.ticker)} 的調整後歷史資料…</div>`;return}
+  const score=result.score;
+  if(!score?.available){root.innerHTML=`<article class="watchAdHocUnavailable"><b>HS SCORE UNAVAILABLE</b><span>${esc(result.ticker||"")} ${esc(result.name||"")}</span><p>${esc(adHocReasonText(score?.reason||result.reason))}</p><small>AD_HOC｜未產生正式 observation，未寫入 Forward。</small></article>`;return}
+  const already=watchlist.some(item=>item.id===score.ticker),eligibility=score.officialEligible?"此 ETF 已在正式 Eligible；本次查詢仍只是 AD_HOC。":"不屬於正式 HS Eligible Universe";
+  root.innerHTML=`<article class="watchAdHocScoreCard"><header><div><b>${esc(score.ticker)}</b><span>${esc(score.name)}</span></div><em>AD_HOC 自選試算</em></header><div class="watchAdHocHero"><span>HS</span><b>${score.displayScore}</b><strong>${esc(score.tier)}</strong></div><div class="watchAdHocComponents">${adHocComponentRow("Weekly J",score.components?.weeklyJ)}${adHocComponentRow("DD52",score.components?.dd52)}${adHocComponentRow("Crash",score.components?.crash)}</div><dl><div><dt>資料日期</dt><dd>${esc(score.scoreAsOf)}</dd></div><div><dt>資料來源</dt><dd>Provider EOD</dd></div></dl>${already?'<button class="miniBtn" type="button" disabled>已在我的自選</button>':`<button class="miniBtn" type="button" data-add-ad-hoc="${esc(score.ticker)}">＋ 加入我的自選</button>`}<footer><b>${esc(eligibility)}</b><span>不寫入 Forward｜不建立正式歷史 observation</span></footer></article>`;
+  root.querySelector("[data-add-ad-hoc]")?.addEventListener("click",event=>addWatch(event.currentTarget.dataset.addAdHoc));
+}
+async function queryWatchAdHoc(ticker){
+  const normalized=String(ticker||"").trim().toUpperCase();watchAdHocQuery={kind:"loading",ticker:normalized};renderWatchAdHocResult();
+  if(!/^[0-9A-Z]{4,10}$/.test(normalized)){watchAdHocQuery={kind:"ready",ticker:normalized,score:HSFinalCoreProduction.buildAdHocScore({ticker:normalized})};renderWatchAdHocResult();return}
+  await ensureStockCatalog();const metadata=catalogItem(normalized);
+  if(!metadata){watchAdHocQuery={kind:"ready",ticker:normalized,score:HSFinalCoreProduction.buildAdHocScore({ticker:normalized})};renderWatchAdHocResult();return}
+  try{const item=await one(normalized),score=adHocScoreForItem(item,metadata);watchAdHocQuery={kind:"ready",ticker:normalized,name:metadata.name,score};}
+  catch(error){watchAdHocQuery={kind:"ready",ticker:normalized,name:metadata.name,score:{available:false,reason:"PRICE_DATA_UNAVAILABLE",ticker:normalized,name:metadata.name}}}
+  renderWatchAdHocResult();
+}
 function watchDiagnosticCard(item,state){
   const id=esc(item.id),name=esc(item.name||item.id);
   if(state?.kind==="loading")return`<article class="watchDiagnosticCard is-loading" data-watch-symbol="${id}"><header><div><b>${id}</b><span>${name}</span></div><em>載入中</em></header><div class="watchDiagnosticLoading">正在取得歷史資料…</div></article>`;
@@ -3518,7 +3550,8 @@ function watchDiagnosticCard(item,state){
   if(!d)return`<article class="watchDiagnosticCard is-loading" data-watch-symbol="${id}"><header><div><b>${id}</b><span>${name}</span></div><em>等待資料</em></header><div class="watchDiagnosticLoading">正在取得歷史資料…</div></article>`;
   const trend=d.trend?.state||"—",pullback=d.pullback?.state||"—",weekly=d.weekly?.j,rs=d.rs?.state||"—",recovery=d.recovery?.state||"—",status=watchMaturityLabel(d.maturityState);
   const explanation=d.maturityState==="UNSUPPORTED_ASSET_CLASS"?"目前 HS 通用技術模型暫不支援此資產類型。":d.maturityState==="WAIT_NATIVE"?"原生交易資料尚未達正式診斷成熟度。":d.maturityState==="INSUFFICIENT_HISTORY"?"歷史資料尚不足以建立 MA43／87／200 與週線判讀。":d.maturityState==="PARTIAL"?"目前只顯示已成熟欄位，不產生整體技術判斷。":d.summary;
-  return`<article class="watchDiagnosticCard" data-watch-detail="${id}" role="button" tabindex="0" aria-label="查看 ${id} ${name} 技術分析"><header><div><b>${id}</b><span>${name}</span></div><em class="watchMaturity watchMaturity-${esc(d.maturityState.toLowerCase())}">${esc(status)}</em></header><div class="watchDiagnosticPrice"><b>${Number.isFinite(d.price)?`$${fmt(d.price)}`:"—"}</b><span class="${Number(d.changePct)>=0?"up":"down"}">${Number.isFinite(d.changePct)?signed(d.changePct):"—"}</span></div><dl class="watchDiagnosticMetrics"><div><dt>趨勢</dt><dd>${esc(trend)}</dd></div><div><dt>拉回</dt><dd>${esc(pullback)}</dd></div><div><dt>週 J</dt><dd>${Number.isFinite(weekly)?`${fmt(weekly)} ${watchDirectionIcon(d.weekly.direction)}`:"—"}</dd></div><div><dt>RS</dt><dd>${esc(rs)}</dd></div><div><dt>止跌</dt><dd>${esc(recovery)}</dd></div></dl>${explanation?`<p>${esc(explanation)}</p>`:""}<footer><span>資料截至 ${esc(d.dataAsOf||"—")}</span><strong>查看分析 →</strong></footer></article>`;
+  const adHoc=state?.adHoc,adHocLine=adHoc?.available?`<div class="watchAdHocMini"><span>AD_HOC HS</span><b>${adHoc.displayScore}</b><em>${esc(adHoc.tier)}</em></div>`:`<div class="watchAdHocMini is-unavailable"><span>AD_HOC HS</span><b>—</b><em>${esc(adHocReasonText(adHoc?.reason))}</em></div>`;
+  return`<article class="watchDiagnosticCard" data-watch-detail="${id}" role="button" tabindex="0" aria-label="查看 ${id} ${name} 技術分析"><header><div><b>${id}</b><span>${name}</span></div><em class="watchMaturity watchMaturity-${esc(d.maturityState.toLowerCase())}">${esc(status)}</em></header>${adHocLine}<div class="watchDiagnosticPrice"><b>${Number.isFinite(d.price)?`$${fmt(d.price)}`:"—"}</b><span class="${Number(d.changePct)>=0?"up":"down"}">${Number.isFinite(d.changePct)?signed(d.changePct):"—"}</span></div><dl class="watchDiagnosticMetrics"><div><dt>趨勢</dt><dd>${esc(trend)}</dd></div><div><dt>拉回</dt><dd>${esc(pullback)}</dd></div><div><dt>週 J</dt><dd>${Number.isFinite(weekly)?`${fmt(weekly)} ${watchDirectionIcon(d.weekly.direction)}`:"—"}</dd></div><div><dt>RS</dt><dd>${esc(rs)}</dd></div><div><dt>止跌</dt><dd>${esc(recovery)}</dd></div></dl>${explanation?`<p>${esc(explanation)}</p>`:""}<footer><span>資料截至 ${esc(d.dataAsOf||"—")}</span><strong>查看分析 →</strong></footer></article>`;
 }
 function renderWatchDiagnostics(){
   const root=$("#watchDiagnostics");if(!root)return;
@@ -3552,7 +3585,7 @@ function rebuildWatchDiagnostics(settled){
     if(!result||result.status==="rejected"){watchDiagnosticState.set(meta.id,{kind:"error",error:result?.reason});return}
     const item=loaded.get(meta.id),benchmark=HSGenericEtfDiagnostics.APPROVED_BENCHMARKS[meta.id],benchmarkItem=benchmark&&benchmark!=="MARKET_BASELINE"?loaded.get(benchmark):null;
     const diagnostic=HSGenericEtfDiagnostics.evaluate({symbol:meta.id,metadata:{...meta,...item},rows:item?.officialRows||[],benchmark,benchmarkRows:benchmarkItem?.officialRows||null});
-    watchDiagnosticState.set(meta.id,{kind:"ready",diagnostic});
+    const adHoc=adHocScoreForItem(item,meta);watchDiagnosticState.set(meta.id,{kind:"ready",diagnostic,adHoc});
   });
   renderWatchDiagnostics();
 }
@@ -3778,6 +3811,7 @@ $("#addEvent").addEventListener("click",()=>{
   const a=customEvents();a.push({id:`custom-${Date.now()}`,date,name,title:name,type:"自訂",risk:"自訂",status:"scheduled",custom:true,result_summary:""});localStorage.setItem(CUSTOM_EVENTS_STORAGE_KEY,JSON.stringify(a));$("#customEventName").value="";renderEvents();refreshAllDecisionModels();renderTop();renderCards();
 });
 $("#addEtfBtn").addEventListener("click",openWatchModal);
+$("#watchAdHocForm").addEventListener("submit",event=>{event.preventDefault();queryWatchAdHoc($("#watchAdHocTicker").value)});
 $("#resetEtfBtn").addEventListener("click",async()=>{if(!confirm("清除這台裝置上的全部 ETF 自選？"))return;watchlist=[];saveWatchlist();renderWatchlist();renderTop();renderCards()});
 document.querySelectorAll("[data-radar-mode]").forEach(button=>button.addEventListener("click",()=>{
   radarMode=button.dataset.radarMode==="my"?"my":"featured";
