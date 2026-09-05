@@ -43,7 +43,10 @@ assert.match(html,/d\.maturityState==="WAIT_NATIVE"/);
 assert.doesNotMatch(html,/Generic Swing Score|genericSwingScore|MA284/);
 
 // Detail order and responsive presentation hooks are available without changing My Watchlist mode.
-const longDetail=html.slice(html.indexOf('if(mode==="long_term_core")return'),html.indexOf('const s=x.swingDecision',html.indexOf('if(mode==="long_term_core")return')));
+const detailStart=html.indexOf("function buildRadarV2Card(");
+const detailEnd=html.indexOf("function switchRadarDetailView",detailStart);
+assert.ok(detailStart>=0&&detailEnd>detailStart,"ETF Radar V2 renderer must exist");
+const longDetail=html.slice(detailStart,detailEnd);
 assert.ok(longDetail.indexOf("radarTodayHtml")<longDetail.indexOf("radarWhyScoreHtml"));
 assert.ok(longDetail.indexOf("radarWhyScoreHtml")<longDetail.indexOf("radarScoreTrendHtml"));
 assert.ok(longDetail.indexOf("radarScoreTrendHtml")<longDetail.indexOf("radarMarketPositionHtml"));
