@@ -1568,6 +1568,14 @@ footer{color:#746f67}
 }
 
 /* Decision Center V1: OFFICIAL remains primary; LIVE PROJECTED is a read-only secondary rail. */
+#hsDecisionRoom.hsDecisionRoom{padding:12px 14px;border-color:rgba(174,137,67,.48);background:linear-gradient(145deg,rgba(20,16,10,.96),rgba(6,6,5,.98));box-shadow:inset 0 1px rgba(255,230,171,.04)}
+#hsDecisionRoom .panelTitle{margin-bottom:9px}#hsDecisionRoom .panelTitle h2{font-size:20px}#hsDecisionRoom .panelTitle>small{color:#948875;font-size:10px}
+.hsDecisionRoomGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.hsDecisionRoomCard{display:grid;align-content:center;gap:3px;min-width:0;min-height:78px;padding:9px 10px;border:1px solid rgba(116,95,55,.34);border-radius:10px;background:rgba(5,5,4,.58)}
+.hsDecisionRoomCard>span{color:#9d917d;font-size:9px;font-weight:850;letter-spacing:.04em}.hsDecisionRoomCard>b{min-width:0;color:#eee2ca;font-size:17px;line-height:1.15;overflow-wrap:anywhere}.hsDecisionRoomCard>b em{margin-left:3px;color:#d4bb7d;font-size:12px;font-style:normal}.hsDecisionRoomCard>small{color:#8e8577;font-size:9px;line-height:1.3;overflow-wrap:anywhere}
+.hsDecisionRoomCard.is-official{border-left:2px solid rgba(211,170,81,.72)}.hsDecisionRoomCard.is-official>b,.hsDecisionRoomCard.is-opportunity>b{color:#f1d58e}.hsDecisionRoomCard.is-live>b{color:#d8cbb2}.hsDecisionRoomCard.is-healthy>b{color:#a8c5a4}.hsDecisionRoomCard.is-attention>b{color:#dfb36d}
+@media(max-width:700px){#hsDecisionRoom.hsDecisionRoom{padding:10px}.hsDecisionRoomGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.hsDecisionRoomCard{min-height:72px;padding:8px}.hsDecisionRoomCard>b{font-size:15px}.hsDecisionRoomCard>b em{font-size:11px}}
+@media(max-width:390px){#hsDecisionRoom .panelTitle h2{font-size:18px}#hsDecisionRoom .panelTitle>small{max-width:112px;text-align:right;line-height:1.25}.hsDecisionRoomCard{min-height:69px;padding:7px}.hsDecisionRoomCard>span{font-size:8.5px}.hsDecisionRoomCard>b{font-size:14px}.hsDecisionRoomCard>small{font-size:8.5px}}
 #homeEtfBrief.hsLivePanel .hsLiveScore small{display:flex;align-items:center;justify-content:center;gap:4px;color:#b8a477;font-size:9px;letter-spacing:.03em}
 #homeEtfBrief.hsLivePanel .hsLiveScore small i{color:#756b5b;font-size:7px;font-style:normal;font-weight:700;letter-spacing:.08em}
 #homeEtfBrief.hsLivePanel .hsLiveProjected{display:grid;grid-template-columns:auto auto auto minmax(0,1fr);align-items:center;gap:5px 8px;min-width:0;padding:6px 8px;border:1px solid rgba(124,102,60,.28);border-radius:9px;background:rgba(5,5,4,.46)}

@@ -357,6 +357,14 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
   <p class="tabIntro" data-tab-intro="sentiment">查看融資 FOMO、CNN 恐懼貪婪、三大法人與重大事件。</p>
   <p class="tabIntro" data-tab-intro="more">品牌理念、買點方法、資料透明與必要設定集中在這裡。</p>
 
+  <section id="hsDecisionRoom" class="panel hsDecisionRoom" data-tab-section="today" aria-labelledby="hsDecisionRoomTitle">
+    <div class="panelTitle compactTitle">
+      <div><p class="eyebrow">HS DECISION CENTER</p><h2 id="hsDecisionRoomTitle">今日戰情室</h2></div>
+      <small>正式分數為主｜盤中預估為輔</small>
+    </div>
+    <div id="hsDecisionRoomGrid" class="hsDecisionRoomGrid" aria-live="polite"><div class="skeleton">彙整今日決策資訊中…</div></div>
+  </section>
+
   <section id="todayHighlights" class="panel todayHighlights" data-tab-section="today" aria-labelledby="todayHighlightsTitle">
     <div class="panelTitle compactTitle">
       <div><p class="eyebrow">TODAY HIGHLIGHTS</p><h2 id="todayHighlightsTitle">今日重點</h2></div>
@@ -2923,6 +2931,67 @@ function renderHSToday(longs){
   const decision=candidate.decision,nextLabel=hsTodayStageLabel(decision.next_stage),distance=Number.isFinite(Number(decision.distance_to_next_stage))?(decision.distance_to_next_stage>0?`距${nextLabel} ${decision.distance_to_next_stage} 分`:"已進入最高決策摘要區"):"目前無距離資料",driver=hsTodayDriverLabel(decision.primary_driver),driverText=driver?`今天主要因${driver}${Number(decision.primary_driver_delta)>=0?"增加":"走弱"}而變化`:(decision.comparison_basis==="NONE"?"主要原因：目前無可比較基準":decision.explanation_text_zh);
   host.innerHTML=`<div class="hsTodayHead"><span>HS TODAY</span><b>今日決策摘要</b></div><strong class="hsTodayHeadline">${esc(hsTodayHeadline(decision))}</strong><div class="hsTodayCandidate"><div><span>最接近買點</span><b>${esc(candidate.item.id)} <em>${decision.score}｜${esc(decision.decision_label_zh)}</em></b></div><div><span>下一階段</span><b>${esc(distance)}</b></div><div><span>今日主要變化</span><b>${esc(driverText)}</b></div><div><span>資金姿態</span><b>${esc(hsTodayPosture(decision.capital_posture))}</b></div></div>${leverage}`;
 }
+
+// HS DECISION CENTER V1 PHASE 2: pure summary selectors. They only read
+// Phase 1 dual-track output and existing production decision contracts.
+function decisionCenterMarketLabel(state){
+  return {PREMARKET:"尚未開盤",OPEN:"交易中",CLOSED:"已收盤",HOLIDAY:"今日休市",STALE:"盤中資料異常"}[state]||"市場狀態待確認";
+}
+function decisionCenterOfficialRows(dualTrack,longs){
+  return [...LONG_RADAR_SCORED_CODES].map(symbol=>{
+    const official=dualTrack?.items?.[symbol]?.official,item=(longs||[]).find(row=>row?.id===symbol),decision=item?homepageFinalDecision(item):null,score=Number(official?.score);
+    return official?.status==="FINALIZED"&&Number.isFinite(score)&&decision?{symbol,score,displayScore:Number(official.display_score),date:String(official.trading_date||""),tier:decision.label}:null;
+  }).filter(Boolean);
+}
+function selectDecisionCenterHighest(rows){
+  return [...(rows||[])].sort((a,b)=>b.score-a.score||a.symbol.localeCompare(b.symbol))[0]||null;
+}
+function selectDecisionCenterOpportunity(rows,contract=window.HSDecisionLayerV1){
+  const thresholds=[...(contract?.NEXT_THRESHOLDS||[])].map(Number).filter(Number.isFinite).sort((a,b)=>a-b),stages=contract?.STAGES||[];
+  if(!thresholds.length)return null;
+  const candidates=(rows||[]).map(row=>{
+    const nextThreshold=thresholds.find(value=>value>row.score);
+    if(nextThreshold===undefined)return {...row,nextThreshold:null,nextLabel:null,distance:null,highest:true};
+    const nextStage=stages.find(stage=>Number(stage.min)===nextThreshold);
+    return {...row,nextThreshold,nextLabel:String(nextStage?.label||"下一門檻"),distance:nextThreshold-row.score,highest:false};
+  });
+  return candidates.sort((a,b)=>(a.highest?1:0)-(b.highest?1:0)||(a.distance??Infinity)-(b.distance??Infinity)||b.score-a.score||a.symbol.localeCompare(b.symbol))[0]||null;
+}
+function selectDecisionCenterLiveMove(dualTrack){
+  if(dualTrack?.market_state!=="OPEN")return {status:"OFF_SESSION",item:null};
+  const rows=[...LONG_RADAR_SCORED_CODES].map(symbol=>dualTrack?.items?.[symbol]).filter(item=>item?.live?.display_eligible===true&&Number.isFinite(Number(item.live.delta_vs_official)));
+  const item=rows.sort((a,b)=>Math.abs(Number(b.live.delta_vs_official))-Math.abs(Number(a.live.delta_vs_official))||a.ticker.localeCompare(b.ticker))[0]||null;
+  return {status:item?"READY":"UNAVAILABLE",item};
+}
+function decisionCenterLeverageSummary(state){
+  if(state?.trigger===true)return {label:"訊號已觸發",detail:`正式狀態 ${state.status||"TRIGGER"}`,healthy:true};
+  if(state?.available===true)return {label:"等待訊號",detail:`正式狀態 ${state.status||"STANDBY"}`,healthy:true};
+  return {label:"資料不足",detail:`正式狀態 ${state?.status||"DATA_UNAVAILABLE"}`,healthy:false};
+}
+function decisionCenterHealth({dualTrack,officialRows,leverageState,cnnSnapshot,forwardReady}){
+  const reasons=[];
+  if((officialRows||[]).length!==LONG_RADAR_SCORED_CODES.size)reasons.push("正式分數資料不完整");
+  if(dualTrack?.market_state==="OPEN"&&[...LONG_RADAR_SCORED_CODES].some(symbol=>dualTrack?.items?.[symbol]?.live?.display_eligible!==true))reasons.push("盤中資料無效或尚未齊備");
+  if(forwardReady!==true)reasons.push("Forward 狀態待確認");
+  if(!cnnSnapshot||cnnSnapshot.status!=="LATEST")reasons.push("CNN 情緒資料待更新");
+  if(leverageState?.available!==true)reasons.push("00631L 資料尚未齊備");
+  return {healthy:reasons.length===0,reasons};
+}
+function decisionCenterDistanceText(value){
+  const number=Number(value);if(!Number.isFinite(number))return"—";
+  const rounded=Math.round(number*10)/10;return Number.isInteger(rounded)?String(rounded):rounded.toFixed(1);
+}
+function renderDecisionCenter(longs,dualTrack,leverageState){
+  const host=$("#hsDecisionRoomGrid");if(!host)return;
+  const officialRows=decisionCenterOfficialRows(dualTrack,longs),highest=selectDecisionCenterHighest(officialRows),opportunity=selectDecisionCenterOpportunity(officialRows),liveMove=selectDecisionCenterLiveMove(dualTrack),leverage=decisionCenterLeverageSummary(leverageState),marketState=dualTrack?.market_state||"STALE";
+  const health=decisionCenterHealth({dualTrack,officialRows,leverageState,cnnSnapshot:cnnFearGreed?.snapshot||null,forwardReady:typeof window.HSPersistenceCore?.listForwardRecords==="function"});
+  const live=liveMove.item?.live,liveDelta=Number(live?.delta_vs_official),liveDeltaText=Number.isFinite(liveDelta)?`${liveDelta>0?"+":""}${decisionCenterDistanceText(liveDelta)}`:"—";
+  const opportunityDetail=opportunity?.highest?`${esc(opportunity.tier)}｜已在最高階段`:opportunity?`距「${esc(opportunity.nextLabel)}」還差 ${decisionCenterDistanceText(opportunity.distance)} 分`:"正式門檻資料待確認";
+  const liveMain=liveMove.status==="READY"?`${esc(liveMove.item.ticker)} ${esc(liveDeltaText)}`:liveMove.status==="OFF_SESSION"?"目前非盤中時段":"目前無有效盤中資料";
+  const liveDetail=liveMove.status==="READY"?`正式 ${liveMove.item.official.display_score} → 盤中預估 ${live.display_score}`:"不使用舊盤中快照";
+  const card=(key,title,main,detail)=>`<article class="hsDecisionRoomCard is-${key}"><span>${esc(title)}</span><b>${main}</b><small>${detail}</small></article>`;
+  host.innerHTML=card("market","今日市場狀態",esc(decisionCenterMarketLabel(marketState)),`台北時間｜${esc(marketState)}`)+card("official","目前最高 C4",highest?`${esc(highest.symbol)} <em>${highest.displayScore} 分</em>`:"資料不足",highest?`${esc(highest.tier)}｜正式盤後 ${esc(highest.date)}`:"僅接受 FINALIZED_EOD")+card("opportunity","最接近下一門檻",opportunity?`${esc(opportunity.symbol)} <em>${opportunity.displayScore} 分</em>`:"資料不足",opportunityDetail)+card("live","盤中變化最大",liveMain,liveDetail)+card("leverage","00631L 槓桿戰術",esc(leverage.label),esc(leverage.detail))+card(health.healthy?"healthy":"attention","系統狀態",health.healthy?"資料正常 ✓":"資料注意 ⚠",health.healthy?"核心決策來源皆可用":esc(health.reasons[0]||"資料狀態待確認"));
+}
 function renderTop(){
   const longIds=new Set(["0050","00830","00662","00757","009815","00935"]),swingIds=new Set(["00733","006201"]);
   const dualTrack=currentDualTrackCoreView(taipeiToday(),new Date());
@@ -2935,6 +3004,7 @@ function renderTop(){
   const swingCount=swings.filter(x=>(strategyDecisionFor(x,strategyModeFor(x))?.stage?.number??0)>0||["first","confirmed"].includes(strategyDecisionFor(x,strategyModeFor(x))?.stage?.key)).length;
   const snapshotAsOf=intradayLongRankAsOf(longs),snapshotSlot=intradayLongRankSlot(longs,snapshotAsOf),saved=previousLongRanks(),canonicalActive=rankedLongs.length===LONG_RADAR_SCORED_CODES.size&&rankedLongs.every(item=>Boolean(item.intraday?.canonical)),candidateSnapshot=canonicalActive?null:(snapshotAsOf?createLongRankSnapshot(rankedLongs,liveMarketCacheVersion||"",snapshotAsOf,snapshotSlot):null),verifiedSnapshot=canonicalActive?null:(isVerifiedLongRankSnapshot(liveRadarRefresh,candidateSnapshot)?candidateSnapshot:null),previous=canonicalActive?{}:comparisonLongRanks(saved,verifiedSnapshot),snapshotIdentity=longRankSnapshotIdentity(verifiedSnapshot);
   $("#homeEtfBriefSummary").textContent=rankedLongs.length>=2?`最高決策優先：${rankedLongs[0].id}｜${displayScore(rankedLongs[0],"long_term_core")}分｜${homepageFinalDecision(rankedLongs[0])?.label||"資料更新中"}；次順位：${rankedLongs[1].id}｜${displayScore(rankedLongs[1],"long_term_core")}分。`:"等待最新盤後正式 Core Score。";
+  renderDecisionCenter(rankedLongs,dualTrack,leverageV1State(all.find(x=>x.id==="00631L")));
   renderHSToday(rankedLongs);
   const rankList=$("#rankList");rankList.classList.add("hsLiveGrid");rankList.innerHTML=displayedLongs.map((x,index)=>longRankRow(x,index,previous,rankedLongs.indexOf(x)>=0?rankedLongs.indexOf(x)+1:null,dualTrack?.items?.[x.id]||null)).join("")||'<div class="newsEmpty">資料載入中</div>';
   const liveReadScore=$("#hsLiveReadScore");if(liveReadScore)liveReadScore.dataset.readCoreScore=rankedLongs[0]?.id||"0050";
