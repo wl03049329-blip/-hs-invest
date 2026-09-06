@@ -1567,6 +1567,30 @@ footer{color:#746f67}
   #homeEtfBrief.hsLivePanel .hsLiveLatest{font-size:11px}
 }
 
+/* Decision Center V1: OFFICIAL remains primary; LIVE PROJECTED is a read-only secondary rail. */
+#homeEtfBrief.hsLivePanel .hsLiveScore small{display:flex;align-items:center;justify-content:center;gap:4px;color:#b8a477;font-size:9px;letter-spacing:.03em}
+#homeEtfBrief.hsLivePanel .hsLiveScore small i{color:#756b5b;font-size:7px;font-style:normal;font-weight:700;letter-spacing:.08em}
+#homeEtfBrief.hsLivePanel .hsLiveProjected{display:grid;grid-template-columns:auto auto auto minmax(0,1fr);align-items:center;gap:5px 8px;min-width:0;padding:6px 8px;border:1px solid rgba(124,102,60,.28);border-radius:9px;background:rgba(5,5,4,.46)}
+#homeEtfBrief.hsLivePanel .hsLiveProjected small{color:#b8a575;font-size:10px;font-weight:850;white-space:nowrap}
+#homeEtfBrief.hsLivePanel .hsLiveProjected small i{margin-left:3px;color:#70695e;font-size:7px;font-style:normal;font-weight:700;letter-spacing:.07em}
+#homeEtfBrief.hsLivePanel .hsLiveProjected>b{color:#e1c984;font-size:20px;line-height:1;font-weight:900}
+#homeEtfBrief.hsLivePanel .hsLiveProjected>strong{color:#bcb09a;font-size:12px}.hsLiveProjected>strong:not(:empty){white-space:nowrap}
+#homeEtfBrief.hsLivePanel .hsLiveProjected>em{min-width:0;color:#8e8577;font-size:9px;font-style:normal;line-height:1.25;text-align:right}
+#homeEtfBrief.hsLivePanel .hsLiveProjected.is-live{border-left:2px solid rgba(207,165,75,.65);background:linear-gradient(90deg,rgba(82,58,19,.16),rgba(5,5,4,.42))}
+#homeEtfBrief.hsLivePanel .hsLiveProjected.is-live>strong{color:#9ac6a0}
+#homeEtfBrief.hsLivePanel .hsLiveProjected.is-unavailable{grid-template-columns:auto minmax(0,1fr);border-color:rgba(94,87,75,.28);background:rgba(7,7,6,.35)}
+#homeEtfBrief.hsLivePanel .hsLiveProjected.is-unavailable>b{color:#b0a695;font-size:11px}
+#homeEtfBrief.hsLivePanel .hsLiveProjected.is-unavailable>em{text-align:right}
+@media(max-width:430px){
+  #homeEtfBrief.hsLivePanel .hsLiveProjected{grid-template-columns:auto auto auto minmax(0,1fr);gap:4px;padding:5px 6px}
+  #homeEtfBrief.hsLivePanel .hsLiveProjected small{font-size:9px}
+  #homeEtfBrief.hsLivePanel .hsLiveProjected small i{display:none}
+  #homeEtfBrief.hsLivePanel .hsLiveProjected>b{font-size:18px}
+  #homeEtfBrief.hsLivePanel .hsLiveProjected>strong{font-size:11px}
+  #homeEtfBrief.hsLivePanel .hsLiveProjected>em{font-size:8.5px;white-space:normal}
+  #homeEtfBrief.hsLivePanel .hsLiveProjected.is-unavailable{grid-template-columns:auto minmax(0,1fr)}
+}
+
 /* HS LEVERAGE is intentionally separate from the general swing holding radar. */
 #homeLeverageBrief{position:relative;overflow:hidden;border-color:#6e5222;background:linear-gradient(145deg,#181107 0%,#090806 62%,#0e0a05 100%)}
 #homeLeverageBrief::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 91% 7%,rgba(229,181,72,.13),transparent 30%);opacity:.8}

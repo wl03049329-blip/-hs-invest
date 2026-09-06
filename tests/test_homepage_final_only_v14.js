@@ -60,10 +60,10 @@ assert.equal(gateContext.homepageFinalDecision(finalItem).coreScore,48);
 assert.equal(gateContext.homepageFinalDecision({...finalItem,intraday:{canonical:{...finalRecord,score_version:"OLD"}}}),null);
 console.log("PASS 7B local formal and invalid-version objects cannot cross the FINAL authority gate");
 
-assert.match(html,/HS FINAL · 盤後正式長期加碼雷達/);
+assert.match(html,/HS DECISION CENTER · 正式與盤中雙軌/);
 assert.match(html,/不使用舊盤中快照/);
-assert.doesNotMatch(html.slice(html.indexOf('id="homeEtfBrief"'),html.indexOf('</section>',html.indexOf('id="homeEtfBrief"'))),/HS LIVE|盤中預估/);
-console.log("PASS 8 homepage current-score status is FINAL-only");
+assert.match(html,/正式來源｜盤後收盤定稿/);
+console.log("PASS 8 homepage primary score status remains FINAL-only while the secondary rail is explicitly non-official");
 
 assert.match(html,/const LONG_RADAR_SCORED_CODES=new Set\(\["0050","00662","00757","00830","00935"\]\)/);
 assert.doesNotMatch(html.match(/const LONG_RADAR_SCORED_CODES[^\n]+/)?.[0]||"",/009815|00631L/);
@@ -79,5 +79,5 @@ console.log("PASS 10 history and Forward Shadow remain separate from homepage se
 for(const symbol of symbols){assert.equal(current?.items?.[symbol]?.status,"SUCCESS");assert(Number.isFinite(current.items[symbol].score));}
 console.log("PASS 11 every eligible homepage FINAL score is finite and valid");
 
-assert.match(html,/canonical-score-resolver\.js\?v=20260902-v14-final-only/);
+assert.match(html,/canonical-score-resolver\.js\?v=20260907-decision-center-v1/);
 console.log("PASS 12 resolver cache version identifies FINAL-only cutover");
