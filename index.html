@@ -1156,6 +1156,8 @@ const LONG_RADAR_SCORED_CODES=new Set(["0050","00662","00757","00830","00935"]);
 const LONG_TERM_CORE_SCORE_VERSION=window.HS_LONG_TERM_CORE_SCORE_VERSION||"FINAL_CORE_WEIGHT_V1";
 let finalizedCoreScoreHistoryArtifact={schema_version:1,core_score_version:LONG_TERM_CORE_SCORE_VERSION,snapshots:[]};
 const coreScoreTrendRanges=new Map();
+const officialC4TrendRanges=new Map();
+let officialC4HistoryCache={artifact:null,bySymbol:null};
 
 const $=s=>document.querySelector(s);
 const fmt=n=>n!==null&&n!==undefined&&n!==""&&Number.isFinite(Number(n))?new Intl.NumberFormat("zh-TW",{maximumFractionDigits:2}).format(Number(n)):"—";
@@ -2871,6 +2873,63 @@ function officialC4ChangeDetailHtml(attribution){
   const rows=OFFICIAL_C4_CHANGE_KEYS.map(key=>`<div><span>${esc(OFFICIAL_C4_CHANGE_LABELS[key])}<small>${key==="weekly_j"?"Weekly J":key==="dd52"?"DD52":"Crash"}</small></span><b class="${attribution.componentDeltas[key]>0?"is-up":attribution.componentDeltas[key]<0?"is-down":""}">${esc(officialC4Signed(attribution.componentDeltas[key]))}</b><em>${esc(officialC4ChangeDirection(key,attribution.componentDeltas[key]))}</em></div>`).join("");
   return`<details class="hsC4Why"><summary>為什麼變？</summary><div class="hsC4WhyBody"><div class="hsC4ScoreTransition"><span><small>${esc(attribution.previous.date)}</small><b>${attribution.previous.score.toFixed(1)}</b></span><i>→</i><span><small>${esc(attribution.latest.date)}</small><b>${attribution.latest.score.toFixed(1)}</b></span><strong class="${attribution.scoreDelta>0?"is-up":attribution.scoreDelta<0?"is-down":""}">${esc(officialC4Signed(attribution.scoreDelta))}</strong></div><section><h4>分數變動來源</h4>${rows}</section><p>主要原因：${esc(attribution.mainReason)}。</p></div></details>`;
 }
+const OFFICIAL_C4_TREND_DAYS={"30D":30,"90D":90,"1Y":365};
+function officialC4ComparableSeries(symbol,artifact){
+  symbol=String(symbol||"");
+  if(!LONG_RADAR_SCORED_CODES.has(symbol)||artifact?.schema_version!==1||!Array.isArray(artifact?.snapshots))return{status:"UNAVAILABLE",symbol,rows:[],versionBoundary:false};
+  const snapshots=[...artifact.snapshots].filter(snapshot=>snapshot?.snapshot_type==="FINALIZED_CLOSE"&&snapshot?.finalized===true&&isCompletedTradingDate(String(snapshot?.date||""))).sort((a,b)=>String(b.date).localeCompare(String(a.date))),rows=[];
+  let currentVersion=null,versionBoundary=false;
+  for(const snapshot of snapshots){
+    const date=String(snapshot.date),row=(snapshot.rows||[]).find(item=>String(item?.symbol||"")===symbol);
+    if(!row||row?.status==="WAIT_NATIVE"||String(row?.mode||"").toUpperCase()==="AD_HOC")continue;
+    const score=Number(row.final_core_score),version=String(row.core_score_version||""),dataAsOf=String(row.data_as_of||snapshot?.source?.data_as_of||""),tier=String(row.tier||"");
+    if(!Number.isFinite(score)||score<0||score>100||!dataAsOf.startsWith(`${date}T`)||!version||!tier)continue;
+    if(currentVersion===null){currentVersion=version;if(version!==LONG_TERM_CORE_SCORE_VERSION)return{status:"VERSION_MISMATCH",symbol,rows:[],currentVersion:version,versionBoundary:true};}
+    if(version!==currentVersion){versionBoundary=true;break;}
+    rows.push({symbol,date,score,tier,version,dataAsOf});
+  }
+  rows.reverse();
+  return{status:rows.length?"READY":"UNAVAILABLE",symbol,rows,currentVersion,versionBoundary};
+}
+function officialC4HistoryViewModel(artifact=typeof finalizedCoreScoreHistoryArtifact!=="undefined"?finalizedCoreScoreHistoryArtifact:null){
+  if(officialC4HistoryCache.artifact===artifact&&officialC4HistoryCache.bySymbol)return officialC4HistoryCache.bySymbol;
+  const bySymbol=new Map([...LONG_RADAR_SCORED_CODES].map(symbol=>[symbol,officialC4ComparableSeries(symbol,artifact)]));
+  officialC4HistoryCache={artifact,bySymbol};return bySymbol;
+}
+function officialC4RangeRows(rows,range){
+  if(!rows?.length)return[];
+  const days=OFFICIAL_C4_TREND_DAYS[range]||OFFICIAL_C4_TREND_DAYS["90D"],end=Date.parse(`${rows.at(-1).date}T00:00:00Z`),span=days*864e5;
+  return rows.filter(row=>end-Date.parse(`${row.date}T00:00:00Z`)<=span);
+}
+function officialC4ThresholdContract(){
+  const layer=window.HSDecisionLayerV1,values=Array.isArray(layer?.NEXT_THRESHOLDS)?layer.NEXT_THRESHOLDS.slice(0,4):[];
+  return values.map(value=>({value,label:layer.STAGES?.find(stage=>stage.min===value)?.label||"正式門檻"}));
+}
+function officialC4ThresholdCrossings(rows,thresholds=officialC4ThresholdContract()){
+  const latest=Object.fromEntries(thresholds.map(item=>[item.value,null]));
+  for(let index=1;index<(rows||[]).length;index++)for(const item of thresholds)if(rows[index-1].score<item.value&&rows[index].score>=item.value)latest[item.value]=rows[index].date;
+  return latest;
+}
+function officialC4TrendState(symbol,range="90D",artifact=typeof finalizedCoreScoreHistoryArtifact!=="undefined"?finalizedCoreScoreHistoryArtifact:null,targetDate=null){
+  range=Object.hasOwn(OFFICIAL_C4_TREND_DAYS,range)?range:"90D";
+  const series=officialC4HistoryViewModel(artifact).get(String(symbol||""))||{status:"UNAVAILABLE",rows:[]},latest=series.rows.at(-1)||null;
+  if(series.status!=="READY"||!latest||(targetDate&&latest.date!==targetDate))return{status:"UNAVAILABLE",symbol,range,rows:[],versionBoundary:series.versionBoundary};
+  const rows=officialC4RangeRows(series.rows,range),high=rows.reduce((best,row)=>!best||row.score>best.score?row:best,null),low=rows.reduce((best,row)=>!best||row.score<best.score?row:best,null),start=rows[0],current=rows.at(-1),thresholds=officialC4ThresholdContract();
+  return{status:"READY",symbol,range,rows,current,high,low,start,change:current.score-start.score,thresholds,crossings:officialC4ThresholdCrossings(rows,thresholds),version:series.currentVersion,versionBoundary:series.versionBoundary,limited:rows.length<5};
+}
+function officialC4TrendChartHtml(state){
+  const rows=state.rows,width=560,height=218,pad={left:30,right:18,top:24,bottom:30},plotWidth=width-pad.left-pad.right,plotHeight=height-pad.top-pad.bottom,pointAt=index=>({x:pad.left+(rows.length===1?plotWidth/2:index*plotWidth/(rows.length-1)),y:pad.top+(100-rows[index].score)/100*plotHeight});
+  const line=rows.map((row,index)=>{const point=pointAt(index);return`${point.x.toFixed(2)},${point.y.toFixed(2)}`}).join(" "),guides=state.thresholds.map(item=>{const y=pad.top+(100-item.value)/100*plotHeight;return`<g><line x1="${pad.left}" x2="${width-pad.right}" y1="${y}" y2="${y}"/><text x="${pad.left+3}" y="${y-4}">${item.value} ${esc(item.label)}</text></g>`}).join("");
+  const dateEvery=Math.max(1,Math.ceil(rows.length/4)),points=rows.map((row,index)=>{const point=pointAt(index),showDate=index===0||index===rows.length-1||index%dateEvery===0,tipX=point.x>width-125?-112:8,tipY=point.y<60?10:-48;return`<g class="hsC4TrendPoint${index===rows.length-1?" is-current":""}" tabindex="0" role="img" aria-label="${esc(row.date)}，正式 C4 ${row.score.toFixed(1)}，${esc(row.tier)}"><title>${esc(row.date)}｜正式 C4 ${row.score.toFixed(1)}｜${esc(row.tier)}</title><circle cx="${point.x}" cy="${point.y}" r="${index===rows.length-1?4.5:3}"/><g class="hsC4TrendTooltip" transform="translate(${point.x+tipX} ${point.y+tipY})"><rect width="104" height="40" rx="6"/><text x="7" y="13">${esc(row.date)}</text><text x="7" y="27">C4 ${row.score.toFixed(1)} · ${esc(row.tier)}</text></g>${showDate?`<text class="hsC4TrendDate" x="${point.x}" y="${height-7}" text-anchor="middle">${esc(row.date.slice(5).replace("-","/"))}</text>`:""}</g>`}).join("");
+  return`<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${esc(state.symbol)} ${state.range} 正式 C4 趨勢，Y 軸固定 0 到 100"><g class="hsC4TrendAxis"><text x="4" y="${pad.top+4}">100</text><text x="13" y="${height-pad.bottom+4}">0</text></g><g class="hsC4TrendThresholds">${guides}</g><polyline class="hsC4TrendLine" points="${line}"/><g>${points}</g></svg>`;
+}
+function officialC4TrendHtml(symbol,targetDate=null){
+  if(!LONG_RADAR_SCORED_CODES.has(String(symbol||"")))return"";
+  const range=officialC4TrendRanges.get(symbol)||"90D",state=officialC4TrendState(symbol,range,finalizedCoreScoreHistoryArtifact,targetDate);
+  if(state.status!=="READY")return`<details class="hsC4Trend" data-official-c4-trend="${esc(symbol)}"><summary>C4 正式趨勢</summary><div class="hsC4TrendEmpty">正式歷史紀錄尚不足；不以盤中或本機資料補值。</div></details>`;
+  const rangeLabel={"30D":"30 日","90D":"90 日","1Y":"1 年"}[state.range],crossing=value=>state.crossings[value]||"NONE",controls=Object.keys(OFFICIAL_C4_TREND_DAYS).map(key=>`<button type="button" class="${key===state.range?"active":""}" data-official-c4-range="${key}" data-official-c4-symbol="${esc(symbol)}">${key}</button>`).join("");
+  return`<details class="hsC4Trend" data-official-c4-trend="${esc(symbol)}"><summary>C4 正式趨勢</summary><div class="hsC4TrendBody"><header><div><small>目前正式 C4</small><b>${state.current.score.toFixed(1)}</b><span>${esc(state.current.tier)}</span></div><nav aria-label="C4 正式趨勢期間">${controls}</nav></header><div class="hsC4TrendSummary"><span>${rangeLabel}最高<b>${state.high.score.toFixed(1)}</b><small>${esc(state.high.date)}</small></span><span>${rangeLabel}最低<b>${state.low.score.toFixed(1)}</b><small>${esc(state.low.date)}</small></span><span>期間變化<b class="${state.change>0?"is-up":state.change<0?"is-down":""}">${esc(officialC4Signed(state.change))}</b><small>${state.start.score.toFixed(1)} → ${state.current.score.toFixed(1)}</small></span></div><div class="hsC4TrendChart">${officialC4TrendChartHtml(state)}</div><div class="hsC4TrendCrossings"><span>最近跨過 50<b>${esc(crossing(50))}</b></span><span>最近跨過 65<b>${esc(crossing(65))}</b></span></div><p>${state.limited?"此期間正式紀錄較少｜":""}${state.versionBoundary?"僅顯示目前模型版本的可比較紀錄｜":""}只連接合法 FINALIZED_CLOSE，不補週末、休市或缺失日期。</p></div></details>`;
+}
 function longRankRow(x,index,previous,rank=index+1,dualTrackItem=null){
   const decision=homepageFinalDecision(x),presentation=decision?.finalPresentation,score=decision?.score,canonical=decision?x.intraday?.canonical:null,ranked=Number.isFinite(rank)&&Boolean(decision),stageLabel=finalDecisionBadgeLabel(presentation),statusTier=finalDecisionStatusTier(presentation);
   const nextTier={label:presentation?.next_stage?hsTodayStageLabel(presentation.next_stage):"目前最高區間",distance:Number(presentation?.distance_to_next_stage)||0,progress:Number.isFinite(Number(score))?Math.max(0,Math.min(100,Number(score))):0},marketAsOf=String(canonical?.market_as_of||decision?.marketAsOf||x.intraday?.asOf||""),time=marketAsOf?formatHomeQuoteTime(marketAsOf):"尚無成功行情";
@@ -2878,7 +2937,7 @@ function longRankRow(x,index,previous,rank=index+1,dualTrackItem=null){
   const rankBadge=ranked?`<span class="hsLiveRank rank-${rank}" aria-label="第${rank}名">${String(rank)}</span>`:`<span class="hsLiveRank is-wait" aria-label="${x.id==="009815"?"原生資料尚未成熟":"盤後正式分數暫不可用"}">NA</span>`;
   const snapshot=liveCanonicalCoreSnapshot?.source_status==="FINALIZED_EOD"&&liveCanonicalCoreSnapshot?.items?.[x.id]===canonical?liveCanonicalCoreSnapshot:null,freshness=snapshot?{label:`盤後正式 ${formatHomeMonthDay(snapshot.trading_date)}｜FINAL`,isLkg:false}:{label:x.id==="009815"?"WAIT_NATIVE｜原生資料尚未成熟":"盤後正式分數暫不可用",isLkg:true},closeComparisonLabel=hsLiveCloseComparisonLabel(canonical,snapshot);
   const weeklyJ=Number.isFinite(x.j)?fmt(x.j):"—",nextSentence=nextTier.distance?`距「${esc(nextTier.label)}」還差 <b>${nextTier.distance} 分</b>`:"已進入極端參考區",decisionCopy=decision?.cta?.detail||decision?.stage?.recommendation||"等待下一筆正式資料",unavailableCopy=x.id==="009815"?"009815 目前維持 WAIT_NATIVE；資料不夠，不假裝有正式 Core Score。":"目前尚無有效盤後正式 Core Score；不使用盤中或本機快取替代。",officialChange=officialC4ChangeAttribution(x.id,finalizedCoreScoreHistoryArtifact,canonical?.trading_date);
-  return `<details class="hsLiveCard ${statusTier} ${ranked?"":"is-wait-native"} ${freshness.isLkg?"is-lkg":""}"><summary><div class="hsLivePrimary"><span class="hsLiveRankWrap">${rankBadge}</span><span class="hsLiveIdentity"><b>${esc(x.id)}</b><small>${esc(x.name)}</small></span><span class="hsLiveDecisionComposite"><span class="hsLiveScore"><b>${hasScore?score:"—"}</b><small>正式分數 <i>OFFICIAL</i></small></span><span class="hsLiveDelta"><b>${esc(closeComparisonLabel)}</b><i class="${scoreDelta>0?"is-up":scoreDelta<0?"is-down":""}">${scoreChange}</i><small>${esc(rankChange)}</small></span></span></div>${hsLiveProjectedHtml(dualTrackItem)}${officialC4ChangeCompactHtml(officialChange)}<div class="hsLiveSecondary"><span class="hsLiveMetaGroup"><span class="hsLiveWeeklyJ">週 J <b>${weeklyJ}</b></span><span class="hsLiveTier longRankStage ${statusTier}">${esc(stageLabel)}</span></span><span class="hsLiveLatest">${esc(freshness.label)}</span><span class="hsLiveOpen" aria-hidden="true">⌄</span></div></summary><div class="hsLiveCardDetail">${hasScore?`<section class="hsLiveSection hsLiveNextSection"><h3>距下一階段</h3><p>${nextSentence}</p><i class="hsLiveProgress"><b style="width:${nextTier.progress}%"></b></i></section><section class="hsLiveSection"><h3>買點驅動</h3><div class="hsLiveDrivers">${hsLiveDriverSummary(canonical)}</div></section><section class="hsLiveSection hsLiveTimelineWrap"><h3>今日盤中變化</h3>${hsLiveTimeline(x.id,snapshot)}</section><section class="hsLiveSection hsLiveDecision"><h3>HS 判讀</h3><strong>${esc(decisionCopy)}</strong><p>目前 ${score} 分，${nextTier.distance?`距下一階段還差 ${nextTier.distance} 分。`:"已進入極端參考區。"}</p></section>${officialC4ChangeDetailHtml(officialChange)}<details class="hsLiveTech"><summary>技術資料</summary><div class="hsLiveDetailMeta"><span>週 J <b>${weeklyJ}</b></span><span>52週回檔 <b>${Number.isFinite(x.fromHigh)?fmt(x.fromHigh)+"%":"—"}</b></span><span>行情時間 <b>${esc(time)}</b></span></div></details>`:`<section class="hsLiveSection hsLiveDecision"><h3>HS 判讀</h3><strong>${esc(unavailableCopy)}</strong></section>`}<div class="hsLiveActions"><button class="miniBtn" type="button" data-read-core-score="${esc(x.id)}">讀懂你的分數</button><button class="miniBtn" type="button" data-core-score-history="${esc(x.id)}">近10日盤後分數</button></div></div></details>`;
+  return `<details class="hsLiveCard ${statusTier} ${ranked?"":"is-wait-native"} ${freshness.isLkg?"is-lkg":""}"><summary><div class="hsLivePrimary"><span class="hsLiveRankWrap">${rankBadge}</span><span class="hsLiveIdentity"><b>${esc(x.id)}</b><small>${esc(x.name)}</small></span><span class="hsLiveDecisionComposite"><span class="hsLiveScore"><b>${hasScore?score:"—"}</b><small>正式分數 <i>OFFICIAL</i></small></span><span class="hsLiveDelta"><b>${esc(closeComparisonLabel)}</b><i class="${scoreDelta>0?"is-up":scoreDelta<0?"is-down":""}">${scoreChange}</i><small>${esc(rankChange)}</small></span></span></div>${hsLiveProjectedHtml(dualTrackItem)}${officialC4ChangeCompactHtml(officialChange)}<div class="hsLiveSecondary"><span class="hsLiveMetaGroup"><span class="hsLiveWeeklyJ">週 J <b>${weeklyJ}</b></span><span class="hsLiveTier longRankStage ${statusTier}">${esc(stageLabel)}</span></span><span class="hsLiveLatest">${esc(freshness.label)}</span><span class="hsLiveOpen" aria-hidden="true">⌄</span></div></summary><div class="hsLiveCardDetail">${hasScore?`<section class="hsLiveSection hsLiveNextSection"><h3>距下一階段</h3><p>${nextSentence}</p><i class="hsLiveProgress"><b style="width:${nextTier.progress}%"></b></i></section><section class="hsLiveSection"><h3>買點驅動</h3><div class="hsLiveDrivers">${hsLiveDriverSummary(canonical)}</div></section><section class="hsLiveSection hsLiveTimelineWrap"><h3>今日盤中變化</h3>${hsLiveTimeline(x.id,snapshot)}</section><section class="hsLiveSection hsLiveDecision"><h3>HS 判讀</h3><strong>${esc(decisionCopy)}</strong><p>目前 ${score} 分，${nextTier.distance?`距下一階段還差 ${nextTier.distance} 分。`:"已進入極端參考區。"}</p></section>${officialC4ChangeDetailHtml(officialChange)}${officialC4TrendHtml(x.id,officialChange?.latest?.date)}<details class="hsLiveTech"><summary>技術資料</summary><div class="hsLiveDetailMeta"><span>週 J <b>${weeklyJ}</b></span><span>52週回檔 <b>${Number.isFinite(x.fromHigh)?fmt(x.fromHigh)+"%":"—"}</b></span><span>行情時間 <b>${esc(time)}</b></span></div></details>`:`<section class="hsLiveSection hsLiveDecision"><h3>HS 判讀</h3><strong>${esc(unavailableCopy)}</strong></section>`}<div class="hsLiveActions"><button class="miniBtn" type="button" data-read-core-score="${esc(x.id)}">讀懂你的分數</button><button class="miniBtn" type="button" data-core-score-history="${esc(x.id)}">近10日盤後分數</button></div></div></details>`;
 }
 function renderTodayHighlights(longs,swings){
   const bestLong=longs.find(item=>Number.isFinite(displayScore(item,"long_term_core")));
@@ -3844,6 +3903,7 @@ $("#closeCoreScoreHistoryModal").addEventListener("click",closeCoreScoreHistoryM
 $("#coreScoreHistoryModal").addEventListener("click",event=>{if(event.target===$("#coreScoreHistoryModal"))closeCoreScoreHistoryModal()});
 document.addEventListener("click",event=>{const button=event.target.closest("[data-core-score-history]");if(!button)return;event.preventDefault();event.stopPropagation();openCoreScoreHistoryModal(button.dataset.coreScoreHistory,button)});
 document.addEventListener("click",event=>{const button=event.target.closest("[data-core-trend-range]");if(!button)return;event.preventDefault();coreScoreTrendRanges.set(button.dataset.coreTrendTicker,button.dataset.coreTrendRange);renderCards()});
+document.addEventListener("click",event=>{const button=event.target.closest("[data-official-c4-range]");if(!button)return;event.preventDefault();event.stopPropagation();const symbol=button.dataset.officialC4Symbol,range=button.dataset.officialC4Range,host=button.closest(".hsC4Trend"),card=host?.closest(".hsLiveCard");officialC4TrendRanges.set(symbol,range);if(host){host.outerHTML=officialC4TrendHtml(symbol);const replacement=card?.querySelector(`[data-official-c4-trend="${symbol}"]`);if(replacement)replacement.open=true}});
 let lastHsStoryTrigger=$("#openHsStory");
 function renderHsCanonicalScoreGuide(){
   const target=$("#hsCanonicalScoreGuide");if(!target)return;
