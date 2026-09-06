@@ -3072,14 +3072,44 @@ function decisionCenterLeverageSummary(state){
   if(state?.available===true)return {label:"等待訊號",detail:`正式狀態 ${state.status||"STANDBY"}`,healthy:true};
   return {label:"資料不足",detail:`正式狀態 ${state?.status||"DATA_UNAVAILABLE"}`,healthy:false};
 }
-function decisionCenterHealth({dualTrack,officialRows,leverageState,cnnSnapshot,forwardReady}){
-  const reasons=[];
-  if((officialRows||[]).length!==LONG_RADAR_SCORED_CODES.size)reasons.push("正式分數資料不完整");
-  if(dualTrack?.market_state==="OPEN"&&[...LONG_RADAR_SCORED_CODES].some(symbol=>dualTrack?.items?.[symbol]?.live?.display_eligible!==true))reasons.push("盤中資料無效或尚未齊備");
-  if(forwardReady!==true)reasons.push("Forward 狀態待確認");
-  if(!cnnSnapshot||cnnSnapshot.status!=="LATEST")reasons.push("CNN 情緒資料待更新");
-  if(leverageState?.available!==true)reasons.push("00631L 資料尚未齊備");
-  return {healthy:reasons.length===0,reasons};
+const DECISION_CENTER_HEALTH_LEVELS=Object.freeze({HEALTHY:{label:"資料正常 ✓",rank:0},WARNING:{label:"資料注意 ⚠",rank:1},ERROR:{label:"資料異常 ✕",rank:2}});
+function decisionCenterEffectiveMarketState(dualTrack,now=new Date()){
+  const state=String(dualTrack?.market_state||"STALE");
+  if(state!=="STALE")return state;
+  const parts=Object.fromEntries(new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Taipei",weekday:"short",hour:"2-digit",minute:"2-digit",hour12:false}).formatToParts(now).map(part=>[part.type,part.value]));
+  if(["Sat","Sun"].includes(parts.weekday))return"HOLIDAY";
+  if(Number(parts.hour)*60+Number(parts.minute)<9*60)return"PREMARKET";
+  return state;
+}
+function decisionCenterHealthItem(key,title,level,status,detail,impact="",unaffected=""){
+  return{key,title,level,status,detail,impact,unaffected};
+}
+function decisionCenterSystemHealth({dualTrack,officialRows,historyBySymbol,leverageState,cnnSnapshot,forwardState,adHocState,targetDate=taipeiToday(),now=new Date()}={}){
+  const items=[],marketState=decisionCenterEffectiveMarketState(dualTrack,now),officialSnapshot=dualTrack?.official_snapshot,officialDate=String(officialSnapshot?.trading_date||officialRows?.[0]?.date||""),officialComplete=officialSnapshot?.source_status==="FINALIZED_EOD"&&officialSnapshot?.score_version===LONG_TERM_CORE_SCORE_VERSION&&(officialRows||[]).length===LONG_RADAR_SCORED_CODES.size&&[...LONG_RADAR_SCORED_CODES].every(symbol=>dualTrack?.items?.[symbol]?.official?.status==="FINALIZED");
+  const officialAge=window.HSDataFreshnessCore?.tradingDayAge?.(officialDate,targetDate),officialCurrent=officialComplete&&officialDate<=targetDate&&officialAge!==null;
+  const officialDelayed=officialAge>3&&marketState!=="HOLIDAY";
+  items.push(officialCurrent?decisionCenterHealthItem("official","正式 C4",officialDelayed?"WARNING":"HEALTHY",officialDelayed?"更新時間需注意":"正常",`最新正式資料：${officialDate}`,officialDelayed?"正式分數時效":"",""):decisionCenterHealthItem("official","正式 C4","ERROR","無法作為正式依據","FINALIZED_CLOSE 資料不完整或版本不符","正式 C4、排名與決策摘要",""));
+  const offSession={PREMARKET:"尚未開盤",CLOSED:"目前非交易時段",HOLIDAY:"今日休市"}[marketState];
+  if(offSession)items.push(decisionCenterHealthItem("live","盤中預估","HEALTHY",offSession,"非交易時段不要求盤中快照"));
+  else{
+    const liveReady=marketState==="OPEN"&&[...LONG_RADAR_SCORED_CODES].every(symbol=>{const live=dualTrack?.items?.[symbol]?.live;return live?.display_eligible===true&&live?.freshness==="FRESH"&&live?.status==="LIVE_PROJECTED"&&live?.trading_date===targetDate&&dualTrack?.items?.[symbol]?.score_version===LONG_TERM_CORE_SCORE_VERSION;});
+    items.push(liveReady?decisionCenterHealthItem("live","盤中預估","HEALTHY","正常",`今日 ${targetDate} 盤中資料完整`):decisionCenterHealthItem("live","盤中預估","WARNING","資料已過期或尚未齊備","目前不顯示盤中預估","盤中預估","正式收盤分數"));
+  }
+  const forwardReady=forwardState?.available===true&&!['FAIL_CLOSED','ERROR'].includes(String(forwardState?.status||""));
+  items.push(forwardReady?decisionCenterHealthItem("forward","Forward 前瞻驗證","HEALTHY","正常",forwardState?.detail||"驗證功能可用"):decisionCenterHealthItem("forward","Forward 前瞻驗證","WARNING","需要注意",forwardState?.detail||"前瞻驗證狀態待確認","前瞻驗證","目前正式 C4"));
+  const cnnReady=cnnSnapshot?.status==="LATEST";
+  items.push(cnnReady?decisionCenterHealthItem("cnn","市場情緒","HEALTHY","正常",`資料日期：${cnnSnapshot.data_date||"—"}`):decisionCenterHealthItem("cnn","市場情緒","WARNING","資料已過期或暫缺",cnnSnapshot?.data_date?`最後資料：${cnnSnapshot.data_date}`:"尚無有效資料","市場情緒顯示","正式 C4"));
+  const leverageReady=leverageState?.available===true;
+  items.push(leverageReady?decisionCenterHealthItem("leverage","00631L 戰術","HEALTHY","正常",leverageState?.trigger===true?"正式狀態：訊號已觸發":"正式狀態：等待訊號"):decisionCenterHealthItem("leverage","00631L 戰術","WARNING","資料尚未齊備",`正式狀態：${leverageState?.status||"DATA_UNAVAILABLE"}`,"00631L 戰術顯示","正式 C4"));
+  const historyReady=officialCurrent&&[...LONG_RADAR_SCORED_CODES].every(symbol=>{const series=historyBySymbol?.get?.(symbol);return series?.status==="READY"&&series?.currentVersion===LONG_TERM_CORE_SCORE_VERSION&&series.rows?.length>=2&&series.rows.at(-1)?.date===officialDate;});
+  items.push(historyReady?decisionCenterHealthItem("history","正式歷史","HEALTHY","正常",`最新紀錄：${officialDate}`):decisionCenterHealthItem("history","正式歷史","WARNING","可比較紀錄不足或未同步","不影響目前正式分數","歷史趨勢","目前正式 C4"));
+  items.push(adHocState?.available===true?decisionCenterHealthItem("adhoc","自選 ETF","HEALTHY","正常","AD_HOC 與 Formal C4 隔離"):decisionCenterHealthItem("adhoc","自選 ETF","WARNING","功能狀態待確認","不提升為 Formal C4 異常","自選 ETF 試算","Formal C4"));
+  const officialError=items[0].level==="ERROR",level=officialError?"ERROR":items.some(item=>item.level==="WARNING"||item.level==="ERROR")?"WARNING":"HEALTHY";
+  return{level,label:DECISION_CENTER_HEALTH_LEVELS[level].label,marketState,officialDate,items};
+}
+function decisionCenterHealthHtml(health){
+  const rows=health.items.map(item=>`<article class="hsSystemHealthRow is-${item.level.toLowerCase()}"><span><b>${esc(item.title)}</b><small>${esc(item.detail)}</small></span><strong>${esc(item.status)}</strong>${item.impact?`<p>影響：${esc(item.impact)}${item.unaffected?`<em>不影響：${esc(item.unaffected)}</em>`:""}</p>`:""}</article>`).join("");
+  return`<details class="hsDecisionRoomCard hsSystemHealthCard is-${health.level.toLowerCase()}"><summary><span>系統狀態</span><b>${esc(health.label)}</b><small>${health.level==="HEALTHY"?"核心與輔助資料來源皆可用":health.level==="ERROR"?"正式 C4 資料需要處理":"部分輔助資料需要注意"}</small></summary><div class="hsSystemHealthDetail"><header><span>資料健康 <small>SYSTEM HEALTH</small></span><b>${esc(health.label)}</b></header>${rows}<p>資料健康只讀取、驗證與顯示，不會重算或改寫任何正式分數。</p></div></details>`;
 }
 function decisionCenterDistanceText(value){
   const number=Number(value);if(!Number.isFinite(number))return"—";
@@ -3088,13 +3118,14 @@ function decisionCenterDistanceText(value){
 function renderDecisionCenter(longs,dualTrack,leverageState){
   const host=$("#hsDecisionRoomGrid");if(!host)return;
   const officialRows=decisionCenterOfficialRows(dualTrack,longs),highest=selectDecisionCenterHighest(officialRows),opportunity=selectDecisionCenterOpportunity(officialRows),liveMove=selectDecisionCenterLiveMove(dualTrack),leverage=decisionCenterLeverageSummary(leverageState),marketState=dualTrack?.market_state||"STALE";
-  const health=decisionCenterHealth({dualTrack,officialRows,leverageState,cnnSnapshot:cnnFearGreed?.snapshot||null,forwardReady:typeof window.HSPersistenceCore?.listForwardRecords==="function"});
+  let forwardRecords=null;try{forwardRecords=window.HSPersistenceCore?.listForwardRecords?.()}catch{forwardRecords=null}
+  const health=decisionCenterSystemHealth({dualTrack,officialRows,historyBySymbol:officialC4HistoryViewModel(finalizedCoreScoreHistoryArtifact),leverageState,cnnSnapshot:cnnFearGreed?.snapshot||null,forwardState:{available:Array.isArray(forwardRecords),status:Array.isArray(forwardRecords)?"READY":"FAIL_CLOSED",detail:Array.isArray(forwardRecords)?`${forwardRecords.length} 筆驗證紀錄｜功能可用`:"驗證資料無法讀取"},adHocState:{available:typeof window.HSFinalCoreProduction?.buildAdHocScore==="function"},targetDate:dualTrack?.target_date||taipeiToday(),now:new Date()});
   const live=liveMove.item?.live,liveDelta=Number(live?.delta_vs_official),liveDeltaText=Number.isFinite(liveDelta)?`${liveDelta>0?"+":""}${decisionCenterDistanceText(liveDelta)}`:"—";
   const opportunityDetail=opportunity?.highest?`${esc(opportunity.tier)}｜已在最高階段`:opportunity?`距「${esc(opportunity.nextLabel)}」還差 ${decisionCenterDistanceText(opportunity.distance)} 分`:"正式門檻資料待確認";
   const liveMain=liveMove.status==="READY"?`${esc(liveMove.item.ticker)} ${esc(liveDeltaText)}`:liveMove.status==="OFF_SESSION"?"目前非盤中時段":"目前無有效盤中資料";
   const liveDetail=liveMove.status==="READY"?`正式 ${liveMove.item.official.display_score} → 盤中預估 ${live.display_score}`:"不使用舊盤中快照";
   const card=(key,title,main,detail)=>`<article class="hsDecisionRoomCard is-${key}"><span>${esc(title)}</span><b>${main}</b><small>${detail}</small></article>`;
-  host.innerHTML=card("market","今日市場狀態",esc(decisionCenterMarketLabel(marketState)),`台北時間｜${esc(marketState)}`)+card("official","目前最高 C4",highest?`${esc(highest.symbol)} <em>${highest.displayScore} 分</em>`:"資料不足",highest?`${esc(highest.tier)}｜正式盤後 ${esc(highest.date)}`:"僅接受 FINALIZED_EOD")+card("opportunity","最接近下一門檻",opportunity?`${esc(opportunity.symbol)} <em>${opportunity.displayScore} 分</em>`:"資料不足",opportunityDetail)+card("live","盤中變化最大",liveMain,liveDetail)+card("leverage","00631L 槓桿戰術",esc(leverage.label),esc(leverage.detail))+card(health.healthy?"healthy":"attention","系統狀態",health.healthy?"資料正常 ✓":"資料注意 ⚠",health.healthy?"核心決策來源皆可用":esc(health.reasons[0]||"資料狀態待確認"));
+  host.innerHTML=card("market","今日市場狀態",esc(decisionCenterMarketLabel(health.marketState)),`台北時間｜${esc(health.marketState)}`)+card("official","目前最高 C4",highest?`${esc(highest.symbol)} <em>${highest.displayScore} 分</em>`:"資料不足",highest?`${esc(highest.tier)}｜正式盤後 ${esc(highest.date)}`:"僅接受 FINALIZED_EOD")+card("opportunity","最接近下一門檻",opportunity?`${esc(opportunity.symbol)} <em>${opportunity.displayScore} 分</em>`:"資料不足",opportunityDetail)+card("live","盤中變化最大",liveMain,liveDetail)+card("leverage","00631L 槓桿戰術",esc(leverage.label),esc(leverage.detail))+decisionCenterHealthHtml(health);
 }
 function renderTop(){
   const longIds=new Set(["0050","00830","00662","00757","009815","00935"]),swingIds=new Set(["00733","006201"]);
