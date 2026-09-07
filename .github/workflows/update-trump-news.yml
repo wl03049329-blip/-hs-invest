@@ -8,20 +8,56 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: update-trump-market-watch
+  cancel-in-progress: false
+
 jobs:
   update:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - name: Update Trump news JSON
         run: python scripts/update_trump_news.py
-      - name: Commit changes
+      - name: Commit and push changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add trump-news.json
-          git diff --cached --quiet || git commit -m "Update Trump market watch"
-          git push
+          if git diff --cached --quiet; then
+            echo "TRUMP_NEWS_NO_CHANGES"
+            exit 0
+          fi
+
+          git commit -m "Update Trump market watch"
+
+          pushed=false
+          for attempt in 1 2 3; do
+            echo "TRUMP_PUSH_ATTEMPT ${attempt}/3"
+            if git fetch origin main; then
+              if ! git rebase origin/main; then
+                echo "TRUMP_REBASE_CONFLICT"
+                git rebase --abort || true
+                exit 1
+              fi
+              if git push origin HEAD:main; then
+                pushed=true
+                break
+              fi
+            fi
+
+            if [ "$attempt" -lt 3 ]; then
+              sleep $((attempt * 5))
+            fi
+          done
+
+          if [ "$pushed" != "true" ]; then
+            echo "TRUMP_PUSH_FAILED_AFTER_RETRIES"
+            exit 1
+          fi
