@@ -235,9 +235,23 @@ def parse_mis_row(row: dict[str, Any], *, required: bool = False) -> tuple[dict[
     code = str(row.get("c", "")).strip().upper()
     if not code or not CODE_RE.fullmatch(code):
         return None, "malformed_row"
-    price_reason = missing_or_invalid_reason(row.get("z"), missing="missing_price", invalid="invalid_price", positive=True)
-    if price_reason:
-        return None, price_reason
+    # ``z`` is the preferred last-traded price.  MIS can legitimately expose
+    # the same observation with ``z: "-"`` while keeping its current trade in
+    # ``pz``.  Only accept that same-row value; date/session/freshness are still
+    # enforced later by ``validate_radar_refresh``.
+    price = finite_number(row.get("z"), positive=True)
+    price_field = "z"
+    if price is None:
+        price = finite_number(row.get("pz"), positive=True)
+        price_field = "pz"
+    if price is None:
+        z_reason = missing_or_invalid_reason(
+            row.get("z"), missing="missing_price", invalid="invalid_price", positive=True
+        )
+        pz_reason = missing_or_invalid_reason(
+            row.get("pz"), missing="missing_price", invalid="invalid_price", positive=True
+        )
+        return None, "missing_price" if z_reason == pz_reason == "missing_price" else "invalid_price"
     reference_reason = missing_or_invalid_reason(
         row.get("y"), missing="missing_reference_price", invalid="invalid_reference_price", positive=True
     )
@@ -254,7 +268,6 @@ def parse_mis_row(row: dict[str, Any], *, required: bool = False) -> tuple[dict[
         return None, "missing_time"
     if quote_time and not re.fullmatch(r"\d{2}:\d{2}:\d{2}", quote_time):
         return None, "invalid_time"
-    price = finite_number(row.get("z"), positive=True)
     previous_close = finite_number(row.get("y"), positive=True)
     high = finite_number(row.get("h"), positive=True)
     low = finite_number(row.get("l"), positive=True)
@@ -265,6 +278,7 @@ def parse_mis_row(row: dict[str, Any], *, required: bool = False) -> tuple[dict[
         "code": code,
         "name": clean_text(row.get("n")),
         "price": price,
+        "price_field": price_field,
         "previous_close": previous_close,
         "date": data_date,
         "quote_time": quote_time or "—",
@@ -388,6 +402,7 @@ def fetch_mis_snapshot(
             **required_locations.get(code, {}),
             "raw_present": code in raw_required,
             "parsed": code in parsed_by_code,
+            "price_field": parsed_by_code.get(code, {}).get("price_field"),
             "rejection_reason": final_rejected.get(code, {}).get("reason"),
             "raw_fields": final_rejected.get(code, {}).get("raw_fields"),
         }
@@ -502,6 +517,7 @@ def validate_radar_refresh(
     final_rejected = final_rejected if isinstance(final_rejected, dict) else {}
     quote_times: dict[str, str] = {}
     market_as_of: dict[str, str] = {}
+    price_fields: dict[str, str] = {}
     for code in RADAR_REQUIRED_LIVE_SYMBOLS:
         if code in final_missing:
             raise ValueError(f"radar required quote raw missing: {code}")
@@ -516,6 +532,9 @@ def validate_radar_refresh(
         if row.get("source") != TWSE_MIS_URL:
             raise ValueError(f"radar quote source mismatch: {code}")
         price = finite_number(row.get("price"), positive=True)
+        price_field = str(row.get("price_field") or "")
+        if price_field not in {"z", "pz"}:
+            raise ValueError(f"radar price source invalid: {code}")
         open_price = finite_number(row.get("open"), positive=True)
         high = finite_number(row.get("high"), positive=True)
         low = finite_number(row.get("low"), positive=True)
@@ -530,6 +549,7 @@ def validate_radar_refresh(
             raise ValueError(f"radar future quote rejected: {code}")
         quote_times[code] = quote_at.strftime("%H:%M:%S")
         market_as_of[code] = quote_at.isoformat()
+        price_fields[code] = price_field
     return {
         "verified": True,
         "trading_date": trading_date,
@@ -541,6 +561,7 @@ def validate_radar_refresh(
         "non_blocking_status": {code: "WAIT_NATIVE" for code in RADAR_NON_BLOCKING_SYMBOLS},
         "quote_times": quote_times,
         "market_as_of": market_as_of,
+        "price_fields": price_fields,
         "source": "TWSE_MIS",
         "source_url": TWSE_MIS_URL,
         "required_symbol_diagnostics": diagnostics,
@@ -794,6 +815,7 @@ def merge_mis_items(
             "code": row["code"],
             "name": row["name"] or old.get("name", row["code"]),
             "price": row["price"],
+            "price_field": row.get("price_field"),
             "previous_close": row["previous_close"],
             "date": row["date"],
             "market": row["market"],
@@ -900,7 +922,7 @@ def write_market_cache(
         snapshot_items = {
             code: {
                 field: by_code[code].get(field)
-                for field in ("price", "open", "high", "low", "volume", "date", "quote_time")
+                for field in ("price", "price_field", "open", "high", "low", "volume", "date", "quote_time")
             }
             for code in RADAR_REQUIRED_LIVE_SYMBOLS
             if code in by_code

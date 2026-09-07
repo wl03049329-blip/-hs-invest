@@ -1,4 +1,5 @@
 import importlib.util
+import hashlib
 import urllib.parse
 from datetime import datetime
 from pathlib import Path
@@ -15,7 +16,7 @@ spec.loader.exec_module(quotes)
 
 def raw(code, slot="10:30", **overrides):
     row = {
-        "c": code, "n": code, "z": "100", "y": "99", "d": "20260821", "t": f"{slot}:00",
+        "c": code, "n": code, "z": "100", "pz": "-", "y": "99", "d": "20260821", "t": f"{slot}:00",
         "o": "99.5", "h": "101", "l": "99", "v": "100", "ex": "tse",
     }
     row.update(overrides)
@@ -55,6 +56,13 @@ def validate(rows, slot="10:30"):
 
 
 channels = [f"tse_{code}.tw" for code in quotes.RADAR_REQUIRED_LIVE_SYMBOLS]
+finalized_path = ROOT / "finalized-core-score-snapshots-v1.json"
+finalized_before = hashlib.sha256(finalized_path.read_bytes()).hexdigest()
+
+# TEST 0: z always wins when both same-row price fields are valid.
+parsed, reason = quotes.parse_mis_row(raw("0050", z="109.90", pz="109.80", h="110", l="109"), required=True)
+assert reason is None and parsed["price"] == 109.9 and parsed["price_field"] == "z"
+print("TEST 0 PASS: z remains the preferred MIS price")
 
 # TEST 1: a raw-absent required symbol is observable before validation.
 missing_0050 = [row for row in required_rows() if row["c"] != "0050"]
@@ -91,11 +99,15 @@ assert result.diagnostics["initial_parse_rejected"]["0050"]["reason"] == "missin
 assert result.diagnostics["final_parse_rejected"]["0050"]["reason"] == "missing_price"
 print("TEST 4 PASS: parse rejection has explicit reason")
 
-# A non-empty yesterday reference or undocumented adjacent field must not be
-# promoted into today's current price when official z is absent.
+# Same-row pz is accepted with explicit provenance; y remains reference-only.
 parsed, reason = quotes.parse_mis_row(raw("0050", z="-", pz="101", y="99"), required=True)
+assert reason is None and parsed["price"] == 101 and parsed["price_field"] == "pz"
+print("TEST 4B PASS: same-row pz fallback is explicit")
+
+# Missing/invalid z and pz remains fail-closed.
+parsed, reason = quotes.parse_mis_row(raw("0050", z="-", pz="-"), required=True)
 assert parsed is None and reason == "missing_price"
-print("TEST 4B PASS: no pz/y price fabrication")
+print("TEST 4C PASS: absent z and pz remains FAIL_MISSING_PRICE")
 
 # TEST 5: retry can recover a parser-rejected required quote.
 result, _ = run_fixture(channels, {1: [invalid_0050, required_rows()]})
@@ -190,6 +202,70 @@ except ValueError as exc:
 assert not result.diagnostics["final_missing"] and not result.diagnostics["final_parse_rejected"]
 print("TEST 11 PASS: stale as-of is not classified as missing")
 
+# Same-row pz never bypasses timestamp or trading-date validation.
+stale_pz = [
+    quotes.parse_mis_row(
+        raw(code, "10:30", z="-" if code == "0050" else "100", pz="100", t="09:30:00" if code == "0050" else "10:30:00"),
+        required=True,
+    )[0]
+    for code in quotes.RADAR_REQUIRED_LIVE_SYMBOLS
+]
+try:
+    quotes.validate_radar_refresh(stale_pz, "2026-08-21", "10:30", datetime.fromisoformat("2026-08-21T10:35:00+08:00"))
+    raise AssertionError("stale same-row pz must fail")
+except ValueError as exc:
+    assert "quote time outside 10:30 window: 0050" in str(exc)
+print("TEST 11B PASS: same-row pz cannot bypass slot freshness")
+
+previous_day_pz = [
+    quotes.parse_mis_row(
+        raw(code, "10:30", z="-" if code == "0050" else "100", pz="100", d="20260820" if code == "0050" else "20260821"),
+        required=True,
+    )[0]
+    for code in quotes.RADAR_REQUIRED_LIVE_SYMBOLS
+]
+try:
+    quotes.validate_radar_refresh(previous_day_pz, "2026-08-21", "10:30", datetime.fromisoformat("2026-08-21T10:35:00+08:00"))
+    raise AssertionError("previous-day same-row pz must fail")
+except ValueError as exc:
+    assert "radar quote date mismatch: 0050" in str(exc)
+print("TEST 11C PASS: same-row pz cannot bypass trading-date validation")
+
+# Reproduce the 2026-09-07 production shape: z is absent, but each current-day
+# row carries a same-observation pz and valid OHLC/timestamp.
+production_prices = {
+    "0050": (109.9, "13:27:00"),
+    "00662": (120.05, "13:26:31"),
+    "00757": (139.85, "13:26:40"),
+    "00830": (83.2, "13:26:43"),
+    "00935": (60.55, "13:26:48"),
+}
+production_rows = []
+for code, (price, observed_at) in production_prices.items():
+    parsed, reason = quotes.parse_mis_row(raw(
+        code,
+        "12:30",
+        z="-",
+        pz=str(price),
+        y=str(price - 1),
+        d="20260907",
+        t=observed_at,
+        o=str(price - .5),
+        h=str(price + .5),
+        l=str(price - .5),
+    ), required=True)
+    assert reason is None and parsed["price"] == price and parsed["price_field"] == "pz"
+    production_rows.append(parsed)
+production_refresh = quotes.validate_radar_refresh(
+    production_rows,
+    "2026-09-07",
+    "12:30",
+    datetime.fromisoformat("2026-09-07T13:27:20+08:00"),
+)
+assert production_refresh["verified"] is True
+assert production_refresh["price_fields"] == {code: "pz" for code in quotes.RADAR_REQUIRED_LIVE_SYMBOLS}
+print("TEST 11D PASS: 2026-09-07 five-symbol pz fixture validates 5/5")
+
 # TEST 12: WAIT_NATIVE is non-blocking and never schedules a required retry.
 result, calls = run_fixture(channels, {1: [required_rows()]})
 assert "009815" not in result.diagnostics["required_symbols"]
@@ -209,7 +285,7 @@ official = {
 prior_real = [{
     "code": "0050", "name": "0050", "price": 100, "previous_close": 99,
     "date": "2026-08-21", "market": "TWSE", "quote_mode": "delayed", "quote_time": "10:41:23",
-    "open": 99.5, "high": 101, "low": 99, "volume": 100, "source": quotes.TWSE_MIS_URL,
+    "price_field": "z", "open": 99.5, "high": 101, "low": 99, "volume": 100, "source": quotes.TWSE_MIS_URL,
 }]
 merged = {
     row["code"]: row
@@ -276,3 +352,5 @@ print("TEST 13C PASS: cross-attempt same-slot accumulation preserves actual sour
 
 # TEST 14 is intentionally run by the existing P0-1 comparison fixture in the release command.
 print("TEST 14 PASS: delegated to test_intraday_snapshot_root_cause_p01.js")
+assert hashlib.sha256(finalized_path.read_bytes()).hexdigest() == finalized_before
+print("TEST 15 PASS: finalized artifact remains byte-identical")

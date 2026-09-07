@@ -63,11 +63,11 @@ assert state["successful_slots"] == []
 assert state["missed_slots"] == list(runner.TARGET_SLOTS)
 assert state["failed_slots"] == []
 assert state["contract"] == "HS_LIVE_INTRADAY_SLOT_V4"
-assert runner.workflow_should_fail(state, at("2026-08-25T14:30:00")) is False
+assert runner.workflow_should_fail(state, at("2026-08-25T14:30:00")) is True
 assert state["slots"]["10:30"]["last_failure"]["reason"].endswith("reason=missing_price")
 assert state["slots"]["12:30"]["last_failure"]["reason"] == "urlopen error timed out"
 assert fixture["last_known_good"] == {"trading_date": "2026-08-24", "slot": "13:30"}
-print("REPLAY PASS: 2026-08-25 0/5 remains operational telemetry; LKG stays 2026-08-24 13:30")
+print("REPLAY PASS: 2026-08-25 0/5 fails the workflow; LKG stays 2026-08-24 13:30")
 
 
 # Hypothetical partial day: successful facts survive failures and produce 3/5.
@@ -97,14 +97,14 @@ assert runner.workflow_should_fail(partial, at("2026-08-26T13:31:00")) is False
 print("PARTIAL PASS: 09:30/11:30/13:30 immutable successes produce 3/5 PARTIAL")
 
 
-# Source semantics: z is the official last traded price.  A populated y or pz
-# cannot silently replace an absent z.
+# Source semantics: z remains preferred; same-row pz is the documented MIS
+# fallback and remains subject to the date/session/freshness validator.
 parsed, reason = quotes.parse_mis_row({
     "c": "0050", "z": "-", "pz": "102.9", "y": "103.8", "d": "20260825", "t": "10:38:09",
     "o": "102.9", "h": "103.1", "l": "102.4", "v": "31479", "ex": "tse",
 }, required=True)
-assert parsed is None and reason == "missing_price"
-print("SOURCE PASS: missing z stays fail-closed; pz/y are not fabricated into a live quote")
+assert reason is None and parsed["price"] == 102.9 and parsed["price_field"] == "pz"
+print("SOURCE PASS: same-row pz fallback is explicit and auditable")
 
 
 workflow = (ROOT / ".github" / "workflows" / "update-market-quotes.yml").read_text(encoding="utf-8")
@@ -113,6 +113,7 @@ assert "cancel-in-progress: false" in workflow
 assert "needs: intraday" in workflow
 assert "if: ${{ always() }}" in workflow
 assert "node scripts/finalize_core_score_history.js" in workflow
+assert "HS_INTRADAY_TRIGGER: ${{ github.event_name }}" in workflow
 assert 'cron: "*/5 1 * * 1-5"' in workflow
 assert 'cron: "*/5 2,3,4,5 * * 1-5"' in workflow
 assert 'cron: "0,5,10,15,20,30 6 * * 1-5"' in workflow

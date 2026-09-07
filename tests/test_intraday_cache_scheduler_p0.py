@@ -30,6 +30,7 @@ def radar_rows(slot, prices=None):
             "code": code,
             "name": code,
             "price": price,
+            "price_field": "z",
             "previous_close": price - 1,
             "date": "2026-08-13",
             "quote_time": f"{slot}:00",
@@ -98,7 +99,7 @@ with tempfile.TemporaryDirectory() as temp:
     quotes.ROOT, quotes.OUTPUT, quotes.META_OUTPUT = temp, temp / "market-quotes.json", temp / "market-quotes-meta.json"
     items = []
     for row in radar_rows("09:30"):
-        item = {key: row[key] for key in ("code", "name", "price", "previous_close", "date", "market", "quote_time", "open", "high", "low", "volume")}
+        item = {key: row[key] for key in ("code", "name", "price", "price_field", "previous_close", "date", "market", "quote_time", "open", "high", "low", "volume")}
         item["quote_mode"] = "delayed"
         items.append(item)
     statuses = {"TWSE": "official_closing_data", "TPEx": "official_closing_data", "TWSE_MIS": "ok"}

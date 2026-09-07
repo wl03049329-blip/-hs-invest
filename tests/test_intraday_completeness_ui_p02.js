@@ -29,7 +29,7 @@ state=context.intradayRadarDisplayState("2026-08-14 12:30",schedule,null,partial
 assert.equal(state.current,"12:30");
 assert.equal(state.failed,"今日盤中資料未完整建立（3/5）");
 
-assert.match(html,/市場正式資料 \$\{esc\(all\[0\]\?\.date\|\|"—"\)\}｜盤中雷達/);
+assert.match(html,/本次更新時段：\$\{actualSnapshotTime\}\$\{failedAttempt\?`｜\$\{failedAttempt\}`:""\}/);
 assert.match(html,/liveRadarCompleteness=metaResult\.value\?\.intraday_completeness/);
 assert.match(html,/radarCompleteness:liveRadarCompleteness/);
 console.log("PASS P0.2 homepage separates formal market date from intraday completeness");

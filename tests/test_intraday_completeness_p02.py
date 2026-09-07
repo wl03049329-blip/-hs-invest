@@ -154,7 +154,7 @@ with tempfile.TemporaryDirectory() as temp_dir:
         execute_fn=lambda _date, _slot: (False, failure),
         git_sync=False,
     )
-    assert failed_code == 0
+    assert failed_code == 1
     success_code = runner.run_scheduled_once(
         now_fn=lambda: at("2026-08-26T10:50:00"),
         execute_fn=lambda _date, slot: (True, successful_attempt(slot)),
@@ -180,4 +180,31 @@ for cron in ('cron: "*/5 1 * * 1-5"', 'cron: "*/5 2,3,4,5 * * 1-5"', 'cron: "0,5
     assert cron in workflow
 assert "hs-live-intraday-slot-v4" in workflow and "cancel-in-progress: false" in workflow
 assert "--scheduled-once" in workflow and "needs: intraday" in workflow and "if: ${{ always() }}" in workflow
-print("PASS HS_LIVE_INTRADAY_SLOT_V4 completeness tests 1-10")
+assert "HS_INTRADAY_TRIGGER: ${{ github.event_name }}" in workflow
+
+# TEST 11: final 0/5 operational failure is a red workflow, but a manual
+# CLOSED-session smoke test remains a legitimate zero-exit skip.
+zero = runner.reconcile_closed_slots(runner.new_completeness("2026-08-26"), at("2026-08-26T14:30:00"))
+assert zero["completeness"] == "0/5" and zero["snapshot_status"] == runner.SNAPSHOT_MISSED
+assert runner.workflow_should_fail(zero, at("2026-08-26T14:30:00")) is True
+assert runner.workflow_should_fail(
+    zero, at("2026-08-26T18:00:00"), trigger_type="workflow_dispatch"
+) is False
+print("TEST 11 PASS: 0/5 fails schedule while manual CLOSED skip succeeds")
+assert runner.workflow_should_fail(
+    runner.record_slot_outcome(
+        runner.new_completeness("2026-08-26"),
+        "10:30",
+        runner.SLOT_FAILED,
+        {
+            "error": "canonical core failed",
+            "failure_class": runner.FAILURE_OPERATIONAL_SOURCE,
+            "slot_diagnostic": {"core_input": "FAIL", "score": "NOT_RUN", "snapshot_append": "NOT_RUN"},
+        },
+        at("2026-08-26T10:40:00"),
+    ),
+    at("2026-08-26T10:40:00"),
+    attempted_success=False,
+) is True
+print("TEST 12 PASS: CORE_FAILED / snapshot not written propagates failure")
+print("PASS HS_LIVE_INTRADAY_SLOT_V4 completeness tests 1-12")

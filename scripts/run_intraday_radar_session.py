@@ -427,12 +427,36 @@ def execute_slot(trading_date: str, slot: str, python: str = sys.executable) -> 
     return success, attempt
 
 
-def workflow_should_fail(state: dict, now: datetime, attempted_success: bool | None = None) -> bool:
-    del now, attempted_success
-    return state.get("integrity_status") == "FAIL" or any(
+def workflow_should_fail(
+    state: dict,
+    now: datetime,
+    attempted_success: bool | None = None,
+    *,
+    trigger_type: str = "schedule",
+) -> bool:
+    integrity_failed = state.get("integrity_status") == "FAIL" or any(
         str(state.get("slots", {}).get(slot, {}).get("failure_class", "")).startswith(FAILURE_INTEGRITY)
         for slot in TARGET_SLOTS
     )
+    if integrity_failed:
+        return True
+    # A production-required slot attempt is successful only after quotes,
+    # canonical Core, and immutable snapshot append all complete.
+    if attempted_success is False:
+        return True
+    local_now = now.astimezone(TAIPEI)
+    # A manual smoke test outside all legal windows is a legitimate CLOSED
+    # skip.  Scheduled audit ticks must still surface an incomplete session.
+    if trigger_type == "workflow_dispatch" and current_slot_for_time(local_now) is None:
+        return False
+    session_closed = local_now.time() >= FINAL_SLOT_CLOSE
+    if session_closed and (
+        state.get("snapshot_status") == SNAPSHOT_MISSED
+        or state.get("missed_slots")
+        or state.get("failed_slots")
+    ):
+        return True
+    return False
 
 
 def run_scheduled_once(
@@ -441,8 +465,12 @@ def run_scheduled_once(
     git_sync: bool = True,
 ) -> int:
     now = now_fn().astimezone(TAIPEI)
+    trigger_type = str(os.environ.get("HS_INTRADAY_TRIGGER", "schedule")).strip() or "schedule"
     if now.weekday() >= 5:
         print("Non-trading weekday: scheduler tick stopped", flush=True)
+        return 0
+    if trigger_type == "workflow_dispatch" and current_slot_for_time(now) is None:
+        print("CLOSED_SESSION_SKIP: manual intraday smoke test is outside a legal slot", flush=True)
         return 0
     if git_sync:
         run(["git", "pull", "--rebase"])
@@ -491,7 +519,7 @@ def run_scheduled_once(
         f"missed={state['missed_slots']} failed={state['failed_slots']}",
         flush=True,
     )
-    return 1 if workflow_should_fail(state, now, attempted_success) else 0
+    return 1 if workflow_should_fail(state, now, attempted_success, trigger_type=trigger_type) else 0
 
 
 def main() -> None:
