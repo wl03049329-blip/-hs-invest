@@ -20,7 +20,6 @@ const ROOT = path.resolve(__dirname, "..");
 const QUOTES_FILE = path.join(ROOT, "market-quotes.json");
 const OUTPUT_FILE = path.join(ROOT, "intraday-core-snapshots-v1.json");
 const SYMBOLS = Object.freeze(["0050", "00662", "00757", "00830", "00935"]);
-const SLOTS = new Set(["09:30", "10:30", "11:30", "12:30", "13:30"]);
 const SCHEMA_VERSION = 1;
 const SLOT_CONTRACT = "HS_LIVE_INTRADAY_SLOT_V4";
 const FINMIND_URL = "https://api.finmindtrade.com/api/v4/data";
@@ -34,6 +33,12 @@ function finite(value) {
   return Number.isFinite(number) ? number : null;
 }
 function iso(value) { return /^\d{4}-\d{2}-\d{2}$/.test(String(value || "")) ? String(value) : ""; }
+function validIntradaySlot(value) {
+  const match = /^(\d{2}):(\d{2})$/.exec(String(value || ""));
+  if (!match) return false;
+  const minutes = Number(match[1]) * 60 + Number(match[2]);
+  return minutes >= 9 * 60 && minutes <= 13 * 60 + 30;
+}
 function readJson(file, fallback) {
   try { return JSON.parse(fs.readFileSync(file, "utf8")); } catch { return fallback; }
 }
@@ -70,7 +75,7 @@ function validateLedger(existing) {
   for (const snapshot of existing.snapshots) {
     if (snapshot.contract && snapshot.contract !== SLOT_CONTRACT) integrity("wrong_slot_contract");
     const key = `${snapshot?.trading_date || ""}|${snapshot?.slot || ""}`;
-    if (!iso(snapshot?.trading_date) || !SLOTS.has(snapshot?.slot) || snapshot?.status !== "SUCCESS" || keys.has(key)) integrity("malformed_or_duplicate_snapshot");
+    if (!iso(snapshot?.trading_date) || !validIntradaySlot(snapshot?.slot) || snapshot?.status !== "SUCCESS" || keys.has(key)) integrity("malformed_or_duplicate_snapshot");
     keys.add(key);
     if (snapshot.score_version && snapshot.score_version !== SCORE_VERSION) integrity("wrong_score_version");
     for (const symbol of SYMBOLS) {
@@ -138,9 +143,11 @@ function scorePreviousClose(ticker, rows, tradingDate) {
   const decision = core.buildDecision({ ticker, j: feature?.j, k: feature?.k, d: feature?.d, dd52, rows: closeRows, marketAsOf: `${latest.date}T13:30:00+08:00` }, null, core.LONG_TERM_CORE_SCORE_VERSION);
   return Number.isFinite(decision.coreScore) ? { symbol: ticker, score: decision.coreScore, trading_date: latest.date, market_as_of: `${latest.date}T13:30:00+08:00` } : null;
 }
-function latestEarlierSuccess(snapshots, tradingDate, slot, symbol) {
-  const snapshot = [...snapshots].filter(row => row?.status === "SUCCESS" && row.trading_date === tradingDate && row.slot < slot)
-    .sort((a, b) => b.slot.localeCompare(a.slot))[0];
+function latestEarlierSuccess(snapshots, tradingDate, currentAsOf, symbol) {
+  const snapshot = [...snapshots].filter(row => {
+    const asOf = String(row?.items?.[symbol]?.market_as_of || row?.market_as_of || "");
+    return row?.status === "SUCCESS" && row.trading_date === tradingDate && asOf && asOf < currentAsOf;
+  }).sort((a, b) => String(b?.items?.[symbol]?.market_as_of || b?.market_as_of || "").localeCompare(String(a?.items?.[symbol]?.market_as_of || a?.market_as_of || "")))[0];
   const item = snapshot?.items?.[symbol];
   return item ? { ...item, slot: snapshot.slot } : null;
 }
@@ -162,7 +169,7 @@ function attachBaselines(item, previousClose, previousIntraday) {
   };
 }
 function buildSnapshot({ quotes, histories, existing, tradingDate, slot, calculatedAt }) {
-  if (!SLOTS.has(slot)) integrity(`unsupported_slot_${slot}`);
+  if (!validIntradaySlot(slot)) integrity(`unsupported_slot_${slot}`);
   validateLedger(existing);
   const raw = quotes?.intraday_quote_snapshots?.[`${tradingDate}_${slot.replace(":", "")}`];
   if (!raw || raw.status !== "SUCCESS") operational("validated_raw_intraday_quote_snapshot_unavailable");
@@ -191,7 +198,7 @@ function buildSnapshot({ quotes, histories, existing, tradingDate, slot, calcula
   }
   const rankRows = object => Object.values(object).sort((a, b) => b.score - a.score || a.symbol.localeCompare(b.symbol)).forEach((item, index) => { item.rank = index + 1; });
   rankRows(current); rankRows(previousClose);
-  const items = Object.fromEntries(SYMBOLS.map(symbol => [symbol, attachBaselines(current[symbol], previousClose[symbol], latestEarlierSuccess(existing.snapshots, tradingDate, slot, symbol))]));
+  const items = Object.fromEntries(SYMBOLS.map(symbol => [symbol, attachBaselines(current[symbol], previousClose[symbol], latestEarlierSuccess(existing.snapshots, tradingDate, current[symbol].market_as_of, symbol))]));
   const marketAsOf = Object.values(items).map(item => item.market_as_of).sort().at(-1);
   const snapshot = {
     schema_version: SCHEMA_VERSION,
@@ -241,7 +248,7 @@ async function main() {
   const refresh = quotes.radar_refresh;
   const tradingDate = String(args["trading-date"] || refresh?.trading_date || "");
   const slot = String(args.slot || refresh?.slot || "");
-  if (!iso(tradingDate) || !SLOTS.has(slot) || refresh?.verified !== true || refresh?.status !== "success") throw new Error("a verified raw radar refresh is required");
+  if (!iso(tradingDate) || !validIntradaySlot(slot) || refresh?.verified !== true || refresh?.status !== "success") throw new Error("a verified raw radar refresh is required");
   const existing = readJson(outputFile, { schema_version: SCHEMA_VERSION, snapshots: [] });
   validateLedger(existing);
   const snapshotKey = `${tradingDate}_${slot.replace(":", "")}`;
@@ -257,11 +264,11 @@ async function main() {
   const histories = Object.fromEntries(await Promise.all(SYMBOLS.map(async symbol => [symbol, await loadHistory(symbol, tradingDate)])));
   const result = buildSnapshot({ quotes, histories, existing, tradingDate, slot, calculatedAt: new Date().toISOString() });
   if (result.published) {
-    const snapshots = [...(existing.snapshots || []), result.snapshot].sort((a, b) => `${a.trading_date} ${a.slot}`.localeCompare(`${b.trading_date} ${b.slot}`)).slice(-500);
+    const snapshots = [...(existing.snapshots || []), result.snapshot].sort((a, b) => `${a.trading_date} ${a.market_as_of || a.slot}`.localeCompare(`${b.trading_date} ${b.market_as_of || b.slot}`)).slice(-500);
     writeAtomic(outputFile, { schema_version: SCHEMA_VERSION, artifact: "intraday-core-snapshots-v1", generated_at: result.snapshot.calculated_at, snapshots });
   }
   console.log(`INTRADAY_CORE_SNAPSHOT ${snapshotKey} ${result.reason}`);
 }
 
-module.exports = { SYMBOLS, SCORE_VERSION, SLOT_CONTRACT, cleanRows, scoreRows, scorePreviousClose, attachBaselines, rawFingerprint, validateLedger, buildSnapshot };
+module.exports = { SYMBOLS, SCORE_VERSION, SLOT_CONTRACT, validIntradaySlot, cleanRows, scoreRows, scorePreviousClose, attachBaselines, rawFingerprint, validateLedger, buildSnapshot };
 if (require.main === module) main().catch(error => { console.error(`INTRADAY_CORE_SNAPSHOT_FAILED ${error.message}`); process.exitCode = 1; });

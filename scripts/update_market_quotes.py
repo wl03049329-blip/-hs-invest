@@ -56,9 +56,14 @@ TAIPEI = ZoneInfo("Asia/Taipei")
 RADAR_REQUIRED_LIVE_SYMBOLS = ("0050", "00662", "00757", "00830", "00935")
 RADAR_NON_BLOCKING_SYMBOLS = ("009815",)
 RADAR_CODES = RADAR_REQUIRED_LIVE_SYMBOLS + RADAR_NON_BLOCKING_SYMBOLS
+# Historical snapshots keep their slot label for compatibility, but current
+# production runs use the actual Taipei execution minute as a rolling bucket.
+# A slot is metadata; it must never be a fixed-time publication gate.
 RADAR_SLOTS = ("09:30", "10:30", "11:30", "12:30", "13:30")
 SLOT_CONTRACT = "HS_LIVE_INTRADAY_SLOT_V4"
-RADAR_FINAL_SLOT_CLOSE = time(14, 20)
+RADAR_MARKET_OPEN = time(9, 0)
+RADAR_MARKET_CLOSE = time(13, 30, 59)
+RADAR_MAX_QUOTE_AGE = timedelta(minutes=15)
 MIS_BATCH_SIZE = 60
 # TWSE MIS may legitimately return ``z: "-"`` between transactions.  Retry
 # required radar symbols independently and accumulate only real, parsed quotes
@@ -477,16 +482,22 @@ def quote_datetime(data_date: str, quote_time: str) -> datetime | None:
         return None
 
 
+def valid_rolling_slot(slot: str) -> bool:
+    if not re.fullmatch(r"(?:0[9]|1[0-2]):[0-5]\d|13:(?:[0-2]\d|30)", str(slot or "")):
+        return False
+    parsed = datetime.strptime(slot, "%H:%M").time()
+    return RADAR_MARKET_OPEN <= parsed <= time(13, 30)
+
+
 def radar_slot_window(trading_date: str, slot: str) -> tuple[datetime, datetime]:
-    if slot not in RADAR_SLOTS:
+    """Return the Taiwan cash-session boundary for a rolling slot label."""
+    if not valid_rolling_slot(slot):
         raise ValueError(f"unsupported radar slot: {slot}")
-    start = datetime.fromisoformat(f"{trading_date}T{slot}:00").replace(tzinfo=TAIPEI)
-    index = RADAR_SLOTS.index(slot)
-    if index + 1 < len(RADAR_SLOTS):
-        end = datetime.fromisoformat(f"{trading_date}T{RADAR_SLOTS[index + 1]}:00").replace(tzinfo=TAIPEI)
-    else:
-        end = datetime.combine(datetime.fromisoformat(trading_date).date(), RADAR_FINAL_SLOT_CLOSE, tzinfo=TAIPEI)
-    return start, end
+    day = datetime.fromisoformat(trading_date).date()
+    return (
+        datetime.combine(day, RADAR_MARKET_OPEN, tzinfo=TAIPEI),
+        datetime.combine(day, RADAR_MARKET_CLOSE, tzinfo=TAIPEI),
+    )
 
 
 def spot_quote_mode(now: datetime, data_date: str, quote_time: str = "") -> str:
@@ -502,14 +513,15 @@ def validate_radar_refresh(
     rows: list[dict[str, Any]], trading_date: str, slot: str, verified_at: datetime,
     required_diagnostics: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    if slot not in RADAR_SLOTS:
+    if not valid_rolling_slot(slot):
         raise ValueError(f"unsupported radar slot: {slot}")
     if trading_date != verified_at.astimezone(TAIPEI).date().isoformat():
         raise ValueError("radar trading date is not Taipei today")
-    minimum, maximum = radar_slot_window(trading_date, slot)
+    session_start, session_end = radar_slot_window(trading_date, slot)
     local_verified = verified_at.astimezone(TAIPEI)
-    if not minimum <= local_verified < maximum:
-        raise ValueError(f"radar slot window is not open: {slot}")
+    if not session_start <= local_verified <= session_end:
+        raise ValueError(f"radar market session is not open: {slot}")
+    freshness_floor = max(session_start, local_verified - RADAR_MAX_QUOTE_AGE)
     by_code = {str(row.get("code", "")): row for row in rows}
     diagnostics = required_diagnostics or getattr(rows, "diagnostics", {})
     final_missing = set(diagnostics.get("final_missing") or []) if isinstance(diagnostics, dict) else set()
@@ -543,10 +555,12 @@ def validate_radar_refresh(
         if price < low * 0.999 or price > high * 1.001:
             raise ValueError(f"radar price outside high/low: {code}")
         quote_at = quote_datetime(trading_date, str(row.get("quote_time", "")))
-        if quote_at is None or quote_at < minimum or quote_at >= maximum:
-            raise ValueError(f"radar quote time outside {slot} window: {code}")
+        if quote_at is None or quote_at < session_start or quote_at > session_end:
+            raise ValueError(f"radar quote time outside market session: {code}")
         if quote_at > local_verified:
             raise ValueError(f"radar future quote rejected: {code}")
+        if quote_at < freshness_floor:
+            raise ValueError(f"radar stale quote rejected: {code}")
         quote_times[code] = quote_at.strftime("%H:%M:%S")
         market_as_of[code] = quote_at.isoformat()
         price_fields[code] = price_field
@@ -1046,18 +1060,20 @@ def main() -> None:
     refresh_attempt: dict[str, Any] | None = None
     try:
         retry_deadline = None
-        if requested_slot and requested_slot in RADAR_SLOTS:
+        if requested_slot and valid_rolling_slot(requested_slot):
             _, retry_deadline = radar_slot_window(requested_date, requested_slot)
         mis_rows = fetch_mis_snapshot(deadline=retry_deadline)
         mis_diagnostics = getattr(mis_rows, "diagnostics", {})
         # Persist every genuine source observation even when the atomic radar
         # set is not complete yet.  Later scheduled attempts may combine only
-        # observations that the V4 validator proves belong to the same slot.
+        # observations that the validator proves are same-day and fresh.  The
+        # rolling slot is metadata only; it is not an hourly acceptance gate.
         items = merge_mis_items(items, mis_rows, now)
         if requested_slot:
             verified_at = datetime.now(TAIPEI)
             item_map = {item["code"]: item for item in items}
-            slot_start, slot_end = radar_slot_window(requested_date, requested_slot)
+            session_start, session_end = radar_slot_window(requested_date, requested_slot)
+            freshness_floor = max(session_start, verified_at - RADAR_MAX_QUOTE_AGE)
             candidate_rows = [
                 item_map[code]
                 for code in RADAR_REQUIRED_LIVE_SYMBOLS
@@ -1066,7 +1082,7 @@ def main() -> None:
                     str(item_map[code].get("date", "")),
                     str(item_map[code].get("quote_time", "")),
                 )) is not None
-                and slot_start <= candidate_at < slot_end
+                and freshness_floor <= candidate_at <= session_end
                 and candidate_at <= verified_at
             ]
             mis_diagnostics = candidate_diagnostics(mis_diagnostics, candidate_rows)

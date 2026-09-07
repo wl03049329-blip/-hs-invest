@@ -143,7 +143,7 @@ with tempfile.TemporaryDirectory() as temp_dir:
 print("TEST 9 PASS: missing-artifact staging regression")
 
 
-# TEST 10: scheduled retries persist FAILED -> SUCCESS and then lock the slot.
+# TEST 10: every legal scheduler tick runs; a prior success never locks an hour.
 with tempfile.TemporaryDirectory() as temp_dir:
     previous_root = runner.ROOT
     runner.ROOT = Path(temp_dir)
@@ -162,17 +162,15 @@ with tempfile.TemporaryDirectory() as temp_dir:
     )
     assert success_code == 0
     calls = []
-    runner.run_scheduled_once(
+    third_code = runner.run_scheduled_once(
         now_fn=lambda: at("2026-08-26T11:00:00"),
-        execute_fn=lambda *_args: calls.append(True),
+        execute_fn=lambda date, slot: (calls.append((date, slot)) or (True, successful_attempt(slot))),
         git_sync=False,
     )
-    persisted = json.loads((runner.ROOT / "market-quotes-meta.json").read_text(encoding="utf-8"))["intraday_completeness"]
-    assert persisted["slots"]["10:30"]["status"] == runner.SLOT_SUCCESS
-    assert persisted["slots"]["10:30"]["attempts"] == 2
-    assert calls == []
+    assert third_code == 0
+    assert calls == [("2026-08-26", "11:00")]
     runner.ROOT = previous_root
-print("TEST 10 PASS: scheduler retries, succeeds, and locks first success")
+print("TEST 10 PASS: scheduler failures stay red and later rolling ticks still run")
 
 
 workflow = (ROOT / ".github" / "workflows" / "update-market-quotes.yml").read_text(encoding="utf-8")

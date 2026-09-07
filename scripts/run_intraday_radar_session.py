@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the five validated intraday radar refreshes in one GitHub Actions job."""
+"""Publish one validated rolling intraday radar refresh per scheduler tick."""
 
 from __future__ import annotations
 
@@ -19,6 +19,8 @@ TAIPEI = ZoneInfo("Asia/Taipei")
 TARGET_SLOTS = ("09:30", "10:30", "11:30", "12:30", "13:30")
 SLOT_CONTRACT = "HS_LIVE_INTRADAY_SLOT_V4"
 FINAL_SLOT_CLOSE = time(14, 20)
+MARKET_OPEN = time(9, 0)
+MARKET_CLOSE = time(13, 30, 59)
 SLOT_PENDING = "PENDING"
 SLOT_SUCCESS = "SUCCESS"
 SLOT_FAILED = "FAILED"
@@ -58,6 +60,18 @@ def current_slot_for_time(now: datetime) -> str | None:
         if slot_datetime(trading_date, slot) <= local_now < slot_end_datetime(trading_date, slot):
             return slot
     return None
+
+
+def rolling_slot_for_time(now: datetime) -> str | None:
+    """Return the actual Taipei execution minute during the cash session.
+
+    This value is an artifact identity/bucket only.  Unlike the legacy V4
+    labels above, it does not decide whether Core may run at 10:17 or 11:43.
+    """
+    local_now = now.astimezone(TAIPEI)
+    if local_now.weekday() >= 5 or not MARKET_OPEN <= local_now.time() <= MARKET_CLOSE:
+        return None
+    return local_now.strftime("%H:%M")
 
 
 def slot_action(now: datetime, target: datetime) -> str:
@@ -465,72 +479,50 @@ def run_scheduled_once(
     git_sync: bool = True,
 ) -> int:
     now = now_fn().astimezone(TAIPEI)
-    trigger_type = str(os.environ.get("HS_INTRADAY_TRIGGER", "schedule")).strip() or "schedule"
     if now.weekday() >= 5:
         print("Non-trading weekday: scheduler tick stopped", flush=True)
         return 0
-    if trigger_type == "workflow_dispatch" and current_slot_for_time(now) is None:
-        print("CLOSED_SESSION_SKIP: manual intraday smoke test is outside a legal slot", flush=True)
+    rolling_slot = rolling_slot_for_time(now)
+    if rolling_slot is None:
+        print("CLOSED_SESSION_SKIP: intraday tick is outside the Taiwan cash session", flush=True)
         return 0
     if git_sync:
         run(["git", "pull", "--rebase"])
     trading_date = now.date().isoformat()
-    state = load_completeness(trading_date)
-    state = reconcile_closed_slots(state, now)
-    classified_slot = current_slot_for_time(now)
-    slot = eligible_slot(state, now)
-    attempted_success: bool | None = None
-    if slot:
-        retry_number = int(state["slots"][slot].get("attempts") or 0) + 1
-        attempted_success, attempt = execute_fn(trading_date, slot)
-        attempt = dict(attempt or {})
-        attempt["slot_diagnostic"] = complete_slot_diagnostic(
-            trading_date,
-            slot,
-            attempt,
-            now,
-            existing_slot_success=False,
-            retry_number=retry_number,
-        )
-        print(f"SLOT_DIAGNOSTIC {json.dumps(attempt['slot_diagnostic'], ensure_ascii=False)}", flush=True)
-        state = record_slot_outcome(state, slot, SLOT_SUCCESS if attempted_success else SLOT_FAILED, attempt, now)
-    elif classified_slot and state["slots"][classified_slot].get("status") == SLOT_SUCCESS:
-        locked = complete_slot_diagnostic(
-            trading_date,
-            classified_slot,
-            {"verified": True, "status": "success", "market_as_of": state["slots"][classified_slot].get("market_as_of")},
-            now,
-            existing_slot_success=True,
-            retry_number=int(state["slots"][classified_slot].get("attempts") or 1),
-        )
-        locked.update({"market_fetch": "NOT_RUN", "fetch_status": "FETCH_NOT_RUN", "core_input": "NOT_RUN", "score": "NOT_RUN", "core_status": "CORE_NOT_RUN", "snapshot_append": "FIRST_SUCCESS_LOCKED", "snapshot_write_status": "FIRST_SUCCESS_LOCKED"})
-        print(f"SLOT_DIAGNOSTIC {json.dumps(locked, ensure_ascii=False)}", flush=True)
-    state = reconcile_closed_slots(state, now)
-    persist_completeness(state)
+    attempted_success, attempt = execute_fn(trading_date, rolling_slot)
+    attempt = dict(attempt or {})
+    attempt["slot_diagnostic"] = complete_slot_diagnostic(
+        trading_date,
+        rolling_slot,
+        attempt,
+        now,
+        existing_slot_success=False,
+        retry_number=1,
+    )
+    print(f"ROLLING_DIAGNOSTIC {json.dumps(attempt['slot_diagnostic'], ensure_ascii=False)}", flush=True)
     if git_sync:
         commit_slot(
             trading_date,
-            slot or "audit",
-            attempted_success is not False and state.get("snapshot_status") != SNAPSHOT_MISSED,
+            rolling_slot,
+            attempted_success,
         )
     print(
-        f"INTRADAY_COMPLETENESS {trading_date} {state['completeness']} "
-        f"{state['snapshot_status']} success={state['successful_slots']} "
-        f"missed={state['missed_slots']} failed={state['failed_slots']}",
+        f"INTRADAY_ROLLING {trading_date} {rolling_slot} "
+        f"{'SNAPSHOT_WRITTEN' if attempted_success else 'SNAPSHOT_FAILED'}",
         flush=True,
     )
-    return 1 if workflow_should_fail(state, now, attempted_success, trigger_type=trigger_type) else 0
+    return 0 if attempted_success else 1
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--slot", choices=TARGET_SLOTS, help="Run one slot only while its legal as-of window is open.")
+    parser.add_argument("--slot", help="Run the current rolling minute only while the cash session is open.")
     parser.add_argument("--scheduled-once", action="store_true", help="Run one idempotent scheduler tick.")
     args = parser.parse_args()
     if args.scheduled_once or args.slot:
         if args.slot:
             now = datetime.now(TAIPEI)
-            classified_slot = current_slot_for_time(now)
+            classified_slot = rolling_slot_for_time(now)
             if args.slot != classified_slot:
                 print(f"[{args.slot}] refused: current classified slot is {classified_slot or 'NONE'}", flush=True)
                 raise SystemExit(1)

@@ -198,7 +198,7 @@ try:
     validate(result, "10:30")
     raise AssertionError("stale as-of must fail")
 except ValueError as exc:
-    assert "quote time outside 10:30 window" in str(exc)
+    assert "stale quote rejected" in str(exc)
 assert not result.diagnostics["final_missing"] and not result.diagnostics["final_parse_rejected"]
 print("TEST 11 PASS: stale as-of is not classified as missing")
 
@@ -214,8 +214,8 @@ try:
     quotes.validate_radar_refresh(stale_pz, "2026-08-21", "10:30", datetime.fromisoformat("2026-08-21T10:35:00+08:00"))
     raise AssertionError("stale same-row pz must fail")
 except ValueError as exc:
-    assert "quote time outside 10:30 window: 0050" in str(exc)
-print("TEST 11B PASS: same-row pz cannot bypass slot freshness")
+    assert "stale quote rejected: 0050" in str(exc)
+print("TEST 11B PASS: same-row pz cannot bypass rolling freshness")
 
 previous_day_pz = [
     quotes.parse_mis_row(
@@ -312,8 +312,8 @@ try:
     )
     raise AssertionError("prior-slot candidate must fail closed")
 except ValueError as exc:
-    assert "quote time outside 10:30 window" in str(exc)
-print("TEST 13B PASS: prior-slot candidate remains fail-closed")
+    assert "stale quote rejected" in str(exc)
+print("TEST 13B PASS: stale persisted candidate remains fail-closed")
 
 # TEST 13C: separate scheduler attempts can accumulate different genuine
 # transactions and publish only after the complete atomic five-symbol set is

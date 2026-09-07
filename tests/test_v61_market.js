@@ -122,12 +122,12 @@ check("期貨籌碼官方來源多時段補抓保留，首頁正式 fallback 由
   for (const cron of ["30 7 * * 1-5", "30 8 * * 1-5", "0 10 * * 1-5", "0 12 * * 1-5", "0 23 * * 0-4"]) {
     assert.ok(futuresWorkflow.includes(`cron: "${cron}"`));
   }
-  assert.match(marketWorkflow, /cron: "30,40,50 1 \* \* 1-5"/);
-  assert.match(marketWorkflow, /cron: "\*\/10 2,3,4,5 \* \* 1-5"/);
-  assert.match(marketWorkflow, /cron: "0,10,20,30 6 \* \* 1-5"/);
+  assert.match(marketWorkflow, /cron: "\*\/5 1 \* \* 1-5"/);
+  assert.match(marketWorkflow, /cron: "\*\/5 2,3,4,5 \* \* 1-5"/);
+  assert.match(marketWorkflow, /cron: "0,5,10,15,20,30 6 \* \* 1-5"/);
   assert.match(marketWorkflow, /run_intraday_radar_session\.py/);
   assert.match(marketRunner, /tx-futures-quote\.json/);
-  assert.match(marketWorkflow, /group: hs-live-intraday-slot-v3/);
+  assert.match(marketWorkflow, /group: hs-live-intraday-slot-v4/);
   assert.match(marketWorkflow, /cancel-in-progress: false/);
   assert.match(marketWorkflow, /needs: intraday/);
   assert.match(marketWorkflow, /if: \$\{\{ always\(\) \}\}/);

@@ -9,6 +9,11 @@
   const finiteScore=value=>Number.isFinite(Number(value))&&Number(value)>=0&&Number(value)<=100;
   const boundedDate=(value,targetDate)=>validDate(value)&&validDate(targetDate)&&value<=targetDate;
   const finiteRaw=value=>value===null||value===undefined||value===""?null:(Number.isFinite(Number(value))?Number(value):null);
+  const snapshotMarketAsOf=snapshot=>{
+    const direct=String(snapshot?.market_as_of||"");
+    const rows=Object.values(snapshot?.items||{}).map(row=>String(row?.market_as_of||"")).filter(Boolean);
+    return [...rows,direct].filter(Boolean).sort().at(-1)||"";
+  };
   const MARKET_STATES=Object.freeze({PREMARKET:"PREMARKET",OPEN:"OPEN",CLOSED:"CLOSED",HOLIDAY:"HOLIDAY",STALE:"STALE"});
   const LIVE_REASONS=Object.freeze({
     NO_CURRENT_DAY_INTRADAY:"NO_CURRENT_DAY_INTRADAY",INCOMPLETE_INTRADAY:"INCOMPLETE_INTRADAY",
@@ -91,8 +96,8 @@
     return{snapshot,display_eligible:false,status:"UNAVAILABLE",reason,freshness:reason===LIVE_REASONS.STALE_INTRADAY_SNAPSHOT?"STALE":"UNAVAILABLE",market_state:marketState};
   }
 
-  function resolveLiveProjected({intradaySnapshots,targetDate,scoreVersion,symbols,now=new Date(),marketState=MARKET_STATES.STALE,maxAgeMinutes=75}={}){
-    const expected=new Set(symbols||[]),rows=(intradaySnapshots||[]).filter(snapshot=>snapshot?.trading_date===targetDate&&snapshot?.status==="SUCCESS").sort((a,b)=>String(b?.slot||"").localeCompare(String(a?.slot||""))),snapshot=rows[0]||null;
+  function resolveLiveProjected({intradaySnapshots,targetDate,scoreVersion,symbols,now=new Date(),marketState=MARKET_STATES.STALE,maxAgeMinutes=15}={}){
+    const expected=new Set(symbols||[]),rows=(intradaySnapshots||[]).filter(snapshot=>snapshot?.trading_date===targetDate&&snapshot?.status==="SUCCESS").sort((a,b)=>snapshotMarketAsOf(b).localeCompare(snapshotMarketAsOf(a))||String(b?.slot||"").localeCompare(String(a?.slot||""))),snapshot=rows[0]||null;
     if(marketState===MARKET_STATES.PREMARKET)return liveUnavailable(LIVE_REASONS.PREMARKET,marketState,snapshot);
     if(marketState===MARKET_STATES.CLOSED)return liveUnavailable(LIVE_REASONS.CLOSED,marketState,snapshot);
     if(marketState===MARKET_STATES.HOLIDAY)return liveUnavailable(LIVE_REASONS.HOLIDAY,marketState,snapshot);
@@ -113,7 +118,7 @@
     return{snapshot:normalized,display_eligible:true,status:"LIVE_PROJECTED",reason:null,freshness:"FRESH",market_state:marketState};
   }
 
-  function buildDualTrackView({finalizedArtifact,intradaySnapshots,targetDate,scoreVersion,symbols,now=new Date(),tradingDayStatus="UNKNOWN",maxAgeMinutes=75}={}){
+  function buildDualTrackView({finalizedArtifact,intradaySnapshots,targetDate,scoreVersion,symbols,now=new Date(),tradingDayStatus="UNKNOWN",maxAgeMinutes=15}={}){
     const expected=new Set(symbols||[]),official=resolveFinalOnly({finalizedArtifact,targetDate,scoreVersion,symbols:expected});
     let marketState=resolveMarketState({targetDate,now,tradingDayStatus,finalizedSnapshot:official,intradaySnapshots});
     const liveResult=resolveLiveProjected({intradaySnapshots,targetDate,scoreVersion,symbols:expected,now,marketState,maxAgeMinutes});
@@ -128,5 +133,5 @@
     return{schema_version:1,score_version:scoreVersion,target_date:targetDate,market_state:marketState,primary:"official",official_snapshot:official,live_snapshot:liveResult.display_eligible?liveResult.snapshot:null,live_reason:liveResult.reason,items};
   }
 
-  return Object.freeze({MARKET_STATES,LIVE_REASONS,normalizeFinalizedSnapshot,normalizeIntradaySnapshot,resolve,resolveFinalOnly,resolveMarketState,resolveLiveProjected,buildDualTrackView});
+  return Object.freeze({MARKET_STATES,LIVE_REASONS,snapshotMarketAsOf,normalizeFinalizedSnapshot,normalizeIntradaySnapshot,resolve,resolveFinalOnly,resolveMarketState,resolveLiveProjected,buildDualTrackView});
 });

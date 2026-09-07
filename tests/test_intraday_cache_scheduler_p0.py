@@ -65,9 +65,9 @@ except ValueError as exc:
     assert "future quote rejected" in str(exc)
 try:
     quotes.validate_radar_refresh(radar_rows("09:30"), "2026-08-13", "09:30", datetime.fromisoformat("2026-08-13T10:30:00+08:00"))
-    raise AssertionError("a closed 09:30 slot must never be backfilled")
+    raise AssertionError("a stale quote must never be accepted by a later rolling run")
 except ValueError as exc:
-    assert "slot window is not open" in str(exc)
+    assert "stale quote rejected" in str(exc)
 
 old_fetch_json, old_tracked_channels = quotes.fetch_json, quotes.tracked_channels
 mis_rows = [{
@@ -147,6 +147,8 @@ assert session.slot_action(datetime.fromisoformat("2026-08-13T10:29:59+08:00"), 
 assert session.slot_action(datetime.fromisoformat("2026-08-13T10:30:00+08:00"), target) == "skip"
 assert session.current_slot_for_time(datetime.fromisoformat("2026-08-13T14:19:59+08:00")) == "13:30"
 assert session.current_slot_for_time(datetime.fromisoformat("2026-08-13T14:20:00+08:00")) is None
+assert session.rolling_slot_for_time(datetime.fromisoformat("2026-08-13T10:17:00+08:00")) == "10:17"
+assert session.rolling_slot_for_time(datetime.fromisoformat("2026-08-13T11:43:00+08:00")) == "11:43"
 
 workflow = (ROOT / ".github" / "workflows" / "update-market-quotes.yml").read_text(encoding="utf-8")
 assert 'cron: "*/5 1 * * 1-5"' in workflow
@@ -160,4 +162,4 @@ assert "cancel-in-progress: false" in workflow
 assert "needs: intraday" in workflow and "if: ${{ always() }}" in workflow
 assert 'cron: "32 1,2,3,4,5 * * 1-5"' not in workflow
 
-print("PASS Slot V4 scheduler, five-ETF validation, WAIT_NATIVE isolation, timestamp preservation and cache version regression")
+print("PASS rolling scheduler, five-ETF validation, WAIT_NATIVE isolation, timestamp preservation and cache version regression")

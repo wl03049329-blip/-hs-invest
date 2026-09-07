@@ -2118,7 +2118,7 @@ function currentTradingDayStatus(targetDate=taipeiToday(),now=new Date()){
   return hasFinalizedToday||hasIntradayToday?"TRADING_DAY":"UNKNOWN";
 }
 function currentDualTrackCoreView(targetDate=taipeiToday(),now=new Date()){
-  return window.HSCanonicalScoreResolver?.buildDualTrackView({finalizedArtifact:finalizedCoreScoreHistoryArtifact,intradaySnapshots:liveCanonicalCoreSnapshots,targetDate,scoreVersion:LONG_TERM_CORE_SCORE_VERSION,symbols:LONG_RADAR_SCORED_CODES,now,tradingDayStatus:currentTradingDayStatus(targetDate,now),maxAgeMinutes:75})||null;
+  return window.HSCanonicalScoreResolver?.buildDualTrackView({finalizedArtifact:finalizedCoreScoreHistoryArtifact,intradaySnapshots:liveCanonicalCoreSnapshots,targetDate,scoreVersion:LONG_TERM_CORE_SCORE_VERSION,symbols:LONG_RADAR_SCORED_CODES,now,tradingDayStatus:currentTradingDayStatus(targetDate,now),maxAgeMinutes:15})||null;
 }
 async function loadCanonicalCoreLedger(signal){
   const payload=await fetchNoStore(`intraday-core-snapshots-v1.json?ts=${Date.now()}`,signal);
@@ -2818,7 +2818,7 @@ function hsLiveProjectedStatus(viewItem){
   const live=viewItem?.live,state=viewItem?.market_state,labels={PREMARKET:"尚未開盤",CLOSED:"目前非交易時段",HOLIDAY:"今日休市",STALE:"盤中資料已過期"};
   if(live?.display_eligible){
     const delta=Number(live.delta_vs_official),rounded=Number.isFinite(delta)?Math.round(Math.abs(delta)*10)/10:null,deltaText=Number.isFinite(rounded)?delta>0?`↑${rounded}`:delta<0?`↓${rounded}`:"↔0":"—";
-    return{eligible:true,label:"盤中預估",score:live.display_score,delta:deltaText,meta:`${live.slot||"—"} 更新`,state};
+    return{eligible:true,label:"盤中預估",score:live.display_score,delta:deltaText,meta:`${formatHomeQuoteTime(live.market_as_of)||live.slot||"—"} 更新`,state};
   }
   const label=labels[state]||({NO_CURRENT_DAY_INTRADAY:"等待今日盤中快照",INCOMPLETE_INTRADAY:"盤中資料不完整",VERSION_MISMATCH:"盤中版本不相容",FUTURE_AS_OF:"盤中時間驗證失敗",TRADING_DAY_UNCONFIRMED:"交易日狀態待確認"}[live?.reason]||"盤中預估暫不可用");
   const meta=live?.market_as_of?`最後快照 ${formatHomeQuoteTime(live.market_as_of)}【已失效】`:"不使用舊快照代替";

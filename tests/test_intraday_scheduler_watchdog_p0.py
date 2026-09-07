@@ -1,5 +1,4 @@
 import importlib.util
-import json
 import tempfile
 from datetime import datetime
 from pathlib import Path
@@ -45,16 +44,8 @@ with tempfile.TemporaryDirectory() as folder:
         }
 
     assert runner.run_scheduled_once(now_fn=lambda: datetime.fromisoformat("2026-08-28T09:33:00+08:00"), execute_fn=first_tick, git_sync=False) == 0
-    assert runner.run_scheduled_once(now_fn=lambda: datetime.fromisoformat("2026-08-28T09:48:00+08:00"), execute_fn=lambda *_: (_ for _ in ()).throw(AssertionError("duplicate execution")), git_sync=False) == 0
-    state = json.loads((runner.ROOT / "market-quotes-meta.json").read_text(encoding="utf-8"))["intraday_completeness"]
-    assert executions == [("2026-08-28", "09:30")]
-    assert state["slots"]["09:30"]["status"] == runner.SLOT_SUCCESS
-    assert state["slots"]["09:30"]["attempts"] == 1
-    diagnostic = state["slots"]["09:30"]["diagnostic"]
-    assert diagnostic["trigger_status"] == "TRIGGERED"
-    assert diagnostic["fetch_status"] == "FETCH_OK"
-    assert diagnostic["core_status"] == "CORE_OK"
-    assert diagnostic["snapshot_write_status"] == "SNAPSHOT_WRITTEN"
+    assert runner.run_scheduled_once(now_fn=lambda: datetime.fromisoformat("2026-08-28T09:48:00+08:00"), execute_fn=first_tick, git_sync=False) == 0
+    assert executions == [("2026-08-28", "09:33"), ("2026-08-28", "09:48")]
     runner.ROOT = old_root
 
-print("PASS independent watchdog schedule and cross-workflow first-success idempotency")
+print("PASS independent watchdog schedule and rolling-tick execution")
