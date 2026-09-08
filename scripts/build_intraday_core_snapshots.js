@@ -270,5 +270,5 @@ async function main() {
   console.log(`INTRADAY_CORE_SNAPSHOT ${snapshotKey} ${result.reason}`);
 }
 
-module.exports = { SYMBOLS, SCORE_VERSION, SLOT_CONTRACT, validIntradaySlot, cleanRows, scoreRows, scorePreviousClose, attachBaselines, rawFingerprint, validateLedger, buildSnapshot };
+module.exports = { SYMBOLS, SCORE_VERSION, SLOT_CONTRACT, validIntradaySlot, cleanRows, scoreRows, scorePreviousClose, attachBaselines, rawFingerprint, validateLedger, buildSnapshot, loadHistory };
 if (require.main === module) main().catch(error => { console.error(`INTRADAY_CORE_SNAPSHOT_FAILED ${error.message}`); process.exitCode = 1; });

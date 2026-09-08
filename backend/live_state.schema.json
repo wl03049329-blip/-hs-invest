@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hs.example/schemas/live-state-v1.json",
+  "title": "HS Live Backend V1 public shadow state",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "status", "market_state", "trading_date", "as_of", "calculated_at", "last_success_at", "completeness", "diagnostic_reason", "tickers"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "status": {"enum": ["AVAILABLE", "UNAVAILABLE"]},
+    "market_state": {"enum": ["OPEN", "CLOSED", "HOLIDAY", "UNAVAILABLE"]},
+    "trading_date": {"type": "string", "format": "date"},
+    "as_of": {"type": ["string", "null"], "format": "date-time"},
+    "calculated_at": {"type": "string", "format": "date-time"},
+    "last_success_at": {"type": ["string", "null"], "format": "date-time"},
+    "completeness": {"enum": ["0/5", "5/5"]},
+    "diagnostic_reason": {"type": ["string", "null"]},
+    "tickers": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["0050", "00662", "00757", "00830", "00935", "009815"],
+      "properties": {
+        "0050": {"$ref": "#/$defs/ticker"}, "00662": {"$ref": "#/$defs/ticker"},
+        "00757": {"$ref": "#/$defs/ticker"}, "00830": {"$ref": "#/$defs/ticker"},
+        "00935": {"$ref": "#/$defs/ticker"}, "009815": {"$ref": "#/$defs/ticker"}
+      }
+    }
+  },
+  "$defs": {
+    "ticker": {
+      "type": "object", "additionalProperties": false,
+      "required": ["score", "display_score", "delta_vs_official", "quote_as_of", "freshness", "status"],
+      "properties": {
+        "score": {"type": ["number", "null"]}, "display_score": {"type": ["number", "string", "null"]},
+        "delta_vs_official": {"type": ["number", "null"]}, "quote_as_of": {"type": ["string", "null"]},
+        "freshness": {"enum": ["FRESH", "DELAYED", "UNAVAILABLE", "WAIT_NATIVE"]},
+        "status": {"enum": ["AVAILABLE", "UNAVAILABLE", "WAIT_NATIVE"]}
+      }
+    }
+  }
+}
