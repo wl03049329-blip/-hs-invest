@@ -29,11 +29,12 @@
   "$defs": {
     "ticker": {
       "type": "object", "additionalProperties": false,
-      "required": ["score", "display_score", "delta_vs_official", "quote_as_of", "freshness", "status"],
+      "required": ["score", "display_score", "delta_vs_official", "quote_as_of", "freshness", "quote_source", "status"],
       "properties": {
         "score": {"type": ["number", "null"]}, "display_score": {"type": ["number", "string", "null"]},
         "delta_vs_official": {"type": ["number", "null"]}, "quote_as_of": {"type": ["string", "null"]},
         "freshness": {"enum": ["FRESH", "DELAYED", "UNAVAILABLE", "WAIT_NATIVE"]},
+        "quote_source": {"enum": ["MIS_Z", "MIS_PZ", "FUGLE_LAST_TRADE", null]},
         "status": {"enum": ["AVAILABLE", "UNAVAILABLE", "WAIT_NATIVE"]}
       }
     }

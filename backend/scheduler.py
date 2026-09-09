@@ -175,9 +175,10 @@ class ShadowScheduler:
                         tickers[symbol] = {
                             "score": item["score"], "display_score": item.get("display_score"),
                             "delta_vs_official": item.get("delta_vs_previous_close"),
-                            "quote_as_of": batch.quote_timestamps[symbol], "freshness": batch.freshness[symbol], "status": "AVAILABLE",
+                            "quote_as_of": batch.quote_timestamps[symbol], "freshness": batch.freshness[symbol],
+                            "quote_source": batch.sources.get(symbol), "status": "AVAILABLE",
                         }
-                    tickers["009815"] = {"score": None, "display_score": None, "delta_vs_official": None, "quote_as_of": None, "freshness": "WAIT_NATIVE", "status": "WAIT_NATIVE"}
+                    tickers["009815"] = {"score": None, "display_score": None, "delta_vs_official": None, "quote_as_of": None, "freshness": "WAIT_NATIVE", "quote_source": None, "status": "WAIT_NATIVE"}
                     public = {
                         "schema_version": 1, "status": "AVAILABLE", "market_state": "OPEN",
                         "trading_date": batch.trading_date, "as_of": min(batch.quote_timestamps.values()),
@@ -189,7 +190,8 @@ class ShadowScheduler:
                         "input_fingerprint": result["input_fingerprint"],
                         "raw_c4_scores": {symbol: tickers[symbol]["score"] for symbol in REQUIRED_SYMBOLS},
                         "display_scores": {symbol: tickers[symbol]["display_score"] for symbol in REQUIRED_SYMBOLS},
-                        "freshness": batch.freshness, "duration_ms": round((time.monotonic() - started) * 1000),
+                        "freshness": batch.freshness, "quote_sources": batch.sources,
+                        "duration_ms": round((time.monotonic() - started) * 1000),
                         "last_success_at": calculated_at,
                         "legacy_anchor": legacy_anchor,
                     }

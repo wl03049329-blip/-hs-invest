@@ -29,10 +29,10 @@ def unavailable_public(
 ) -> dict[str, Any]:
     prior = previous or {}
     tickers = {
-        symbol: {"score": None, "display_score": None, "delta_vs_official": None, "quote_as_of": None, "freshness": "UNAVAILABLE", "status": "UNAVAILABLE"}
+        symbol: {"score": None, "display_score": None, "delta_vs_official": None, "quote_as_of": None, "freshness": "UNAVAILABLE", "quote_source": None, "status": "UNAVAILABLE"}
         for symbol in REQUIRED_SYMBOLS
     }
-    tickers[WAIT_NATIVE_SYMBOL] = {"score": None, "display_score": None, "delta_vs_official": None, "quote_as_of": None, "freshness": "WAIT_NATIVE", "status": "WAIT_NATIVE"}
+    tickers[WAIT_NATIVE_SYMBOL] = {"score": None, "display_score": None, "delta_vs_official": None, "quote_as_of": None, "freshness": "WAIT_NATIVE", "quote_source": None, "status": "WAIT_NATIVE"}
     return {
         "schema_version": 1,
         "status": "UNAVAILABLE",
