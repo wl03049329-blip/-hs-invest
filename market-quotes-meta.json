@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "updated_at": "2026-09-08T05:26:23.714523Z",
+  "updated_at": "2026-09-10T05:25:43.809446Z",
   "source_dates": {
-    "TWSE": "2026-09-08",
-    "TPEx": "2026-09-08"
+    "TWSE": "2026-09-10",
+    "TPEx": "2026-09-10"
   },
   "source_status": {
     "TWSE": "official_closing_data",
@@ -13,10 +13,10 @@
   "item_count": 2395,
   "radar_refresh": {
     "verified": true,
-    "trading_date": "2026-09-08",
-    "slot": "13:26",
-    "verified_at": "2026-09-08T05:26:42.059763Z",
-    "captured_at": "2026-09-08T13:26:42.059763+08:00",
+    "trading_date": "2026-09-10",
+    "slot": "13:25",
+    "verified_at": "2026-09-10T05:26:27.248097Z",
+    "captured_at": "2026-09-10T13:26:27.248097+08:00",
     "codes": [
       "0050",
       "00662",
@@ -31,18 +31,18 @@
       "009815": "WAIT_NATIVE"
     },
     "quote_times": {
-      "0050": "13:26:07",
-      "00662": "13:26:25",
-      "00757": "13:26:11",
-      "00830": "13:26:29",
-      "00935": "13:26:21"
+      "0050": "13:25:33",
+      "00662": "13:25:59",
+      "00757": "13:25:47",
+      "00830": "13:26:03",
+      "00935": "13:26:00"
     },
     "market_as_of": {
-      "0050": "2026-09-08T13:26:07+08:00",
-      "00662": "2026-09-08T13:26:25+08:00",
-      "00757": "2026-09-08T13:26:11+08:00",
-      "00830": "2026-09-08T13:26:29+08:00",
-      "00935": "2026-09-08T13:26:21+08:00"
+      "0050": "2026-09-10T13:25:33+08:00",
+      "00662": "2026-09-10T13:25:59+08:00",
+      "00757": "2026-09-10T13:25:47+08:00",
+      "00830": "2026-09-10T13:26:03+08:00",
+      "00935": "2026-09-10T13:26:00+08:00"
     },
     "price_fields": {
       "0050": "pz",
@@ -62,12 +62,43 @@
         "00935"
       ],
       "initial_missing": [],
-      "initial_parse_rejected": {},
-      "retried_batches": [],
+      "initial_parse_rejected": {
+        "00757": {
+          "batch": 5,
+          "request_key": "tse_00757.tw",
+          "reason": "missing_price",
+          "raw_fields": {
+            "c": "00757",
+            "ex": "tse",
+            "d": "20260910",
+            "^": "20260910",
+            "t": "13:24:31",
+            "%": "13:24:31",
+            "tlong": "1789017871000",
+            "z": "-",
+            "pz": "-",
+            "y": "137.4000",
+            "o": "137.5000",
+            "h": "137.7500",
+            "l": "137.3500",
+            "v": "453",
+            "tv": "-",
+            "a": "137.8000_137.8500_137.9000_137.9500_138.0000_",
+            "b": "137.7500_137.7000_137.6500_137.6000_137.5500_"
+          }
+        }
+      },
+      "retried_batches": [
+        5
+      ],
       "retry_strategy": "required_symbol_single_request",
-      "targeted_retry_attempts": {},
+      "targeted_retry_attempts": {
+        "00757": 5
+      },
       "retry_errors": {},
-      "retry_recovered": [],
+      "retry_recovered": [
+        "00757"
+      ],
       "final_missing": [],
       "final_parse_rejected": {},
       "symbols": {
@@ -80,7 +111,7 @@
           "rejection_reason": null,
           "raw_fields": null,
           "candidate_cache": false,
-          "candidate_market_as_of": "2026-09-08T13:26:07+08:00"
+          "candidate_market_as_of": "2026-09-10T13:25:33+08:00"
         },
         "00662": {
           "batch": 4,
@@ -91,7 +122,7 @@
           "rejection_reason": null,
           "raw_fields": null,
           "candidate_cache": false,
-          "candidate_market_as_of": "2026-09-08T13:26:25+08:00"
+          "candidate_market_as_of": "2026-09-10T13:25:59+08:00"
         },
         "00757": {
           "batch": 5,
@@ -102,7 +133,7 @@
           "rejection_reason": null,
           "raw_fields": null,
           "candidate_cache": false,
-          "candidate_market_as_of": "2026-09-08T13:26:11+08:00"
+          "candidate_market_as_of": "2026-09-10T13:25:47+08:00"
         },
         "00830": {
           "batch": 5,
@@ -113,7 +144,7 @@
           "rejection_reason": null,
           "raw_fields": null,
           "candidate_cache": false,
-          "candidate_market_as_of": "2026-09-08T13:26:29+08:00"
+          "candidate_market_as_of": "2026-09-10T13:26:03+08:00"
         },
         "00935": {
           "batch": 6,
@@ -124,7 +155,7 @@
           "rejection_reason": null,
           "raw_fields": null,
           "candidate_cache": false,
-          "candidate_market_as_of": "2026-09-08T13:26:21+08:00"
+          "candidate_market_as_of": "2026-09-10T13:26:00+08:00"
         }
       },
       "current_attempt_symbols": {
@@ -176,21 +207,21 @@
       },
       "candidate_cache_recovered": [],
       "candidate_market_as_of": {
-        "0050": "2026-09-08T13:26:07+08:00",
-        "00662": "2026-09-08T13:26:25+08:00",
-        "00757": "2026-09-08T13:26:11+08:00",
-        "00830": "2026-09-08T13:26:29+08:00",
-        "00935": "2026-09-08T13:26:21+08:00"
+        "0050": "2026-09-10T13:25:33+08:00",
+        "00662": "2026-09-10T13:25:59+08:00",
+        "00757": "2026-09-10T13:25:47+08:00",
+        "00830": "2026-09-10T13:26:03+08:00",
+        "00935": "2026-09-10T13:26:00+08:00"
       }
     },
     "status": "success"
   },
   "radar_refresh_attempt": {
     "verified": true,
-    "trading_date": "2026-09-08",
-    "slot": "13:26",
-    "verified_at": "2026-09-08T05:26:42.059763Z",
-    "captured_at": "2026-09-08T13:26:42.059763+08:00",
+    "trading_date": "2026-09-10",
+    "slot": "13:25",
+    "verified_at": "2026-09-10T05:26:27.248097Z",
+    "captured_at": "2026-09-10T13:26:27.248097+08:00",
     "codes": [
       "0050",
       "00662",
@@ -205,18 +236,18 @@
       "009815": "WAIT_NATIVE"
     },
     "quote_times": {
-      "0050": "13:26:07",
-      "00662": "13:26:25",
-      "00757": "13:26:11",
-      "00830": "13:26:29",
-      "00935": "13:26:21"
+      "0050": "13:25:33",
+      "00662": "13:25:59",
+      "00757": "13:25:47",
+      "00830": "13:26:03",
+      "00935": "13:26:00"
     },
     "market_as_of": {
-      "0050": "2026-09-08T13:26:07+08:00",
-      "00662": "2026-09-08T13:26:25+08:00",
-      "00757": "2026-09-08T13:26:11+08:00",
-      "00830": "2026-09-08T13:26:29+08:00",
-      "00935": "2026-09-08T13:26:21+08:00"
+      "0050": "2026-09-10T13:25:33+08:00",
+      "00662": "2026-09-10T13:25:59+08:00",
+      "00757": "2026-09-10T13:25:47+08:00",
+      "00830": "2026-09-10T13:26:03+08:00",
+      "00935": "2026-09-10T13:26:00+08:00"
     },
     "price_fields": {
       "0050": "pz",
@@ -236,12 +267,43 @@
         "00935"
       ],
       "initial_missing": [],
-      "initial_parse_rejected": {},
-      "retried_batches": [],
+      "initial_parse_rejected": {
+        "00757": {
+          "batch": 5,
+          "request_key": "tse_00757.tw",
+          "reason": "missing_price",
+          "raw_fields": {
+            "c": "00757",
+            "ex": "tse",
+            "d": "20260910",
+            "^": "20260910",
+            "t": "13:24:31",
+            "%": "13:24:31",
+            "tlong": "1789017871000",
+            "z": "-",
+            "pz": "-",
+            "y": "137.4000",
+            "o": "137.5000",
+            "h": "137.7500",
+            "l": "137.3500",
+            "v": "453",
+            "tv": "-",
+            "a": "137.8000_137.8500_137.9000_137.9500_138.0000_",
+            "b": "137.7500_137.7000_137.6500_137.6000_137.5500_"
+          }
+        }
+      },
+      "retried_batches": [
+        5
+      ],
       "retry_strategy": "required_symbol_single_request",
-      "targeted_retry_attempts": {},
+      "targeted_retry_attempts": {
+        "00757": 5
+      },
       "retry_errors": {},
-      "retry_recovered": [],
+      "retry_recovered": [
+        "00757"
+      ],
       "final_missing": [],
       "final_parse_rejected": {},
       "symbols": {
@@ -254,7 +316,7 @@
           "rejection_reason": null,
           "raw_fields": null,
           "candidate_cache": false,
-          "candidate_market_as_of": "2026-09-08T13:26:07+08:00"
+          "candidate_market_as_of": "2026-09-10T13:25:33+08:00"
         },
         "00662": {
           "batch": 4,
@@ -265,7 +327,7 @@
           "rejection_reason": null,
           "raw_fields": null,
           "candidate_cache": false,
-          "candidate_market_as_of": "2026-09-08T13:26:25+08:00"
+          "candidate_market_as_of": "2026-09-10T13:25:59+08:00"
         },
         "00757": {
           "batch": 5,
@@ -276,7 +338,7 @@
           "rejection_reason": null,
           "raw_fields": null,
           "candidate_cache": false,
-          "candidate_market_as_of": "2026-09-08T13:26:11+08:00"
+          "candidate_market_as_of": "2026-09-10T13:25:47+08:00"
         },
         "00830": {
           "batch": 5,
@@ -287,7 +349,7 @@
           "rejection_reason": null,
           "raw_fields": null,
           "candidate_cache": false,
-          "candidate_market_as_of": "2026-09-08T13:26:29+08:00"
+          "candidate_market_as_of": "2026-09-10T13:26:03+08:00"
         },
         "00935": {
           "batch": 6,
@@ -298,7 +360,7 @@
           "rejection_reason": null,
           "raw_fields": null,
           "candidate_cache": false,
-          "candidate_market_as_of": "2026-09-08T13:26:21+08:00"
+          "candidate_market_as_of": "2026-09-10T13:26:00+08:00"
         }
       },
       "current_attempt_symbols": {
@@ -350,20 +412,20 @@
       },
       "candidate_cache_recovered": [],
       "candidate_market_as_of": {
-        "0050": "2026-09-08T13:26:07+08:00",
-        "00662": "2026-09-08T13:26:25+08:00",
-        "00757": "2026-09-08T13:26:11+08:00",
-        "00830": "2026-09-08T13:26:29+08:00",
-        "00935": "2026-09-08T13:26:21+08:00"
+        "0050": "2026-09-10T13:25:33+08:00",
+        "00662": "2026-09-10T13:25:59+08:00",
+        "00757": "2026-09-10T13:25:47+08:00",
+        "00830": "2026-09-10T13:26:03+08:00",
+        "00935": "2026-09-10T13:26:00+08:00"
       }
     },
     "status": "success",
     "slot_diagnostic": {
       "schema_version": 3,
       "contract": "HS_LIVE_INTRADAY_SLOT_V4",
-      "trading_date": "2026-09-08",
-      "classified_slot": "13:26",
-      "actual_run_time": "2026-09-08T05:26:42.059763Z",
+      "trading_date": "2026-09-10",
+      "classified_slot": "13:25",
+      "actual_run_time": "2026-09-10T05:26:27.248097Z",
       "market_fetch": "PASS",
       "required_symbols": {
         "0050": "PASS",
@@ -373,11 +435,11 @@
         "00935": "PASS"
       },
       "market_as_of": {
-        "0050": "2026-09-08T13:26:07+08:00",
-        "00662": "2026-09-08T13:26:25+08:00",
-        "00757": "2026-09-08T13:26:11+08:00",
-        "00830": "2026-09-08T13:26:29+08:00",
-        "00935": "2026-09-08T13:26:21+08:00"
+        "0050": "2026-09-10T13:25:33+08:00",
+        "00662": "2026-09-10T13:25:59+08:00",
+        "00757": "2026-09-10T13:25:47+08:00",
+        "00830": "2026-09-10T13:26:03+08:00",
+        "00935": "2026-09-10T13:26:00+08:00"
       },
       "core_input": "PENDING",
       "score": "NOT_RUN",
@@ -386,7 +448,9 @@
       "retry_number": null,
       "failure_class": null,
       "reason": null,
-      "source_attempts": {}
+      "source_attempts": {
+        "00757": 5
+      }
     }
   },
   "intraday_completeness": {
@@ -556,11 +620,11 @@
     "updated_at": "2026-09-07T12:18:22.300494Z"
   },
   "intraday_snapshot_meta": {
-    "current_market_date": "2026-09-08",
-    "current_slot": "13:26",
-    "previous_successful_slot": "13:30",
-    "last_successful_snapshot": "2026-09-08_1326",
-    "snapshot_calculated_at": "2026-09-08T05:26:42.059763Z"
+    "current_market_date": "2026-09-10",
+    "current_slot": "13:25",
+    "previous_successful_slot": "13:26",
+    "last_successful_snapshot": "2026-09-10_1325",
+    "snapshot_calculated_at": "2026-09-10T05:26:27.248097Z"
   },
   "intraday_quote_snapshots": {
     "2026-08-24_1330": {
@@ -823,20 +887,90 @@
       "non_blocking_status": {
         "009815": "WAIT_NATIVE"
       }
+    },
+    "2026-09-10_1325": {
+      "contract": "HS_LIVE_INTRADAY_SLOT_V4",
+      "market_date": "2026-09-10",
+      "slot": "13:25",
+      "status": "SUCCESS",
+      "captured_at": "2026-09-10T13:26:27.248097+08:00",
+      "calculated_at": "2026-09-10T05:26:27.248097Z",
+      "market_as_of": {
+        "0050": "2026-09-10T13:25:33+08:00",
+        "00662": "2026-09-10T13:25:59+08:00",
+        "00757": "2026-09-10T13:25:47+08:00",
+        "00830": "2026-09-10T13:26:03+08:00",
+        "00935": "2026-09-10T13:26:00+08:00"
+      },
+      "items": {
+        "0050": {
+          "price": 109.1,
+          "price_field": "pz",
+          "open": 108.6,
+          "high": 109.15,
+          "low": 108.4,
+          "volume": 38747000.0,
+          "date": "2026-09-10",
+          "quote_time": "13:25:33"
+        },
+        "00662": {
+          "price": 119.05,
+          "price_field": "pz",
+          "open": 118.9,
+          "high": 119.15,
+          "low": 118.75,
+          "volume": 1836000.0,
+          "date": "2026-09-10",
+          "quote_time": "13:25:59"
+        },
+        "00757": {
+          "price": 137.75,
+          "price_field": "pz",
+          "open": 137.5,
+          "high": 137.75,
+          "low": 137.35,
+          "volume": 454000.0,
+          "date": "2026-09-10",
+          "quote_time": "13:25:47"
+        },
+        "00830": {
+          "price": 83.0,
+          "price_field": "pz",
+          "open": 83.0,
+          "high": 83.15,
+          "low": 82.65,
+          "volume": 3396000.0,
+          "date": "2026-09-10",
+          "quote_time": "13:26:03"
+        },
+        "00935": {
+          "price": 59.65,
+          "price_field": "pz",
+          "open": 59.45,
+          "high": 59.75,
+          "low": 59.0,
+          "volume": 7598000.0,
+          "date": "2026-09-10",
+          "quote_time": "13:26:00"
+        }
+      },
+      "non_blocking_status": {
+        "009815": "WAIT_NATIVE"
+      }
     }
   },
   "official_eod_snapshot": {
     "snapshot_type": "OFFICIAL_CLOSE_INPUT",
-    "date": "2026-09-07",
-    "observed_at": "2026-09-08T05:26:23.714523Z",
+    "date": "2026-09-09",
+    "observed_at": "2026-09-10T05:25:43.809446Z",
     "source_status": "official_closing_data",
     "items": {
       "0050": {
         "code": "0050",
         "name": "元大台灣50",
-        "price": 109.9,
-        "previous_close": 107.9,
-        "date": "2026-09-07",
+        "price": 109.65,
+        "previous_close": 109.65,
+        "date": "2026-09-09",
         "market": "TWSE",
         "quote_mode": "close",
         "quote_time": "收盤"
@@ -844,9 +978,9 @@
       "00662": {
         "code": "00662",
         "name": "富邦NASDAQ",
-        "price": 120.1,
-        "previous_close": 120.55,
-        "date": "2026-09-07",
+        "price": 119.45,
+        "previous_close": 120.0,
+        "date": "2026-09-09",
         "market": "TWSE",
         "quote_mode": "close",
         "quote_time": "收盤"
@@ -854,9 +988,9 @@
       "00757": {
         "code": "00757",
         "name": "統一FANG+",
-        "price": 139.9,
-        "previous_close": 141.55,
-        "date": "2026-09-07",
+        "price": 137.4,
+        "previous_close": 139.15,
+        "date": "2026-09-09",
         "market": "TWSE",
         "quote_mode": "close",
         "quote_time": "收盤"
@@ -864,9 +998,9 @@
       "00830": {
         "code": "00830",
         "name": "國泰費城半導體",
-        "price": 83.3,
-        "previous_close": 80.95,
-        "date": "2026-09-07",
+        "price": 83.1,
+        "previous_close": 83.69999999999999,
+        "date": "2026-09-09",
         "market": "TWSE",
         "quote_mode": "close",
         "quote_time": "收盤"
@@ -874,9 +1008,9 @@
       "00935": {
         "code": "00935",
         "name": "野村臺灣新科技50",
-        "price": 60.6,
-        "previous_close": 58.65,
-        "date": "2026-09-07",
+        "price": 60.0,
+        "previous_close": 59.85,
+        "date": "2026-09-09",
         "market": "TWSE",
         "quote_mode": "close",
         "quote_time": "收盤"
