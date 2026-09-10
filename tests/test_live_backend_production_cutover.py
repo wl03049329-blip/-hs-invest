@@ -181,12 +181,25 @@ class ProductionModeTests(unittest.TestCase):
             self.assertEqual(asyncio.run(scheduler.tick(NOW)), "SUCCESS")
             instance = create_app(store, scheduler, backend_mode="production")
             health = next(route.endpoint for route in instance.routes if route.path == "/healthz")()
-            required = {"backend_mode", "service_status", "market_state", "trading_date", "current_bucket", "last_attempted_run", "last_successful_run", "completeness", "required_symbols", "quote_timestamps", "quote_freshness", "quote_sources", "input_fingerprint", "c4_version", "scheduler_gap", "age_since_last_success_seconds", "volume_status"}
+            required = {"backend_mode", "service_status", "market_state", "trading_date", "current_bucket", "last_attempted_run", "last_successful_run", "completeness", "required_symbols", "quote_timestamps", "quote_freshness", "quote_sources", "quote_telemetry_scope", "input_fingerprint", "c4_version", "scheduler_gap", "age_since_last_success_seconds", "volume_status"}
             self.assertTrue(required <= health.keys())
             self.assertEqual((health["backend_mode"], health["c4_version"]), ("production", C4_VERSION))
             self.assertNotIn("FUGLE_API_KEY", str(health))
 
-    def test_19_production_does_not_publish_persisted_shadow_state(self) -> None:
+    def test_19_closed_tick_preserves_last_success_diagnostics_without_publishing_live(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = StateStore(temporary)
+            scheduler = ShadowScheduler(store, calendar=TradingDay(), quote_fetcher=batch, scorer=Scorer(), mode="production")
+            self.assertEqual(asyncio.run(scheduler.tick(NOW)), "SUCCESS")
+            fingerprint = store.snapshot()["input_fingerprint"]
+            self.assertEqual(asyncio.run(scheduler.tick(NOW.replace(hour=14))), "CLOSED")
+            readiness = store.readiness(NOW.replace(hour=14), backend_mode="production", current_bucket="2026-09-10T14:00+08:00")
+            self.assertEqual(readiness["quote_telemetry_scope"], "LAST_SUCCESSFUL")
+            self.assertEqual(readiness["input_fingerprint"], fingerprint)
+            self.assertTrue(all(readiness["quote_timestamps"][symbol] for symbol in REQUIRED_SYMBOLS))
+            self.assertEqual(store.public_state(NOW.replace(hour=14), expected_mode="production")["status"], "UNAVAILABLE")
+
+    def test_20_production_does_not_publish_persisted_shadow_state(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             store = StateStore(temporary)
             store.save({"schema_version": 1, "mode": "shadow", "current_public_state": successful_public(), "last_attempted_run": {"run_id": "2026-09-10T10:15+08:00", "at": NOW.isoformat(), "status": "SUCCESS"}})

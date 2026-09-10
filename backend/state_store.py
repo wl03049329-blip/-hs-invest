@@ -201,6 +201,7 @@ class StateStore:
             "quote_timestamps": {symbol: state_timestamps.get(symbol) or tickers.get(symbol, {}).get("quote_as_of") for symbol in REQUIRED_SYMBOLS},
             "quote_freshness": {symbol: state_freshness.get(symbol) or tickers.get(symbol, {}).get("freshness", "UNAVAILABLE") for symbol in REQUIRED_SYMBOLS},
             "quote_sources": {symbol: state_sources.get(symbol) or tickers.get(symbol, {}).get("quote_source") for symbol in REQUIRED_SYMBOLS},
+            "quote_telemetry_scope": "CURRENT_AVAILABLE" if public.get("status") == "AVAILABLE" else ("LAST_SUCCESSFUL" if state_timestamps else "NONE"),
             "input_fingerprint": state.get("input_fingerprint"),
             "c4_version": state.get("c4_version") or public.get("c4_version"),
             "scheduler_gap": state.get("scheduler_gap"),

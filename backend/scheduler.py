@@ -126,9 +126,11 @@ class ShadowScheduler:
             "last_successful_run": previous.get("last_successful_run"),
             "last_attempted_run": {"run_id": run_id, "at": now.isoformat(), "status": "UNAVAILABLE", "reason": reason} if run_id else previous.get("last_attempted_run"),
             "market_date": now.astimezone(TAIPEI).date().isoformat(), "calendar_revision": calendar_revision,
-            "quote_timestamps": quote_timestamps or {}, "quote_freshness": quote_freshness or {},
-            "quote_sources": quote_sources or {}, "completeness": completeness, "error_class": reason.split(":", 1)[0],
-            "scheduler_gap": gap, "c4_version": previous.get("c4_version"), "input_fingerprint": None,
+            "quote_timestamps": quote_timestamps if quote_timestamps is not None else previous.get("quote_timestamps", {}),
+            "quote_freshness": quote_freshness if quote_freshness is not None else previous.get("quote_freshness", {}),
+            "quote_sources": quote_sources if quote_sources is not None else previous.get("quote_sources", {}),
+            "completeness": completeness, "error_class": reason.split(":", 1)[0],
+            "scheduler_gap": gap, "c4_version": previous.get("c4_version"), "input_fingerprint": previous.get("input_fingerprint"),
         })
 
     async def tick(self, now: datetime | None = None) -> str:
