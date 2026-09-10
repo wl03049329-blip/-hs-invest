@@ -10,6 +10,8 @@
 <meta name="application-name" content="HS ETF雷達" />
 <meta name="apple-mobile-web-app-title" content="HS ETF雷達" />
 <meta name="description" content="台股延遲行情、ETF買點、估值、籌碼與個人持股雷達" />
+<meta name="hs-live-source" content="legacy" />
+<meta name="hs-live-railway-url" content="https://hs-invest-production.up.railway.app/api/live-scores" />
 <link rel="icon" type="image/png" sizes="64x64" href="assets/favicon-v3.png?v=5" />
 <link rel="shortcut icon" href="assets/favicon-v3.ico?v=5" />
 <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon-v3.png?v=5" />
@@ -1014,7 +1016,8 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 <script src="strategy-mode-core.js?v=20260804a"></script>
 <script src="backtest/long-term/final-core-score-v1.js?v=20260813-phase6b"></script>
 <script src="final-core-production.js?v=20260826-trigger-p0"></script>
-<script src="canonical-score-resolver.js?v=20260907-decision-center-v1"></script>
+<script src="canonical-score-resolver.js?v=20260910-live-cutover"></script>
+<script src="hs-live-source-adapter.js?v=20260910-live-cutover"></script>
 <script src="hs-decision-layer-v1.js?v=20260823-dl1"></script>
 <script src="swing-strategy-core.js?v=20260809a"></script>
 <script src="leverage-v1-core.js?v=20260822-l1"></script>
@@ -2115,14 +2118,36 @@ function currentTradingDayStatus(targetDate=taipeiToday(),now=new Date()){
   const parts=Object.fromEntries(new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Taipei",weekday:"short",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(now).map(part=>[part.type,part.value]));
   if(["Sat","Sun"].includes(parts.weekday))return"HOLIDAY";
   const finalized=currentCanonicalCoreSnapshot(targetDate),hasFinalizedToday=finalized?.trading_date===targetDate,hasIntradayToday=liveCanonicalCoreSnapshots.some(snapshot=>snapshot?.snapshot_type==="INTRADAY_CORE"&&snapshot?.status==="SUCCESS"&&snapshot?.trading_date===targetDate);
+  if(liveCoreSourceState.source==="railway"&&liveCoreSourceState.trading_date===targetDate){
+    if(liveCoreSourceState.market_state==="HOLIDAY")return"HOLIDAY";
+    if(["OPEN","CLOSED"].includes(liveCoreSourceState.market_state))return"TRADING_DAY";
+  }
   return hasFinalizedToday||hasIntradayToday?"TRADING_DAY":"UNKNOWN";
 }
 function currentDualTrackCoreView(targetDate=taipeiToday(),now=new Date()){
-  return window.HSCanonicalScoreResolver?.buildDualTrackView({finalizedArtifact:finalizedCoreScoreHistoryArtifact,intradaySnapshots:liveCanonicalCoreSnapshots,targetDate,scoreVersion:LONG_TERM_CORE_SCORE_VERSION,symbols:LONG_RADAR_SCORED_CODES,now,tradingDayStatus:currentTradingDayStatus(targetDate,now),maxAgeMinutes:15})||null;
+  const options={finalizedArtifact:finalizedCoreScoreHistoryArtifact,intradaySnapshots:liveCanonicalCoreSnapshots,targetDate,scoreVersion:LONG_TERM_CORE_SCORE_VERSION,symbols:LONG_RADAR_SCORED_CODES,now,tradingDayStatus:currentTradingDayStatus(targetDate,now),maxAgeMinutes:15};
+  if(liveCoreSourceState.source==="railway")options.maxAgeMinutes=10;
+  const view=window.HSCanonicalScoreResolver?.buildDualTrackView(options)||null;
+  if(view&&liveCoreSourceState.source==="railway"&&liveCoreSourceState.status!=="AVAILABLE"){
+    view.live_reason="RAILWAY_SOURCE_UNAVAILABLE";
+    for(const item of Object.values(view.items||{}))if(item?.live&&!item.live.display_eligible)item.live.reason="RAILWAY_SOURCE_UNAVAILABLE";
+  }
+  return view;
 }
 async function loadCanonicalCoreLedger(signal){
+  if(window.HSLiveSourceAdapter?.selectedSource()==="railway"){
+    liveCanonicalCoreSnapshots=[];
+    try{
+      liveCoreSourceState=await window.HSLiveSourceAdapter.loadRailway({endpoint:window.HSLiveSourceAdapter.railwayEndpoint(),signal,targetDate:taipeiToday(),scoreVersion:LONG_TERM_CORE_SCORE_VERSION,symbols:LONG_RADAR_SCORED_CODES,now:new Date()});
+      liveCanonicalCoreSnapshots=liveCoreSourceState.status==="AVAILABLE"?liveCoreSourceState.snapshots:[];
+    }catch(error){
+      liveCoreSourceState={source:"railway",status:"UNAVAILABLE",reason:String(error?.message||"RAILWAY_SOURCE_UNAVAILABLE"),snapshots:[],market_state:"UNAVAILABLE",trading_date:taipeiToday()};
+    }
+    return liveCanonicalCoreSnapshots[0]||null;
+  }
   const payload=await fetchNoStore(`intraday-core-snapshots-v1.json?ts=${Date.now()}`,signal);
   liveCanonicalCoreSnapshots=parseCanonicalCoreSnapshots(payload);
+  liveCoreSourceState={source:"legacy",status:liveCanonicalCoreSnapshots.length?"AVAILABLE":"UNAVAILABLE",reason:null,snapshots:liveCanonicalCoreSnapshots,market_state:"UNAVAILABLE",trading_date:String(liveCanonicalCoreSnapshots[0]?.trading_date||"")};
   return latestCanonicalCoreSnapshot(payload);
 }
 function canonicalCoreItem(snapshot,symbol){
@@ -2207,7 +2232,7 @@ function longRankRefreshWindow(date=new Date()){
 function scheduleLongRankRefresh(){
   clearTimeout(longRankTimer);longRankTimer=null;
   if(document.hidden)return;
-  longRankTimer=setTimeout(async()=>{if(longRankRefreshWindow())await refreshLiveQuotes({force:true});scheduleLongRankRefresh()},60000);
+  longRankTimer=setTimeout(async()=>{if(longRankRefreshWindow()||(window.HSLiveSourceAdapter?.selectedSource()==="railway"&&window.HSLiveSourceAdapter.isTaipeiLiveWindow()))await refreshLiveQuotes({force:true});scheduleLongRankRefresh()},60000);
 }
 async function refreshLiveQuotes({force=false}={}){
   if(document.hidden&&!force)return false;
@@ -2220,12 +2245,14 @@ async function refreshLiveQuotes({force=false}={}){
   liveQuoteLastAttemptAt=now;liveQuoteAbortController=new AbortController();
   const signal=liveQuoteAbortController.signal,proxy=HSLiveMarketCore.validProxyUrl(localStorage.getItem(LIVE_QUOTE_PROXY_KEY)||"",location.href);
   liveQuoteInFlight=(async()=>{
+    const railwaySelected=window.HSLiveSourceAdapter?.selectedSource()==="railway";
+    const railwayCanonicalSnapshot=railwaySelected?await loadCanonicalCoreLedger(signal):null;
     const requests=[
       fetchNoStore(`market-quotes-meta.json?ts=${now}`,signal),
       proxy?fetchNoStore(`${proxy}${proxy.includes("?")?"&":"?"}ts=${now}`,signal):Promise.resolve(null)
     ];
     const [metaResult,proxyResult]=await Promise.allSettled(requests);
-    let successes=0;
+    let successes=railwayCanonicalSnapshot?1:0;
     if(metaResult.status==="fulfilled"){
       liveRadarRefresh=metaResult.value?.radar_refresh||liveRadarRefresh;
       liveRadarRefreshAttempt=metaResult.value?.radar_refresh_attempt||liveRadarRefreshAttempt;
@@ -2233,13 +2260,14 @@ async function refreshLiveQuotes({force=false}={}){
       const metaTime=String(metaResult.value?.updated_at||"");
       if(metaTime&&metaTime!==liveMarketCacheVersion){
         try{
-          const [cache,canonicalCoreSnapshot]=await Promise.all([fetchNoStore(`market-quotes.json?ts=${now}`,signal),loadCanonicalCoreLedger(signal).catch(()=>null)]),quotes=parsePublicQuoteCache(cache),canonicalCoreSnapshots=liveCanonicalCoreSnapshots;
+          const [cache,canonicalCoreSnapshot]=await Promise.all([fetchNoStore(`market-quotes.json?ts=${now}`,signal),railwaySelected?Promise.resolve(railwayCanonicalSnapshot):loadCanonicalCoreLedger(signal).catch(()=>null)]),quotes=parsePublicQuoteCache(cache),canonicalCoreSnapshots=liveCanonicalCoreSnapshots;
           if(quotes.size){livePublicQuotes=quotes;liveMarketCacheVersion=String(cache.updated_at||metaTime);liveRadarRefresh=cache.radar_refresh||liveRadarRefresh;liveRadarRefreshAttempt=cache.radar_refresh_attempt||liveRadarRefreshAttempt;liveRadarCompleteness=cache.intraday_completeness||liveRadarCompleteness;window.dispatchEvent(new CustomEvent("hs:delayed-quotes",{detail:{quotes,sourceUpdatedAt:liveMarketCacheVersion,checkedAt:new Date().toISOString(),source:"github_actions_cache",radarRefresh:liveRadarRefresh,radarRefreshAttempt:liveRadarRefreshAttempt,radarCompleteness:liveRadarCompleteness,canonicalCoreSnapshot,canonicalCoreSnapshots}}));successes++}
         }catch{}
       }else window.dispatchEvent(new CustomEvent("hs:quote-cache-checked",{detail:{sourceUpdatedAt:metaTime,checkedAt:new Date().toISOString()}}));
     }
     if(proxyResult.status==="fulfilled"&&proxyResult.value){applyAuthorizedMarket(proxyResult.value,{includeCommodities:false});successes++}
     else if(proxyResult.status==="rejected")liveQuoteHttpStatus=Number(proxyResult.reason?.status)||0;
+    if(railwaySelected&&all.length){renderTop();renderCards()}
     if(!successes)throw new Error("all quote sources failed");
     liveQuoteFailures=0;liveQuoteHttpStatus=0;
     return true;
@@ -2249,7 +2277,7 @@ async function refreshLiveQuotes({force=false}={}){
   }).finally(()=>{liveQuoteInFlight=null;liveQuoteAbortController=null});
   return liveQuoteInFlight;
 }
-let livePublicQuotes=new Map(),liveMarketCacheVersion="",liveCanonicalCoreSnapshots=[];
+let livePublicQuotes=new Map(),liveMarketCacheVersion="",liveCanonicalCoreSnapshots=[],liveCoreSourceState={source:"legacy",status:"UNAVAILABLE",reason:null,snapshots:[],market_state:"UNAVAILABLE",trading_date:""};
 async function loadMarketOverview(options={}){return refreshLiveQuotes(options)}
 async function loadFuturesPosition(){
   const previous=futuresPosition;
@@ -2820,7 +2848,7 @@ function hsLiveProjectedStatus(viewItem){
     const delta=Number(live.delta_vs_official),rounded=Number.isFinite(delta)?Math.round(Math.abs(delta)*10)/10:null,deltaText=Number.isFinite(rounded)?delta>0?`↑${rounded}`:delta<0?`↓${rounded}`:"↔0":"—";
     return{eligible:true,label:"盤中預估",score:live.display_score,delta:deltaText,meta:`${formatHomeQuoteTime(live.market_as_of)||live.slot||"—"} 更新`,state};
   }
-  const label=labels[state]||({NO_CURRENT_DAY_INTRADAY:"等待今日盤中快照",INCOMPLETE_INTRADAY:"盤中資料不完整",VERSION_MISMATCH:"盤中版本不相容",FUTURE_AS_OF:"盤中時間驗證失敗",TRADING_DAY_UNCONFIRMED:"交易日狀態待確認"}[live?.reason]||"盤中預估暫不可用");
+  const label=labels[state]||({NO_CURRENT_DAY_INTRADAY:"等待今日盤中快照",INCOMPLETE_INTRADAY:"盤中資料不完整",VERSION_MISMATCH:"盤中版本不相容",FUTURE_AS_OF:"盤中時間驗證失敗",TRADING_DAY_UNCONFIRMED:"交易日狀態待確認",RAILWAY_SOURCE_UNAVAILABLE:"盤中資料暫不可用"}[live?.reason]||"盤中預估暫不可用");
   const meta=live?.market_as_of?`最後快照 ${formatHomeQuoteTime(live.market_as_of)}【已失效】`:"不使用舊快照代替";
   return{eligible:false,label,score:null,delta:null,meta,state};
 }
@@ -4129,7 +4157,7 @@ window.HSLiveMarket=Object.freeze({
   refresh:()=>refreshLiveQuotes({force:true}),
   latestQuotes:()=>new Map(livePublicQuotes),
   proxyConfigured:()=>Boolean(HSLiveMarketCore.validProxyUrl(localStorage.getItem(LIVE_QUOTE_PROXY_KEY)||"",location.href)),
-  state:()=>Object.freeze({rankTimerCount:longRankTimer===null?0:1,inFlight:Boolean(liveQuoteInFlight),failures:liveQuoteFailures,lastAttemptAt:liveQuoteLastAttemptAt})
+  state:()=>Object.freeze({rankTimerCount:longRankTimer===null?0:1,inFlight:Boolean(liveQuoteInFlight),failures:liveQuoteFailures,lastAttemptAt:liveQuoteLastAttemptAt,liveSource:liveCoreSourceState.source,liveSourceStatus:liveCoreSourceState.status})
 });
 loadAlerts();renderWatchlist();renderEvents();renderTrump();switchChipTab(localStorage.getItem(CHIP_TAB_STORAGE_KEY)||"overview",{scroll:false});switchTab(sessionStorage.getItem("hsRadar.activeTab")||"today",{scroll:false});scheduleCnnPoll();refreshLiveQuotes({force:true});scheduleLongRankRefresh();ensureStockCatalog().finally(load);
 

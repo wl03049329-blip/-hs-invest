@@ -43,6 +43,7 @@ def unavailable_public(
         "last_success_at": prior.get("last_success_at"),
         "completeness": completeness,
         "diagnostic_reason": reason,
+        "c4_version": None,
         "tickers": tickers,
     }
 
@@ -58,6 +59,7 @@ class StateStore:
             if self.root != mount_root and mount_root not in self.root.parents:
                 raise RuntimeError("HS_LIVE_VOLUME_PATH must be inside RAILWAY_VOLUME_MOUNT_PATH")
         self.root.mkdir(parents=True, exist_ok=True)
+        self.railway_volume_mounted = bool(railway_mount)
         self.state_path = self._safe_path("live-state.json")
         self.parity_path = self._safe_path("shadow-parity.jsonl")
         self.history_dir = self._safe_path("history-cache")
@@ -141,11 +143,13 @@ class StateStore:
                     fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
             handle.close()
 
-    def public_state(self, now: datetime) -> dict[str, Any]:
+    def public_state(self, now: datetime, *, expected_mode: str | None = None) -> dict[str, Any]:
         state = self.snapshot()
         public = state.get("current_public_state")
         if not isinstance(public, dict):
-            return unavailable_public("NO_SUCCESSFUL_SHADOW_STATE", now=now)
+            return unavailable_public("NO_SUCCESSFUL_LIVE_STATE", now=now)
+        if expected_mode is not None and state.get("mode") != expected_mode:
+            return unavailable_public("BACKEND_MODE_STATE_MISMATCH", now=now, previous=public, market_state=public.get("market_state", "UNAVAILABLE"))
         if public.get("status") != "AVAILABLE":
             return public
         local_now = now.astimezone(TAIPEI)
@@ -168,3 +172,43 @@ class StateStore:
                     reason = f"QUOTE_INVALID:{symbol}"
                     break
         return unavailable_public(reason, now=now, previous=public, market_state="OPEN") if reason else public
+
+    def readiness(self, now: datetime, *, backend_mode: str, current_bucket: str) -> dict[str, Any]:
+        """Return sanitized operational telemetry without provider payloads or secrets."""
+        state = self.snapshot()
+        public = self.public_state(now, expected_mode=backend_mode)
+        tickers = public.get("tickers") if isinstance(public.get("tickers"), dict) else {}
+        state_timestamps = state.get("quote_timestamps") if isinstance(state.get("quote_timestamps"), dict) else {}
+        state_freshness = state.get("quote_freshness") if isinstance(state.get("quote_freshness"), dict) else {}
+        state_sources = state.get("quote_sources") if isinstance(state.get("quote_sources"), dict) else {}
+        last_success = state.get("last_successful_run") if isinstance(state.get("last_successful_run"), dict) else None
+        age_seconds = None
+        try:
+            success_at = datetime.fromisoformat(str((last_success or {}).get("at") or public.get("last_success_at")))
+            age_seconds = max(0, round((now.astimezone(TAIPEI) - success_at.astimezone(TAIPEI)).total_seconds(), 3))
+        except (TypeError, ValueError):
+            pass
+        return {
+            "backend_mode": backend_mode,
+            "service_status": "READY",
+            "market_state": public.get("market_state", "UNAVAILABLE"),
+            "trading_date": public.get("trading_date", now.astimezone(TAIPEI).date().isoformat()),
+            "current_bucket": current_bucket,
+            "last_attempted_run": state.get("last_attempted_run"),
+            "last_successful_run": last_success,
+            "completeness": public.get("completeness", "0/5"),
+            "required_symbols": list(REQUIRED_SYMBOLS),
+            "quote_timestamps": {symbol: state_timestamps.get(symbol) or tickers.get(symbol, {}).get("quote_as_of") for symbol in REQUIRED_SYMBOLS},
+            "quote_freshness": {symbol: state_freshness.get(symbol) or tickers.get(symbol, {}).get("freshness", "UNAVAILABLE") for symbol in REQUIRED_SYMBOLS},
+            "quote_sources": {symbol: state_sources.get(symbol) or tickers.get(symbol, {}).get("quote_source") for symbol in REQUIRED_SYMBOLS},
+            "input_fingerprint": state.get("input_fingerprint"),
+            "c4_version": state.get("c4_version") or public.get("c4_version"),
+            "scheduler_gap": state.get("scheduler_gap"),
+            "age_since_last_success_seconds": age_seconds,
+            "volume_status": {
+                "status": "READY",
+                "railway_mount_verified": self.railway_volume_mounted,
+                "writable": os.access(self.root, os.W_OK),
+                "runtime_state_only": True,
+            },
+        }

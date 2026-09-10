@@ -79,5 +79,5 @@ console.log("PASS 10 history and Forward Shadow remain separate from homepage se
 for(const symbol of symbols){assert.equal(current?.items?.[symbol]?.status,"SUCCESS");assert(Number.isFinite(current.items[symbol].score));}
 console.log("PASS 11 every eligible homepage FINAL score is finite and valid");
 
-assert.match(html,/canonical-score-resolver\.js\?v=20260907-decision-center-v1/);
+assert.match(html,/canonical-score-resolver\.js\?v=20260910-live-cutover/);
 console.log("PASS 12 resolver cache version identifies FINAL-only cutover");

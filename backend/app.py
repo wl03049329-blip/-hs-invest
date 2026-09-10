@@ -1,4 +1,4 @@
-"""Read-only FastAPI surface for HS Live Backend V1 shadow state."""
+"""Read-only FastAPI surface for HS Live Backend V1 runtime state."""
 
 from __future__ import annotations
 
@@ -11,22 +11,29 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .live_quotes import TAIPEI
-from .scheduler import ShadowScheduler
+from .runtime_mode import resolve_backend_mode
+from .scheduler import ShadowScheduler, bucket_run_id
 from .state_store import StateStore
 
-MODE = os.getenv("HS_LIVE_BACKEND_MODE", "shadow")
-if MODE != "shadow":
-    raise RuntimeError("HS_LIVE_BACKEND_MODE must remain shadow in Phase A")
+MODE = resolve_backend_mode()
 
-def create_app(state_store: StateStore | None = None, shadow_scheduler: ShadowScheduler | None = None) -> FastAPI:
+def create_app(
+    state_store: StateStore | None = None,
+    shadow_scheduler: ShadowScheduler | None = None,
+    *,
+    backend_mode: str | None = None,
+) -> FastAPI:
+    active_mode = resolve_backend_mode(backend_mode)
     active_store = state_store or StateStore()
-    active_scheduler = shadow_scheduler or ShadowScheduler(active_store)
+    active_scheduler = shadow_scheduler or ShadowScheduler(active_store, mode=active_mode)
+    if active_scheduler.mode != active_mode:
+        raise RuntimeError("scheduler/backend mode mismatch")
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
         task = None
         if os.getenv("HS_LIVE_DISABLE_SCHEDULER") != "1":
-            task = asyncio.create_task(active_scheduler.run_forever(), name="hs-live-shadow-scheduler")
+            task = asyncio.create_task(active_scheduler.run_forever(), name=f"hs-live-{active_mode}-scheduler")
         yield
         if task:
             task.cancel()
@@ -40,14 +47,15 @@ def create_app(state_store: StateStore | None = None, shadow_scheduler: ShadowSc
 
     @instance.get("/api/live-scores")
     def live_scores() -> dict:
-        return active_store.public_state(datetime.now(TAIPEI))
+        return active_store.public_state(datetime.now(TAIPEI), expected_mode=active_mode)
 
     @instance.get("/healthz")
     def healthz() -> dict:
-        current = active_store.snapshot().get("current_public_state", {})
-        return {"status": "ok", "mode": MODE, "live_status": current.get("status", "UNAVAILABLE")}
+        now = datetime.now(TAIPEI)
+        diagnostics = active_store.readiness(now, backend_mode=active_mode, current_bucket=bucket_run_id(now))
+        return {"status": "ok", "mode": active_mode, "live_status": active_store.public_state(now, expected_mode=active_mode).get("status", "UNAVAILABLE"), **diagnostics}
 
     return instance
 
 
-app = create_app()
+app = create_app(backend_mode=MODE)

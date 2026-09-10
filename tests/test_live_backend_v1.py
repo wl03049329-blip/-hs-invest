@@ -196,7 +196,9 @@ class CalendarAndSchedulerTests(unittest.TestCase):
             self.assertTrue(all(public["tickers"][symbol]["score"] is None for symbol in REQUIRED_SYMBOLS))
         after = {item: hashlib.sha256(item.read_bytes()).hexdigest() for item in protected}
         self.assertEqual(before, after)
-        self.assertNotIn("/api/live-scores", (ROOT / "index.html").read_text(encoding="utf-8"))
+        homepage = (ROOT / "index.html").read_text(encoding="utf-8")
+        self.assertIn("hs-live-source-adapter.js", homepage)
+        self.assertIn('name="hs-live-source" content="legacy"', homepage)
 
 
 class ApiSurfaceTests(unittest.TestCase):

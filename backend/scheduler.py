@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from .live_quotes import REQUIRED_SYMBOLS, TAIPEI, QuoteBatch, fetch_live_batch
+from .runtime_mode import resolve_backend_mode
 from .state_store import StateStore, unavailable_public
 from .trading_calendar import TradingCalendar
 
@@ -93,8 +94,10 @@ class ShadowScheduler:
         calendar: TradingCalendar | None = None,
         quote_fetcher: Callable[[datetime], QuoteBatch] = fetch_live_batch,
         scorer: Any | None = None,
+        mode: str | None = None,
     ) -> None:
         self.store = store
+        self.mode = resolve_backend_mode(mode)
         self.calendar = calendar or TradingCalendar()
         self.quote_fetcher = quote_fetcher
         self.scorer = scorer or C4Bridge(store)
@@ -110,6 +113,8 @@ class ShadowScheduler:
         gap: dict[str, Any] | None = None,
         completeness: str = "0/5",
         quote_timestamps: dict[str, str] | None = None,
+        quote_freshness: dict[str, str] | None = None,
+        quote_sources: dict[str, str] | None = None,
     ) -> None:
         previous = self.store.snapshot()
         public = unavailable_public(
@@ -117,11 +122,12 @@ class ShadowScheduler:
             market_state=market_state, completeness=completeness,
         )
         self.store.save({
-            "schema_version": 1, "mode": "shadow", "current_public_state": public,
+            "schema_version": 1, "mode": self.mode, "current_public_state": public,
             "last_successful_run": previous.get("last_successful_run"),
             "last_attempted_run": {"run_id": run_id, "at": now.isoformat(), "status": "UNAVAILABLE", "reason": reason} if run_id else previous.get("last_attempted_run"),
             "market_date": now.astimezone(TAIPEI).date().isoformat(), "calendar_revision": calendar_revision,
-            "quote_timestamps": quote_timestamps or {}, "completeness": completeness, "error_class": reason.split(":", 1)[0],
+            "quote_timestamps": quote_timestamps or {}, "quote_freshness": quote_freshness or {},
+            "quote_sources": quote_sources or {}, "completeness": completeness, "error_class": reason.split(":", 1)[0],
             "scheduler_gap": gap, "c4_version": previous.get("c4_version"), "input_fingerprint": None,
         })
 
@@ -140,7 +146,7 @@ class ShadowScheduler:
             run_id = bucket_run_id(now)
             before = self.store.snapshot()
             last_attempt = before.get("last_attempted_run") or {}
-            if last_attempt.get("run_id") == run_id:
+            if before.get("mode") == self.mode and last_attempt.get("run_id") == run_id:
                 return "DUPLICATE"
             gap = None
             try:
@@ -183,7 +189,8 @@ class ShadowScheduler:
                         "schema_version": 1, "status": "AVAILABLE", "market_state": "OPEN",
                         "trading_date": batch.trading_date, "as_of": min(batch.quote_timestamps.values()),
                         "calculated_at": calculated_at, "last_success_at": calculated_at,
-                        "completeness": batch.completeness, "diagnostic_reason": None, "tickers": tickers,
+                        "completeness": batch.completeness, "diagnostic_reason": None,
+                        "c4_version": result["score_version"], "tickers": tickers,
                     }
                     parity = {
                         "run_id": run_id, "quote_as_of": batch.quote_timestamps, "completeness": batch.completeness,
@@ -196,11 +203,12 @@ class ShadowScheduler:
                         "legacy_anchor": legacy_anchor,
                     }
                     state = {
-                        "schema_version": 1, "mode": "shadow", "current_public_state": public,
+                        "schema_version": 1, "mode": self.mode, "current_public_state": public,
                         "last_successful_run": {"run_id": run_id, "at": calculated_at},
                         "last_attempted_run": {"run_id": run_id, "at": calculated_at, "status": "SUCCESS"},
                         "market_date": batch.trading_date, "calendar_revision": calendar.revision,
-                        "quote_timestamps": batch.quote_timestamps, "completeness": batch.completeness,
+                        "quote_timestamps": batch.quote_timestamps, "quote_freshness": batch.freshness,
+                        "quote_sources": batch.sources, "completeness": batch.completeness,
                         "error_class": None, "scheduler_gap": gap, "c4_version": result["score_version"],
                         "input_fingerprint": result["input_fingerprint"],
                     }
@@ -213,6 +221,8 @@ class ShadowScheduler:
                         now, reason, "OPEN", calendar.revision, run_id, gap,
                         completeness=batch.completeness if batch else "0/5",
                         quote_timestamps=batch.quote_timestamps if batch else None,
+                        quote_freshness=batch.freshness if batch else None,
+                        quote_sources=batch.sources if batch else None,
                     )
                     return "UNAVAILABLE"
 

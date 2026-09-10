@@ -1,10 +1,10 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://hs.example/schemas/live-state-v1.json",
-  "title": "HS Live Backend V1 public shadow state",
+  "title": "HS Live Backend V1 public runtime state",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "status", "market_state", "trading_date", "as_of", "calculated_at", "last_success_at", "completeness", "diagnostic_reason", "tickers"],
+  "required": ["schema_version", "status", "market_state", "trading_date", "as_of", "calculated_at", "last_success_at", "completeness", "diagnostic_reason", "c4_version", "tickers"],
   "properties": {
     "schema_version": {"const": 1},
     "status": {"enum": ["AVAILABLE", "UNAVAILABLE"]},
@@ -15,6 +15,7 @@
     "last_success_at": {"type": ["string", "null"], "format": "date-time"},
     "completeness": {"enum": ["0/5", "5/5"]},
     "diagnostic_reason": {"type": ["string", "null"]},
+    "c4_version": {"type": ["string", "null"]},
     "tickers": {
       "type": "object",
       "additionalProperties": false,
