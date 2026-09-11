@@ -22,6 +22,10 @@ SESSION_END = time(13, 30, 59)
 SYMBOL_RE = re.compile(r"\d{4,6}")
 
 
+def _taipei_now() -> datetime:
+    return datetime.now(TAIPEI)
+
+
 class FugleUnavailable(RuntimeError):
     """A safe, credential-free Fugle failure classification."""
 
@@ -115,6 +119,7 @@ def fetch_fugle_quote(
     api_key: str | None = None,
     opener: Callable[..., Any] = urllib.request.urlopen,
     timeout: float = 5.0,
+    clock: Callable[[], datetime] = _taipei_now,
 ) -> FugleObservation:
     key = api_key if api_key is not None else os.getenv("FUGLE_API_KEY")
     if not key:
@@ -151,4 +156,9 @@ def fetch_fugle_quote(
         payload = json.loads(body.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise FugleUnavailable("MALFORMED_JSON") from exc
-    return validate_fugle_payload(payload, normalized_symbol, now)
+    # A trade may legitimately occur after the scheduler captured its cycle
+    # timestamp but before this HTTP response arrived.  Validate against the
+    # response-time clock so that only timestamps beyond observation time are
+    # classified as future.
+    response_received_at = clock().astimezone(TAIPEI)
+    return validate_fugle_payload(payload, normalized_symbol, response_received_at)

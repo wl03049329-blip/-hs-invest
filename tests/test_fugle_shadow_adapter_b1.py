@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import io
+import json
 import math
 import os
 import tempfile
@@ -158,20 +159,46 @@ class FugleTransportTests(unittest.TestCase):
                 raise urllib.error.HTTPError(request.full_url, status, "blocked", {}, io.BytesIO())
 
             with self.subTest(status=status), self.assertRaisesRegex(FugleUnavailable, f"HTTP_{status}"):
-                fetch_fugle_quote("0050", NOW, api_key="test-secret", opener=opener)
+                fetch_fugle_quote("0050", NOW, api_key="test-secret", opener=opener, clock=lambda: NOW)
 
     def test_timeout_fails_closed(self) -> None:
         def opener(*_, **__):
             raise TimeoutError("slow")
 
         with self.assertRaisesRegex(FugleUnavailable, "TIMEOUT"):
-            fetch_fugle_quote("0050", NOW, api_key="test-secret", opener=opener)
+            fetch_fugle_quote("0050", NOW, api_key="test-secret", opener=opener, clock=lambda: NOW)
 
     def test_missing_key_is_unavailable_and_secret_is_not_in_error(self) -> None:
         with mock.patch.dict(os.environ, {}, clear=True):
             with self.assertRaisesRegex(FugleUnavailable, "FUGLE_API_KEY_MISSING") as caught:
-                fetch_fugle_quote("0050", NOW)
+                fetch_fugle_quote("0050", NOW, clock=lambda: NOW)
         self.assertNotIn("test-secret", str(caught.exception))
+
+    def test_trade_after_cycle_start_but_before_response_is_not_future(self) -> None:
+        trade_at = NOW + timedelta(seconds=3)
+        response_at = NOW + timedelta(seconds=5)
+        payload = json.dumps(fugle_payload("0050", trade_at=trade_at)).encode("utf-8")
+        quote = fetch_fugle_quote(
+            "0050",
+            NOW,
+            api_key="test-secret",
+            opener=lambda *_args, **_kwargs: FakeResponse(payload),
+            clock=lambda: response_at,
+        )
+        self.assertEqual(quote.trade_at, trade_at)
+
+    def test_trade_after_response_time_remains_rejected(self) -> None:
+        trade_at = NOW + timedelta(seconds=6)
+        response_at = NOW + timedelta(seconds=5)
+        payload = json.dumps(fugle_payload("0050", trade_at=trade_at)).encode("utf-8")
+        with self.assertRaisesRegex(FugleUnavailable, "LAST_TRADE_FUTURE"):
+            fetch_fugle_quote(
+                "0050",
+                NOW,
+                api_key="test-secret",
+                opener=lambda *_args, **_kwargs: FakeResponse(payload),
+                clock=lambda: response_at,
+            )
 
 
 class MixedSourceContractTests(unittest.TestCase):
@@ -181,6 +208,7 @@ class MixedSourceContractTests(unittest.TestCase):
             NOW,
             fetcher=lambda **_: mis_result(modes={}),
             fugle_fetcher=lambda symbol, now: calls.append(symbol),
+            clock=lambda: NOW,
         )
         self.assertEqual(calls, [])
         self.assertEqual(set(batch.sources.values()), {"MIS_Z"})
@@ -192,6 +220,7 @@ class MixedSourceContractTests(unittest.TestCase):
             NOW,
             fetcher=lambda **_: mis_result(modes=modes),
             fugle_fetcher=lambda symbol, now: calls.append(symbol),
+            clock=lambda: NOW,
         )
         self.assertEqual(calls, [])
         self.assertEqual(set(batch.sources.values()), {"MIS_PZ"})
@@ -205,7 +234,12 @@ class MixedSourceContractTests(unittest.TestCase):
             calls.append(symbol)
             return valid_observation(symbol, now)
 
-        batch = fetch_live_batch(NOW, fetcher=lambda **_: mis_result(modes=modes), fugle_fetcher=fugle)
+        batch = fetch_live_batch(
+            NOW,
+            fetcher=lambda **_: mis_result(modes=modes),
+            fugle_fetcher=fugle,
+            clock=lambda: NOW,
+        )
         self.assertEqual(set(calls), fallback_symbols)
         self.assertEqual(batch.completeness, "5/5")
         self.assertEqual(batch.sources["0050"], "MIS_Z")
@@ -222,7 +256,12 @@ class MixedSourceContractTests(unittest.TestCase):
             return valid_observation(symbol, now)
 
         with self.assertRaisesRegex(QuoteUnavailable, "00935:HTTP_429"):
-            fetch_live_batch(NOW, fetcher=lambda **_: mis_result(modes=modes), fugle_fetcher=fugle)
+            fetch_live_batch(
+                NOW,
+                fetcher=lambda **_: mis_result(modes=modes),
+                fugle_fetcher=fugle,
+                clock=lambda: NOW,
+            )
 
     def test_wait_native_and_quote_provenance_survive_scheduler_publication(self) -> None:
         fallback_symbols = set(REQUIRED_SYMBOLS) - {"0050"}
@@ -231,6 +270,7 @@ class MixedSourceContractTests(unittest.TestCase):
             NOW,
             fetcher=lambda **_: mis_result(modes=modes),
             fugle_fetcher=lambda symbol, now: valid_observation(symbol, now),
+            clock=lambda: NOW,
         )
         with tempfile.TemporaryDirectory() as temporary:
             store = StateStore(temporary)

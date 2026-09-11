@@ -174,6 +174,7 @@ def fetch_live_batch(
     *,
     fetcher: Callable[..., list[dict[str, Any]]] = production_mis.fetch_mis_snapshot,
     fugle_fetcher: Callable[[str, datetime], FugleObservation] = fetch_fugle_quote,
+    clock: Callable[[], datetime] = lambda: datetime.now(TAIPEI),
 ) -> QuoteBatch:
     local_now = now.astimezone(TAIPEI)
     deadline = local_now + timedelta(seconds=25)
@@ -200,7 +201,8 @@ def fetch_live_batch(
             continue
         try:
             observation = fugle_fetcher(symbol, local_now)
-            row = _fugle_row(symbol, raw, observation, local_now)
+            validation_now = clock().astimezone(TAIPEI)
+            row = _fugle_row(symbol, raw, observation, validation_now)
             rows.append(row)
             by_code[symbol] = row
         except FugleUnavailable as exc:
@@ -209,4 +211,4 @@ def fetch_live_batch(
             failures.append(f"{symbol}:FUGLE_{type(exc).__name__.upper()}")
     if failures:
         raise QuoteUnavailable("SECONDARY_UNAVAILABLE:" + ",".join(failures))
-    return validate_rows(rows, local_now, diagnostics=diagnostics)
+    return validate_rows(rows, clock().astimezone(TAIPEI), diagnostics=diagnostics)
