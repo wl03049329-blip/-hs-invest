@@ -10,7 +10,7 @@
 <meta name="application-name" content="HS ETF雷達" />
 <meta name="apple-mobile-web-app-title" content="HS ETF雷達" />
 <meta name="description" content="台股延遲行情、ETF買點、估值、籌碼與個人持股雷達" />
-<meta name="hs-live-source" content="legacy" />
+<meta name="hs-live-source" content="railway" />
 <meta name="hs-live-railway-url" content="https://hs-invest-production.up.railway.app/api/live-scores" />
 <link rel="icon" type="image/png" sizes="64x64" href="assets/favicon-v3.png?v=5" />
 <link rel="shortcut icon" href="assets/favicon-v3.ico?v=5" />
@@ -2854,7 +2854,7 @@ function hsLiveProjectedStatus(viewItem){
 }
 function hsLiveProjectedHtml(viewItem){
   const state=hsLiveProjectedStatus(viewItem);
-  return state.eligible?`<span class="hsLiveProjected is-live" aria-label="盤中預估，僅供參考"><small>盤中預估 <i>LIVE PROJECTED</i></small><b>${state.score}</b><strong>${esc(state.delta)}</strong><em>${esc(state.meta)}｜盤中參考</em></span>`:`<span class="hsLiveProjected is-unavailable" aria-label="${esc(state.label)}"><small>盤中參考</small><b>${esc(state.label)}</b><em>${esc(state.meta)}</em></span>`;
+  return state.eligible?`<span class="hsLiveProjected is-live" aria-label="Railway 盤中預估，僅供參考"><small>盤中預估 <i>LIVE PROJECTED</i> · Railway</small><b>${state.score}</b><strong>${esc(state.delta)}</strong><em>${esc(state.meta)}｜盤中參考</em></span>`:`<span class="hsLiveProjected is-unavailable" aria-label="${esc(state.label)}"><small>盤中參考 <i>RAILWAY</i></small><b>${esc(state.label)}</b><em>${esc(state.meta)}</em></span>`;
 }
 const OFFICIAL_C4_CHANGE_KEYS=["weekly_j","dd52","crash"];
 const OFFICIAL_C4_CHANGE_LABELS={weekly_j:"週線超賣程度",dd52:"距 52 週高點回撤",crash:"短期急跌程度"};

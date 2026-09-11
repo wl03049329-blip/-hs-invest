@@ -12,9 +12,10 @@ function payload(overrides={}){
   return{schema_version:1,status:"AVAILABLE",market_state:"OPEN",trading_date:date,as_of:`${date}T10:05:00+08:00`,calculated_at:`${date}T10:05:05+08:00`,last_success_at:`${date}T10:05:05+08:00`,completeness:"5/5",diagnostic_reason:null,c4_version:scoreVersion,tickers,...overrides};
 }
 
-assert.equal(adapter.selectedSource({globalObject:{},documentObject:null}),"legacy");
+assert.equal(adapter.selectedSource({globalObject:{},documentObject:null}),"railway");
+assert.equal(adapter.selectedSource({globalObject:{HS_LIVE_SOURCE:"legacy"},documentObject:null}),"legacy");
 assert.equal(adapter.selectedSource({globalObject:{HS_LIVE_SOURCE:"railway"},documentObject:null}),"railway");
-console.log("A PASS: frontend source switch defaults to legacy and accepts explicit railway");
+console.log("A PASS: frontend source defaults to Railway and retains explicit legacy rollback");
 
 let result=adapter.railwayToCanonical(payload(),{targetDate:date,scoreVersion,symbols,now});
 assert.equal(result.status,"AVAILABLE");
@@ -35,7 +36,9 @@ result=adapter.railwayToCanonical(payload({tickers:{...payload().tickers,"00830"
 assert.equal(result.status,"UNAVAILABLE");
 assert.deepEqual(result.snapshots,[]);
 const html=fs.readFileSync(path.join(root,"index.html"),"utf8");
-assert.match(html,/<meta name="hs-live-source" content="legacy"/);
+assert.match(html,/<meta name="hs-live-source" content="railway"/);
+assert.match(html,/盤中預估 <i>LIVE PROJECTED<\/i> · Railway/);
+assert.match(html,/正式分數 <i>OFFICIAL<\/i>/);
 assert.match(html,/liveCanonicalCoreSnapshots=\[\];[\s\S]*loadRailway/);
 assert.doesNotMatch(html,/loadRailway[\s\S]{0,500}(?:intraday-core-snapshots-v1|latestCanonicalCoreSnapshot)/);
 console.log("D PASS: stale Railway data fails closed and selected Railway path cannot retain/fallback to legacy snapshots");

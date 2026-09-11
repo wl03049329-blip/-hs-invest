@@ -5,7 +5,7 @@
   if(typeof module==="object"&&module.exports)module.exports=api;
   if(root)root.HSLiveSourceAdapter=api;
 })(typeof globalThis!=="undefined"?globalThis:this,function(){
-  const DEFAULT_SOURCE="legacy";
+  const DEFAULT_SOURCE="railway";
   const DEFAULT_RAILWAY_URL="https://hs-invest-production.up.railway.app/api/live-scores";
   const VALID_SOURCES=new Set(["legacy","railway"]);
   const VALID_FRESHNESS=new Set(["FRESH","DELAYED"]);
