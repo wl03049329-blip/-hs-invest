@@ -188,6 +188,12 @@ class StateStore:
             age_seconds = max(0, round((now.astimezone(TAIPEI) - success_at.astimezone(TAIPEI)).total_seconds(), 3))
         except (TypeError, ValueError):
             pass
+        primary_tick_age = None
+        try:
+            primary_tick = datetime.fromisoformat(str(state.get("last_primary_tick_at")))
+            primary_tick_age = max(0, (now.astimezone(TAIPEI) - primary_tick.astimezone(TAIPEI)).total_seconds())
+        except (TypeError, ValueError):
+            pass
         return {
             "backend_mode": backend_mode,
             "service_status": "READY",
@@ -212,4 +218,22 @@ class StateStore:
                 "writable": os.access(self.root, os.W_OK),
                 "runtime_state_only": True,
             },
+            "primary_trigger_source": state.get("primary_trigger_source"),
+            "last_primary_tick_at": state.get("last_primary_tick_at"),
+            "last_successful_live_snapshot_at": state.get("last_successful_live_snapshot_at"),
+            "latest_trading_date": state.get("market_date"),
+            "live_completeness": state.get("completeness", "0/5"),
+            "required_symbols_status": {
+                symbol: ("AVAILABLE" if state.get("completeness") == "5/5" and state_timestamps.get(symbol) else "UNAVAILABLE")
+                for symbol in REQUIRED_SYMBOLS
+            },
+            "publication_status": state.get("publication_status", "NOT_CONFIGURED"),
+            "artifact_commit_sha": state.get("artifact_commit_sha"),
+            "github_fallback_last_run": state.get("github_fallback_last_run"),
+            "github_fallback_gap_detected": state.get("github_fallback_gap_detected"),
+            "primary_trigger_health": (
+                "PRIMARY_TRIGGER_STALE"
+                if primary_tick_age is None or primary_tick_age > 600
+                else "HEALTHY"
+            ),
         }

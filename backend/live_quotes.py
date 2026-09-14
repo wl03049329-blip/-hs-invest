@@ -135,6 +135,40 @@ def _fugle_row(symbol: str, raw: dict[str, Any], observation: FugleObservation, 
     }
 
 
+def apply_fugle_fallback(
+    rows: list[dict[str, Any]],
+    diagnostics: dict[str, Any] | None,
+    local_now: datetime,
+    *,
+    fugle_fetcher: Callable[[str, datetime], FugleObservation] = fetch_fugle_quote,
+    clock: Callable[[], datetime] = lambda: datetime.now(TAIPEI),
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """Recover only same-row MIS missing-price rejects through the shared adapter."""
+    recovered = [dict(row) for row in rows]
+    by_code = {str(row.get("code") or ""): row for row in recovered}
+    rejected = diagnostics.get("final_parse_rejected", {}) if isinstance(diagnostics, dict) else {}
+    failures: list[str] = []
+    for symbol in REQUIRED_SYMBOLS:
+        if symbol in by_code:
+            continue
+        detail = rejected.get(symbol) if isinstance(rejected, dict) else None
+        reason = str(detail.get("reason") or "") if isinstance(detail, dict) else ""
+        raw = detail.get("raw_fields") if isinstance(detail, dict) else None
+        if reason not in {"missing_price", "invalid_price"} or not isinstance(raw, dict):
+            failures.append(f"{symbol}:MIS_{reason.upper() or 'UNAVAILABLE'}")
+            continue
+        try:
+            observation = fugle_fetcher(symbol, local_now)
+            row = _fugle_row(symbol, raw, observation, clock().astimezone(TAIPEI))
+            recovered.append(row)
+            by_code[symbol] = row
+        except FugleUnavailable as exc:
+            failures.append(f"{symbol}:{exc}")
+        except Exception as exc:  # noqa: BLE001
+            failures.append(f"{symbol}:FUGLE_{type(exc).__name__.upper()}")
+    return recovered, failures
+
+
 def validate_rows(
     rows: list[dict[str, Any]],
     now: datetime,
@@ -187,28 +221,9 @@ def fetch_live_batch(
     for row in rows:
         if row.get("source") == production_mis.TWSE_MIS_URL and row.get("price_field") in {"z", "pz"}:
             row["quote_source"] = f"MIS_{str(row['price_field']).upper()}"
-    by_code = {str(row.get("code") or ""): row for row in rows}
-    rejected = diagnostics.get("final_parse_rejected", {}) if isinstance(diagnostics, dict) else {}
-    failures: list[str] = []
-    for symbol in REQUIRED_SYMBOLS:
-        if symbol in by_code:
-            continue
-        detail = rejected.get(symbol) if isinstance(rejected, dict) else None
-        reason = str(detail.get("reason") or "") if isinstance(detail, dict) else ""
-        raw = detail.get("raw_fields") if isinstance(detail, dict) else None
-        if reason not in {"missing_price", "invalid_price"} or not isinstance(raw, dict):
-            failures.append(f"{symbol}:MIS_{reason.upper() or 'UNAVAILABLE'}")
-            continue
-        try:
-            observation = fugle_fetcher(symbol, local_now)
-            validation_now = clock().astimezone(TAIPEI)
-            row = _fugle_row(symbol, raw, observation, validation_now)
-            rows.append(row)
-            by_code[symbol] = row
-        except FugleUnavailable as exc:
-            failures.append(f"{symbol}:{exc}")
-        except Exception as exc:  # noqa: BLE001
-            failures.append(f"{symbol}:FUGLE_{type(exc).__name__.upper()}")
+    rows, failures = apply_fugle_fallback(
+        rows, diagnostics, local_now, fugle_fetcher=fugle_fetcher, clock=clock,
+    )
     if failures:
         raise QuoteUnavailable("SECONDARY_UNAVAILABLE:" + ",".join(failures))
     return validate_rows(rows, clock().astimezone(TAIPEI), diagnostics=diagnostics)

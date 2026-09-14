@@ -1,0 +1,50 @@
+name: Publish Railway live artifacts
+
+on:
+  repository_dispatch:
+    types: [hs_live_snapshot_ready]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: hs-live-intraday-slot-v4
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Configure artifact committer
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin main
+      - name: Publish validated Railway payload
+        run: node scripts/publish_railway_live_artifacts.js --event "$GITHUB_EVENT_PATH"
+      - name: Commit and push live artifacts
+        run: |
+          git add market-quotes.json market-quotes-meta.json intraday-core-snapshots-v1.json
+          if git diff --cached --quiet; then
+            echo "ARTIFACT_COMMIT_NOT_NEEDED"
+            exit 0
+          fi
+          git commit -m "Update Railway intraday radar artifacts"
+          for attempt in 1 2 3; do
+            git pull --rebase origin main
+            if git push origin HEAD:main; then
+              echo "ARTIFACT_PUSH_OK"
+              exit 0
+            fi
+            sleep $((attempt * 3))
+          done
+          echo "ARTIFACT_PUSH_FAILED"
+          exit 1

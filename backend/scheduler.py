@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from .live_quotes import REQUIRED_SYMBOLS, TAIPEI, QuoteBatch, fetch_live_batch
+from .artifact_publisher import GitHubArtifactPublisher
 from .runtime_mode import resolve_backend_mode
 from .state_store import StateStore, unavailable_public
 from .trading_calendar import TradingCalendar
@@ -94,6 +95,7 @@ class ShadowScheduler:
         calendar: TradingCalendar | None = None,
         quote_fetcher: Callable[[datetime], QuoteBatch] = fetch_live_batch,
         scorer: Any | None = None,
+        publisher: Any | None = None,
         mode: str | None = None,
     ) -> None:
         self.store = store
@@ -101,6 +103,7 @@ class ShadowScheduler:
         self.calendar = calendar or TradingCalendar()
         self.quote_fetcher = quote_fetcher
         self.scorer = scorer or C4Bridge(store)
+        self.publisher = publisher or GitHubArtifactPublisher()
         self._lock = asyncio.Lock()
 
     def _save_unavailable(
@@ -131,6 +134,13 @@ class ShadowScheduler:
             "quote_sources": quote_sources if quote_sources is not None else previous.get("quote_sources", {}),
             "completeness": completeness, "error_class": reason.split(":", 1)[0],
             "scheduler_gap": gap, "c4_version": previous.get("c4_version"), "input_fingerprint": previous.get("input_fingerprint"),
+            "primary_trigger_source": "RAILWAY_PRIMARY",
+            "last_primary_tick_at": now.isoformat(),
+            "last_successful_live_snapshot_at": previous.get("last_successful_live_snapshot_at"),
+            "publication_status": previous.get("publication_status", "NOT_ATTEMPTED"),
+            "artifact_commit_sha": previous.get("artifact_commit_sha"),
+            "github_fallback_last_run": previous.get("github_fallback_last_run"),
+            "github_fallback_gap_detected": previous.get("github_fallback_gap_detected"),
         })
 
     async def tick(self, now: datetime | None = None) -> str:
@@ -204,6 +214,9 @@ class ShadowScheduler:
                         "last_success_at": calculated_at,
                         "legacy_anchor": legacy_anchor,
                     }
+                    publication = self.publisher.publish(
+                        batch=batch, score_result=result, run_id=run_id, mode=self.mode,
+                    )
                     state = {
                         "schema_version": 1, "mode": self.mode, "current_public_state": public,
                         "last_successful_run": {"run_id": run_id, "at": calculated_at},
@@ -213,6 +226,11 @@ class ShadowScheduler:
                         "quote_sources": batch.sources, "completeness": batch.completeness,
                         "error_class": None, "scheduler_gap": gap, "c4_version": result["score_version"],
                         "input_fingerprint": result["input_fingerprint"],
+                        "primary_trigger_source": "RAILWAY_PRIMARY",
+                        "last_primary_tick_at": calculated_at,
+                        "last_successful_live_snapshot_at": calculated_at,
+                        "publication_status": publication.status,
+                        "artifact_commit_sha": publication.artifact_commit_sha,
                     }
                     self.store.save(state)
                     self.store.append_parity(parity)

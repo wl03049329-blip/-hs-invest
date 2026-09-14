@@ -997,6 +997,11 @@ def write_market_cache(
         "intraday_quote_snapshots": payload.get("intraday_quote_snapshots"),
         "official_eod_snapshot": payload.get("official_eod_snapshot"),
     }
+    trigger_source = (payload.get("radar_refresh_attempt") or {}).get("trigger_source")
+    if trigger_source == "GITHUB_FALLBACK":
+        attempt = payload.get("radar_refresh_attempt") or {}
+        meta["github_fallback_last_run"] = attempt.get("verified_at") or attempt.get("attempted_at")
+        meta["github_fallback_gap_detected"] = False
     write_atomic(META_OUTPUT, meta)
 
 
@@ -1064,6 +1069,17 @@ def main() -> None:
             _, retry_deadline = radar_slot_window(requested_date, requested_slot)
         mis_rows = fetch_mis_snapshot(deadline=retry_deadline)
         mis_diagnostics = getattr(mis_rows, "diagnostics", {})
+        if requested_slot:
+            # Reuse the Railway adapter and its exact last-trade validation;
+            # the legacy fallback must not grow a second Fugle contract.
+            from backend.live_quotes import apply_fugle_fallback
+
+            recovered_rows, secondary_failures = apply_fugle_fallback(
+                list(mis_rows), mis_diagnostics, datetime.now(TAIPEI),
+            )
+            if secondary_failures:
+                raise ValueError("SECONDARY_UNAVAILABLE:" + ",".join(secondary_failures))
+            mis_rows = MisSnapshotRows(recovered_rows, mis_diagnostics)
         # Persist every genuine source observation even when the atomic radar
         # set is not complete yet.  Later scheduled attempts may combine only
         # observations that the validator proves are same-day and fresh.  The
@@ -1089,6 +1105,7 @@ def main() -> None:
             radar_refresh = {
                 **validate_radar_refresh(candidate_rows, requested_date, requested_slot, verified_at, mis_diagnostics),
                 "status": "success",
+                "trigger_source": os.environ.get("HS_INTRADAY_TRIGGER_SOURCE", "MANUAL"),
             }
             refresh_attempt = {
                 **radar_refresh,
@@ -1118,6 +1135,7 @@ def main() -> None:
                 "attempted_at": attempted_at.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
                 "error": error_text,
                 "failure_class": "OPERATIONAL_SOURCE",
+                "trigger_source": os.environ.get("HS_INTRADAY_TRIGGER_SOURCE", "MANUAL"),
                 "required_symbol_diagnostics": mis_diagnostics,
                 "slot_diagnostic": slot_diagnostic,
             }

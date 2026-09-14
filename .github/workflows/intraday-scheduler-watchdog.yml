@@ -36,4 +36,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git pull --rebase origin main
       - name: Run one idempotent V4 scheduler tick
+        env:
+          HS_INTRADAY_TRIGGER: ${{ github.event_name }}
+          FUGLE_API_KEY: ${{ secrets.FUGLE_API_KEY }}
         run: python scripts/run_intraday_radar_session.py --scheduled-once

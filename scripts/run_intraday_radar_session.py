@@ -74,6 +74,17 @@ def rolling_slot_for_time(now: datetime) -> str | None:
     return local_now.strftime("%H:%M")
 
 
+def canonical_slot_exists(trading_date: str, slot: str) -> bool:
+    payload = read_json(ROOT / "intraday-core-snapshots-v1.json")
+    return any(
+        row.get("trading_date") == trading_date
+        and row.get("slot") == slot
+        and row.get("status") == "SUCCESS"
+        for row in payload.get("snapshots", [])
+        if isinstance(row, dict)
+    )
+
+
 def slot_action(now: datetime, target: datetime) -> str:
     if now < target:
         return "wait"
@@ -367,7 +378,13 @@ def complete_slot_diagnostic(
 
 def execute_slot(trading_date: str, slot: str, python: str = sys.executable) -> tuple[bool, dict]:
     env = dict(os.environ)
-    env.update({"HS_RADAR_SLOT": slot, "HS_RADAR_TRADING_DATE": trading_date})
+    trigger = env.get("HS_INTRADAY_TRIGGER", "manual")
+    trigger_source = "GITHUB_FALLBACK" if trigger == "schedule" else "MANUAL"
+    env.update({
+        "HS_RADAR_SLOT": slot,
+        "HS_RADAR_TRADING_DATE": trading_date,
+        "HS_INTRADAY_TRIGGER_SOURCE": trigger_source,
+    })
     updater = run_observed([python, "scripts/update_market_quotes.py"], env=env)
     attempt = read_refresh_attempt()
     if updater.returncode != 0:
@@ -489,6 +506,13 @@ def run_scheduled_once(
     if git_sync:
         run(["git", "pull", "--rebase"])
     trading_date = now.date().isoformat()
+    if canonical_slot_exists(trading_date, rolling_slot):
+        print(
+            f"INTRADAY_ROLLING {trading_date} {rolling_slot} "
+            "ALREADY_PUBLISHED_BY_PRIMARY_OR_FALLBACK",
+            flush=True,
+        )
+        return 0
     attempted_success, attempt = execute_fn(trading_date, rolling_slot)
     attempt = dict(attempt or {})
     attempt["slot_diagnostic"] = complete_slot_diagnostic(
