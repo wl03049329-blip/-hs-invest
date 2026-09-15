@@ -31,6 +31,16 @@ const payload = {schema_version: 1, trigger_source: "RAILWAY_PRIMARY", run_id: "
   quote_sources: Object.fromEntries(core.SYMBOLS.map(s => [s, "MIS_Z"])), input_fingerprint: fingerprint,
   score_version: core.SCORE_VERSION, quotes, snapshot};
 
+const eventFile = path.join(os.tmpdir(), `hs-publish-event-${process.pid}.json`);
+const envelope = {version: bridge.ENVELOPE_VERSION, payload};
+assert.ok(Object.keys(envelope).length <= 10, "repository_dispatch client_payload must stay within GitHub's top-level key limit");
+fs.writeFileSync(eventFile, JSON.stringify({client_payload: envelope}));
+const decoded = bridge.eventPayload(eventFile);
+assert.equal(decoded.input_fingerprint, fingerprint, "versioned envelope must preserve the fingerprint");
+assert.deepEqual(decoded.quote_sources, payload.quote_sources, "versioned envelope must preserve quote provenance");
+assert.throws(() => bridge.eventPayload(path.join(os.tmpdir(), "hs-publish-missing-event.json")), /invalid_event_envelope/);
+fs.unlinkSync(eventFile);
+
 const temporary = fs.mkdtempSync(path.join(os.tmpdir(), "hs-publish-"));
 const files = {quotes: path.join(temporary, "market-quotes.json"), meta: path.join(temporary, "market-quotes-meta.json"), scores: path.join(temporary, "intraday-core-snapshots-v1.json")};
 fs.writeFileSync(files.quotes, JSON.stringify({version: 2, items: []}));

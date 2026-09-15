@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
+import io
 import json
 import tempfile
 import unittest
+import urllib.error
 from datetime import date, datetime
 from pathlib import Path
 from unittest import mock
 
-from backend.artifact_publisher import GitHubArtifactPublisher
+from backend.artifact_publisher import DISPATCH_ENVELOPE_VERSION, GitHubArtifactPublisher
 from backend.live_quotes import REQUIRED_SYMBOLS, TAIPEI, QuoteBatch
 from backend.scheduler import C4_VERSION, ShadowScheduler
 from backend.state_store import StateStore
@@ -91,7 +94,26 @@ class TriggerReliabilityTests(unittest.TestCase):
             batch=quote_batch, score_result=result, run_id="r", mode="production")
         self.assertEqual(status.status, "DISPATCH_ACCEPTED")
         self.assertNotIn("test-secret", captured["body"])
-        self.assertEqual(json.loads(captured["body"])["client_payload"]["trigger_source"], "RAILWAY_PRIMARY")
+        body = json.loads(captured["body"])
+        envelope = body["client_payload"]
+        self.assertLessEqual(len(envelope), 10)
+        self.assertEqual(envelope["version"], DISPATCH_ENVELOPE_VERSION)
+        self.assertEqual(envelope["payload"]["trigger_source"], "RAILWAY_PRIMARY")
+        self.assertEqual(envelope["payload"]["input_fingerprint"], "a" * 64)
+        self.assertEqual(envelope["payload"]["quote_sources"], quote_batch.sources)
+
+    def test_dispatch_422_is_fail_closed_and_logged_without_secret(self) -> None:
+        def opener(request, timeout):
+            raise urllib.error.HTTPError(request.full_url, 422, "validation failed", {}, None)
+
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr):
+            status = GitHubArtifactPublisher(token="test-secret", opener=opener).publish(
+                batch=batch(), score_result=Scorer().score(batch(), NOW.isoformat()), run_id="r", mode="production")
+        self.assertEqual(status.status, "HTTP_422")
+        self.assertIn("GITHUB_DISPATCH_VALIDATION_FAILED", stderr.getvalue())
+        self.assertIn("client_payload_top_level_keys=2", stderr.getvalue())
+        self.assertNotIn("test-secret", stderr.getvalue())
 
     def test_late_github_fallback_skips_existing_primary_slot(self) -> None:
         with mock.patch.object(runner, "canonical_slot_exists", return_value=True):

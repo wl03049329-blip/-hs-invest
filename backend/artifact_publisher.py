@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 import time
 import urllib.error
 import urllib.request
@@ -12,6 +13,7 @@ from typing import Any, Callable
 
 
 DISPATCH_EVENT = "hs_live_snapshot_ready"
+DISPATCH_ENVELOPE_VERSION = "HS_LIVE_ARTIFACT_DISPATCH_V1"
 DEFAULT_REPOSITORY = "wl03049329-blip/-hs-invest"
 
 
@@ -70,7 +72,11 @@ class GitHubArtifactPublisher:
             "quotes": {symbol: _safe_quote(row) for symbol, row in batch.items.items()},
             "snapshot": snapshot,
         }
-        body = json.dumps({"event_type": DISPATCH_EVENT, "client_payload": payload}, separators=(",", ":")).encode("utf-8")
+        client_payload = {
+            "version": DISPATCH_ENVELOPE_VERSION,
+            "payload": payload,
+        }
+        body = json.dumps({"event_type": DISPATCH_EVENT, "client_payload": client_payload}, separators=(",", ":")).encode("utf-8")
         request = urllib.request.Request(
             f"https://api.github.com/repos/{self.repository}/dispatches",
             data=body,
@@ -91,9 +97,25 @@ class GitHubArtifactPublisher:
                 if status == 204:
                     return PublicationResult("DISPATCH_ACCEPTED")
                 if status != 429 and status < 500:
+                    if status == 422:
+                        print(
+                            "GITHUB_DISPATCH_VALIDATION_FAILED "
+                            f"status=HTTP_422 envelope_version={DISPATCH_ENVELOPE_VERSION} "
+                            f"client_payload_top_level_keys={len(client_payload)}",
+                            file=sys.stderr,
+                            flush=True,
+                        )
                     return PublicationResult(f"HTTP_{status}")
             except urllib.error.HTTPError as exc:
                 if exc.code != 429 and exc.code < 500:
+                    if exc.code == 422:
+                        print(
+                            "GITHUB_DISPATCH_VALIDATION_FAILED "
+                            f"status=HTTP_422 envelope_version={DISPATCH_ENVELOPE_VERSION} "
+                            f"client_payload_top_level_keys={len(client_payload)}",
+                            file=sys.stderr,
+                            flush=True,
+                        )
                     return PublicationResult(f"HTTP_{exc.code}")
             except (urllib.error.URLError, TimeoutError, OSError):
                 pass

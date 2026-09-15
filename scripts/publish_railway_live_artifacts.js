@@ -10,6 +10,7 @@ const QUOTES = path.join(ROOT, "market-quotes.json");
 const META = path.join(ROOT, "market-quotes-meta.json");
 const SCORES = path.join(ROOT, "intraday-core-snapshots-v1.json");
 const SOURCES = new Set(["MIS_Z", "MIS_PZ", "FUGLE_LAST_TRADE"]);
+const ENVELOPE_VERSION = "HS_LIVE_ARTIFACT_DISPATCH_V1";
 
 function fail(reason) { throw new Error(`RAILWAY_ARTIFACT_INTEGRITY ${reason}`); }
 function readJson(file, fallback) { try { return JSON.parse(fs.readFileSync(file, "utf8")); } catch { return fallback; } }
@@ -21,7 +22,9 @@ function atomicWrite(file, value, compact = false) {
 function finitePositive(value) { const number = Number(value); return Number.isFinite(number) && number > 0 ? number : null; }
 function eventPayload(file) {
   const event = readJson(file, null);
-  const payload = event?.client_payload;
+  const envelope = event?.client_payload;
+  if (!envelope || envelope.version !== ENVELOPE_VERSION || !envelope.payload || typeof envelope.payload !== "object" || Array.isArray(envelope.payload)) fail("invalid_event_envelope");
+  const payload = envelope.payload;
   if (!payload || payload.trigger_source !== "RAILWAY_PRIMARY") fail("invalid_event_payload");
   return payload;
 }
@@ -138,5 +141,5 @@ function main() {
   console.log(`RAILWAY_ARTIFACT_PUBLICATION ${result.key} ${result.status}`);
 }
 
-module.exports = { validatePayload, publish };
+module.exports = { ENVELOPE_VERSION, eventPayload, validatePayload, publish };
 if (require.main === module) { try { main(); } catch (error) { console.error(error.message); process.exitCode = 1; } }
