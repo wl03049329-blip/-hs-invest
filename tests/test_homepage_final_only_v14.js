@@ -60,7 +60,8 @@ assert.equal(gateContext.homepageFinalDecision(finalItem).coreScore,48);
 assert.equal(gateContext.homepageFinalDecision({...finalItem,intraday:{canonical:{...finalRecord,score_version:"OLD"}}}),null);
 console.log("PASS 7B local formal and invalid-version objects cannot cross the FINAL authority gate");
 
-assert.match(html,/HS DECISION CENTER · 正式與盤中雙軌/);
+assert.match(html,/C4 CORE RADAR/);
+assert.match(html,/正式分數 <i>OFFICIAL<\/i>/);
 assert.match(html,/不使用舊盤中快照/);
 assert.match(html,/正式來源｜盤後收盤定稿/);
 console.log("PASS 8 homepage primary score status remains FINAL-only while the secondary rail is explicitly non-official");

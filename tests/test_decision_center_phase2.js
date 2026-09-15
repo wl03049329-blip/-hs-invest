@@ -41,6 +41,17 @@ assert.doesNotMatch(source,/buildFinal|buildAdHocScore|calculateCanonicalCore|co
 console.log("J/K/L PASS: no C4 recomputation, browser truth, write path or protected mutation");
 
 for(const state of ["PREMARKET","OPEN","CLOSED","HOLIDAY","STALE"])assert.ok(sandbox.decisionCenterMarketLabel(state));
-for(const text of ["今日市場狀態","目前最高 C4","最接近下一門檻","盤中變化最大","00631L 槓桿戰術","系統狀態"])assert.ok(html.includes(text));
+for(const text of ["今日市場狀態","目前最高 C4","C4 主雷達","今日焦點","00631L 槓桿戰術","系統狀態"])assert.ok(html.includes(text));
 assert.match(css,/\.hsDecisionRoomGrid\{display:grid;grid-template-columns:repeat\(3/);assert.match(css,/@media\(max-width:700px\)[\s\S]*?grid-template-columns:repeat\(2/);
 console.log("PASS HS Decision Center Phase 2 summary and responsive contract");
+
+for(const marker of ["HS 投資作戰儀表板","C4 主雷達","今日焦點","00631L 槓桿戰術雷達","SYSTEM STATUS","hsDashboardC4Grid","homeSystemStatusSummary"])assert.ok(html.includes(marker),`${marker} must remain on the homepage`);
+const order=["id=\"hsDecisionRoom\"","id=\"homeEtfBrief\"","id=\"todayHighlights\"","id=\"homeLeverageBrief\"","id=\"homeSystemStatus\""].map(marker=>html.indexOf(marker));
+assert.ok(order.every((value,index)=>value>0&&(index===0||value>order[index-1])),"homepage operations flow must be Hero -> C4 -> Focus -> 00631L -> System");
+assert.match(html,/function decisionCenterC4Cards[\s\S]*?selectDecisionCenterOpportunity\(\[row\]\)/);
+assert.match(html,/HS_DASHBOARD_C4_SYMBOLS=Object\.freeze\(\["0050","00662","00830","00935","009815"\]\)/);
+assert.match(html,/WAIT_NATIVE｜不以替代值補算/);
+assert.match(css,/\.hsDashboardC4Grid\{[^}]*grid-template-columns:repeat\(3/);
+assert.match(css,/@media\(max-width:700px\)[\s\S]*?\.hsDashboardC4Grid\{grid-template-columns:repeat\(2/);
+assert.doesNotMatch(source,/calculateFinalCore|buildFinal\(|buildAdHocScore\(|evaluateCrashVelocity|localStorage|sessionStorage|\.setItem\(/);
+console.log("PASS HS investment operations dashboard is responsive and presentation-only");
