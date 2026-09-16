@@ -2047,3 +2047,39 @@ footer{color:#746f67}
     white-space:normal;
   }
 }
+
+/* Homepage readability pass: presentation-only sizing, tone and layout. */
+#homeSentiment.hsCommandSentiment .homeSentimentCard>em{min-height:22px!important;align-self:center!important;display:grid!important;place-items:center;color:#d0c2aa!important;font-size:10px!important;font-weight:900!important;line-height:1.22!important;white-space:normal!important}
+#homeSentiment.hsCommandSentiment #homeSentimentOverviewCard>span{color:#c3b69f!important;font-size:10px!important;font-weight:850!important}
+
+.hsDashboardC4Card .hsC4DeltaValue{font-size:15px!important;font-weight:950!important;line-height:1.12!important;letter-spacing:.01em}
+.hsDashboardC4Card .hsC4DeltaValue.up{color:#70d39b!important}
+.hsDashboardC4Card .hsC4DeltaValue.down{color:#e27672!important}
+.hsDashboardC4Card .hsC4DeltaValue.neutral{color:#b9ae9b!important}
+.hsDashboardC4Card.is-compact dl>div:not(.hsC4ThresholdMetric) .hsC4DeltaValue{font-size:14px!important}
+
+.hsLeverageCompact{grid-template-columns:minmax(170px,.72fr) minmax(0,2fr)}
+.hsLeverageCompact dl{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-areas:"velocity status" "price tactical"}
+.hsLeverageCompact dl>div{padding:11px 15px;border-right:1px solid rgba(140,105,42,.22);border-bottom:1px solid rgba(140,105,42,.18)}
+.hsLeverageCompact dl>div:nth-child(1){grid-area:price;border-bottom:0}
+.hsLeverageCompact dl>div:nth-child(2){grid-area:velocity}
+.hsLeverageCompact dl>div:nth-child(3){grid-area:tactical;border-right:0;border-bottom:0}
+.hsLeverageCompact dl>div:nth-child(4){grid-area:status;border-right:0}
+.hsLeverageCompactVelocity .hsLeverageCompactProgress{width:100%;margin-top:9px}
+
+@media(max-width:780px){
+  .hsLeverageCompact{grid-template-columns:106px minmax(0,1fr)}
+  .hsLeverageCompact dl>div{padding:9px 10px}
+  .hsLeverageCompactVelocity .hsLeverageCompactProgress{margin-top:6px}
+}
+@media(max-width:430px){
+  #homeSentiment.hsCommandSentiment .homeSentimentCard{grid-template-rows:27px 19px minmax(23px,auto) minmax(22px,auto)!important;min-height:104px!important}
+  #homeSentiment.hsCommandSentiment .homeSentimentCard>span{font-size:8px!important;line-height:1.18!important}
+  #homeSentiment.hsCommandSentiment #homeSentimentOverviewCard>span{font-size:8.6px!important}
+  #homeSentiment.hsCommandSentiment .homeSentimentCard>em{min-height:22px!important;font-size:9px!important;line-height:1.2!important}
+  .hsDashboardC4Card .hsC4DeltaValue,.hsDashboardC4Card.is-compact dl>div:not(.hsC4ThresholdMetric) .hsC4DeltaValue{font-size:13.5px!important}
+  .hsLeverageCompact{grid-template-columns:92px minmax(0,1fr)}
+  .hsLeverageCompactIdentity{padding:10px 9px}
+  .hsLeverageCompact dl>div{padding:8px 8px}
+  .hsLeverageCompactVelocity .hsLeverageCompactProgress{height:5px;margin-top:6px}
+}
