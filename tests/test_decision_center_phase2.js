@@ -41,17 +41,21 @@ assert.doesNotMatch(source,/buildFinal|buildAdHocScore|calculateCanonicalCore|co
 console.log("J/K/L PASS: no C4 recomputation, browser truth, write path or protected mutation");
 
 for(const state of ["PREMARKET","OPEN","CLOSED","HOLIDAY","STALE"])assert.ok(sandbox.decisionCenterMarketLabel(state));
-for(const text of ["今日市場狀態","目前最高 C4","C4 主雷達","今日焦點","00631L 槓桿戰術","系統狀態"])assert.ok(html.includes(text));
-assert.match(css,/\.hsDecisionRoomGrid\{display:grid;grid-template-columns:repeat\(3/);assert.match(css,/@media\(max-width:700px\)[\s\S]*?grid-template-columns:repeat\(2/);
+for(const text of ["今日核心決策","目前分數","C4 今日盤中追蹤","市場情緒快覽","00631L 槓桿戰術","資料狀態"])assert.ok(html.includes(text));
+assert.match(css,/\.hsCoreDecisionHero\{[^}]*display:grid/);assert.match(css,/@media\(max-width:430px\)[\s\S]*?\.hsDecisionStatusRail\{grid-template-columns:repeat\(2/);
 console.log("PASS HS Decision Center Phase 2 summary and responsive contract");
 
-for(const marker of ["HS 投資作戰儀表板","C4 主雷達","今日焦點","00631L 槓桿戰術雷達","SYSTEM STATUS","hsDashboardC4Grid","homeSystemStatusSummary"])assert.ok(html.includes(marker),`${marker} must remain on the homepage`);
-const order=["id=\"hsDecisionRoom\"","id=\"homeEtfBrief\"","id=\"todayHighlights\"","id=\"homeLeverageBrief\"","id=\"homeSystemStatus\""].map(marker=>html.indexOf(marker));
-assert.ok(order.every((value,index)=>value>0&&(index===0||value>order[index-1])),"homepage operations flow must be Hero -> C4 -> Focus -> 00631L -> System");
-assert.match(html,/function decisionCenterC4Cards[\s\S]*?selectDecisionCenterOpportunity\(\[row\]\)/);
-assert.match(html,/HS_DASHBOARD_C4_SYMBOLS=Object\.freeze\(\["0050","00662","00830","00935","009815"\]\)/);
-assert.match(html,/WAIT_NATIVE｜不以替代值補算/);
-assert.match(css,/\.hsDashboardC4Grid\{[^}]*grid-template-columns:repeat\(3/);
-assert.match(css,/@media\(max-width:700px\)[\s\S]*?\.hsDashboardC4Grid\{grid-template-columns:repeat\(2/);
+for(const marker of ["今日核心決策","市場情緒快覽","C4 今日盤中追蹤","00631L 槓桿戰術雷達","hsDashboardC4Grid","hsDecisionStatusRail"])assert.ok(html.includes(marker),`${marker} must remain on the homepage`);
+const order=["id=\"hsDecisionRoom\"","id=\"homeSentiment\"","id=\"homeEtfBrief\"","id=\"homeLeverageBrief\""].map(marker=>html.indexOf(marker));
+assert.ok(order.every((value,index)=>value>0&&(index===0||value>order[index-1])),"homepage operations flow must be Hero -> Sentiment -> C4 -> 00631L");
+assert.match(html,/function decisionCenterC4Rows[\s\S]*?selectDecisionCenterOpportunity\(\[\{symbol,score:rawScore\}\]\)/);
+assert.match(html,/HS_DASHBOARD_C4_SYMBOLS=Object\.freeze\(\["0050","00662","00757","00830","00935","009815"\]\)/);
+assert.match(html,/WAIT_NATIVE/);
+assert.match(html,/不以替代值補算/);
+assert.match(css,/\.hsDashboardC4Grid\{[^}]*grid-template-columns:repeat\(2/);
+assert.match(css,/\.hsDashboardC4Card\.is-leader\{grid-column:1\/-1/);
+assert.match(html,/data-home-c4-sort="score"/);assert.match(html,/data-home-c4-sort="change"/);assert.match(html,/data-home-c4-sort="threshold"/);
+assert.match(html,/今日盤中軌跡尚未累積/);
+assert.doesNotMatch(html,/id="homeSwingBrief"/);
 assert.doesNotMatch(source,/calculateFinalCore|buildFinal\(|buildAdHocScore\(|evaluateCrashVelocity|localStorage|sessionStorage|\.setItem\(/);
-console.log("PASS HS investment operations dashboard is responsive and presentation-only");
+console.log("PASS HS mockup dashboard is responsive, six-symbol and presentation-only");

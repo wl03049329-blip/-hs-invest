@@ -60,7 +60,7 @@ assert.equal(gateContext.homepageFinalDecision(finalItem).coreScore,48);
 assert.equal(gateContext.homepageFinalDecision({...finalItem,intraday:{canonical:{...finalRecord,score_version:"OLD"}}}),null);
 console.log("PASS 7B local formal and invalid-version objects cannot cross the FINAL authority gate");
 
-assert.match(html,/C4 CORE RADAR/);
+assert.match(html,/C4 LIVE TRACKING/);
 assert.match(html,/正式分數 <i>OFFICIAL<\/i>/);
 assert.match(html,/不使用舊盤中快照/);
 assert.match(html,/正式來源｜盤後收盤定稿/);

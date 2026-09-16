@@ -3,7 +3,7 @@ const fs = require("fs");
 const html = fs.readFileSync("index.html", "utf8");
 const css = fs.readFileSync("formal-black-gold.css", "utf8");
 
-assert.match(html, /C4 CORE RADAR/);
+assert.match(html, /C4 LIVE TRACKING/);
 assert.match(html, /長期加碼決策/);
 assert.match(html, /id="hsLiveReadScore"[^>]+data-read-core-score/);
 assert.doesNotMatch(html, /function hsLiveNextTier\(score\)/);
@@ -88,5 +88,18 @@ assert.match(css, /hsLivePrimary\{display:grid;grid-template-columns:42px minmax
 assert.match(css, /hsLiveSecondary\{display:grid;grid-template-columns:auto minmax\(0,1fr\) auto/);
 assert.ok(css.includes("#homeEtfBrief.hsLivePanel .hsLivePrimary{grid-template-columns:34px minmax(84px,1fr) minmax(180px,1.2fr)"));
 assert.match(css, /hsLiveLatest\{min-width:0;color:#9d917c;font-size:11px/);
+
+assert.match(html, /HS_DASHBOARD_C4_SYMBOLS=Object\.freeze\(\["0050","00662","00757","00830","00935","009815"\]\)/);
+assert.match(html, /function homeC4IntradaySeries/);
+assert.match(html, /function homeC4Sparkline/);
+assert.match(html, /data-c4-source="\$\{status\}"/);
+assert.match(html, /WAIT_NATIVE/);
+assert.match(html, /不以替代值補算/);
+assert.match(html, /data-home-c4-sort="score"/);
+assert.match(html, /data-home-c4-sort="change"/);
+assert.match(html, /data-home-c4-sort="threshold"/);
+assert.match(css, /\.hsDashboardC4Card\.is-leader\{grid-column:1\/-1/);
+assert.match(css, /\.hsCommandSentiment \.homeSentimentCards\{display:grid!important;grid-template-columns:repeat\(6/);
+assert.doesNotMatch(html, /id="homeSwingBrief"/);
 
 console.log("HS LIVE Phase 2 UI contract: PASS");

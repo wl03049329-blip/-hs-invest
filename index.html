@@ -341,8 +341,13 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       <h1 class="srOnly">HS｜ETF股市雷達</h1>
       <p class="subtitle">打開先看懂今天市場，再決定要不要加碼。週 KD 每日試算；0050、00631L 歷史價格已還原分割。</p>
     </div>
-    <button class="btn refreshBtn" id="reload" aria-label="重新整理全部資料"><svg aria-hidden="true"><use href="#i-refresh"/></svg><span>更新</span></button>
+    <div class="hsHeaderActions">
+      <div class="hsHeaderState"><b id="homeHeaderMarketState">資料載入中</b><small id="homeHeaderLastUpdate">最後更新 —</small></div>
+      <button class="btn refreshBtn" id="reload" aria-label="重新整理全部資料"><svg aria-hidden="true"><use href="#i-refresh"/></svg><span>更新</span></button>
+    </div>
   </header>
+
+  <div class="hsHeaderStrap" data-tab-section="today"><span>洞察市場 · 掌握先機 · 紀律投資</span><small>DATA DRIVES A BETTER TOMORROW</small></div>
 
   <div id="message" class="message info">正在取得最新資料…</div>
 
@@ -361,18 +366,36 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 
   <section id="hsDecisionRoom" class="panel hsDecisionRoom" data-tab-section="today" aria-labelledby="hsDecisionRoomTitle">
     <div class="panelTitle compactTitle">
-      <div><p class="eyebrow">HS INVESTMENT OPERATIONS</p><h2 id="hsDecisionRoomTitle">HS 投資作戰儀表板</h2></div>
-      <small>正式分數為主｜盤中預估為輔</small>
+      <div><p class="eyebrow">TODAY'S CORE DECISION</p><h2 id="hsDecisionRoomTitle"><svg aria-hidden="true"><use href="#i-radar"/></svg>今日核心決策</h2></div>
+      <small id="hsDecisionMarketCaption">市場狀態確認中 · 掌握下一步佈局</small>
     </div>
     <div id="hsDecisionRoomGrid" class="hsDecisionRoomGrid" aria-live="polite"><div class="skeleton">彙整今日市場狀態中…</div></div>
   </section>
 
+  <section id="homeSentiment" class="panel homeSentiment hsCommandSentiment" data-tab-section="today" aria-labelledby="homeSentimentTitle">
+    <div class="panelTitle compactTitle">
+      <div><p class="eyebrow">MARKET SENTIMENT</p><h2 id="homeSentimentTitle"><svg aria-hidden="true"><use href="#i-market"/></svg>市場情緒快覽</h2></div>
+      <small>6 項關鍵指標 · 掌握市場全貌</small>
+    </div>
+    <div id="homeSentimentCards" class="homeSentimentCards">
+      <button id="homeMarginBalanceCard" class="homeSentimentCard" type="button" data-home-chip="margin"><svg aria-hidden="true"><use href="#i-fund"/></svg><span>台股融資餘額</span><b>—</b><em>載入中</em><small>盤後資料</small></button>
+      <button id="homeMaintenanceCard" class="homeSentimentCard" type="button" data-home-chip="margin"><svg aria-hidden="true"><use href="#i-risk-shield"/></svg><span>融資維持率</span><b>—</b><em>載入中</em><small>盤後資料</small></button>
+      <button id="homeCnnCard" class="homeSentimentCard" type="button" data-home-chip="mood"><svg aria-hidden="true"><use href="#i-gauge"/></svg><span>Fear &amp; Greed</span><b>—</b><em>載入中</em><small>更新中</small></button>
+      <button id="homeForeignFuturesCard" class="homeSentimentCard" type="button" data-home-chip="futures"><svg aria-hidden="true"><use href="#i-globe"/></svg><span>外資台指期</span><b>—</b><em>載入中</em><small>盤後資料</small></button>
+      <button id="homeTmfRatioCard" class="homeSentimentCard" type="button" data-home-chip="futures"><svg aria-hidden="true"><use href="#i-users"/></svg><span>散戶多空比</span><b>—</b><em>載入中</em><small>非三大法人部位推估</small></button>
+      <button id="homeSentimentOverviewCard" class="homeSentimentCard" type="button" data-home-chip="overview"><svg aria-hidden="true"><use href="#i-market"/></svg><span>市場總覽</span><b>—</b><em>情緒資料彙整中</em><small>綜合市場判讀</small></button>
+    </div>
+    <p id="homeSentimentConclusion" class="homeSentimentConclusion">情緒資料彙整中…</p>
+    <details id="homeSentimentDetails" class="homeSentimentDetails"><summary>展開資料方法與日期</summary><div>資料載入中…</div></details>
+  </section>
+
   <section id="homeEtfBrief" class="panel homeEtfBrief hsLivePanel" data-tab-section="today" aria-labelledby="homeEtfBriefTitle">
     <div class="panelTitle compactTitle">
-      <div><p class="eyebrow">C4 CORE RADAR</p><h2 id="homeEtfBriefTitle">C4 主雷達</h2></div>
+      <div><p class="eyebrow">C4 LIVE TRACKING</p><h2 id="homeEtfBriefTitle"><svg aria-hidden="true"><use href="#i-radar"/></svg>C4 今日盤中追蹤</h2></div>
       <button id="hsLiveReadScore" class="hsLiveReadScore" type="button" data-read-core-score="0050">讀懂你的分數</button>
       <small id="updatedTop">載入最新排名</small>
     </div>
+    <div class="hsC4SortTabs" role="group" aria-label="C4 排序方式"><button class="is-active" type="button" data-home-c4-sort="score">目前分數</button><button type="button" data-home-c4-sort="change">今日變化</button><button type="button" data-home-c4-sort="threshold">接近門檻</button></div>
     <div id="homeEtfBriefSummary" class="homeEtfBriefSummary">買點資料載入中…</div>
     <div id="hsDashboardC4Grid" class="hsDashboardC4Grid" aria-live="polite"><div class="skeleton">載入正式 C4 排名中…</div></div>
     <details class="hsDashboardDetails">
@@ -383,44 +406,9 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
     </details>
   </section>
 
-  <section id="todayHighlights" class="panel todayHighlights hsTodayFocus" data-tab-section="today" aria-labelledby="todayHighlightsTitle">
-    <div class="panelTitle compactTitle">
-      <div><p class="eyebrow">TODAY FOCUS</p><h2 id="todayHighlightsTitle">今日焦點</h2></div>
-      <small id="todayHighlightsDate">台北時間資料</small>
-    </div>
-    <div id="todayHighlightsContent" class="todayHighlightsGrid"><div class="skeleton">整理今日焦點中…</div></div>
-    <p id="todayHighlightsConclusion" class="todayHighlightsConclusion">策略資料載入中…</p>
-  </section>
-
   <section id="homeLeverageBrief" class="panel homeLeverageBrief" data-tab-section="today" aria-labelledby="homeLeverageBriefTitle">
-    <div class="panelTitle compactTitle"><div><p class="eyebrow">HS LEVERAGE</p><h2 id="homeLeverageBriefTitle">00631L 槓桿戰術雷達</h2></div><small>獨立戰術觀察</small></div>
+    <div class="panelTitle compactTitle"><div><p class="eyebrow">HS LEVERAGE</p><h2 id="homeLeverageBriefTitle"><svg aria-hidden="true"><use href="#i-chip"/></svg>00631L 槓桿戰術雷達</h2></div><small>獨立戰術觀察 · 嚴控風險</small></div>
     <div id="homeLeverageCard"><div class="skeleton">載入 00631L 槓桿戰術資料中…</div></div>
-  </section>
-
-  <section id="homeSystemStatus" class="panel hsHomeSystemStatus" data-tab-section="today" aria-labelledby="homeSystemStatusTitle">
-    <div class="panelTitle compactTitle">
-      <div><p class="eyebrow">SYSTEM STATUS</p><h2 id="homeSystemStatusTitle">系統狀態</h2></div>
-      <small>異常時才提高提醒</small>
-    </div>
-    <div id="homeSystemStatusSummary" class="hsHomeSystemSummary"><div class="skeleton">確認資料健康中…</div></div>
-    <div id="homeSystemStatusDetails"></div>
-  </section>
-
-  <section id="homeSentiment" class="panel homeSentiment" data-tab-section="today" aria-labelledby="homeSentimentTitle">
-    <div class="panelTitle compactTitle">
-      <div><p class="eyebrow">MARKET SENTIMENT</p><h2 id="homeSentimentTitle"><span class="headingEmoji" aria-hidden="true">😨</span>市場情緒快覽</h2></div>
-      <small>點卡片看完整籌碼</small>
-    </div>
-    <div id="homeSentimentCards" class="homeSentimentCards">
-      <button id="homeMarginBalanceCard" class="homeSentimentCard" type="button" data-home-chip="margin"><span>台股融資餘額</span><i class="sentimentCardEmoji" aria-hidden="true">💰</i><b>—</b><em>載入中</em><small>盤後資料</small></button>
-      <button id="homeMaintenanceCard" class="homeSentimentCard" type="button" data-home-chip="margin"><span>市場推估融資維持率</span><i class="sentimentCardEmoji" aria-hidden="true">🛡️</i><b>—</b><em>載入中</em><small>盤後資料</small></button>
-      <button id="homeCnnCard" class="homeSentimentCard" type="button" data-home-chip="mood"><span>CNN Fear &amp; Greed</span><i class="sentimentCardEmoji" aria-hidden="true">⚖️</i><b>—</b><em>載入中</em><small>更新中</small></button>
-      <button id="homeForeignFuturesCard" class="homeSentimentCard" type="button" data-home-chip="futures"><span>外資台指期</span><i class="sentimentCardEmoji" aria-hidden="true">🌐</i><b>—</b><em>載入中</em><small>盤後資料</small></button>
-      <button id="homeTmfRatioCard" class="homeSentimentCard" type="button" data-home-chip="futures"><span>散戶微台多空比</span><i class="sentimentCardEmoji" aria-hidden="true">🤡</i><b>—</b><em>載入中</em><small>非三大法人部位推估</small></button>
-      <button id="homeSentimentOverviewCard" class="homeSentimentCard" type="button" data-home-chip="overview"><span>總覽</span><i class="sentimentCardEmoji" aria-hidden="true">🔔</i><b>—</b><em>情緒資料彙整中</em><small>綜合市場判讀</small></button>
-    </div>
-    <p id="homeSentimentConclusion" class="homeSentimentConclusion">情緒資料彙整中…</p>
-    <details id="homeSentimentDetails" class="homeSentimentDetails"><summary>展開資料方法與日期</summary><div>資料載入中…</div></details>
   </section>
 
   <section id="hsStoryEntry" class="hsStoryEntry tabHidden" data-tab-section="more" aria-labelledby="hsStoryEntryTitle">
@@ -448,19 +436,6 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
     </article>
 
     <div id="snapshotGrid" hidden aria-hidden="true"></div>
-  </section>
-
-  <section id="homeSwingBrief" class="panel homeEtfBrief" data-tab-section="today" aria-labelledby="homeSwingBriefTitle">
-    <div class="panelTitle compactTitle"><div><p class="eyebrow">SWING HOLDING RADAR</p><h2 id="homeSwingBriefTitle">波段持有雷達</h2></div><small>沿用既有模型</small></div>
-    <div id="homeSwingList" class="rankList"><div class="skeleton">載入波段資料中…</div></div>
-  </section>
-
-  <section id="homeStoryEntry" class="homeStoryEntry" data-tab-section="today" aria-labelledby="homeStoryEntryTitle">
-    <button id="openHsStoryHome" class="homeStoryCard" type="button" aria-haspopup="dialog" aria-controls="hsStoryModal">
-      <img data-brand-logo alt="HS ETF股市雷達正式標誌" width="48" height="48">
-      <span><small>THE HS STORY</small><b id="homeStoryEntryTitle">為什麼做 HS ETF 股市雷達？</b><em>把市場情緒與買點紀律整理成每天看得懂的雷達。</em></span>
-      <strong>了解更多</strong>
-    </button>
   </section>
 
   <section id="myProfile" class="panel myProfile tabHidden uiDormant" data-tab-section="more" aria-labelledby="myProfileTitle" hidden aria-hidden="true">
@@ -3019,6 +2994,11 @@ function leverageHomeCard(item){
   const quoteClass=Number(item.changePct)>=0?"up":"down",quoteText=Number.isFinite(item.changePct)?signed(item.changePct):"—";
   return `<article class="hsLeverageCard ${v1.trigger?"is-trigger":"is-standby"}" data-v1-status="${esc(v1.status)}"><header class="hsLeverageQuote"><div><span>HS LEVERAGE <i aria-hidden="true">ϟ</i></span><b>${esc(item.id)} <small>${esc(item.name)}</small></b></div><strong>$${fmt(item.price)}<small class="${quoteClass}">${esc(quoteText)}</small></strong></header><section class="hsLeverageV1"><div class="hsLeverageV1Head"><span>正式 V1</span><b>${v1Label}</b></div><div class="hsLeverageVelocity"><span>5D Crash Velocity</span><b>${v1Value} <small>/ ${threshold}</small></b></div><i class="hsLeverageProgress" aria-label="Crash Velocity 相對 Frozen threshold"><b style="width:${progress}%"></b></i><p>${v1Copy}</p></section><section class="hsLeverageTactical"><div><span>戰術觀察</span><b>${Number.isFinite(tacticalScore)?tacticalScore:"資料不足"}</b></div><p><b>機會環境</b>${Number.isFinite(panicScore)?`恐慌觀察 ${fmt(panicScore)}｜0050 回檔 ${Number.isFinite(drawdown)?fmt(drawdown)+"%":"資料不足"}`:"資料觀察中"}</p><p><b>執行確認</b>${esc(tacticalAction)}</p></section><footer class="hsLeverageForward"><b>FORWARD SHADOW · ${esc(v1.strategy)}</b><span>Frozen threshold ${threshold}｜Training end ${esc(v1.trainingEnd)}｜Forward start ${esc(v1.forwardStart)}</span><em>等待首筆 Forward Observation</em></footer></article>`;
 }
+function leverageHomeCompactCard(item){
+  if(!item)return '<div class="newsEmpty">00631L 資料載入中。</div>';
+  const v1=leverageV1State(item),tactical=item.swingDecision||item.strategyDecisions?.leveraged?.result||null,tacticalScore=Number(tactical?.buyScore),velocity=Number(v1.value),threshold=Number(v1.threshold),state=v1.trigger?"觸發":v1.available?"待命":"資料不足",quoteText=Number.isFinite(item.changePct)?signed(item.changePct):"—";
+  return`<article class="hsLeverageCompact" data-v1-status="${esc(v1.status)}"><div class="hsLeverageCompactIdentity"><b>00631L</b><span>${esc(item.name)}</span></div><dl><div><dt>現價</dt><dd>$${fmt(item.price)} <small class="${Number(item.changePct)>=0?"up":"down"}">${esc(quoteText)}</small></dd></div><div><dt>5D 急跌速度</dt><dd>${Number.isFinite(velocity)?fmt(velocity):"—"}<small>${Number.isFinite(threshold)?` / ${threshold}`:""}</small></dd></div><div><dt>戰術觀察</dt><dd>${Number.isFinite(tacticalScore)?tacticalScore:"—"}</dd></div><div><dt>目前狀態</dt><dd>${esc(state)}</dd><small>${v1.trigger?"極端急跌條件成立":"等待極端急跌訊號"}</small></div></dl></article>`;
+}
 // HS TODAY is a presentation adapter. It only passes canonical Core outputs to
 // HSDecisionLayerV1; all score, stage, distance, posture, and driver rules stay there.
 function hsTodayFactorAdapter(factors){
@@ -3105,15 +3085,49 @@ function selectDecisionCenterOpportunity(rows,contract=window.HSDecisionLayerV1)
   });
   return candidates.sort((a,b)=>(a.highest?1:0)-(b.highest?1:0)||(a.distance??Infinity)-(b.distance??Infinity)||b.score-a.score||a.symbol.localeCompare(b.symbol))[0]||null;
 }
-const HS_DASHBOARD_C4_SYMBOLS=Object.freeze(["0050","00662","00830","00935","009815"]);
-function decisionCenterC4Cards(officialRows,longs){
-  const names=new Map((longs||[]).map(item=>[item.id,item.name])),dashboardSymbols=new Set(HS_DASHBOARD_C4_SYMBOLS),ranked=[...(officialRows||[])].filter(row=>dashboardSymbols.has(row.symbol)).sort((a,b)=>b.score-a.score||a.symbol.localeCompare(b.symbol));
+const HS_DASHBOARD_C4_SYMBOLS=Object.freeze(["0050","00662","00757","00830","00935","009815"]);
+let homeC4SortMode="score";
+function homeC4IntradaySeries(symbol,tradingDate,live){
+  const byTime=new Map();
+  for(const snapshot of Array.isArray(liveCanonicalCoreSnapshots)?liveCanonicalCoreSnapshots:[]){
+    if(snapshot?.status!=="SUCCESS"||snapshot?.trading_date!==tradingDate)continue;
+    const item=snapshot?.items?.[symbol],score=Number(item?.display_score??item?.score),asOf=String(item?.market_as_of||snapshot?.market_as_of||snapshot?.generated_at||"");
+    if(item?.status!=="SUCCESS"||!Number.isFinite(score)||!asOf)continue;
+    byTime.set(asOf,{score,asOf});
+  }
+  const liveScore=Number(live?.display_score??live?.score),liveAsOf=String(live?.market_as_of||"");
+  if(live?.display_eligible===true&&live?.trading_date===tradingDate&&Number.isFinite(liveScore)&&liveAsOf)byTime.set(liveAsOf,{score:liveScore,asOf:liveAsOf});
+  return [...byTime.values()].sort((a,b)=>Date.parse(a.asOf)-Date.parse(b.asOf));
+}
+function homeC4Sparkline(series,symbol="c4"){
+  if(!Array.isArray(series)||series.length<2)return`<div class="hsC4Sparkline is-unavailable"><span>今日盤中軌跡尚未累積</span></div>`;
+  const values=series.map(point=>point.score),min=Math.min(...values),max=Math.max(...values),range=Math.max(max-min,1),width=320,height=78,pad=5;
+  const gradientId=`hsC4LineFill-${String(symbol).replace(/[^a-zA-Z0-9_-]/g,"")||"c4"}`;
+  const points=values.map((value,index)=>`${pad+(width-pad*2)*(index/(values.length-1))},${pad+(height-pad*2)*(1-(value-min)/range)}`).join(" ");
+  return`<div class="hsC4Sparkline" aria-label="${series.length} 筆今日盤中分數軌跡"><svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img"><defs><linearGradient id="${gradientId}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#efc85e" stop-opacity=".35"/><stop offset="1" stop-color="#efc85e" stop-opacity="0"/></linearGradient></defs><polyline class="area" style="fill:url(#${gradientId})" points="${pad},${height-pad} ${points} ${width-pad},${height-pad}"/><polyline class="line" points="${points}"/></svg><span>${formatHomeQuoteTime(series[0].asOf)||"開盤"}</span><span>${formatHomeQuoteTime(series.at(-1).asOf)||"最新"}</span></div>`;
+}
+function decisionCenterC4Rows(officialRows,longs,dualTrack){
+  const names=new Map((longs||[]).map(item=>[item.id,item.name])),officialMap=new Map((officialRows||[]).map(row=>[row.symbol,row])),history=officialC4HistoryViewModel(finalizedCoreScoreHistoryArtifact);
+  return HS_DASHBOARD_C4_SYMBOLS.filter(symbol=>symbol!=="009815").map(symbol=>{
+    const official=officialMap.get(symbol),live=dualTrack?.items?.[symbol]?.live,item=(longs||[]).find(row=>row?.id===symbol),useLive=dualTrack?.market_state==="OPEN"&&live?.display_eligible===true&&live?.status==="LIVE_PROJECTED"&&live?.trading_date===dualTrack?.target_date,officialHistory=history.get(symbol)?.rows||[],latestOfficial=officialHistory.at(-1),previousOfficial=officialHistory.at(-2);
+    const score=Number(useLive?(live.display_score??live.score):official?.displayScore),rawScore=Number(useLive?(live.score??live.display_score):official?.score),officialDelta=latestOfficial&&previousOfficial?latestOfficial.score-previousOfficial.score:null,delta=useLive&&Number.isFinite(Number(live?.delta_vs_official))?Number(live.delta_vs_official):Number.isFinite(officialDelta)?officialDelta:null,tradingDate=String(useLive?live.trading_date:official?.date||""),series=homeC4IntradaySeries(symbol,tradingDate,useLive?live:null),next=Number.isFinite(rawScore)?selectDecisionCenterOpportunity([{symbol,score:rawScore}]):null;
+    return{symbol,name:names.get(symbol)||item?.name||"",official,live,useLive,score,rawScore,delta,tradingDate,series,next,tier:useLive?String(live?.tier||official?.tier||"正式分數"):String(official?.tier||"正式分數")};
+  });
+}
+function sortDecisionCenterC4Rows(rows,mode=homeC4SortMode){
+  const copy=[...(rows||[])];
+  if(mode==="change")return copy.sort((a,b)=>(b.delta??-Infinity)-(a.delta??-Infinity)||b.score-a.score||a.symbol.localeCompare(b.symbol));
+  if(mode==="threshold")return copy.sort((a,b)=>(a.next?.distance??Infinity)-(b.next?.distance??Infinity)||b.score-a.score||a.symbol.localeCompare(b.symbol));
+  return copy.sort((a,b)=>(b.score??-Infinity)-(a.score??-Infinity)||a.symbol.localeCompare(b.symbol));
+}
+function decisionCenterC4Cards(officialRows,longs,dualTrack){
+  const ranked=sortDecisionCenterC4Rows(decisionCenterC4Rows(officialRows,longs,dualTrack));
   const cards=ranked.map((row,index)=>{
-    const next=selectDecisionCenterOpportunity([row]),distance=next?.highest?"已在最高區間":Number.isFinite(next?.distance)?`距${next.nextLabel} ${decisionCenterDistanceText(next.distance)} 分`:"下一級資料暫缺";
-    return`<article class="hsDashboardC4Card ${index===0?"is-leader":""}" data-c4-symbol="${esc(row.symbol)}"><span>${esc(row.symbol)}<small>${esc(names.get(row.symbol)||"")}</small></span><b>${row.displayScore}</b><strong>${esc(row.tier)}</strong><em>${esc(distance)}</em></article>`;
+    const high=row.series.length?Math.max(...row.series.map(point=>point.score)):null,low=row.series.length?Math.min(...row.series.map(point=>point.score)):null,distance=row.next?.highest?"已在最高區間":Number.isFinite(row.next?.distance)?`距下一級 ${decisionCenterDistanceText(row.next.distance)} 分`:"門檻資料暫缺",delta=Number.isFinite(row.delta)?`${row.delta>0?"+":""}${decisionCenterDistanceText(row.delta)}`:"—",status=row.useLive?"LIVE":"FINAL";
+    return`<article class="hsDashboardC4Card ${index===0?"is-leader":"is-compact"}" data-c4-symbol="${esc(row.symbol)}" data-c4-source="${status}"><div class="hsC4Rank">${index+1}</div><header><span>${esc(row.symbol)}<small>${esc(row.name)}</small></span><i class="${row.useLive?"is-live":"is-final"}">${status}</i></header><div class="hsC4CardScore"><b>${Number.isFinite(row.score)?row.score:"—"}</b><strong>${esc(row.tier)}</strong></div><dl><div><dt>vs 昨日正式</dt><dd class="${Number(row.delta)>=0?"up":"down"}">${esc(delta)}</dd></div><div><dt>今日高</dt><dd>${Number.isFinite(high)?high:"—"}</dd></div><div><dt>今日低</dt><dd>${Number.isFinite(low)?low:"—"}</dd></div><div><dt>門檻</dt><dd>${esc(distance)}</dd></div></dl>${homeC4Sparkline(row.series,row.symbol)}</article>`;
   });
   const waiting=(longs||[]).find(item=>item?.id==="009815");
-  if(waiting)cards.push(`<article class="hsDashboardC4Card is-unavailable" data-c4-symbol="009815"><span>009815<small>${esc(waiting.name||"")}</small></span><b>—</b><strong>等待原生資料</strong><em>WAIT_NATIVE｜不以替代值補算</em></article>`);
+  cards.push(`<article class="hsDashboardC4Card is-unavailable" data-c4-symbol="009815" data-c4-source="WAIT_NATIVE"><div class="hsC4Rank">6</div><header><span>009815<small>${esc(waiting?.name||"大華美國 MAG7+")}</small></span><i>WAIT_NATIVE</i></header><div class="hsC4Wait"><b>盤中原生預估尚不可用</b><small>等待原生數據，不以替代值補算</small></div></article>`);
   return cards.join("");
 }
 function selectDecisionCenterLiveMove(dualTrack){
@@ -3177,11 +3191,13 @@ function renderDecisionCenter(longs,dualTrack,leverageState){
   const health=decisionCenterSystemHealth({dualTrack,officialRows,historyBySymbol:officialC4HistoryViewModel(finalizedCoreScoreHistoryArtifact),leverageState,cnnSnapshot:cnnFearGreed?.snapshot||null,forwardState:{available:Array.isArray(forwardRecords),status:Array.isArray(forwardRecords)?"READY":"FAIL_CLOSED",detail:Array.isArray(forwardRecords)?`${forwardRecords.length} 筆驗證紀錄｜功能可用`:"驗證資料無法讀取"},adHocState:{available:typeof window.HSFinalCoreProduction?.buildAdHocScore==="function"},targetDate:dualTrack?.target_date||taipeiToday(),now:new Date()});
   const live=liveMove.item?.live,liveReady=marketState==="OPEN"&&liveMove.status==="READY",liveLabel=liveReady?"LIVE":marketState==="CLOSED"?"收盤":marketState==="PREMARKET"?"盤前":marketState==="HOLIDAY"?"休市":"UNAVAILABLE",liveTone=liveReady?"is-live":liveLabel==="UNAVAILABLE"?"is-warning":"is-neutral";
   const latestLive=[...LONG_RADAR_SCORED_CODES].map(symbol=>dualTrack?.items?.[symbol]?.live?.market_as_of).filter(Boolean).sort().at(-1),lastUpdate=liveReady?(formatHomeQuoteTime(latestLive)||"—"):(formatHomeQuoteTime(highest?.asOf)||highest?.date||"—");
-  host.innerHTML=`<div class="hsOpsHeroMain"><span>今日市場狀態</span><strong>${esc(decisionCenterMarketLabel(health.marketState))}</strong><small>${highest?`正式盤後 ${esc(highest.date)}`:"正式資料暫不可用"}</small></div><div class="hsOpsHeroScore"><span>目前最高 C4</span>${highest?`<b>${esc(highest.symbol)}</b><strong>${highest.displayScore}</strong><em>${esc(highest.tier)}</em>`:`<b>—</b><strong>—</strong><em>UNAVAILABLE</em>`}</div><div class="hsOpsHeroStatus"><span class="${liveTone}"><i></i>${esc(liveLabel)}</span><small>盤中狀態</small><span class="is-update">${esc(lastUpdate)}</span><small>Last Update</small></div>`;
-  const c4Grid=$("#hsDashboardC4Grid");if(c4Grid)c4Grid.innerHTML=decisionCenterC4Cards(dashboardOfficialRows,longs)||'<div class="newsEmpty">正式 C4 資料暫不可用。</div>';
-  const system=$("#homeSystemStatusSummary"),systemDetails=$("#homeSystemStatusDetails"),healthMap=new Map(health.items.map(item=>[item.key,item]));
-  if(system){const status=(key,label)=>{const item=healthMap.get(key),tone=item?.level==="HEALTHY"?"is-ok":"is-warning";return`<span class="${tone}"><i></i><b>${esc(label)}</b><em>${esc(item?.status||"UNAVAILABLE")}</em></span>`};system.innerHTML=status("live","Intraday")+status("forward","Forward")+status("official","Finalized")+`<span class="hsSystemLast"><b>Last Snapshot</b><em>${esc(lastUpdate)}</em></span>`}
-  if(systemDetails)systemDetails.innerHTML=decisionCenterHealthHtml(health);
+  const focusRows=sortDecisionCenterC4Rows(decisionCenterC4Rows(dashboardOfficialRows,longs,dualTrack),"score"),focus=focusRows[0],focusNext=focus?.next,focusDistance=focusNext?.highest?"最高決策區":Number.isFinite(focusNext?.distance)?`${decisionCenterDistanceText(focusNext.distance)} 分`:"—",focusStatus=focus?.useLive?"LIVE":"FINAL";
+  const leverage=decisionCenterLeverageSummary(leverageState),cnnLabel=cnnFearGreed?.label||"資料待更新",healthTone=health.level==="HEALTHY"?"is-ok":"is-warning";
+  host.innerHTML=`<div class="hsCoreDecisionHero"><div class="hsCoreIdentity"><span>${esc(focus?.symbol||highest?.symbol||"—")}</span><b>${esc(focus?.name||"正式資料暫不可用")}</b><small>${esc(focus?.tier||highest?.tier||"資料更新中")} ｜ 長期趨勢</small></div><div class="hsCoreHeroScore"><span>目前分數 <i>${focusStatus}</i></span><b>${Number.isFinite(focus?.score)?focus.score:highest?.displayScore??"—"}</b><strong>${esc(focus?.tier||highest?.tier||"UNAVAILABLE")}</strong></div><div class="hsCoreThreshold"><span>距正式分批</span><b>${esc(focusDistance)}</b><small>${focusNext?.highest?"維持紀律，等待布局":`維持觀察 · 等待時機`}</small></div></div><div class="hsDecisionStatusRail"><article><svg aria-hidden="true"><use href="#i-market"/></svg><span>市場狀態<b>${esc(decisionCenterMarketLabel(health.marketState))}</b><small>${esc(liveReady?`LIVE ${lastUpdate}`:`FINAL ${highest?.date||"—"}`)}</small></span></article><article><svg aria-hidden="true"><use href="#i-fund"/></svg><span>資料狀態<b class="${healthTone}">${esc(health.label)}</b><small>${esc(health.officialDate||"系統確認中")}</small></span></article><article><svg aria-hidden="true"><use href="#i-gauge"/></svg><span>市場情緒<b>${esc(cnnLabel)}</b><small>${Number.isFinite(cnnFearGreed?.score)?`Fear & Greed ${fmt(cnnFearGreed.score)}`:"不以缺值補算"}</small></span></article><article><svg aria-hidden="true"><use href="#i-chip"/></svg><span>00631L 狀態<b>${esc(leverage.label)}</b><small>${esc(leverage.detail)}</small></span></article></div>${decisionCenterHealthHtml(health)}`;
+  const caption=$("#hsDecisionMarketCaption");if(caption)caption.textContent=`${decisionCenterMarketLabel(health.marketState)} · 掌握下一步佈局`;
+  const headerState=$("#homeHeaderMarketState"),headerUpdate=$("#homeHeaderLastUpdate");if(headerState)headerState.textContent=decisionCenterMarketLabel(health.marketState);if(headerUpdate)headerUpdate.textContent=`最後更新 ${lastUpdate}`;
+  const c4Grid=$("#hsDashboardC4Grid");if(c4Grid)c4Grid.innerHTML=decisionCenterC4Cards(dashboardOfficialRows,longs,dualTrack)||'<div class="newsEmpty">正式 C4 資料暫不可用。</div>';
+  document.querySelectorAll("[data-home-c4-sort]").forEach(button=>button.classList.toggle("is-active",button.dataset.homeC4Sort===homeC4SortMode));
 }
 function renderTop(){
   const longIds=new Set(["0050","00830","00662","00757","009815","00935"]),swingIds=new Set(["00733","006201"]);
@@ -3199,8 +3215,7 @@ function renderTop(){
   renderHSToday(rankedLongs);
   const rankList=$("#rankList");rankList.classList.add("hsLiveGrid");rankList.innerHTML=displayedLongs.map((x,index)=>longRankRow(x,index,previous,rankedLongs.indexOf(x)>=0?rankedLongs.indexOf(x)+1:null,dualTrack?.items?.[x.id]||null)).join("")||'<div class="newsEmpty">資料載入中</div>';
   const liveReadScore=$("#hsLiveReadScore");if(liveReadScore)liveReadScore.dataset.readCoreScore=rankedLongs[0]?.id||"0050";
-  $("#homeLeverageCard").innerHTML=leverageHomeCard(all.find(x=>x.id==="00631L"));
-  $("#homeSwingList").innerHTML=`<div class="homeOpportunityGroup">${swings.map(x=>compactOpportunityRow(x,strategyModeFor(x))).join("")||'<div class="newsEmpty">資料載入中</div>'}</div>`;
+  $("#homeLeverageCard").innerHTML=leverageHomeCompactCard(all.find(x=>x.id==="00631L"));
   if(verifiedSnapshot&&snapshotIdentity&&snapshotIdentity!==lastRankSnapshotIdentity){localStorage.setItem(LONG_RANK_STORAGE_KEY,JSON.stringify(longRankSnapshot(rankedLongs,saved,snapshotIdentity,snapshotAsOf,snapshotSlot)));lastRankSnapshotIdentity=snapshotIdentity}
   const radar=activeRadarItems(),sorted=[...radar].sort((a,b)=>(displayScore(b)??-1)-(displayScore(a)??-1)),low=[...radar].sort((a,b)=>a.j-b.j)[0],best=sorted.find(x=>Number.isFinite(displayScore(x)));
   $("#snapshotGrid").innerHTML=(best||low)?`<div class="snapshot"><span>最高策略分數</span><b>${best?`${best.id}｜${displayScore(best)} 分`:"資料不足"}</b></div><div class="snapshot"><span>最低週 J 值</span><b>${low?`${low.id}｜${fmt(low.j)}`:"—"}</b></div><div class="snapshot"><span>長期加碼區</span><b>${longCount} 檔</b></div><div class="snapshot"><span>波段已確認</span><b>${swingCount} 檔</b></div>`:'<div class="newsEmpty">尚無 ETF 資料。</div>';
@@ -3210,7 +3225,6 @@ function renderTop(){
   $("#radarNextSlot").textContent="不使用舊盤中快照";
   if($("#radarOverviewCurrent"))$("#radarOverviewCurrent").textContent=`本次更新時段：${actualSnapshotTime}${failedAttempt?`｜${failedAttempt}`:""}`;
   if($("#radarOverviewNext"))$("#radarOverviewNext").textContent=`下一次更新：${radarDisplay.next.replace(/^下一次更新\s*/,"")}`;
-  renderTodayHighlights(rankedLongs,swings);
 }
 function uiMetricStatus(kind,value){
   if(!Number.isFinite(value))return"資料暫缺";
@@ -4002,7 +4016,7 @@ function syncHsStoryActive(){const modal=$("#hsStoryModal"),chapters=[...modal.q
 function openHsStory(event){lastHsStoryTrigger=event?.currentTarget||lastHsStoryTrigger;const modal=$("#hsStoryModal");renderHsCanonicalScoreGuide();modal.scrollTop=0;setHsStoryActive("hs-story-intention");modal.classList.add("show");modal.setAttribute("aria-hidden","false");setTimeout(()=>$("#closeHsStory").focus(),30)}
 function closeHsStory(){const modal=$("#hsStoryModal");modal.classList.remove("show");modal.setAttribute("aria-hidden","true");lastHsStoryTrigger?.focus()}
 $("#openHsStory").addEventListener("click",openHsStory);
-$("#openHsStoryHome").addEventListener("click",openHsStory);
+$("#openHsStoryHome")?.addEventListener("click",openHsStory);
 $("#closeHsStory").addEventListener("click",closeHsStory);
 $("#hsStoryModal").addEventListener("click",event=>{if(event.target===$("#hsStoryModal"))closeHsStory()});
 $("#hsStoryModal").addEventListener("scroll",syncHsStoryActive,{passive:true});
@@ -4106,7 +4120,8 @@ document.querySelectorAll("[data-radar-mode]").forEach(button=>button.addEventLi
 }));
 document.querySelectorAll("[data-chip-tab]").forEach(button=>button.addEventListener("click",()=>switchChipTab(button.dataset.chipTab)));
 document.querySelectorAll("[data-radar-view]").forEach(button=>button.addEventListener("click",()=>switchRadarOverviewView(button.dataset.radarView)));
-$("#homeSwingBrief").addEventListener("click",event=>{if(event.target.closest("[data-open-etf-radar]"))switchTab("signals")});
+document.addEventListener("click",event=>{const button=event.target.closest("[data-home-c4-sort]");if(!button)return;homeC4SortMode=["score","change","threshold"].includes(button.dataset.homeC4Sort)?button.dataset.homeC4Sort:"score";renderTop()});
+$("#homeSwingBrief")?.addEventListener("click",event=>{if(event.target.closest("[data-open-etf-radar]"))switchTab("signals")});
 $("#radarDetailBack").addEventListener("click",closeRadarDetail);
 $("#radarDetailStickyBack").addEventListener("click",closeRadarDetail);
 $("#radarDetailStickyCollapse").addEventListener("click",closeRadarDetail);
