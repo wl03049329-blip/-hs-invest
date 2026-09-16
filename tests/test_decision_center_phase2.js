@@ -8,7 +8,7 @@ const decision=require("../hs-decision-layer-v1.js");
 const html=fs.readFileSync("index.html","utf8"),css=fs.readFileSync("formal-black-gold.css","utf8"),symbols=["0050","00662","00757","00830","00935"];
 const start=html.indexOf("function decisionCenterMarketLabel"),end=html.indexOf("function renderDecisionCenter",start),source=html.slice(start,end);
 assert.ok(start>0&&end>start,"Decision Center selectors must be testable in isolation");
-const sandbox={window:{HSDecisionLayerV1:decision},LONG_RADAR_SCORED_CODES:new Set(symbols),homepageFinalDecision:item=>item?.decision||null};
+const sandbox={window:{HSDecisionLayerV1:decision},LONG_RADAR_SCORED_CODES:new Set(symbols),homepageFinalDecision:item=>item?.decision||null,archivedIntradayCoreSnapshots:[],liveCanonicalCoreSnapshots:[],taipeiToday:()=>"2026-09-17",esc:value=>String(value)};
 vm.runInNewContext(source,sandbox);
 const rows=[{symbol:"0050",score:44.2,displayScore:44,tier:"回檔觀察"},{symbol:"00662",score:49.6,displayScore:49,tier:"回檔觀察"},{symbol:"00757",score:41,displayScore:41,tier:"回檔觀察"},{symbol:"00830",score:53.8,displayScore:53,tier:"小額加碼"},{symbol:"00935",score:39,displayScore:39,tier:"一般持有"}];
 
@@ -63,3 +63,19 @@ assert.match(html,/今日盤中軌跡尚未累積/);
 assert.doesNotMatch(html,/id="homeSwingBrief"/);
 assert.doesNotMatch(source,/calculateFinalCore|buildFinal\(|buildAdHocScore\(|evaluateCrashVelocity|localStorage|sessionStorage|\.setItem\(/);
 console.log("PASS HS mockup dashboard is responsive, six-symbol and presentation-only");
+
+const archived=JSON.parse(fs.readFileSync("intraday-core-snapshots-v1.json","utf8")).snapshots;
+sandbox.archivedIntradayCoreSnapshots=archived;
+const previous=sandbox.homeC4PreviousSessionSummary("00830","2026-09-17");
+assert.deepEqual(JSON.parse(JSON.stringify(previous)),{date:"2026-09-16",high:50,low:49,last:49});
+assert.match(sandbox.homeC4PreviousSessionPanel(previous),/09\/16 盤中[\s\S]*高 50｜低 49｜末 49/);
+assert.equal(sandbox.homeC4LatestPreviousSessionDate("2026-09-17"),"2026-09-16");
+const mockSnapshot=(date,slot,score)=>({status:"SUCCESS",trading_date:date,market_as_of:`${date}T${slot}:00+08:00`,items:{"00830":{status:"SUCCESS",display_score:score,market_as_of:`${date}T${slot}:00+08:00`}}});
+sandbox.archivedIntradayCoreSnapshots=[mockSnapshot("2026-09-13","13:30",45),mockSnapshot("2026-09-18","09:05",47),mockSnapshot("2026-09-18","13:30",48),mockSnapshot("2026-09-21","09:05",49)];
+assert.equal(sandbox.homeC4PreviousSessionSummary("00830","2026-09-21").date,"2026-09-18","Monday premarket must use Friday's nearest stored trajectory");
+assert.equal(sandbox.homeC4PreviousSessionSummary("00830","2026-09-17").date,"2026-09-13","missing prior-day snapshots must search backward to the nearest stored trajectory");
+assert.match(source,/snapshot\?\.trading_date<targetDate/);
+assert.match(source,/trackStarted\?homeC4Sparkline\(row\.series,row\.symbol\):premarket&&row\.previousSession\?homeC4PreviousSessionPanel/);
+assert.match(source,/waitingPreviousDate[\s\S]*等待原生資料[\s\S]*WAIT_NATIVE/);
+assert.match(html,/archivedIntradayCoreSnapshots=parseCanonicalCoreSnapshots\(payload\)/);
+console.log("PASS previous-session intraday summary uses the nearest stored trajectory, switches away during today's track and preserves WAIT_NATIVE");

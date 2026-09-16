@@ -2057,6 +2057,11 @@ footer{color:#746f67}
 .hsDashboardC4Card .hsC4DeltaValue.down{color:#e27672!important}
 .hsDashboardC4Card .hsC4DeltaValue.neutral{color:#b9ae9b!important}
 .hsDashboardC4Card.is-compact dl>div:not(.hsC4ThresholdMetric) .hsC4DeltaValue{font-size:14px!important}
+.hsC4PreviousSession{display:grid;align-content:center;justify-items:start;gap:5px;padding:7px 10px;border:1px solid rgba(171,132,54,.2);border-radius:7px;background:linear-gradient(135deg,rgba(91,64,18,.13),rgba(8,8,7,.42));box-sizing:border-box}
+.hsC4PreviousSession>small{color:#9d8c6b;font-size:9px;font-weight:800;letter-spacing:.06em}
+.hsC4PreviousSession>strong{color:#d5c6a9;font-size:12px;font-weight:900;line-height:1.25;white-space:nowrap}
+.hsDashboardC4Card.is-unavailable .hsC4PreviousSessionWait{grid-column:2;display:flex;align-items:baseline;gap:6px;min-width:0;margin-top:2px;color:#8c8375;font-size:8px;line-height:1.25}
+.hsC4PreviousSessionWait>span{color:#a38f67;font-weight:850}.hsC4PreviousSessionWait>b{color:#b7aa94;font-size:9px}.hsC4PreviousSessionWait>small{color:#716b62;font-size:6px;letter-spacing:.08em}
 
 .hsLeverageCompact{grid-template-columns:minmax(170px,.72fr) minmax(0,2fr)}
 .hsLeverageCompact dl{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-areas:"velocity status" "price tactical"}
@@ -2068,6 +2073,7 @@ footer{color:#746f67}
 .hsLeverageCompactVelocity .hsLeverageCompactProgress{width:100%;margin-top:9px}
 
 @media(max-width:780px){
+  .hsC4PreviousSession{gap:3px;padding:5px 8px}.hsC4PreviousSession>small{font-size:7.5px}.hsC4PreviousSession>strong{font-size:10px}
   .hsLeverageCompact{grid-template-columns:106px minmax(0,1fr)}
   .hsLeverageCompact dl>div{padding:9px 10px}
   .hsLeverageCompactVelocity .hsLeverageCompactProgress{margin-top:6px}
