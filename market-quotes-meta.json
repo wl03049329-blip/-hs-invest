@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "updated_at": "2026-09-11T05:23:36.098948Z",
+  "updated_at": "2026-09-16T09:10:42.039042+08:00",
   "source_dates": {
     "TWSE": "2026-09-11",
     "TPEx": "2026-09-10"
@@ -8,691 +8,44 @@
   "source_status": {
     "TWSE": "official_closing_data",
     "TPEx": "official_closing_data",
-    "TWSE_MIS": "cached_after_error: radar required quote parse rejected: 00662 reason=missing_price"
+    "TWSE_MIS": "cached_after_error: radar required quote parse rejected: 00662 reason=missing_price",
+    "RAILWAY_PRIMARY": "ok"
   },
   "item_count": 2397,
   "radar_refresh": {
     "verified": true,
-    "trading_date": "2026-09-10",
-    "slot": "13:25",
-    "verified_at": "2026-09-10T05:26:27.248097Z",
-    "captured_at": "2026-09-10T13:26:27.248097+08:00",
-    "codes": [
-      "0050",
-      "00662",
-      "00757",
-      "00830",
-      "00935"
-    ],
-    "non_blocking_codes": [
-      "009815"
-    ],
-    "non_blocking_status": {
-      "009815": "WAIT_NATIVE"
-    },
-    "quote_times": {
-      "0050": "13:25:33",
-      "00662": "13:25:59",
-      "00757": "13:25:47",
-      "00830": "13:26:03",
-      "00935": "13:26:00"
-    },
-    "market_as_of": {
-      "0050": "2026-09-10T13:25:33+08:00",
-      "00662": "2026-09-10T13:25:59+08:00",
-      "00757": "2026-09-10T13:25:47+08:00",
-      "00830": "2026-09-10T13:26:03+08:00",
-      "00935": "2026-09-10T13:26:00+08:00"
-    },
-    "price_fields": {
-      "0050": "pz",
-      "00662": "pz",
-      "00757": "pz",
-      "00830": "pz",
-      "00935": "pz"
-    },
-    "source": "TWSE_MIS",
-    "source_url": "https://mis.twse.com.tw/stock/api/getStockInfo.jsp",
-    "required_symbol_diagnostics": {
-      "required_symbols": [
-        "0050",
-        "00662",
-        "00757",
-        "00830",
-        "00935"
-      ],
-      "initial_missing": [],
-      "initial_parse_rejected": {
-        "00757": {
-          "batch": 5,
-          "request_key": "tse_00757.tw",
-          "reason": "missing_price",
-          "raw_fields": {
-            "c": "00757",
-            "ex": "tse",
-            "d": "20260910",
-            "^": "20260910",
-            "t": "13:24:31",
-            "%": "13:24:31",
-            "tlong": "1789017871000",
-            "z": "-",
-            "pz": "-",
-            "y": "137.4000",
-            "o": "137.5000",
-            "h": "137.7500",
-            "l": "137.3500",
-            "v": "453",
-            "tv": "-",
-            "a": "137.8000_137.8500_137.9000_137.9500_138.0000_",
-            "b": "137.7500_137.7000_137.6500_137.6000_137.5500_"
-          }
-        }
-      },
-      "retried_batches": [
-        5
-      ],
-      "retry_strategy": "required_symbol_single_request",
-      "targeted_retry_attempts": {
-        "00757": 5
-      },
-      "retry_errors": {},
-      "retry_recovered": [
-        "00757"
-      ],
-      "final_missing": [],
-      "final_parse_rejected": {},
-      "symbols": {
-        "0050": {
-          "batch": 3,
-          "request_key": "tse_0050.tw",
-          "raw_present": true,
-          "parsed": true,
-          "price_field": "pz",
-          "rejection_reason": null,
-          "raw_fields": null,
-          "candidate_cache": false,
-          "candidate_market_as_of": "2026-09-10T13:25:33+08:00"
-        },
-        "00662": {
-          "batch": 4,
-          "request_key": "tse_00662.tw",
-          "raw_present": true,
-          "parsed": true,
-          "price_field": "pz",
-          "rejection_reason": null,
-          "raw_fields": null,
-          "candidate_cache": false,
-          "candidate_market_as_of": "2026-09-10T13:25:59+08:00"
-        },
-        "00757": {
-          "batch": 5,
-          "request_key": "tse_00757.tw",
-          "raw_present": true,
-          "parsed": true,
-          "price_field": "pz",
-          "rejection_reason": null,
-          "raw_fields": null,
-          "candidate_cache": false,
-          "candidate_market_as_of": "2026-09-10T13:25:47+08:00"
-        },
-        "00830": {
-          "batch": 5,
-          "request_key": "tse_00830.tw",
-          "raw_present": true,
-          "parsed": true,
-          "price_field": "pz",
-          "rejection_reason": null,
-          "raw_fields": null,
-          "candidate_cache": false,
-          "candidate_market_as_of": "2026-09-10T13:26:03+08:00"
-        },
-        "00935": {
-          "batch": 6,
-          "request_key": "tse_00935.tw",
-          "raw_present": true,
-          "parsed": true,
-          "price_field": "pz",
-          "rejection_reason": null,
-          "raw_fields": null,
-          "candidate_cache": false,
-          "candidate_market_as_of": "2026-09-10T13:26:00+08:00"
-        }
-      },
-      "current_attempt_symbols": {
-        "0050": {
-          "batch": 3,
-          "request_key": "tse_0050.tw",
-          "raw_present": true,
-          "parsed": true,
-          "price_field": "pz",
-          "rejection_reason": null,
-          "raw_fields": null
-        },
-        "00662": {
-          "batch": 4,
-          "request_key": "tse_00662.tw",
-          "raw_present": true,
-          "parsed": true,
-          "price_field": "pz",
-          "rejection_reason": null,
-          "raw_fields": null
-        },
-        "00757": {
-          "batch": 5,
-          "request_key": "tse_00757.tw",
-          "raw_present": true,
-          "parsed": true,
-          "price_field": "pz",
-          "rejection_reason": null,
-          "raw_fields": null
-        },
-        "00830": {
-          "batch": 5,
-          "request_key": "tse_00830.tw",
-          "raw_present": true,
-          "parsed": true,
-          "price_field": "pz",
-          "rejection_reason": null,
-          "raw_fields": null
-        },
-        "00935": {
-          "batch": 6,
-          "request_key": "tse_00935.tw",
-          "raw_present": true,
-          "parsed": true,
-          "price_field": "pz",
-          "rejection_reason": null,
-          "raw_fields": null
-        }
-      },
-      "candidate_cache_recovered": [],
-      "candidate_market_as_of": {
-        "0050": "2026-09-10T13:25:33+08:00",
-        "00662": "2026-09-10T13:25:59+08:00",
-        "00757": "2026-09-10T13:25:47+08:00",
-        "00830": "2026-09-10T13:26:03+08:00",
-        "00935": "2026-09-10T13:26:00+08:00"
-      }
-    },
-    "status": "success"
+    "status": "success",
+    "trading_date": "2026-09-16",
+    "slot": "09:10",
+    "captured_at": "2026-09-16T09:10:42.038658+08:00",
+    "verified_at": "2026-09-16T09:10:42.039042+08:00",
+    "market_as_of": "2026-09-16T09:10:40+08:00",
+    "completeness": "5/5",
+    "trigger_source": "RAILWAY_PRIMARY",
+    "quote_sources": {
+      "0050": "FUGLE_LAST_TRADE",
+      "00662": "FUGLE_LAST_TRADE",
+      "00757": "FUGLE_LAST_TRADE",
+      "00830": "FUGLE_LAST_TRADE",
+      "00935": "FUGLE_LAST_TRADE"
+    }
   },
   "radar_refresh_attempt": {
-    "verified": false,
-    "status": "failed",
-    "trading_date": "2026-09-11",
-    "slot": "13:23",
-    "attempted_at": "2026-09-11T05:25:21.734426Z",
-    "error": "radar required quote parse rejected: 00662 reason=missing_price",
-    "failure_class": "OPERATIONAL_SOURCE",
-    "required_symbol_diagnostics": {
-      "required_symbols": [
-        "0050",
-        "00662",
-        "00757",
-        "00830",
-        "00935"
-      ],
-      "initial_missing": [],
-      "initial_parse_rejected": {
-        "0050": {
-          "batch": 1,
-          "request_key": "tse_0050.tw",
-          "reason": "missing_price",
-          "raw_fields": {
-            "c": "0050",
-            "ex": "tse",
-            "d": "20260911",
-            "^": "20260911",
-            "t": "13:23:34",
-            "%": "13:23:34",
-            "tlong": "1789104214000",
-            "z": "-",
-            "pz": "-",
-            "y": "109.1500",
-            "o": "107.4000",
-            "h": "108.0000",
-            "l": "106.9000",
-            "v": "88357",
-            "tv": "-",
-            "a": "107.7000_107.7500_107.8000_107.8500_107.9000_",
-            "b": "107.6500_107.6000_107.5500_107.5000_107.4500_"
-          }
-        },
-        "00662": {
-          "batch": 2,
-          "request_key": "tse_00662.tw",
-          "reason": "missing_price",
-          "raw_fields": {
-            "c": "00662",
-            "ex": "tse",
-            "d": "20260911",
-            "^": "20260911",
-            "t": "13:23:21",
-            "%": "13:23:21",
-            "tlong": "1789104201000",
-            "z": "-",
-            "pz": "-",
-            "y": "119.2000",
-            "o": "118.3000",
-            "h": "118.4500",
-            "l": "118.1000",
-            "v": "2914",
-            "tv": "-",
-            "a": "118.4500_118.5000_118.5500_118.6000_118.6500_",
-            "b": "118.4000_118.3500_118.3000_118.2500_118.2000_"
-          }
-        },
-        "00757": {
-          "batch": 3,
-          "request_key": "tse_00757.tw",
-          "reason": "missing_price",
-          "raw_fields": {
-            "c": "00757",
-            "ex": "tse",
-            "d": "20260911",
-            "^": "20260911",
-            "t": "13:23:33",
-            "%": "13:23:33",
-            "tlong": "1789104213000",
-            "z": "-",
-            "pz": "-",
-            "y": "137.8500",
-            "o": "137.0500",
-            "h": "137.2500",
-            "l": "136.8500",
-            "v": "355",
-            "tv": "-",
-            "a": "137.3000_137.3500_137.4000_137.4500_137.5000_",
-            "b": "137.2000_137.1500_137.1000_137.0500_137.0000_"
-          }
-        },
-        "00830": {
-          "batch": 3,
-          "request_key": "tse_00830.tw",
-          "reason": "missing_price",
-          "raw_fields": {
-            "c": "00830",
-            "ex": "tse",
-            "d": "20260911",
-            "^": "20260911",
-            "t": "13:23:28",
-            "%": "13:23:28",
-            "tlong": "1789104208000",
-            "z": "-",
-            "pz": "-",
-            "y": "83.0500",
-            "o": "81.6500",
-            "h": "81.6500",
-            "l": "81.1500",
-            "v": "3872",
-            "tv": "-",
-            "a": "81.4500_81.5000_81.5500_81.6000_81.6500_",
-            "b": "81.4000_81.3500_81.3000_81.2500_81.2000_"
-          }
-        },
-        "00935": {
-          "batch": 4,
-          "request_key": "tse_00935.tw",
-          "reason": "missing_price",
-          "raw_fields": {
-            "c": "00935",
-            "ex": "tse",
-            "d": "20260911",
-            "^": "20260911",
-            "t": "13:23:39",
-            "%": "13:23:39",
-            "tlong": "1789104219000",
-            "z": "-",
-            "pz": "-",
-            "y": "59.7000",
-            "o": "58.5500",
-            "h": "58.7000",
-            "l": "57.9500",
-            "v": "11852",
-            "tv": "-",
-            "a": "58.5000_58.5500_58.6000_58.6500_58.7000_",
-            "b": "58.4500_58.4000_58.3500_58.3000_58.2500_"
-          }
-        }
-      },
-      "retried_batches": [
-        1,
-        2,
-        3,
-        4
-      ],
-      "retry_strategy": "required_symbol_single_request",
-      "targeted_retry_attempts": {
-        "0050": 9,
-        "00662": 9,
-        "00757": 9,
-        "00830": 5,
-        "00935": 9
-      },
-      "retry_errors": {},
-      "retry_recovered": [
-        "0050",
-        "00830"
-      ],
-      "final_missing": [],
-      "final_parse_rejected": {
-        "00662": {
-          "batch": 2,
-          "request_key": "tse_00662.tw",
-          "reason": "missing_price",
-          "raw_fields": {
-            "c": "00662",
-            "ex": "tse",
-            "d": "20260911",
-            "^": "20260911",
-            "t": "13:24:52",
-            "%": "13:24:52",
-            "tlong": "1789104292000",
-            "z": "-",
-            "pz": "-",
-            "y": "119.2000",
-            "o": "118.3000",
-            "h": "118.4500",
-            "l": "118.1000",
-            "v": "2920",
-            "tv": "-",
-            "a": "118.4500_118.5000_118.5500_118.6000_118.6500_",
-            "b": "118.4000_118.3500_118.3000_118.2500_118.2000_"
-          }
-        },
-        "00757": {
-          "batch": 3,
-          "request_key": "tse_00757.tw",
-          "reason": "missing_price",
-          "raw_fields": {
-            "c": "00757",
-            "ex": "tse",
-            "d": "20260911",
-            "^": "20260911",
-            "t": "13:24:32",
-            "%": "13:24:32",
-            "tlong": "1789104272000",
-            "z": "-",
-            "pz": "-",
-            "y": "137.8500",
-            "o": "137.0500",
-            "h": "137.2500",
-            "l": "136.8500",
-            "v": "355",
-            "tv": "-",
-            "a": "137.2500_137.3000_137.3500_137.4000_137.4500_",
-            "b": "137.2000_137.1500_137.1000_137.0500_137.0000_"
-          }
-        },
-        "00935": {
-          "batch": 4,
-          "request_key": "tse_00935.tw",
-          "reason": "missing_price",
-          "raw_fields": {
-            "c": "00935",
-            "ex": "tse",
-            "d": "20260911",
-            "^": "20260911",
-            "t": "13:24:46",
-            "%": "13:24:46",
-            "tlong": "1789104286000",
-            "z": "-",
-            "pz": "-",
-            "y": "59.7000",
-            "o": "58.5500",
-            "h": "58.7000",
-            "l": "57.9500",
-            "v": "11978",
-            "tv": "-",
-            "a": "58.5000_58.5500_58.6000_58.6500_58.7000_",
-            "b": "58.4500_58.4000_58.3500_58.3000_58.2500_"
-          }
-        }
-      },
-      "symbols": {
-        "0050": {
-          "batch": 1,
-          "request_key": "tse_0050.tw",
-          "raw_present": true,
-          "parsed": true,
-          "price_field": "pz",
-          "rejection_reason": null,
-          "raw_fields": null,
-          "candidate_cache": false,
-          "candidate_market_as_of": "2026-09-11T13:25:03+08:00"
-        },
-        "00662": {
-          "batch": 2,
-          "request_key": "tse_00662.tw",
-          "raw_present": true,
-          "parsed": false,
-          "price_field": null,
-          "rejection_reason": "missing_price",
-          "raw_fields": {
-            "c": "00662",
-            "ex": "tse",
-            "d": "20260911",
-            "^": "20260911",
-            "t": "13:24:52",
-            "%": "13:24:52",
-            "tlong": "1789104292000",
-            "z": "-",
-            "pz": "-",
-            "y": "119.2000",
-            "o": "118.3000",
-            "h": "118.4500",
-            "l": "118.1000",
-            "v": "2920",
-            "tv": "-",
-            "a": "118.4500_118.5000_118.5500_118.6000_118.6500_",
-            "b": "118.4000_118.3500_118.3000_118.2500_118.2000_"
-          }
-        },
-        "00757": {
-          "batch": 3,
-          "request_key": "tse_00757.tw",
-          "raw_present": true,
-          "parsed": false,
-          "price_field": null,
-          "rejection_reason": "missing_price",
-          "raw_fields": {
-            "c": "00757",
-            "ex": "tse",
-            "d": "20260911",
-            "^": "20260911",
-            "t": "13:24:32",
-            "%": "13:24:32",
-            "tlong": "1789104272000",
-            "z": "-",
-            "pz": "-",
-            "y": "137.8500",
-            "o": "137.0500",
-            "h": "137.2500",
-            "l": "136.8500",
-            "v": "355",
-            "tv": "-",
-            "a": "137.2500_137.3000_137.3500_137.4000_137.4500_",
-            "b": "137.2000_137.1500_137.1000_137.0500_137.0000_"
-          }
-        },
-        "00830": {
-          "batch": 3,
-          "request_key": "tse_00830.tw",
-          "raw_present": true,
-          "parsed": true,
-          "price_field": "z",
-          "rejection_reason": null,
-          "raw_fields": null,
-          "candidate_cache": false,
-          "candidate_market_as_of": "2026-09-11T13:24:07+08:00"
-        },
-        "00935": {
-          "batch": 4,
-          "request_key": "tse_00935.tw",
-          "raw_present": true,
-          "parsed": false,
-          "price_field": null,
-          "rejection_reason": "missing_price",
-          "raw_fields": {
-            "c": "00935",
-            "ex": "tse",
-            "d": "20260911",
-            "^": "20260911",
-            "t": "13:24:46",
-            "%": "13:24:46",
-            "tlong": "1789104286000",
-            "z": "-",
-            "pz": "-",
-            "y": "59.7000",
-            "o": "58.5500",
-            "h": "58.7000",
-            "l": "57.9500",
-            "v": "11978",
-            "tv": "-",
-            "a": "58.5000_58.5500_58.6000_58.6500_58.7000_",
-            "b": "58.4500_58.4000_58.3500_58.3000_58.2500_"
-          }
-        }
-      },
-      "current_attempt_symbols": {
-        "0050": {
-          "batch": 1,
-          "request_key": "tse_0050.tw",
-          "raw_present": true,
-          "parsed": true,
-          "price_field": "pz",
-          "rejection_reason": null,
-          "raw_fields": null
-        },
-        "00662": {
-          "batch": 2,
-          "request_key": "tse_00662.tw",
-          "raw_present": true,
-          "parsed": false,
-          "price_field": null,
-          "rejection_reason": "missing_price",
-          "raw_fields": {
-            "c": "00662",
-            "ex": "tse",
-            "d": "20260911",
-            "^": "20260911",
-            "t": "13:24:52",
-            "%": "13:24:52",
-            "tlong": "1789104292000",
-            "z": "-",
-            "pz": "-",
-            "y": "119.2000",
-            "o": "118.3000",
-            "h": "118.4500",
-            "l": "118.1000",
-            "v": "2920",
-            "tv": "-",
-            "a": "118.4500_118.5000_118.5500_118.6000_118.6500_",
-            "b": "118.4000_118.3500_118.3000_118.2500_118.2000_"
-          }
-        },
-        "00757": {
-          "batch": 3,
-          "request_key": "tse_00757.tw",
-          "raw_present": true,
-          "parsed": false,
-          "price_field": null,
-          "rejection_reason": "missing_price",
-          "raw_fields": {
-            "c": "00757",
-            "ex": "tse",
-            "d": "20260911",
-            "^": "20260911",
-            "t": "13:24:32",
-            "%": "13:24:32",
-            "tlong": "1789104272000",
-            "z": "-",
-            "pz": "-",
-            "y": "137.8500",
-            "o": "137.0500",
-            "h": "137.2500",
-            "l": "136.8500",
-            "v": "355",
-            "tv": "-",
-            "a": "137.2500_137.3000_137.3500_137.4000_137.4500_",
-            "b": "137.2000_137.1500_137.1000_137.0500_137.0000_"
-          }
-        },
-        "00830": {
-          "batch": 3,
-          "request_key": "tse_00830.tw",
-          "raw_present": true,
-          "parsed": true,
-          "price_field": "z",
-          "rejection_reason": null,
-          "raw_fields": null
-        },
-        "00935": {
-          "batch": 4,
-          "request_key": "tse_00935.tw",
-          "raw_present": true,
-          "parsed": false,
-          "price_field": null,
-          "rejection_reason": "missing_price",
-          "raw_fields": {
-            "c": "00935",
-            "ex": "tse",
-            "d": "20260911",
-            "^": "20260911",
-            "t": "13:24:46",
-            "%": "13:24:46",
-            "tlong": "1789104286000",
-            "z": "-",
-            "pz": "-",
-            "y": "59.7000",
-            "o": "58.5500",
-            "h": "58.7000",
-            "l": "57.9500",
-            "v": "11978",
-            "tv": "-",
-            "a": "58.5000_58.5500_58.6000_58.6500_58.7000_",
-            "b": "58.4500_58.4000_58.3500_58.3000_58.2500_"
-          }
-        }
-      },
-      "candidate_cache_recovered": [],
-      "candidate_market_as_of": {
-        "0050": "2026-09-11T13:25:03+08:00",
-        "00830": "2026-09-11T13:24:07+08:00"
-      }
-    },
-    "slot_diagnostic": {
-      "schema_version": 3,
-      "contract": "HS_LIVE_INTRADAY_SLOT_V4",
-      "trading_date": "2026-09-11",
-      "classified_slot": "13:23",
-      "actual_run_time": "2026-09-11T05:25:21.734450Z",
-      "market_fetch": "PASS",
-      "required_symbols": {
-        "0050": "PASS",
-        "00662": "FAIL_MISSING_PRICE",
-        "00757": "FAIL_MISSING_PRICE",
-        "00830": "PASS",
-        "00935": "FAIL_MISSING_PRICE"
-      },
-      "market_as_of": {
-        "0050": "2026-09-11T13:25:03+08:00",
-        "00830": "2026-09-11T13:24:07+08:00"
-      },
-      "core_input": "NOT_RUN",
-      "score": "NOT_RUN",
-      "snapshot_append": "NOT_RUN",
-      "existing_slot_success": false,
-      "retry_number": null,
-      "failure_class": "OPERATIONAL_SOURCE",
-      "reason": "radar required quote parse rejected: 00662 reason=missing_price",
-      "source_attempts": {
-        "0050": 9,
-        "00662": 9,
-        "00757": 9,
-        "00830": 5,
-        "00935": 9
-      }
+    "verified": true,
+    "status": "success",
+    "trading_date": "2026-09-16",
+    "slot": "09:10",
+    "captured_at": "2026-09-16T09:10:42.038658+08:00",
+    "verified_at": "2026-09-16T09:10:42.039042+08:00",
+    "market_as_of": "2026-09-16T09:10:40+08:00",
+    "completeness": "5/5",
+    "trigger_source": "RAILWAY_PRIMARY",
+    "quote_sources": {
+      "0050": "FUGLE_LAST_TRADE",
+      "00662": "FUGLE_LAST_TRADE",
+      "00757": "FUGLE_LAST_TRADE",
+      "00830": "FUGLE_LAST_TRADE",
+      "00935": "FUGLE_LAST_TRADE"
     }
   },
   "intraday_completeness": {
@@ -862,11 +215,12 @@
     "updated_at": "2026-09-07T12:18:22.300494Z"
   },
   "intraday_snapshot_meta": {
-    "current_market_date": "2026-09-10",
-    "current_slot": "13:25",
-    "previous_successful_slot": "13:26",
-    "last_successful_snapshot": "2026-09-10_1325",
-    "snapshot_calculated_at": "2026-09-10T05:26:27.248097Z"
+    "current_market_date": "2026-09-16",
+    "current_slot": "09:10",
+    "previous_successful_slot": "13:25",
+    "last_successful_snapshot": "2026-09-16_0910",
+    "snapshot_calculated_at": "2026-09-16T09:10:42.039042+08:00",
+    "trigger_source": "RAILWAY_PRIMARY"
   },
   "intraday_quote_snapshots": {
     "2026-08-24_1330": {
@@ -887,7 +241,7 @@
           "open": 104.65,
           "high": 104.8,
           "low": 103.8,
-          "volume": 40371000.0,
+          "volume": 40371000,
           "date": "2026-08-24",
           "quote_time": "13:30:00"
         },
@@ -896,7 +250,7 @@
           "open": 119.9,
           "high": 119.95,
           "low": 119.3,
-          "volume": 2183000.0,
+          "volume": 2183000,
           "date": "2026-08-24",
           "quote_time": "13:30:00"
         },
@@ -905,7 +259,7 @@
           "open": 137.35,
           "high": 137.75,
           "low": 136.95,
-          "volume": 1278000.0,
+          "volume": 1278000,
           "date": "2026-08-24",
           "quote_time": "13:30:00"
         },
@@ -914,7 +268,7 @@
           "open": 83.15,
           "high": 83.15,
           "low": 82.1,
-          "volume": 5727000.0,
+          "volume": 5727000,
           "date": "2026-08-24",
           "quote_time": "13:30:00"
         },
@@ -923,7 +277,7 @@
           "open": 55.85,
           "high": 56.6,
           "low": 55.65,
-          "volume": 5213000.0,
+          "volume": 5213000,
           "date": "2026-08-24",
           "quote_time": "13:30:00"
         }
@@ -950,7 +304,7 @@
           "open": 104.1,
           "high": 106.05,
           "low": 103.5,
-          "volume": 84650000.0,
+          "volume": 84650000,
           "date": "2026-08-26",
           "quote_time": "13:30:00"
         },
@@ -959,7 +313,7 @@
           "open": 119.05,
           "high": 119.55,
           "low": 118.85,
-          "volume": 3389000.0,
+          "volume": 3389000,
           "date": "2026-08-26",
           "quote_time": "13:30:00"
         },
@@ -968,7 +322,7 @@
           "open": 137.2,
           "high": 137.5,
           "low": 136.8,
-          "volume": 521000.0,
+          "volume": 521000,
           "date": "2026-08-26",
           "quote_time": "13:30:00"
         },
@@ -977,16 +331,16 @@
           "open": 81.9,
           "high": 82.5,
           "low": 81.45,
-          "volume": 8251000.0,
+          "volume": 8251000,
           "date": "2026-08-26",
           "quote_time": "13:30:00"
         },
         "00935": {
-          "price": 57.0,
+          "price": 57,
           "open": 55.55,
           "high": 57.05,
           "low": 55.45,
-          "volume": 4644000.0,
+          "volume": 4644000,
           "date": "2026-08-26",
           "quote_time": "13:30:00"
         }
@@ -1015,7 +369,7 @@
           "open": 106.5,
           "high": 108.7,
           "low": 106.5,
-          "volume": 104653000.0,
+          "volume": 104653000,
           "date": "2026-09-01",
           "quote_time": "13:30:00"
         },
@@ -1024,7 +378,7 @@
           "open": 119.7,
           "high": 119.7,
           "low": 119.25,
-          "volume": 2586000.0,
+          "volume": 2586000,
           "date": "2026-09-01",
           "quote_time": "13:30:00"
         },
@@ -1033,7 +387,7 @@
           "open": 139.55,
           "high": 139.55,
           "low": 139.15,
-          "volume": 291000.0,
+          "volume": 291000,
           "date": "2026-09-01",
           "quote_time": "13:30:00"
         },
@@ -1042,7 +396,7 @@
           "open": 81.3,
           "high": 81.3,
           "low": 80.8,
-          "volume": 5698000.0,
+          "volume": 5698000,
           "date": "2026-09-01",
           "quote_time": "13:30:00"
         },
@@ -1051,7 +405,7 @@
           "open": 58.85,
           "high": 59.85,
           "low": 58.6,
-          "volume": 32279000.0,
+          "volume": 32279000,
           "date": "2026-09-01",
           "quote_time": "13:30:00"
         }
@@ -1078,20 +432,20 @@
         "0050": {
           "price": 109.65,
           "price_field": "pz",
-          "open": 110.0,
+          "open": 110,
           "high": 110.75,
           "low": 109.55,
-          "volume": 69202000.0,
+          "volume": 69202000,
           "date": "2026-09-08",
           "quote_time": "13:26:07"
         },
         "00662": {
           "price": 120.1,
           "price_field": "pz",
-          "open": 120.0,
+          "open": 120,
           "high": 120.3,
           "low": 119.75,
-          "volume": 2067000.0,
+          "volume": 2067000,
           "date": "2026-09-08",
           "quote_time": "13:26:25"
         },
@@ -1101,7 +455,7 @@
           "open": 139.65,
           "high": 139.65,
           "low": 139.1,
-          "volume": 1384000.0,
+          "volume": 1384000,
           "date": "2026-09-08",
           "quote_time": "13:26:11"
         },
@@ -1111,7 +465,7 @@
           "open": 83.7,
           "high": 83.85,
           "low": 83.2,
-          "volume": 5239000.0,
+          "volume": 5239000,
           "date": "2026-09-08",
           "quote_time": "13:26:29"
         },
@@ -1121,7 +475,7 @@
           "open": 60.75,
           "high": 60.8,
           "low": 59.7,
-          "volume": 9358000.0,
+          "volume": 9358000,
           "date": "2026-09-08",
           "quote_time": "13:26:21"
         }
@@ -1151,7 +505,7 @@
           "open": 108.6,
           "high": 109.15,
           "low": 108.4,
-          "volume": 38747000.0,
+          "volume": 38747000,
           "date": "2026-09-10",
           "quote_time": "13:25:33"
         },
@@ -1161,7 +515,7 @@
           "open": 118.9,
           "high": 119.15,
           "low": 118.75,
-          "volume": 1836000.0,
+          "volume": 1836000,
           "date": "2026-09-10",
           "quote_time": "13:25:59"
         },
@@ -1171,17 +525,17 @@
           "open": 137.5,
           "high": 137.75,
           "low": 137.35,
-          "volume": 454000.0,
+          "volume": 454000,
           "date": "2026-09-10",
           "quote_time": "13:25:47"
         },
         "00830": {
-          "price": 83.0,
+          "price": 83,
           "price_field": "pz",
-          "open": 83.0,
+          "open": 83,
           "high": 83.15,
           "low": 82.65,
-          "volume": 3396000.0,
+          "volume": 3396000,
           "date": "2026-09-10",
           "quote_time": "13:26:03"
         },
@@ -1190,14 +544,116 @@
           "price_field": "pz",
           "open": 59.45,
           "high": 59.75,
-          "low": 59.0,
-          "volume": 7598000.0,
+          "low": 59,
+          "volume": 7598000,
           "date": "2026-09-10",
           "quote_time": "13:26:00"
         }
       },
       "non_blocking_status": {
         "009815": "WAIT_NATIVE"
+      }
+    },
+    "2026-09-16_0910": {
+      "contract": "HS_LIVE_INTRADAY_SLOT_V4",
+      "market_date": "2026-09-16",
+      "slot": "09:10",
+      "status": "SUCCESS",
+      "captured_at": "2026-09-16T09:10:42.038658+08:00",
+      "calculated_at": "2026-09-16T09:10:42.039042+08:00",
+      "market_as_of": "2026-09-16T09:10:40+08:00",
+      "items": {
+        "0050": {
+          "code": "0050",
+          "date": "2026-09-16",
+          "high": 106.45,
+          "low": 106.15,
+          "market": "TWSE",
+          "name": "0050",
+          "open": 106.15,
+          "previous_close": 106.25,
+          "price": 106.2,
+          "price_field": "lastTrade.price",
+          "quote_source": "FUGLE_LAST_TRADE",
+          "quote_time": "09:10:40",
+          "source": "https://api.fugle.tw/marketdata/v1.0/stock/intraday/quote",
+          "volume": 6584000
+        },
+        "00662": {
+          "code": "00662",
+          "date": "2026-09-16",
+          "high": 118.8,
+          "low": 118.65,
+          "market": "TWSE",
+          "name": "00662",
+          "open": 118.65,
+          "previous_close": 118.55,
+          "price": 118.65,
+          "price_field": "lastTrade.price",
+          "quote_source": "FUGLE_LAST_TRADE",
+          "quote_time": "09:10:34",
+          "source": "https://api.fugle.tw/marketdata/v1.0/stock/intraday/quote",
+          "volume": 60000
+        },
+        "00757": {
+          "code": "00757",
+          "date": "2026-09-16",
+          "high": 138.75,
+          "low": 138.5,
+          "market": "TWSE",
+          "name": "00757",
+          "open": 138.5,
+          "previous_close": 138.85,
+          "price": 138.65,
+          "price_field": "lastTrade.price",
+          "quote_source": "FUGLE_LAST_TRADE",
+          "quote_time": "09:10:32",
+          "source": "https://api.fugle.tw/marketdata/v1.0/stock/intraday/quote",
+          "volume": 8000
+        },
+        "00830": {
+          "code": "00830",
+          "date": "2026-09-16",
+          "high": 79.55,
+          "low": 79.2,
+          "market": "TWSE",
+          "name": "00830",
+          "open": 79.2,
+          "previous_close": 79,
+          "price": 79.45,
+          "price_field": "lastTrade.price",
+          "quote_source": "FUGLE_LAST_TRADE",
+          "quote_time": "09:10:38",
+          "source": "https://api.fugle.tw/marketdata/v1.0/stock/intraday/quote",
+          "volume": 125000
+        },
+        "00935": {
+          "code": "00935",
+          "date": "2026-09-16",
+          "high": 56.1,
+          "low": 55.85,
+          "market": "TWSE",
+          "name": "00935",
+          "open": 55.9,
+          "previous_close": 55.55,
+          "price": 55.9,
+          "price_field": "lastTrade.price",
+          "quote_source": "FUGLE_LAST_TRADE",
+          "quote_time": "09:10:37",
+          "source": "https://api.fugle.tw/marketdata/v1.0/stock/intraday/quote",
+          "volume": 1218000
+        }
+      },
+      "non_blocking_status": {
+        "009815": "WAIT_NATIVE"
+      },
+      "trigger_source": "RAILWAY_PRIMARY",
+      "quote_sources": {
+        "0050": "FUGLE_LAST_TRADE",
+        "00662": "FUGLE_LAST_TRADE",
+        "00757": "FUGLE_LAST_TRADE",
+        "00830": "FUGLE_LAST_TRADE",
+        "00935": "FUGLE_LAST_TRADE"
       }
     }
   },
@@ -1251,12 +707,26 @@
         "code": "00935",
         "name": "野村臺灣新科技50",
         "price": 59.7,
-        "previous_close": 60.0,
+        "previous_close": 60,
         "date": "2026-09-10",
         "market": "TWSE",
         "quote_mode": "close",
         "quote_time": "收盤"
       }
     }
-  }
+  },
+  "primary_trigger_source": "RAILWAY_PRIMARY",
+  "last_primary_tick_at": "2026-09-16T09:10:42.039042+08:00",
+  "last_successful_live_snapshot_at": "2026-09-16T09:10:42.039042+08:00",
+  "latest_trading_date": "2026-09-16",
+  "live_completeness": "5/5",
+  "required_symbols_status": {
+    "0050": "AVAILABLE",
+    "00662": "AVAILABLE",
+    "00757": "AVAILABLE",
+    "00830": "AVAILABLE",
+    "00935": "AVAILABLE"
+  },
+  "publication_status": "ARTIFACTS_WRITTEN",
+  "artifact_commit_sha": null
 }
