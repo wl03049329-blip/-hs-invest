@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "updated_at": "2026-09-16T09:50:41.743478+08:00",
+  "updated_at": "2026-09-16T09:55:44.207510+08:00",
   "source_dates": {
     "TWSE": "2026-09-11",
     "TPEx": "2026-09-10"
@@ -16,10 +16,10 @@
     "verified": true,
     "status": "success",
     "trading_date": "2026-09-16",
-    "slot": "09:50",
-    "captured_at": "2026-09-16T09:50:41.742803+08:00",
-    "verified_at": "2026-09-16T09:50:41.743478+08:00",
-    "market_as_of": "2026-09-16T09:50:39+08:00",
+    "slot": "09:55",
+    "captured_at": "2026-09-16T09:55:44.206844+08:00",
+    "verified_at": "2026-09-16T09:55:44.207510+08:00",
+    "market_as_of": "2026-09-16T09:55:39+08:00",
     "completeness": "5/5",
     "trigger_source": "RAILWAY_PRIMARY",
     "quote_sources": {
@@ -34,10 +34,10 @@
     "verified": true,
     "status": "success",
     "trading_date": "2026-09-16",
-    "slot": "09:50",
-    "captured_at": "2026-09-16T09:50:41.742803+08:00",
-    "verified_at": "2026-09-16T09:50:41.743478+08:00",
-    "market_as_of": "2026-09-16T09:50:39+08:00",
+    "slot": "09:55",
+    "captured_at": "2026-09-16T09:55:44.206844+08:00",
+    "verified_at": "2026-09-16T09:55:44.207510+08:00",
+    "market_as_of": "2026-09-16T09:55:39+08:00",
     "completeness": "5/5",
     "trigger_source": "RAILWAY_PRIMARY",
     "quote_sources": {
@@ -216,10 +216,10 @@
   },
   "intraday_snapshot_meta": {
     "current_market_date": "2026-09-16",
-    "current_slot": "09:50",
-    "previous_successful_slot": "09:45",
-    "last_successful_snapshot": "2026-09-16_0950",
-    "snapshot_calculated_at": "2026-09-16T09:50:41.743478+08:00",
+    "current_slot": "09:55",
+    "previous_successful_slot": "09:50",
+    "last_successful_snapshot": "2026-09-16_0955",
+    "snapshot_calculated_at": "2026-09-16T09:55:44.207510+08:00",
     "trigger_source": "RAILWAY_PRIMARY"
   },
   "intraday_quote_snapshots": {
@@ -1369,6 +1369,108 @@
         "00830": "FUGLE_LAST_TRADE",
         "00935": "FUGLE_LAST_TRADE"
       }
+    },
+    "2026-09-16_0955": {
+      "contract": "HS_LIVE_INTRADAY_SLOT_V4",
+      "market_date": "2026-09-16",
+      "slot": "09:55",
+      "status": "SUCCESS",
+      "captured_at": "2026-09-16T09:55:44.206844+08:00",
+      "calculated_at": "2026-09-16T09:55:44.207510+08:00",
+      "market_as_of": "2026-09-16T09:55:39+08:00",
+      "items": {
+        "0050": {
+          "code": "0050",
+          "date": "2026-09-16",
+          "high": 106.75,
+          "low": 106.15,
+          "market": "TWSE",
+          "name": "元大台灣50",
+          "open": 106.15,
+          "previous_close": 106.25,
+          "price": 106.35,
+          "price_field": "z",
+          "quote_source": "MIS_Z",
+          "quote_time": "09:55:29",
+          "source": "https://mis.twse.com.tw/stock/api/getStockInfo.jsp",
+          "volume": 19222000
+        },
+        "00662": {
+          "code": "00662",
+          "date": "2026-09-16",
+          "high": 118.8,
+          "low": 118.5,
+          "market": "TWSE",
+          "name": "00662",
+          "open": 118.65,
+          "previous_close": 118.55,
+          "price": 118.55,
+          "price_field": "lastTrade.price",
+          "quote_source": "FUGLE_LAST_TRADE",
+          "quote_time": "09:55:10",
+          "source": "https://api.fugle.tw/marketdata/v1.0/stock/intraday/quote",
+          "volume": 688000
+        },
+        "00757": {
+          "code": "00757",
+          "date": "2026-09-16",
+          "high": 138.85,
+          "low": 138.5,
+          "market": "TWSE",
+          "name": "00757",
+          "open": 138.5,
+          "previous_close": 138.85,
+          "price": 138.65,
+          "price_field": "lastTrade.price",
+          "quote_source": "FUGLE_LAST_TRADE",
+          "quote_time": "09:55:15",
+          "source": "https://api.fugle.tw/marketdata/v1.0/stock/intraday/quote",
+          "volume": 187000
+        },
+        "00830": {
+          "code": "00830",
+          "date": "2026-09-16",
+          "high": 79.55,
+          "low": 79.2,
+          "market": "TWSE",
+          "name": "00830",
+          "open": 79.2,
+          "previous_close": 79,
+          "price": 79.4,
+          "price_field": "lastTrade.price",
+          "quote_source": "FUGLE_LAST_TRADE",
+          "quote_time": "09:55:27",
+          "source": "https://api.fugle.tw/marketdata/v1.0/stock/intraday/quote",
+          "volume": 860000
+        },
+        "00935": {
+          "code": "00935",
+          "date": "2026-09-16",
+          "high": 56.25,
+          "low": 55.85,
+          "market": "TWSE",
+          "name": "00935",
+          "open": 55.9,
+          "previous_close": 55.55,
+          "price": 56.1,
+          "price_field": "lastTrade.price",
+          "quote_source": "FUGLE_LAST_TRADE",
+          "quote_time": "09:55:39",
+          "source": "https://api.fugle.tw/marketdata/v1.0/stock/intraday/quote",
+          "volume": 3886000
+        }
+      },
+      "non_blocking_status": {
+        "009815": "WAIT_NATIVE"
+      },
+      "trigger_source": "RAILWAY_PRIMARY",
+      "quote_sources": {
+        "0050": "MIS_Z",
+        "00662": "FUGLE_LAST_TRADE",
+        "00757": "FUGLE_LAST_TRADE",
+        "00830": "FUGLE_LAST_TRADE",
+        "00935": "FUGLE_LAST_TRADE"
+      }
     }
   },
   "official_eod_snapshot": {
@@ -1430,8 +1532,8 @@
     }
   },
   "primary_trigger_source": "RAILWAY_PRIMARY",
-  "last_primary_tick_at": "2026-09-16T09:50:41.743478+08:00",
-  "last_successful_live_snapshot_at": "2026-09-16T09:50:41.743478+08:00",
+  "last_primary_tick_at": "2026-09-16T09:55:44.207510+08:00",
+  "last_successful_live_snapshot_at": "2026-09-16T09:55:44.207510+08:00",
   "latest_trading_date": "2026-09-16",
   "live_completeness": "5/5",
   "required_symbols_status": {
