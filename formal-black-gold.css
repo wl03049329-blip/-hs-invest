@@ -1794,3 +1794,121 @@ footer{color:#746f67}
   .hsDashboardC4Card.is-leader{grid-template-columns:40px minmax(84px,.94fr) 64px minmax(0,1fr)!important}
   .hsDashboardC4Card.is-leader .hsC4Sparkline.is-unavailable::after{padding:5px 7px;color:#a79a84}
 }
+
+/* Homepage UI bugfix + ETF decision detail restore (presentation only). */
+.panelTitle h2>svg,.hsDecisionStatusRail svg,.hsCommandSentiment .homeSentimentCard>svg,.hsHeaderActions .refreshBtn svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.panel[data-tab-section="today"] .panelTitle h2::before{content:none!important;display:none!important}
+.hsHeaderActions .refreshBtn{display:flex;align-items:center;justify-content:center;line-height:1}.hsHeaderActions .refreshBtn svg{display:block;margin:0}
+.hsDecisionStatusRail article{align-items:start}.hsDecisionStatusRail b,.hsDecisionStatusRail small{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;line-height:1.25}
+.hsDashboardC4Card>header{align-items:flex-start}.hsDashboardC4Card>header>.hsC4Identity{flex:1 1 auto;min-width:0}.hsDashboardC4Card>header>i{flex:0 0 auto;white-space:nowrap}
+.hsDashboardC4Card .hsC4Rank{align-content:center;gap:2px;line-height:1}.hsDashboardC4Card .hsC4Rank>b{font:inherit}.hsDashboardC4Card .hsC4Rank>small{display:block;max-width:100%;color:#a89463;font-size:6px;font-weight:850;line-height:1.05;text-align:center;white-space:normal}
+.hsDashboardC4Card dl>div{display:grid;grid-template-columns:minmax(max-content,1fr) auto;align-items:baseline;gap:4px;min-width:0}.hsDashboardC4Card dt,.hsDashboardC4Card dd{white-space:nowrap}.hsDashboardC4Card.sort-threshold .hsC4ThresholdMetric{padding:2px 4px;border-radius:5px;background:rgba(197,146,42,.12)}.hsDashboardC4Card.sort-threshold .hsC4ThresholdMetric dt,.hsDashboardC4Card.sort-threshold .hsC4ThresholdMetric dd{color:#f0ce75;font-weight:900}
+.hsLeverageCompactVelocity{position:relative}.hsLeverageCompactProgress{display:block;height:4px;margin-top:8px;border-radius:999px;overflow:hidden;background:rgba(112,89,48,.32)}.hsLeverageCompactProgress>b{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#8d6729,#edc963);box-shadow:0 0 8px rgba(222,172,66,.2)}
+
+.signalDetailHeroSlot{margin-bottom:12px}.hsEtfDetailHero{display:grid;grid-template-columns:minmax(180px,1.1fr) minmax(190px,.8fr) minmax(190px,.9fr);gap:0;margin:0;padding:0;overflow:hidden;border-color:#84652d;background:radial-gradient(circle at 68% 28%,rgba(204,151,42,.16),transparent 38%),linear-gradient(125deg,#161006,#080706 66%)}
+.hsEtfDetailHero>div{display:grid;align-content:center;min-width:0;padding:19px 20px}.hsEtfDetailIdentity{border-right:1px solid rgba(164,127,52,.28)}.hsEtfDetailIdentity>small{color:#a68950;font-size:8px;font-weight:900;letter-spacing:.13em}.hsEtfDetailIdentity>b{margin-top:7px;color:#f5dc8a;font-size:32px;line-height:1}.hsEtfDetailIdentity>strong{margin-top:5px;color:#eee4d3;font-size:15px}.hsEtfDetailIdentity>span{display:flex;align-items:baseline;gap:8px;margin-top:11px}.hsEtfDetailIdentity em{color:#f2e7d2;font-size:18px;font-style:normal;font-weight:900}.hsEtfDetailIdentity i{font-size:11px;font-style:normal;font-weight:850}
+.hsEtfDetailScores{grid-template-columns:repeat(2,minmax(0,1fr));align-content:stretch!important;padding:0!important;border-right:1px solid rgba(164,127,52,.28)}.hsEtfDetailScores>span{display:grid;align-content:center;justify-items:center;padding:16px 10px;text-align:center}.hsEtfDetailScores>span+span{border-left:1px solid rgba(164,127,52,.22)}.hsEtfDetailScores small{color:#9f9584;font-size:8px;letter-spacing:.09em}.hsEtfDetailScores b{margin-top:5px;color:#f4d475;font-size:48px;line-height:.9}.hsEtfDetailScores i{margin-top:8px;padding:3px 7px;border:1px solid rgba(172,137,65,.32);border-radius:999px;color:#aa9a79;font-size:7px;font-style:normal}.hsEtfDetailScores .is-live b,.hsEtfDetailScores .is-live i{color:#72d9a2}
+.hsEtfDetailDecision{justify-items:start}.hsEtfDetailStatus{padding:4px 8px;border:1px solid rgba(180,144,70,.36);border-radius:999px;color:#d9bc72;font-size:8px;font-weight:900;letter-spacing:.08em}.hsEtfDetailStatus.is-live{border-color:rgba(82,183,127,.45);color:#77d9a4}.hsEtfDetailStatus.is-unavailable{color:#9b9284}.hsEtfDetailDecision>b{margin-top:10px;color:#f0d27a;font-size:20px}.hsEtfDetailDecision>strong{margin-top:5px;color:#d6c7ab;font-size:12px}.hsEtfDetailDecision>small{margin-top:8px;color:#827b70;font-size:8px;line-height:1.45}
+.hsEtfIntradayStats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-bottom:10px}.hsEtfIntradayStats>span,.hsEtfPriceGrid>span,.hsEtfHealthSummary>span,.hsEtfThresholdEvents>div>span{display:grid;gap:4px;min-width:0;padding:10px;border:1px solid rgba(125,99,51,.24);border-radius:9px;background:rgba(6,6,5,.5)}.hsEtfIntradayStats small,.hsEtfPriceGrid small,.hsEtfHealthSummary small,.hsEtfThresholdEvents small{color:#8f8779;font-size:8px}.hsEtfIntradayStats b,.hsEtfPriceGrid b,.hsEtfHealthSummary b,.hsEtfThresholdEvents b{color:#e4d5b8;font-size:15px;overflow-wrap:anywhere}
+.hsEtfIntradayTrack .hsC4Sparkline{width:100%;height:105px;padding:8px;border:1px solid rgba(125,96,42,.18);border-radius:10px;background:repeating-linear-gradient(0deg,transparent 0 25px,rgba(211,166,69,.04) 26px)}.hsEtfIntradayTrack .hsC4Sparkline svg{height:82px}.hsEtfIntradayTrack .hsC4Sparkline.is-unavailable{font-size:10px}.hsEtfObservationTimes{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}.hsEtfObservationTimes span{padding:3px 6px;border-radius:999px;background:#17130d;color:#9e927d;font-size:8px}.hsEtfTrackEmpty{margin:8px 0 0;color:#8f8779;font-size:10px;text-align:center}
+.hsEtfTierScale{position:relative;display:grid;grid-template-columns:40fr 10fr 15fr 5fr 10fr 10fr 11fr;min-height:72px;padding-top:28px}.hsEtfTierScale>span{display:grid;align-content:center;min-width:0;padding:7px 4px;border:1px solid rgba(113,91,53,.28);border-left:0;background:linear-gradient(180deg,rgba(67,52,27,.24),rgba(13,11,8,.62));text-align:center}.hsEtfTierScale>span:first-child{border-left:1px solid rgba(113,91,53,.28);border-radius:8px 0 0 8px}.hsEtfTierScale>span:last-of-type{border-radius:0 8px 8px 0}.hsEtfTierScale>span.is-current{border-color:#c69d46;background:linear-gradient(180deg,rgba(147,103,26,.42),rgba(35,25,10,.72))}.hsEtfTierScale i{color:#7e776c;font-size:7px;font-style:normal}.hsEtfTierScale b{margin-top:3px;color:#c9b991;font-size:8px;line-height:1.1}.hsEtfTierScale>em{position:absolute;top:0;transform:translateX(-50%);font-style:normal}.hsEtfTierScale>em::after{content:"";display:block;width:1px;height:30px;margin:auto;background:#edc766}.hsEtfTierScale>em b{display:block;padding:3px 6px;border-radius:6px;background:#e6bd59;color:#171006;font-size:10px}.hsEtfTierProgress>p{margin:10px 0 0;color:#d5c19a;font-size:11px;font-weight:800}
+.hsEtfPriceGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.hsEtfPriceGrid b.up{color:#69d399}.hsEtfPriceGrid b.down{color:#e57c72}.hsEtfThresholdEvents>div{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.hsEtfThresholdEvents b{font-size:12px}.hsEtfHealthSummary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.hsEtfHealthSummary b{font-size:11px}.hsEtfDataHealth details{margin-top:9px;border-top:1px solid rgba(121,96,50,.22);color:#8f8779;font-size:9px}.hsEtfDataHealth summary{padding-top:9px;color:#b9a36d;cursor:pointer}.hsEtfDataHealth p{margin:7px 0;line-height:1.5}.hsEtfDataHealth code{overflow-wrap:anywhere;color:#b9ad98}
+
+@media(max-width:780px){
+  .app{padding-bottom:max(112px,calc(92px + env(safe-area-inset-bottom)))}
+  .hsDashboardC4Card>header{flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:5px}.hsDashboardC4Card>header>i{padding:2px 5px}.hsDashboardC4Card dl>div{grid-template-columns:minmax(0,1fr) auto}.hsDashboardC4Card dt{font-size:8.8px!important}.hsDashboardC4Card dd{font-size:10px!important}.hsDashboardC4Card .hsC4Rank>small{font-size:5.6px}
+  .hsEtfDetailHero{grid-template-columns:minmax(0,1.1fr) minmax(118px,.8fr)}.hsEtfDetailHero>div{padding:15px}.hsEtfDetailIdentity{border-right:1px solid rgba(164,127,52,.28)}.hsEtfDetailScores{border-right:0}.hsEtfDetailDecision{grid-column:1/-1;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:3px 10px;border-top:1px solid rgba(164,127,52,.24)}.hsEtfDetailDecision>b,.hsEtfDetailDecision>strong,.hsEtfDetailDecision>small{margin:0}.hsEtfDetailDecision>b{font-size:17px}.hsEtfDetailDecision>strong{justify-self:end}.hsEtfDetailDecision>small{grid-column:1/-1}.hsEtfDetailScores b{font-size:40px}
+  .hsEtfIntradayStats{grid-template-columns:repeat(3,minmax(0,1fr))}.hsEtfPriceGrid,.hsEtfHealthSummary{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:430px){
+  .hsDecisionStatusRail article{grid-template-columns:23px minmax(0,1fr);padding:7px 6px}.hsDecisionStatusRail b{font-size:10.5px}.hsDecisionStatusRail small{font-size:6.5px}
+  .hsDashboardC4Card .hsC4Rank{height:44px}.hsDashboardC4Card>header>.hsC4Identity{font-size:13px}.hsDashboardC4Card dl{gap:3px 5px}.hsDashboardC4Card dt{font-size:8.2px!important}.hsDashboardC4Card dd{font-size:9.3px!important}.hsDashboardC4Card .hsC4Rank>small{font-size:5.2px}
+  .hsEtfDetailHero{grid-template-columns:minmax(0,1fr) 112px}.hsEtfDetailHero>div{padding:13px 11px}.hsEtfDetailIdentity>b{font-size:27px}.hsEtfDetailIdentity>strong{font-size:12px}.hsEtfDetailIdentity em{font-size:15px}.hsEtfDetailScores{grid-template-columns:1fr}.hsEtfDetailScores>span{padding:9px}.hsEtfDetailScores>span+span{border-top:1px solid rgba(164,127,52,.22);border-left:0}.hsEtfDetailScores b{font-size:34px}.hsEtfDetailDecision{padding:11px}.hsEtfDetailDecision>strong{font-size:10px;text-align:right}
+  .hsEtfIntradayStats{grid-template-columns:repeat(2,minmax(0,1fr))}.hsEtfIntradayStats>span:last-child{grid-column:1/-1}.hsEtfIntradayTrack .hsC4Sparkline{height:88px}.hsEtfIntradayTrack .hsC4Sparkline svg{height:65px}.hsEtfTierScale{grid-template-columns:repeat(7,minmax(0,1fr));min-height:76px}.hsEtfTierScale>span{padding:6px 2px}.hsEtfTierScale i{font-size:6px}.hsEtfTierScale b{font-size:6.5px;overflow-wrap:anywhere}.hsEtfThresholdEvents>div{grid-template-columns:1fr}.hsEtfPriceGrid b,.hsEtfIntradayStats b{font-size:14px}
+}
+
+/* Final app-level visual polish: shared presentation tokens and hierarchy only. */
+:root{
+  --hs-app-radius-section:16px;
+  --hs-app-radius-card:11px;
+  --hs-app-radius-compact:8px;
+  --hs-app-space-1:4px;
+  --hs-app-space-2:8px;
+  --hs-app-space-3:12px;
+  --hs-app-space-4:16px;
+  --hs-app-gold-1:#f3d477;
+  --hs-app-gold-2:#c7a252;
+  --hs-app-gold-3:#8f7847;
+  --hs-app-muted:#8d8578;
+  --hs-app-border:rgba(154,120,53,.27);
+  --hs-app-surface-major:linear-gradient(145deg,rgba(14,12,8,.98),rgba(6,6,5,.98));
+  --hs-app-surface-card:linear-gradient(145deg,rgba(17,14,9,.92),rgba(6,6,5,.94));
+}
+
+/* Homepage: icon rhythm, touch feedback, and clear decision hierarchy. */
+.hsDecisionStatusRail article{grid-template-columns:40px minmax(0,1fr);gap:var(--hs-app-space-2);border-radius:var(--hs-app-radius-card);background:var(--hs-app-surface-card)}
+.hsDecisionStatusRail svg{box-sizing:border-box;width:34px;height:34px;padding:7px;border:1px solid rgba(235,195,91,.2);border-radius:var(--hs-app-radius-compact);background:linear-gradient(145deg,rgba(150,108,29,.42),rgba(31,24,12,.72));color:#f3d47c;filter:drop-shadow(0 2px 5px rgba(0,0,0,.5))}
+.hsDecisionStatusRail span{align-self:center}.hsDecisionStatusRail b{color:#e8d6ad}.hsDecisionStatusRail small{color:var(--hs-app-muted)}
+
+.hsCommandSentiment .homeSentimentCard{grid-template-columns:1fr!important;grid-template-rows:32px 20px minmax(27px,auto) 16px!important;align-content:start!important;justify-items:center!important;gap:3px!important;padding:10px 6px!important;border-radius:var(--hs-app-radius-card)!important}
+.hsCommandSentiment .homeSentimentCard>svg{grid-column:1!important;grid-row:1!important;box-sizing:border-box;width:29px!important;height:29px!important;padding:6px!important;align-self:start}
+.hsCommandSentiment .homeSentimentCard>span{grid-column:1!important;grid-row:2!important;align-self:center;min-height:0!important;color:#aea492!important;font-size:9px!important;font-weight:700!important;line-height:1.15!important;text-align:center!important}
+.hsCommandSentiment .homeSentimentCard>b{grid-column:1!important;grid-row:3!important;align-self:center;margin:0!important;color:#f1e6d0!important;font-size:21px!important;line-height:1!important}
+.hsCommandSentiment .homeSentimentCard>em{grid-column:1!important;grid-row:4!important;align-self:end;margin:0!important;color:#c9ab5d!important;font-size:9px!important;line-height:1.15!important}
+
+.hsDashboardC4Card.is-compact dl{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px 4px}
+.hsDashboardC4Card.is-compact .hsC4ThresholdMetric{grid-column:1/-1;grid-row:1;order:-1;padding:5px 7px;border:1px solid rgba(204,159,57,.23);border-radius:7px;background:linear-gradient(90deg,rgba(123,86,20,.2),rgba(34,27,14,.22))}
+.hsDashboardC4Card.is-compact .hsC4ThresholdMetric dt{color:#bda25e;font-weight:850}.hsDashboardC4Card.is-compact .hsC4ThresholdMetric dd{color:var(--hs-app-gold-1);font-weight:950}
+.hsDashboardC4Card.is-compact dl>div:not(.hsC4ThresholdMetric){display:grid;grid-template-columns:1fr;align-content:start;gap:2px;padding:2px 1px}.hsDashboardC4Card.is-compact dl>div:not(.hsC4ThresholdMetric) dt{color:#756f65}.hsDashboardC4Card.is-compact dl>div:not(.hsC4ThresholdMetric) dd{color:#aea493}
+.hsDashboardC4Card.is-compact .hsC4CardScore>b{color:var(--hs-app-gold-1)}.hsDashboardC4Card.is-compact .hsC4CardScore>strong{color:#c9b677}
+.hsDashboardC4Card.is-leader .hsC4Sparkline.is-unavailable{background:repeating-linear-gradient(0deg,transparent 0 23px,rgba(211,166,69,.052) 24px),repeating-linear-gradient(90deg,transparent 0 49px,rgba(211,166,69,.03) 50px),linear-gradient(180deg,rgba(94,67,20,.08),transparent 68%)}
+.hsDashboardC4Card.is-leader .hsC4Sparkline.is-unavailable::before{bottom:28%;box-shadow:0 -24px rgba(225,183,83,.055),0 -48px rgba(225,183,83,.04)}
+.hsDashboardC4Card.is-leader .hsC4Sparkline.is-unavailable>span{display:none}
+.hsDashboardC4Card.is-leader .hsC4Sparkline.is-unavailable::after{content:"今日盤中軌跡累積中"}
+
+.hsLeverageCompact dl>div:nth-child(2),.hsLeverageCompact dl>div:nth-child(4){position:relative;background:linear-gradient(145deg,rgba(113,78,19,.16),rgba(6,6,5,.16))}.hsLeverageCompact dl>div:nth-child(2)::before,.hsLeverageCompact dl>div:nth-child(4)::before{content:"";position:absolute;inset:7px;border:1px solid rgba(200,154,56,.08);border-radius:7px;pointer-events:none}
+.hsLeverageCompact dl>div:nth-child(2) dt,.hsLeverageCompact dl>div:nth-child(4) dt{color:#b9a262;font-weight:800}.hsLeverageCompact dl>div:nth-child(2) dd,.hsLeverageCompact dl>div:nth-child(4) dd{color:var(--hs-app-gold-1);font-size:25px}.hsLeverageCompact dl>div:nth-child(1) dd,.hsLeverageCompact dl>div:nth-child(3) dd{color:#c9baa0;font-size:18px}
+.hsLeverageCompactProgress{height:5px;background:rgba(77,62,35,.5)}.hsLeverageCompactProgress>b{background:linear-gradient(90deg,#8a6428,var(--hs-app-gold-1));box-shadow:0 0 7px rgba(222,172,66,.16)}
+
+.hsHeaderActions .refreshBtn svg{transition:transform 180ms ease}.hsHeaderActions .refreshBtn:active svg{transform:rotate(120deg)}.hsHeaderActions .refreshBtn[aria-busy="true"] svg{animation:hsRefreshOnce 180ms ease-out 1}.hsHeaderActions .refreshBtn:focus-visible{outline:2px solid rgba(240,201,103,.62);outline-offset:2px}@keyframes hsRefreshOnce{to{transform:rotate(180deg)}}
+.homeSentimentCard,.hsC4SortTabs button,.radarV2Card>summary,.bottomNavButton,.miniBtn{transition:transform 120ms ease,filter 120ms ease,background-color 120ms ease}.homeSentimentCard:active,.hsC4SortTabs button:active,.radarV2Card>summary:active,.bottomNavButton:active,.miniBtn:active{transform:scale(.99);filter:brightness(1.06)}
+
+/* ETF detail: the score leads; supporting analysis recedes progressively. */
+.hsEtfDetailHero{border-radius:var(--hs-app-radius-section);background:radial-gradient(circle at 49% 45%,rgba(215,163,49,.16),transparent 29%),linear-gradient(125deg,#151006,#070706 68%);box-shadow:inset 0 1px rgba(255,228,155,.075),0 12px 30px rgba(0,0,0,.2)}
+.hsEtfDetailIdentity>b{color:#d9c390;font-size:29px}.hsEtfDetailIdentity>strong{color:#cfc3ae}.hsEtfDetailIdentity em{color:#d9ccb4}
+.hsEtfDetailScores b{color:var(--hs-app-gold-1);font-size:55px;text-shadow:0 0 16px rgba(221,169,49,.22),0 4px 16px rgba(0,0,0,.65)}.hsEtfDetailScores small{color:#a89d8b}.hsEtfDetailScores i{color:#a8956e}
+.hsEtfDetailDecision>b{color:#e9c96e;font-size:21px}.hsEtfDetailDecision>strong{color:#cbb88e}.hsEtfDetailDecision>small{color:#777166}
+
+.radarV2Section{border-color:var(--hs-app-border);border-radius:var(--hs-app-radius-section);background:var(--hs-app-surface-major);box-shadow:inset 0 1px rgba(255,226,151,.025)}.radarV2Section>header{gap:var(--hs-app-space-1);margin-bottom:var(--hs-app-space-3)}.radarV2Section>header>span{color:var(--hs-app-gold-3)}.radarV2Section>header small{color:var(--hs-app-muted)}
+.radarWhyScore .strategyBreakdown .modelBreakdown{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:var(--hs-app-space-2)}.radarWhyScore .strategyBreakdown .modelBreakdown>div{grid-template-columns:1fr auto;align-content:start;min-height:88px;padding:12px;border-color:rgba(135,105,47,.22);background:var(--hs-app-surface-card)}.radarWhyScore .strategyBreakdown .modelBreakdown>div b{color:#ddc170}.radarWhyScore .strategyBreakdown .modelBreakdown>div:first-child{border-color:rgba(191,149,59,.36);background:linear-gradient(145deg,rgba(45,33,14,.62),rgba(7,7,6,.86))}
+
+.hsEtfTierProgress{border-color:rgba(184,140,50,.42);background:radial-gradient(circle at 50% 80%,rgba(143,99,23,.1),transparent 42%),var(--hs-app-surface-major)}.hsEtfTierScale>span{filter:saturate(.7);opacity:.6}.hsEtfTierScale>span.is-current{filter:none;opacity:1;border-color:#d2a646;background:linear-gradient(180deg,rgba(161,115,28,.48),rgba(36,26,11,.78));box-shadow:inset 0 1px rgba(255,225,145,.12)}.hsEtfTierScale>span.is-current+span{opacity:.9;border-color:rgba(198,153,59,.52)}.hsEtfTierScale>span.is-current b,.hsEtfTierScale>span.is-current+span b{color:#e4c973}.hsEtfTierScale>em b{background:linear-gradient(180deg,#f1cf6c,#ba8627);box-shadow:0 4px 12px rgba(0,0,0,.45)}.hsEtfTierProgress>p{display:inline-block;padding:5px 9px;border-radius:999px;background:rgba(107,76,22,.2);color:#e0c16d}
+
+.hsEtfIntradayTrack .hsC4Sparkline{padding:12px;border-radius:var(--hs-app-radius-card);background:repeating-linear-gradient(0deg,transparent 0 25px,rgba(211,166,69,.045) 26px),linear-gradient(180deg,rgba(58,42,16,.08),rgba(5,5,5,.15))}.hsEtfIntradayTrack .hsC4Sparkline.is-unavailable{color:#968a76}.hsEtfObservationTimes span{background:rgba(42,32,16,.56);color:#a89a82}
+.hsEtfPriceGrid{gap:var(--hs-app-space-2)}.hsEtfPriceGrid>span{border-color:rgba(125,99,51,.18);background:var(--hs-app-surface-card)}.hsEtfPriceGrid>span:nth-child(-n+2){border-color:rgba(172,132,52,.34);background:linear-gradient(145deg,rgba(42,31,13,.55),rgba(7,7,6,.88))}.hsEtfPriceGrid>span:nth-child(-n+2) b{font-size:18px;color:#e8d29a}.hsEtfPriceGrid small{color:#827b70}
+.radarScoreTrend{border-color:rgba(121,98,56,.18);background:linear-gradient(145deg,rgba(10,9,7,.88),rgba(5,5,5,.92));box-shadow:none}.radarScoreTrend .radarTrendLine{stroke:#c8a959}.radarScoreTrend .radarTrendPoint circle{fill:#dfc987}.radarScoreTrend .radarTrendSummary b{color:#dcc16f}
+.hsEtfDataHealth{border-color:rgba(104,91,66,.17);background:linear-gradient(145deg,rgba(9,9,8,.8),rgba(5,5,5,.86));box-shadow:none}.hsEtfDataHealth>header h3{color:#bcb19d}.hsEtfHealthSummary>span{padding:8px;border-color:rgba(110,95,66,.16);background:rgba(5,5,5,.42)}.hsEtfHealthSummary b{color:#bdb29f}.hsEtfDataHealth details{opacity:.82}.hsEtfDataHealth details[open]{opacity:1}
+
+@media(max-width:780px){
+  .hsCommandSentiment .homeSentimentCard{grid-template-rows:29px 19px minmax(25px,auto) 15px!important;padding:8px 4px!important}.hsCommandSentiment .homeSentimentCard>svg{width:27px!important;height:27px!important}.hsCommandSentiment .homeSentimentCard>b{font-size:18px!important}
+  .radarWhyScore .strategyBreakdown .modelBreakdown{grid-template-columns:repeat(3,minmax(0,1fr))!important}.radarWhyScore .strategyBreakdown .modelBreakdown>div{min-height:82px;padding:10px 8px}
+  .hsLeverageCompact dl>div:nth-child(2) dd,.hsLeverageCompact dl>div:nth-child(4) dd{font-size:18px}.hsLeverageCompact dl>div:nth-child(1) dd,.hsLeverageCompact dl>div:nth-child(3) dd{font-size:14px}
+}
+@media(max-width:430px){
+  .hsDecisionStatusRail article{grid-template-columns:29px minmax(0,1fr);gap:6px}.hsDecisionStatusRail svg{width:27px;height:27px;padding:5px}.hsDecisionStatusRail b{font-size:10.5px}.hsDecisionStatusRail small{font-size:6.5px}
+  .hsCommandSentiment .homeSentimentCard{grid-template-rows:27px 18px minmax(23px,auto) 14px!important;gap:2px!important;padding:7px 3px!important}.hsCommandSentiment .homeSentimentCard>svg{width:25px!important;height:25px!important;padding:5px!important}.hsCommandSentiment .homeSentimentCard>span{font-size:7px!important}.hsCommandSentiment .homeSentimentCard>b{font-size:15px!important}.hsCommandSentiment .homeSentimentCard>em{font-size:7px!important}
+  .hsDashboardC4Card.is-compact dl{gap:4px 3px}.hsDashboardC4Card.is-compact .hsC4ThresholdMetric{padding:4px 5px}.hsDashboardC4Card.is-compact dl>div:not(.hsC4ThresholdMetric) dt{font-size:7.8px!important}.hsDashboardC4Card.is-compact dl>div:not(.hsC4ThresholdMetric) dd{font-size:9px!important}
+  .hsEtfDetailIdentity>b{font-size:24px}.hsEtfDetailScores b{font-size:39px}.hsEtfDetailDecision>b{font-size:17px}
+  .radarWhyScore .strategyBreakdown .modelBreakdown{grid-template-columns:1fr!important}.radarWhyScore .strategyBreakdown .modelBreakdown>div{min-height:0;padding:10px 11px}
+}
+@media(hover:hover) and (pointer:fine){.homeSentimentCard:hover,.radarV2Card>summary:hover,.miniBtn:hover{filter:brightness(1.045)}}
+@media(prefers-reduced-motion:reduce){.hsHeaderActions .refreshBtn svg,.homeSentimentCard,.hsC4SortTabs button,.radarV2Card>summary,.bottomNavButton,.miniBtn{transition:none!important;animation:none!important}}
+
+/* Final screenshot refinement: preserve data semantics while clarifying secondary hierarchy. */
+.radarWhyScore .strategyBreakdown .modelBreakdown>div:first-child{border-color:rgba(135,105,47,.22);background:var(--hs-app-surface-card)}
+.radarWhyScore .radarPrimaryDriver{border-left:2px solid rgba(198,153,59,.56);background:linear-gradient(90deg,rgba(95,67,20,.18),rgba(7,7,6,.2))}
+.hsEtfPriceGrid>span:nth-child(2){border-color:rgba(125,99,51,.18);background:var(--hs-app-surface-card)}
+.hsEtfPriceGrid>span:nth-child(2) b{font-size:15px;color:#e4d5b8}
+.hsEtfPriceGrid>span:nth-child(1),.hsEtfPriceGrid>span:nth-child(4),.hsEtfPriceGrid>span:nth-child(5){border-color:rgba(172,132,52,.34);background:linear-gradient(145deg,rgba(42,31,13,.55),rgba(7,7,6,.88))}
+.hsEtfPriceGrid>span:nth-child(1) b,.hsEtfPriceGrid>span:nth-child(4) b,.hsEtfPriceGrid>span:nth-child(5) b{font-size:18px;color:#e8d29a}
+@media(max-width:430px){.hsDashboardC4Card.is-compact dl>div:not(.hsC4ThresholdMetric) dt{font-size:8.5px!important}.hsDashboardC4Card.is-compact dl>div:not(.hsC4ThresholdMetric) dd{font-size:9.8px!important}}
