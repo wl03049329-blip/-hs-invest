@@ -94,7 +94,7 @@ assert.match(html, /function homeC4IntradaySeries/);
 assert.match(html, /function homeC4Sparkline/);
 assert.match(html, /data-c4-source="\$\{status\}"/);
 assert.match(html, /WAIT_NATIVE/);
-assert.match(html, /不以替代值補算/);
+assert.match(html, /系統不使用替代值估算/);
 assert.match(html, /data-home-c4-sort="score"/);
 assert.match(html, /data-home-c4-sort="change"/);
 assert.match(html, /data-home-c4-sort="threshold"/);

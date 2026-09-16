@@ -51,7 +51,11 @@ assert.ok(order.every((value,index)=>value>0&&(index===0||value>order[index-1]))
 assert.match(html,/function decisionCenterC4Rows[\s\S]*?selectDecisionCenterOpportunity\(\[\{symbol,score:rawScore\}\]\)/);
 assert.match(html,/HS_DASHBOARD_C4_SYMBOLS=Object\.freeze\(\["0050","00662","00757","00830","00935","009815"\]\)/);
 assert.match(html,/WAIT_NATIVE/);
-assert.match(html,/不以替代值補算/);
+assert.match(html,/系統不使用替代值估算/);
+assert.match(html,/前日 FINAL/);
+assert.match(html,/盤中軌跡<\/dt><dd>尚未開始/);
+assert.match(html,/獨立策略｜不納入 C4 排名/);
+assert.match(html,/市場情緒：\$\{esc\(overviewValue\)\}/);
 assert.match(css,/\.hsDashboardC4Grid\{[^}]*grid-template-columns:repeat\(2/);
 assert.match(css,/\.hsDashboardC4Card\.is-leader\{grid-column:1\/-1/);
 assert.match(html,/data-home-c4-sort="score"/);assert.match(html,/data-home-c4-sort="change"/);assert.match(html,/data-home-c4-sort="threshold"/);

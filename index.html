@@ -377,6 +377,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       <div><p class="eyebrow">MARKET SENTIMENT</p><h2 id="homeSentimentTitle"><svg aria-hidden="true"><use href="#i-market"/></svg>市場情緒快覽</h2></div>
       <small>6 項關鍵指標 · 掌握市場全貌</small>
     </div>
+    <p id="homeSentimentConclusion" class="homeSentimentConclusion"><b>市場情緒：資料彙整中</b><span>六項指標載入後提供綜合判讀</span></p>
     <div id="homeSentimentCards" class="homeSentimentCards">
       <button id="homeMarginBalanceCard" class="homeSentimentCard" type="button" data-home-chip="margin"><svg aria-hidden="true"><use href="#i-fund"/></svg><span>台股融資餘額</span><b>—</b><em>載入中</em><small>盤後資料</small></button>
       <button id="homeMaintenanceCard" class="homeSentimentCard" type="button" data-home-chip="margin"><svg aria-hidden="true"><use href="#i-risk-shield"/></svg><span>融資維持率</span><b>—</b><em>載入中</em><small>盤後資料</small></button>
@@ -385,7 +386,6 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       <button id="homeTmfRatioCard" class="homeSentimentCard" type="button" data-home-chip="futures"><svg aria-hidden="true"><use href="#i-users"/></svg><span>散戶多空比</span><b>—</b><em>載入中</em><small>非三大法人部位推估</small></button>
       <button id="homeSentimentOverviewCard" class="homeSentimentCard" type="button" data-home-chip="overview"><svg aria-hidden="true"><use href="#i-market"/></svg><span>市場總覽</span><b>—</b><em>情緒資料彙整中</em><small>綜合市場判讀</small></button>
     </div>
-    <p id="homeSentimentConclusion" class="homeSentimentConclusion">情緒資料彙整中…</p>
     <details id="homeSentimentDetails" class="homeSentimentDetails"><summary>展開資料方法與日期</summary><div>資料載入中…</div></details>
   </section>
 
@@ -407,7 +407,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
   </section>
 
   <section id="homeLeverageBrief" class="panel homeLeverageBrief" data-tab-section="today" aria-labelledby="homeLeverageBriefTitle">
-    <div class="panelTitle compactTitle"><div><p class="eyebrow">HS LEVERAGE</p><h2 id="homeLeverageBriefTitle"><svg aria-hidden="true"><use href="#i-chip"/></svg>00631L 槓桿戰術雷達</h2></div><small>獨立戰術觀察 · 嚴控風險</small></div>
+    <div class="panelTitle compactTitle"><div><p class="eyebrow">HS LEVERAGE</p><h2 id="homeLeverageBriefTitle"><svg aria-hidden="true"><use href="#i-chip"/></svg>00631L 槓桿戰術雷達</h2><span class="hsLeverageIsolation">獨立策略｜不納入 C4 排名</span></div><small>獨立戰術觀察 · 嚴控風險</small></div>
     <div id="homeLeverageCard"><div class="skeleton">載入 00631L 槓桿戰術資料中…</div></div>
   </section>
 
@@ -804,7 +804,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
     <p id="liveQuoteProxyStatus" class="footnote" role="status">目前使用公開快取 fallback。</p>
   </details>
 
-  <footer>HS ETF 股市雷達 2.0 · Developed by 弘昇<br><span class="footnote">新聞、籌碼、買點分數、持股估算與歷史驗證僅供資訊參考，不構成投資建議；FOMO 為本站自製情緒代理指標。</span></footer>
+  <footer class="appFooter"><b>HS ETF 股市雷達 2.0 · Built by HS</b><span>數據、分數與回測僅供資訊參考，不構成投資建議。</span><small>FOMO 為本站自製情緒代理指標。</small></footer>
 </div>
 
 <nav class="bottomNav" aria-label="手機主要分頁">
@@ -3121,13 +3121,14 @@ function sortDecisionCenterC4Rows(rows,mode=homeC4SortMode){
   return copy.sort((a,b)=>(b.score??-Infinity)-(a.score??-Infinity)||a.symbol.localeCompare(b.symbol));
 }
 function decisionCenterC4Cards(officialRows,longs,dualTrack){
-  const ranked=sortDecisionCenterC4Rows(decisionCenterC4Rows(officialRows,longs,dualTrack));
+  const ranked=sortDecisionCenterC4Rows(decisionCenterC4Rows(officialRows,longs,dualTrack)),marketState=decisionCenterEffectiveMarketState(dualTrack),premarket=marketState==="PREMARKET";
   const cards=ranked.map((row,index)=>{
-    const high=row.series.length?Math.max(...row.series.map(point=>point.score)):null,low=row.series.length?Math.min(...row.series.map(point=>point.score)):null,distance=row.next?.highest?"已在最高區間":Number.isFinite(row.next?.distance)?`距下一級 ${decisionCenterDistanceText(row.next.distance)} 分`:"門檻資料暫缺",delta=Number.isFinite(row.delta)?`${row.delta>0?"+":""}${decisionCenterDistanceText(row.delta)}`:"—",status=row.useLive?"LIVE":"FINAL";
-    return`<article class="hsDashboardC4Card ${index===0?"is-leader":"is-compact"}" data-c4-symbol="${esc(row.symbol)}" data-c4-source="${status}"><div class="hsC4Rank">${index+1}</div><header><span>${esc(row.symbol)}<small>${esc(row.name)}</small></span><i class="${row.useLive?"is-live":"is-final"}">${status}</i></header><div class="hsC4CardScore"><b>${Number.isFinite(row.score)?row.score:"—"}</b><strong>${esc(row.tier)}</strong></div><dl><div><dt>vs 昨日正式</dt><dd class="${Number(row.delta)>=0?"up":"down"}">${esc(delta)}</dd></div><div><dt>今日高</dt><dd>${Number.isFinite(high)?high:"—"}</dd></div><div><dt>今日低</dt><dd>${Number.isFinite(low)?low:"—"}</dd></div><div><dt>門檻</dt><dd>${esc(distance)}</dd></div></dl>${homeC4Sparkline(row.series,row.symbol)}</article>`;
+    const high=row.series.length?Math.max(...row.series.map(point=>point.score)):null,low=row.series.length?Math.min(...row.series.map(point=>point.score)):null,distance=row.next?.highest?"已在最高區間":Number.isFinite(row.next?.distance)?`距下一級 ${decisionCenterDistanceText(row.next.distance)} 分`:"門檻資料暫缺",delta=Number.isFinite(row.delta)?`${row.delta>0?"+":""}${decisionCenterDistanceText(row.delta)}`:"—",status=row.useLive?"LIVE":"FINAL",displayStatus=!row.useLive&&premarket?"前日 FINAL":status,trackStarted=!premarket&&row.series.length>0&&row.tradingDate===dualTrack?.target_date&&(row.useLive||marketState==="CLOSED");
+    const trackMetrics=trackStarted?`<div><dt>今日高</dt><dd>${Number.isFinite(high)?high:"—"}</dd></div><div><dt>今日低</dt><dd>${Number.isFinite(low)?low:"—"}</dd></div>`:`<div class="hsC4TrackPending"><dt>盤中軌跡</dt><dd>尚未開始</dd></div>`;
+    return`<article class="hsDashboardC4Card ${index===0?"is-leader":"is-compact"}" data-c4-symbol="${esc(row.symbol)}" data-c4-source="${status}"><div class="hsC4Rank">${index+1}</div><header><span class="hsC4Identity">${esc(row.symbol)}<small>${esc(row.name)}</small></span><i class="${row.useLive?"is-live":"is-final"}">${esc(displayStatus)}</i></header><div class="hsC4CardScore"><b>${Number.isFinite(row.score)?row.score:"—"}</b><strong>${esc(row.tier)}</strong></div><dl><div><dt>vs 昨日正式</dt><dd class="${Number(row.delta)>=0?"up":"down"}">${esc(delta)}</dd></div>${trackMetrics}<div class="hsC4ThresholdMetric"><dt>門檻</dt><dd>${esc(distance)}</dd></div></dl>${homeC4Sparkline(trackStarted?row.series:[],row.symbol)}</article>`;
   });
   const waiting=(longs||[]).find(item=>item?.id==="009815");
-  cards.push(`<article class="hsDashboardC4Card is-unavailable" data-c4-symbol="009815" data-c4-source="WAIT_NATIVE"><div class="hsC4Rank">6</div><header><span>009815<small>${esc(waiting?.name||"大華美國 MAG7+")}</small></span><i>WAIT_NATIVE</i></header><div class="hsC4Wait"><b>盤中原生預估尚不可用</b><small>等待原生數據，不以替代值補算</small></div></article>`);
+  cards.push(`<article class="hsDashboardC4Card is-unavailable" data-c4-symbol="009815" data-c4-source="WAIT_NATIVE"><div class="hsC4Rank">6</div><header><span class="hsC4Identity">009815<small>${esc(waiting?.name||"大華美國 MAG7+")}</small></span><i class="is-wait-native-label"><b>等待原生資料</b><small>WAIT_NATIVE</small></i></header><div class="hsC4Wait"><b>原生盤中資料尚未取得</b><small>系統不使用替代值估算</small></div></article>`);
   return cards.join("");
 }
 function selectDecisionCenterLiveMove(dualTrack){
@@ -3191,10 +3192,10 @@ function renderDecisionCenter(longs,dualTrack,leverageState){
   const health=decisionCenterSystemHealth({dualTrack,officialRows,historyBySymbol:officialC4HistoryViewModel(finalizedCoreScoreHistoryArtifact),leverageState,cnnSnapshot:cnnFearGreed?.snapshot||null,forwardState:{available:Array.isArray(forwardRecords),status:Array.isArray(forwardRecords)?"READY":"FAIL_CLOSED",detail:Array.isArray(forwardRecords)?`${forwardRecords.length} 筆驗證紀錄｜功能可用`:"驗證資料無法讀取"},adHocState:{available:typeof window.HSFinalCoreProduction?.buildAdHocScore==="function"},targetDate:dualTrack?.target_date||taipeiToday(),now:new Date()});
   const live=liveMove.item?.live,liveReady=marketState==="OPEN"&&liveMove.status==="READY",liveLabel=liveReady?"LIVE":marketState==="CLOSED"?"收盤":marketState==="PREMARKET"?"盤前":marketState==="HOLIDAY"?"休市":"UNAVAILABLE",liveTone=liveReady?"is-live":liveLabel==="UNAVAILABLE"?"is-warning":"is-neutral";
   const latestLive=[...LONG_RADAR_SCORED_CODES].map(symbol=>dualTrack?.items?.[symbol]?.live?.market_as_of).filter(Boolean).sort().at(-1),lastUpdate=liveReady?(formatHomeQuoteTime(latestLive)||"—"):(formatHomeQuoteTime(highest?.asOf)||highest?.date||"—");
-  const focusRows=sortDecisionCenterC4Rows(decisionCenterC4Rows(dashboardOfficialRows,longs,dualTrack),"score"),focus=focusRows[0],focusNext=focus?.next,focusDistance=focusNext?.highest?"最高決策區":Number.isFinite(focusNext?.distance)?`${decisionCenterDistanceText(focusNext.distance)} 分`:"—",focusStatus=focus?.useLive?"LIVE":"FINAL";
+  const focusRows=sortDecisionCenterC4Rows(decisionCenterC4Rows(dashboardOfficialRows,longs,dualTrack),"score"),focus=focusRows[0],focusNext=focus?.next,focusDistance=focusNext?.highest?"最高決策區":Number.isFinite(focusNext?.distance)?`${decisionCenterDistanceText(focusNext.distance)} 分`:"—",focusStatus=focus?.useLive?"LIVE":health.marketState==="PREMARKET"?"前日 FINAL":"FINAL",focusThreshold=focusNext?.highest?"已在最高決策區":Number.isFinite(focusNext?.distance)?`距${focusNext.nextLabel||"下一級"}僅 ${focusDistance}`:"門檻資料暫缺",focusThresholdDetail=focusNext?.highest?"維持紀律，等待布局":Number.isFinite(focusNext?.distance)?`再增加 ${focusDistance}即進入下一級`:"維持觀察 · 等待時機";
   const leverage=decisionCenterLeverageSummary(leverageState),cnnLabel=cnnFearGreed?.label||"資料待更新",healthTone=health.level==="HEALTHY"?"is-ok":"is-warning";
-  host.innerHTML=`<div class="hsCoreDecisionHero"><div class="hsCoreIdentity"><span>${esc(focus?.symbol||highest?.symbol||"—")}</span><b>${esc(focus?.name||"正式資料暫不可用")}</b><small>${esc(focus?.tier||highest?.tier||"資料更新中")} ｜ 長期趨勢</small></div><div class="hsCoreHeroScore"><span>目前分數 <i>${focusStatus}</i></span><b>${Number.isFinite(focus?.score)?focus.score:highest?.displayScore??"—"}</b><strong>${esc(focus?.tier||highest?.tier||"UNAVAILABLE")}</strong></div><div class="hsCoreThreshold"><span>距正式分批</span><b>${esc(focusDistance)}</b><small>${focusNext?.highest?"維持紀律，等待布局":`維持觀察 · 等待時機`}</small></div></div><div class="hsDecisionStatusRail"><article><svg aria-hidden="true"><use href="#i-market"/></svg><span>市場狀態<b>${esc(decisionCenterMarketLabel(health.marketState))}</b><small>${esc(liveReady?`LIVE ${lastUpdate}`:`FINAL ${highest?.date||"—"}`)}</small></span></article><article><svg aria-hidden="true"><use href="#i-fund"/></svg><span>資料狀態<b class="${healthTone}">${esc(health.label)}</b><small>${esc(health.officialDate||"系統確認中")}</small></span></article><article><svg aria-hidden="true"><use href="#i-gauge"/></svg><span>市場情緒<b>${esc(cnnLabel)}</b><small>${Number.isFinite(cnnFearGreed?.score)?`Fear & Greed ${fmt(cnnFearGreed.score)}`:"不以缺值補算"}</small></span></article><article><svg aria-hidden="true"><use href="#i-chip"/></svg><span>00631L 狀態<b>${esc(leverage.label)}</b><small>${esc(leverage.detail)}</small></span></article></div>${decisionCenterHealthHtml(health)}`;
-  const caption=$("#hsDecisionMarketCaption");if(caption)caption.textContent=`${decisionCenterMarketLabel(health.marketState)} · 掌握下一步佈局`;
+  host.innerHTML=`<div class="hsCoreDecisionHero"><div class="hsCoreIdentity"><span>${esc(focus?.symbol||highest?.symbol||"—")}</span><b>${esc(focus?.name||"正式資料暫不可用")}</b><small>${esc(focus?.tier||highest?.tier||"資料更新中")} ｜ 長期趨勢</small></div><div class="hsCoreHeroScore"><span>目前分數 <i>${focusStatus}</i></span><b>${Number.isFinite(focus?.score)?focus.score:highest?.displayScore??"—"}<small>分</small></b><strong>${esc(focus?.tier||highest?.tier||"UNAVAILABLE")}</strong></div><div class="hsCoreThreshold"><span>距下一級門檻</span><b>${esc(focusThreshold)}</b><small>${esc(focusThresholdDetail)}</small></div></div><div class="hsDecisionStatusRail"><article><svg aria-hidden="true"><use href="#i-market"/></svg><span>市場狀態<b>${esc(decisionCenterMarketLabel(health.marketState))}</b><small>${esc(liveReady?`LIVE ${lastUpdate}`:health.marketState==="PREMARKET"?`前一交易日 FINAL ${highest?.date||"—"}`:`FINAL ${highest?.date||"—"}`)}</small></span></article><article><svg aria-hidden="true"><use href="#i-fund"/></svg><span>資料狀態<b class="${healthTone}">${esc(health.label)}</b><small>${esc(health.officialDate||"系統確認中")}</small></span></article><article><svg aria-hidden="true"><use href="#i-gauge"/></svg><span>市場情緒<b>${esc(cnnLabel)}</b><small>${Number.isFinite(cnnFearGreed?.score)?`Fear & Greed ${fmt(cnnFearGreed.score)}`:"不以缺值補算"}</small></span></article><article><svg aria-hidden="true"><use href="#i-chip"/></svg><span>00631L 狀態<b>${esc(leverage.label)}</b><small>${esc(leverage.detail)}</small></span></article></div>${decisionCenterHealthHtml(health)}`;
+  const caption=$("#hsDecisionMarketCaption");if(caption)caption.textContent=health.marketState==="PREMARKET"?"目前顯示前一交易日收盤資料":`${decisionCenterMarketLabel(health.marketState)} · 掌握下一步佈局`;
   const headerState=$("#homeHeaderMarketState"),headerUpdate=$("#homeHeaderLastUpdate");if(headerState)headerState.textContent=decisionCenterMarketLabel(health.marketState);if(headerUpdate)headerUpdate.textContent=`最後更新 ${lastUpdate}`;
   const c4Grid=$("#hsDashboardC4Grid");if(c4Grid)c4Grid.innerHTML=decisionCenterC4Cards(dashboardOfficialRows,longs,dualTrack)||'<div class="newsEmpty">正式 C4 資料暫不可用。</div>';
   document.querySelectorAll("[data-home-c4-sort]").forEach(button=>button.classList.toggle("is-active",button.dataset.homeC4Sort===homeC4SortMode));
@@ -3596,6 +3597,7 @@ function renderHomeSentimentCards(){
   const overviewValue=cnn?.label||risk?.interpretation?.label||"資料更新中";
   const overviewHint=/貪婪|偏熱/.test(overviewValue)?"避免追高":/恐懼|偏冷|壓力/.test(overviewValue)?"分批觀察":"等待回檔";
   setHomeSentimentCard("#homeSentimentOverviewCard",{value:overviewValue,status:overviewHint,date:values.dataDate||futuresPosition?.dataDate||cnnSnapshot.data_date,snapshot:marginSnapshot});
+  const summary=$("#homeSentimentConclusion");if(summary)summary.innerHTML=`<b>市場情緒：${esc(overviewValue)}</b><span>${esc(combinedSentimentConclusion())}</span>`;
 }
 function combinedSentimentConclusion(){
   const margin=marketChip.margin,cnn=cnnFearGreed,risk=marketChip.marginRisk,ratio=risk?.maintenance_ratio;
