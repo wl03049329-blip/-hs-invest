@@ -5,7 +5,9 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import re
 import subprocess
+import sys
 import time
 from datetime import datetime, time as wall_time
 from pathlib import Path
@@ -18,6 +20,7 @@ from .state_store import StateStore, unavailable_public
 from .trading_calendar import TradingCalendar
 
 C4_VERSION = "FINAL_CORE_WEIGHT_V1"
+MAX_BUCKET_ATTEMPTS = 3  # First attempt plus at most two same-bucket retries.
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -141,6 +144,7 @@ class ShadowScheduler:
             "artifact_commit_sha": previous.get("artifact_commit_sha"),
             "github_fallback_last_run": previous.get("github_fallback_last_run"),
             "github_fallback_gap_detected": previous.get("github_fallback_gap_detected"),
+            "attempt_control": previous.get("attempt_control"),
         })
 
     async def tick(self, now: datetime | None = None) -> str:
@@ -158,7 +162,8 @@ class ShadowScheduler:
             run_id = bucket_run_id(now)
             before = self.store.snapshot()
             last_attempt = before.get("last_attempted_run") or {}
-            if before.get("mode") == self.mode and last_attempt.get("run_id") == run_id:
+            last_success = before.get("last_successful_run") or {}
+            if before.get("mode") == self.mode and last_success.get("run_id") == run_id:
                 return "DUPLICATE"
             gap = None
             try:
@@ -173,11 +178,52 @@ class ShadowScheduler:
             with self.store.volume_lock() as acquired:
                 if not acquired:
                     return "LOCKED"
+                control = before.get("attempt_control") or {}
+                persisted_attempt = int(control.get("count") or 0) if (
+                    control.get("run_id") == run_id and control.get("mode") == self.mode
+                ) else 0
+                attempt = max(persisted_attempt, self.store.attempt_count(run_id, self.mode)) + 1
+                if attempt > MAX_BUCKET_ATTEMPTS:
+                    return "RETRY_EXHAUSTED"
+                self.store.save({
+                    **before, "schema_version": 1,
+                    "attempt_control": {"run_id": run_id, "mode": self.mode, "count": attempt},
+                })
+                stage = "STARTED"
+                dispatch_status = "NOT_ATTEMPTED"
+                telemetry_available = True
+                def record(status: str, *, error_class: str | None = None, symbol: str | None = None,
+                           completeness: str | None = None, result: str | None = None) -> None:
+                    nonlocal telemetry_available
+                    if not telemetry_available:
+                        return
+                    try:
+                        self.store.append_attempt({
+                            "bucket": run_id, "mode": self.mode, "attempt": attempt,
+                            "at": datetime.now(TAIPEI).isoformat(), "stage": stage,
+                            "status": status, "error_class": error_class, "symbol": symbol,
+                            "completeness": completeness, "dispatch_status": dispatch_status,
+                            "result": result,
+                        })
+                    except OSError:
+                        telemetry_available = False
+                        print("SCHEDULER_ATTEMPT_TELEMETRY_FAILED error_class=OSError", file=sys.stderr, flush=True)
+                record("STARTED")
                 started = time.monotonic()
                 batch: QuoteBatch | None = None
                 try:
+                    stage = "QUOTE_FETCH"
                     batch = await asyncio.to_thread(self.quote_fetcher, now)
+                    record("PASS", completeness=batch.completeness)
+                    if batch.completeness != "5/5" or any(
+                        symbol not in batch.items or symbol not in batch.quote_timestamps
+                        or symbol not in batch.freshness for symbol in REQUIRED_SYMBOLS
+                    ):
+                        raise RuntimeError("INCOMPLETE_REQUIRED_QUOTES")
+                    stage = "VALIDATION"
+                    record("PASS", completeness=batch.completeness)
                     calculated_at = datetime.now(TAIPEI).isoformat()
+                    stage = "C4"
                     result = await asyncio.to_thread(self.scorer.score, batch, calculated_at)
                     snapshot = result["snapshot"]
                     if result.get("score_version") != C4_VERSION or snapshot.get("score_version") != C4_VERSION:
@@ -196,6 +242,8 @@ class ShadowScheduler:
                             "quote_as_of": batch.quote_timestamps[symbol], "freshness": batch.freshness[symbol],
                             "quote_source": batch.sources.get(symbol), "status": "AVAILABLE",
                         }
+                    stage = "C4_COMPLETE"
+                    record("PASS", completeness=batch.completeness)
                     tickers["009815"] = {"score": None, "display_score": None, "delta_vs_official": None, "quote_as_of": None, "freshness": "WAIT_NATIVE", "quote_source": None, "status": "WAIT_NATIVE"}
                     public = {
                         "schema_version": 1, "status": "AVAILABLE", "market_state": "OPEN",
@@ -214,9 +262,19 @@ class ShadowScheduler:
                         "last_success_at": calculated_at,
                         "legacy_anchor": legacy_anchor,
                     }
+                    stage = "ARTIFACT_READY"
+                    record("PASS", completeness=batch.completeness)
+                    stage = "DISPATCH"
                     publication = self.publisher.publish(
                         batch=batch, score_result=result, run_id=run_id, mode=self.mode,
                     )
+                    dispatch_status = publication.status
+                    if (self.mode == "production" and publication.status != "DISPATCH_ACCEPTED") or (
+                        self.mode == "shadow" and publication.status != "SHADOW_SKIPPED"
+                    ):
+                        raise RuntimeError("DISPATCH_NOT_ACCEPTED")
+                    stage = "DISPATCHED" if self.mode == "production" else "SHADOW_SKIPPED"
+                    record("PASS", completeness=batch.completeness)
                     state = {
                         "schema_version": 1, "mode": self.mode, "current_public_state": public,
                         "last_successful_run": {"run_id": run_id, "at": calculated_at},
@@ -231,11 +289,19 @@ class ShadowScheduler:
                         "last_successful_live_snapshot_at": calculated_at,
                         "publication_status": publication.status,
                         "artifact_commit_sha": publication.artifact_commit_sha,
+                        "attempt_control": {"run_id": run_id, "mode": self.mode, "count": attempt},
                     }
                     self.store.save(state)
                     self.store.append_parity(parity)
+                    stage = "SUCCESS"
+                    record("SUCCESS", completeness=batch.completeness, result="SUCCESS")
                     return "SUCCESS"
                 except Exception as exc:  # noqa: BLE001
+                    code = str(exc).split(":", 1)[0]
+                    error_class = code if re.fullmatch(r"[A-Z][A-Z0-9_]{0,63}", code) else type(exc).__name__
+                    symbol = next((value for value in REQUIRED_SYMBOLS if re.search(rf"(?<!\d){value}(?!\d)", str(exc))), None)
+                    record("FAILED", error_class=error_class, symbol=symbol,
+                           completeness=batch.completeness if batch else "0/5", result="UNAVAILABLE")
                     reason = f"{type(exc).__name__}:{exc}"
                     self._save_unavailable(
                         now, reason, "OPEN", calendar.revision, run_id, gap,

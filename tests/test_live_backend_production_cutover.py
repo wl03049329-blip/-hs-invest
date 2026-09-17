@@ -10,6 +10,7 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 from unittest import mock
 
+from backend.artifact_publisher import PublicationResult
 from backend.live_quotes import REQUIRED_SYMBOLS, TAIPEI, QuoteBatch
 from backend.runtime_mode import resolve_backend_mode
 from backend.scheduler import C4_VERSION, ShadowScheduler
@@ -67,6 +68,15 @@ def successful_public(now: datetime = NOW) -> dict:
 
 
 class ProductionModeTests(unittest.TestCase):
+    def setUp(self) -> None:
+        publisher = mock.Mock()
+        publisher.publish.side_effect = lambda **kwargs: PublicationResult(
+            "DISPATCH_ACCEPTED" if kwargs.get("mode") == "production" else "SHADOW_SKIPPED"
+        )
+        patcher = mock.patch("backend.scheduler.GitHubArtifactPublisher", return_value=publisher)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     def test_01_shadow_mode_starts_and_is_default(self) -> None:
         self.assertEqual(resolve_backend_mode("shadow"), "shadow")
         with mock.patch.dict(os.environ, {}, clear=True):
@@ -169,7 +179,7 @@ class ProductionModeTests(unittest.TestCase):
             scheduler = ShadowScheduler(StateStore(temporary), calendar=TradingDay(), quote_fetcher=batch, scorer=Scorer(), mode="production")
             self.assertEqual(asyncio.run(scheduler.tick(NOW)), "SUCCESS")
             names = {path.name for path in Path(temporary).iterdir()}
-            self.assertTrue(names <= {"live-state.json", "shadow-parity.jsonl", "history-cache", "scheduler.lock"})
+            self.assertTrue(names <= {"live-state.json", "shadow-parity.jsonl", "scheduler-attempts.jsonl", "history-cache", "scheduler.lock"})
         self.assertEqual(before, {path: hashlib.sha256(path.read_bytes()).hexdigest() for path in protected})
 
     def test_18_production_health_endpoint_exposes_readiness_without_secrets(self) -> None:

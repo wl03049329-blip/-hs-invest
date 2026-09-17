@@ -62,6 +62,7 @@ class StateStore:
         self.railway_volume_mounted = bool(railway_mount)
         self.state_path = self._safe_path("live-state.json")
         self.parity_path = self._safe_path("shadow-parity.jsonl")
+        self.attempt_path = self._safe_path("scheduler-attempts.jsonl")
         self.history_dir = self._safe_path("history-cache")
         self.history_dir.mkdir(exist_ok=True)
         self.lock_path = self._safe_path("scheduler.lock")
@@ -107,6 +108,30 @@ class StateStore:
             handle.write(json.dumps(record, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n")
             handle.flush()
             os.fsync(handle.fileno())
+
+    def append_attempt(self, record: dict[str, Any]) -> None:
+        """Persist only scheduler-owned, sanitized attempt fields on the runtime Volume."""
+        fields = ("bucket", "mode", "attempt", "at", "stage", "status", "error_class", "symbol", "completeness", "dispatch_status", "result")
+        safe = {field: record.get(field) for field in fields}
+        with self._memory_lock, self.attempt_path.open("a", encoding="utf-8", newline="\n") as handle:
+            handle.write(json.dumps(safe, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+
+    def attempt_count(self, bucket: str, mode: str) -> int:
+        try:
+            with self._memory_lock, self.attempt_path.open(encoding="utf-8") as handle:
+                count = 0
+                for line in handle:
+                    try:
+                        record = json.loads(line)
+                    except ValueError:
+                        return 2**31  # Fail closed: never grant extra retries from a torn log.
+                    if (record.get("bucket"), record.get("mode"), record.get("stage"), record.get("status")) == (bucket, mode, "STARTED", "STARTED"):
+                        count += 1
+                return count
+        except FileNotFoundError:
+            return 0
 
     @contextmanager
     def volume_lock(self) -> Iterator[bool]:
