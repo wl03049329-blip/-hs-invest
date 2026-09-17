@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-Hant" data-build-sha="PENDING" data-radar-phase="3.1-hotfix-v3">
+<html lang="zh-Hant" data-build-sha="PENDING" data-radar-phase="3.2-mobile-stack-v32">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
@@ -303,18 +303,14 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 </style>
 <link rel="stylesheet" href="portfolio-v6.css?v=20260818-rebalance2" />
 <link rel="stylesheet" href="v62-tech.css?v=20260809b" />
-<link rel="stylesheet" href="formal-black-gold.css?v=20260918-radar-phase31-mobile-v3" />
-<style id="radarPhase31CriticalMobile">
-/* Phase 3.1 P0: survives a stale external stylesheet when fresh HTML is loaded. */
-@media(max-width:430px){
-  .radarWhyScore .radarExplainFactors{display:grid!important;grid-template-columns:minmax(0,1fr)!important;width:100%!important;min-width:0!important}
-  .radarWhyScore .radarExplainFactor{width:100%!important;min-width:0!important;max-width:100%!important;height:auto!important;overflow:visible!important}
-  .radarWhyScore .radarExplainFactor>header{display:block!important}
-  .radarWhyScore .radarExplainFactor h4{white-space:normal!important;word-break:keep-all!important;overflow-wrap:normal!important}
-  .radarWhyScore .radarExplainFactorMetrics{display:grid!important;grid-template-columns:minmax(0,1fr)!important;width:100%!important}
-  .radarWhyScore .radarExplainFactorMetrics>span{display:flex!important;align-items:baseline!important;justify-content:space-between!important;gap:16px!important;width:100%!important;min-width:0!important}
-  .radarWhyScore .radarExplainFactorMetrics>span>b{flex:0 0 auto!important;white-space:nowrap!important}
-}
+<link rel="stylesheet" href="formal-black-gold.css?v=20260918-radar-phase32-mobile-stack" />
+<style id="radarPhase32CriticalLayout">
+/* Phase 3.2 structural fallback: the renderer is mobile-first even if external CSS is stale. */
+.radarFactorStackV32{display:flex;flex-direction:column;width:100%;min-width:0}
+.radarFactorCardV32{width:100%;min-width:0}
+.radarFactorHeaderV32,.radarFactorMetricV32{display:flex;justify-content:space-between;gap:16px;width:100%;min-width:0}
+.radarFactorTitleV32{min-width:0;white-space:normal;word-break:keep-all;overflow-wrap:normal}
+.radarFactorValueV32,.radarFactorMetricV32 strong{flex:0 0 auto;white-space:nowrap}
 </style>
 <style>
 /* HS story: final no-arrow layout */
@@ -2164,7 +2160,7 @@ function currentFrontendDiagnosticRenderState(dualTrack=currentDualTrackCoreView
 }
 function liveDebugValue(value){return value===null||value===undefined||value===""?"—":String(value)}
 function radarPhase31LayoutDiagnostics(){
-  const parent=document.querySelector(".radarWhyScore .radarExplainFactors"),card=parent?.querySelector(".radarExplainFactor"),style=parent?getComputedStyle(parent):null;
+  const parent=document.querySelector('[data-radar-factor-layout="mobile-stack-v32"]'),card=parent?.querySelector(".radarFactorCardV32"),style=parent?getComputedStyle(parent):null;
   return{innerWidth:window.innerWidth,clientWidth:document.documentElement.clientWidth,dpr:window.devicePixelRatio,display:style?.display||"NOT_RENDERED",columns:style?.gridTemplateColumns||"NOT_RENDERED",parentWidth:parent?Math.round(parent.getBoundingClientRect().width):null,cardWidth:card?Math.round(card.getBoundingClientRect().width):null,cssHref:Array.from(document.querySelectorAll('link[rel="stylesheet"]')).map(link=>link.href).find(href=>href.includes("formal-black-gold.css"))||"NONE",buildSha:document.documentElement.dataset.buildSha||"PENDING",radarPhase:document.documentElement.dataset.radarPhase||"UNKNOWN"}
 }
 function renderLiveDebugPanel(current=liveTelemetry?.snapshot()?.current){
@@ -3605,10 +3601,10 @@ function radarExplainSummary(attribution){
 }
 function radarWhyScoreHtml(x,decision){
   const pair=radarOfficialFactorPair(x.id),current=pair.current,attribution=radarFactorAttribution(pair),main=current?.complete?[...current.factors].sort((a,b)=>b.contribution-a.contribution)[0]:null,percentage=main&&current.rawTotal>0?Math.round(main.contribution/current.rawTotal*100):null;
-  const factorCards=RADAR_EXPLAIN_FACTOR_DEFINITIONS.map(definition=>{const factor=current?.factors?.find(item=>item.key===definition.key),available=factor?.available===true,raw=available?`${radarExplainNumber(factor.raw,2)}${definition.rawSuffix}`:"—";return`<article class="radarExplainFactor${main?.key===definition.key?" is-main":""}"><header><div><h4>${esc(definition.label)}</h4><small>${esc(definition.model)}</small></div><b>${raw}</b></header><div class="radarExplainFactorMetrics"><span><small>因子分數</small><b>${available?radarExplainNumber(factor.score,2):"—"}</b></span><span><small>權重</small><b>${available?`${radarExplainNumber(factor.weight,0)}%`:"—"}</b></span><span class="is-contribution"><small>分數貢獻</small><b>${available?radarExplainSigned(factor.contribution,2):"—"}</b></span></div></article>`}).join("");
+  const factorCards=RADAR_EXPLAIN_FACTOR_DEFINITIONS.map(definition=>{const factor=current?.factors?.find(item=>item.key===definition.key),available=factor?.available===true,raw=available?`${radarExplainNumber(factor.raw,2)}${definition.rawSuffix}`:"—";return`<section class="radarFactorCardV32${main?.key===definition.key?" is-main":""}"><header class="radarFactorHeaderV32"><span class="radarFactorTitleV32">${esc(definition.label)}<small class="radarFactorModelV32">${esc(definition.model)}</small></span><strong class="radarFactorValueV32">${raw}</strong></header><div class="radarFactorMetricsV32"><div class="radarFactorMetricV32"><span>因子分數</span><strong>${available?radarExplainNumber(factor.score,2):"—"}</strong></div><div class="radarFactorMetricV32"><span>權重</span><strong>${available?`${radarExplainNumber(factor.weight,0)}%`:"—"}</strong></div><div class="radarFactorMetricV32 is-contribution"><span>分數貢獻</span><strong>${available?radarExplainSigned(factor.contribution,2):"—"}</strong></div></div></section>`}).join("");
   const attributionRows=attribution?attribution.deltas.map(item=>`<div><span>${esc(item.label)}</span><b class="${radarExplainDeltaTone(item.value)}">${radarExplainSigned(item.value,2)}</b></div>`).join(""):"";
   const displayChange=current&&pair.previous?`<div class="radarExplainDisplayChange"><span><b>${pair.previous.displayScore}</b><i>→</i><b>${current.displayScore}</b></span><strong class="${radarExplainDeltaTone(attribution?.displayDelta)}">${Number.isFinite(attribution?.displayDelta)?`${attribution.displayDelta>0?"▲":attribution.displayDelta<0?"▼":""}${Math.abs(attribution.displayDelta)}`:"—"}</strong></div>`:`<div class="radarExplainDisplayChange is-unavailable"><span>今日變化</span><strong>—</strong></div>`;
-  return`<section class="radarV2Section radarWhyScore"><header class="radarExplainTitle"><h3>分數拆解</h3><small>Core Score 正式三因子｜資料來自最新正式盤後</small></header><div class="radarExplainLead"><div class="radarExplainScore"><small>Core Score</small><b>${current?current.displayScore:"—"}</b></div><div class="radarExplainPrimary"><small>目前分數主要來自</small><b>${main?esc(main.label):"資料暫缺"}</b>${Number.isFinite(percentage)?`<em>約占目前總分 ${percentage}%</em>`:""}</div></div><div class="radarExplainFactors">${factorCards}</div>${current?.complete?`<div class="radarExplainTotals"><span><small>原始總分</small><b>${radarExplainNumber(current.rawTotal,2)}</b></span><span><small>顯示分數</small><b>${current.displayScore}</b></span></div>`:`<p class="radarExplainUnavailable">分數拆解資料不完整</p>`}<section class="radarExplainToday"><header><h4>今日分數變化</h4><small>前一正式盤後 → 目前正式盤後</small></header>${displayChange}${attribution?`<div class="radarExplainAttribution">${attributionRows}<div class="is-total"><span>合計</span><b class="${radarExplainDeltaTone(attribution.total)}">${radarExplainSigned(attribution.total,2)}</b></div></div>`:`<p class="radarExplainUnavailable">因子變化資料暫缺</p>`}<div class="radarExplainReading"><small>今日判讀</small><p>${esc(radarExplainSummary(attribution))}</p></div></section></section>`;
+  return`<section class="radarV2Section radarWhyScore"><header class="radarExplainTitle"><h3>分數拆解</h3><small>Core Score 正式三因子｜資料來自最新正式盤後</small></header><div class="radarExplainLead"><div class="radarExplainScore"><small>Core Score</small><b>${current?current.displayScore:"—"}</b></div><div class="radarExplainPrimary"><small>目前分數主要來自</small><b>${main?esc(main.label):"資料暫缺"}</b>${Number.isFinite(percentage)?`<em>約占目前總分 ${percentage}%</em>`:""}</div></div><div class="radarFactorStackV32" data-radar-factor-layout="mobile-stack-v32">${factorCards}</div>${current?.complete?`<div class="radarExplainTotals"><span><small>原始總分</small><b>${radarExplainNumber(current.rawTotal,2)}</b></span><span><small>顯示分數</small><b>${current.displayScore}</b></span></div>`:`<p class="radarExplainUnavailable">分數拆解資料不完整</p>`}<section class="radarExplainToday"><header><h4>今日分數變化</h4><small>前一正式盤後 → 目前正式盤後</small></header>${displayChange}${attribution?`<div class="radarExplainAttribution">${attributionRows}<div class="is-total"><span>合計</span><b class="${radarExplainDeltaTone(attribution.total)}">${radarExplainSigned(attribution.total,2)}</b></div></div>`:`<p class="radarExplainUnavailable">因子變化資料暫缺</p>`}<div class="radarExplainReading"><small>今日判讀</small><p>${esc(radarExplainSummary(attribution))}</p></div></section></section>`;
 }
 function radarScoreTrendHtml(ticker,history=loadDailyLongRankHistory()){
   if(ticker==="009815")return`<section class="radarV2Section radarScoreTrend"><header><span>SCORE TREND</span><h3>近 10 個正式盤後交易日</h3></header><div class="radarTrendEmpty">009815 維持 WAIT_NATIVE；原生正式 Core Score 歷史尚未建立。</div></section>`;
