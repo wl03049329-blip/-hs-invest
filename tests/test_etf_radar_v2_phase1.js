@@ -15,11 +15,15 @@ assert.match(html,/sourceLabel=source==="official"\?"正式盤後":"本機盤後
 assert.match(html,/`\$\{sourceLabel\}比較：首次／—`/);
 assert.match(html,/decision\?\.marketAsOf\|\|x\.intraday\?\.asOf/);
 
-// WHY SCORE is presentation over the frozen factors, not a new formula.
+// WHY SCORE is finalized-only presentation over stored frozen contributions, not a new formula.
 assert.match(html,/function radarWhyScoreHtml\(x,decision\)/);
-assert.match(html,/strategyBreakdownHtml\(x,"long_term_core"\)/);
-assert.match(html,/function radarPrimaryDriver\(decision\)/);
-assert.match(html,/weeklyJ:"Weekly J 低檔",dd52:"DD52 回撤深度",crash:"Crash 壓力"/);
+assert.match(html,/function radarOfficialFactorPair\(ticker,artifact=/);
+assert.match(html,/snapshot\?\.snapshot_type!=="FINALIZED_CLOSE"/);
+assert.match(html,/snapshot\?\.finalized!==true/);
+assert.match(html,/factor\.contribution-before\.contribution/);
+assert.match(html,/目前分數主要來自/);
+assert.match(html,/原始總分/);
+assert.match(html,/今日分數變化/);
 assert.match(core,/weeklyJ[\s\S]{0,120}weight:30/);
 assert.match(core,/dd52[\s\S]{0,120}weight:55/);
 assert.match(core,/crash[\s\S]{0,120}weight:15/);
