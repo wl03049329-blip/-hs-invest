@@ -1,74 +1,74 @@
 {
-  "data_date": "2026-09-16",
-  "updated_at": "2026-09-16T22:43:08+08:00",
+  "data_date": "2026-09-17",
+  "updated_at": "2026-09-17T22:46:52+08:00",
   "data_mode": "after_hours",
   "model": {
     "name": "rolling_estimated_margin_cost",
     "financing_ratio": 0.6,
     "initial_maintenance_ratio": 166.6667,
-    "warmup_trading_days": 149,
+    "warmup_trading_days": 150,
     "is_estimated": true,
     "sample_state": "ready"
   },
   "margin_balance": {
-    "estimated_financing_principal": 898369402667,
-    "daily_change": 6573627267,
-    "daily_change_pct": 0.74,
-    "change_20d": 71329802971,
-    "percentile_60d": 56.7,
-    "balance_shares": 11551991000
+    "estimated_financing_principal": 903805918135,
+    "daily_change": 5436515468,
+    "daily_change_pct": 0.61,
+    "change_20d": 74493288293,
+    "percentile_60d": 63.3,
+    "balance_shares": 11571894000
   },
   "maintenance_ratio": {
-    "value": 161.63,
-    "daily_change": 3.97,
-    "average_20d": 165.95,
-    "percentile_60d": 38.3,
-    "collateral_market_value": 1451992561380,
-    "estimated_financing_principal": 898369402667,
+    "value": 161.33,
+    "daily_change": -0.3,
+    "average_20d": 165.74,
+    "percentile_60d": 36.7,
+    "collateral_market_value": 1458133784990,
+    "estimated_financing_principal": 903805918135,
     "method": "rolling_estimated_margin_cost",
     "is_estimated": true
   },
   "short_balance": {
-    "shares": 231156000,
-    "daily_change": -6925000
+    "shares": 253521000,
+    "daily_change": 22065000
   },
   "markets": {
     "twse": {
-      "collateral_market_value": 1078983262580.0,
-      "estimated_remaining_cost": 1110904164065.0,
-      "estimated_financing_principal": 666542498439.0,
-      "margin_balance_shares": 9248312000.0,
+      "collateral_market_value": 1084875265030.0,
+      "estimated_remaining_cost": 1116384751554.0,
+      "estimated_financing_principal": 669830850933.0,
+      "margin_balance_shares": 9261757000.0,
       "matched_count": 1237,
       "missing_count": 1,
-      "stale_price_count": 9,
-      "maintenance_ratio": 161.88
+      "stale_price_count": 2,
+      "maintenance_ratio": 161.96
     },
     "tpex": {
-      "collateral_market_value": 373009298800.0,
-      "estimated_remaining_cost": 386378173713.0,
-      "estimated_financing_principal": 231826904228.0,
-      "margin_balance_shares": 2303679000.0,
+      "collateral_market_value": 373258519960.0,
+      "estimated_remaining_cost": 389958445338.0,
+      "estimated_financing_principal": 233975067203.0,
+      "margin_balance_shares": 2310137000.0,
       "matched_count": 824,
       "missing_count": 0,
-      "stale_price_count": 6,
-      "maintenance_ratio": 160.9
+      "stale_price_count": 5,
+      "maintenance_ratio": 159.53
     },
     "combined": {
-      "collateral_market_value": 1451992561380.0,
-      "estimated_remaining_cost": 1497282337778.0,
-      "estimated_financing_principal": 898369402667.0,
-      "margin_balance_shares": 11551991000.0,
+      "collateral_market_value": 1458133784990.0,
+      "estimated_remaining_cost": 1506343196892.0,
+      "estimated_financing_principal": 903805918135.0,
+      "margin_balance_shares": 11571894000.0,
       "matched_count": 2061,
       "missing_count": 1,
-      "stale_price_count": 15,
-      "maintenance_ratio": 161.63
+      "stale_price_count": 7,
+      "maintenance_ratio": 161.33
     }
   },
   "coverage": {
     "matched_count": 2061,
     "missing_count": 1,
     "coverage_ratio": 100.0,
-    "stale_price_count": 15
+    "stale_price_count": 7
   },
   "risk_state": "依推估維持率判讀",
   "summary": "融資本金採逐檔滾動成本推估；融資增減與維持率需交叉觀察，單日變動不代表後續方向。",
@@ -979,6 +979,12 @@
       "estimated_financing_principal": 898369402667.0,
       "collateral_market_value": 1451992561380.0,
       "maintenance_ratio": 161.63
+    },
+    {
+      "date": "2026-09-17",
+      "estimated_financing_principal": 903805918135.0,
+      "collateral_market_value": 1458133784990.0,
+      "maintenance_ratio": 161.33
     }
   ],
   "missing_securities": [
