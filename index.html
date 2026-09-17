@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-Hant">
+<html lang="zh-Hant" data-build-sha="PENDING" data-radar-phase="3.1-hotfix-v3">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
@@ -303,7 +303,19 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 </style>
 <link rel="stylesheet" href="portfolio-v6.css?v=20260818-rebalance2" />
 <link rel="stylesheet" href="v62-tech.css?v=20260809b" />
-<link rel="stylesheet" href="formal-black-gold.css?v=20260918-radar-phase31-mobile-v2" />
+<link rel="stylesheet" href="formal-black-gold.css?v=20260918-radar-phase31-mobile-v3" />
+<style id="radarPhase31CriticalMobile">
+/* Phase 3.1 P0: survives a stale external stylesheet when fresh HTML is loaded. */
+@media(max-width:430px){
+  .radarWhyScore .radarExplainFactors{display:grid!important;grid-template-columns:minmax(0,1fr)!important;width:100%!important;min-width:0!important}
+  .radarWhyScore .radarExplainFactor{width:100%!important;min-width:0!important;max-width:100%!important;height:auto!important;overflow:visible!important}
+  .radarWhyScore .radarExplainFactor>header{display:block!important}
+  .radarWhyScore .radarExplainFactor h4{white-space:normal!important;word-break:keep-all!important;overflow-wrap:normal!important}
+  .radarWhyScore .radarExplainFactorMetrics{display:grid!important;grid-template-columns:minmax(0,1fr)!important;width:100%!important}
+  .radarWhyScore .radarExplainFactorMetrics>span{display:flex!important;align-items:baseline!important;justify-content:space-between!important;gap:16px!important;width:100%!important;min-width:0!important}
+  .radarWhyScore .radarExplainFactorMetrics>span>b{flex:0 0 auto!important;white-space:nowrap!important}
+}
+</style>
 <style>
 /* HS story: final no-arrow layout */
 .hsStorySteps li::before,
@@ -2151,9 +2163,13 @@ function currentFrontendDiagnosticRenderState(dualTrack=currentDualTrackCoreView
   return window.HSLiveDiagnostics?.diagnosticRenderState({marketState:decisionCenterEffectiveMarketState(dualTrack),liveSnapshotCount:liveCanonicalCoreSnapshots.length,archivedTodaySnapshotCount:archive.today,baseState:currentFrontendLiveRenderState(dualTrack)})||currentFrontendLiveRenderState(dualTrack);
 }
 function liveDebugValue(value){return value===null||value===undefined||value===""?"—":String(value)}
+function radarPhase31LayoutDiagnostics(){
+  const parent=document.querySelector(".radarWhyScore .radarExplainFactors"),card=parent?.querySelector(".radarExplainFactor"),style=parent?getComputedStyle(parent):null;
+  return{innerWidth:window.innerWidth,clientWidth:document.documentElement.clientWidth,dpr:window.devicePixelRatio,display:style?.display||"NOT_RENDERED",columns:style?.gridTemplateColumns||"NOT_RENDERED",parentWidth:parent?Math.round(parent.getBoundingClientRect().width):null,cardWidth:card?Math.round(card.getBoundingClientRect().width):null,cssHref:Array.from(document.querySelectorAll('link[rel="stylesheet"]')).map(link=>link.href).find(href=>href.includes("formal-black-gold.css"))||"NONE",buildSha:document.documentElement.dataset.buildSha||"PENDING",radarPhase:document.documentElement.dataset.radarPhase||"UNKNOWN"}
+}
 function renderLiveDebugPanel(current=liveTelemetry?.snapshot()?.current){
   const host=document.getElementById("hsLiveDebugPanel");if(!host||!current)return;
-  const fields=[["Frontend source",current.frontend_live_source],["API status",current.api_fetch_status],["API latency",Number.isFinite(current.api_fetch_ms)?`${current.api_fetch_ms} ms`:null],["Live snapshots",current.store_live_snapshot_count],["Archived today",current.archived_snapshot_count_today],["Archived total",current.archived_snapshot_count_total],["Archive date",current.archive_date],["Latest snapshot",current.latest_snapshot_time],["Selected live snapshot",current.selected_snapshot_time],["Freshness",current.freshness_check],["Reject reason",current.reject_reason],["Maximum quote age",Number.isFinite(current.maximum_quote_age_sec)?`${current.maximum_quote_age_sec} sec`:null],["Freshness threshold",Number.isFinite(current.threshold_sec)?`${current.threshold_sec} sec`:null],["Market state",current.market_state],["Render state",current.render_state_after||currentFrontendDiagnosticRenderState()],["Last poll",current.poll_time],["Last successful update",current.last_successful_update],["Frontend build SHA",current.app_build_sha],["Backend build SHA",current.backend_build_sha],["Bundle",current.frontend_bundle_version],["Service worker",current.service_worker_version],["Anomaly",current.anomaly]];
+  const layout=radarPhase31LayoutDiagnostics(),fields=[["Frontend source",current.frontend_live_source],["API status",current.api_fetch_status],["API latency",Number.isFinite(current.api_fetch_ms)?`${current.api_fetch_ms} ms`:null],["Live snapshots",current.store_live_snapshot_count],["Archived today",current.archived_snapshot_count_today],["Archived total",current.archived_snapshot_count_total],["Archive date",current.archive_date],["Latest snapshot",current.latest_snapshot_time],["Selected live snapshot",current.selected_snapshot_time],["Freshness",current.freshness_check],["Reject reason",current.reject_reason],["Maximum quote age",Number.isFinite(current.maximum_quote_age_sec)?`${current.maximum_quote_age_sec} sec`:null],["Freshness threshold",Number.isFinite(current.threshold_sec)?`${current.threshold_sec} sec`:null],["Market state",current.market_state],["Render state",current.render_state_after||currentFrontendDiagnosticRenderState()],["Last poll",current.poll_time],["Last successful update",current.last_successful_update],["Frontend build SHA",current.app_build_sha],["Backend build SHA",current.backend_build_sha],["Bundle",current.frontend_bundle_version],["Service worker",current.service_worker_version],["Radar phase",layout.radarPhase],["Viewport inner/client",`${layout.innerWidth} / ${layout.clientWidth}`],["Device pixel ratio",layout.dpr],["Factor display",layout.display],["Factor columns",layout.columns],["Factor parent/card width",`${liveDebugValue(layout.parentWidth)} / ${liveDebugValue(layout.cardWidth)}`],["Loaded CSS",layout.cssHref],["DOM build SHA",layout.buildSha],["Anomaly",current.anomaly]];
   host.querySelector("dl").innerHTML=fields.map(([label,value])=>`<div><dt>${esc(label)}</dt><dd>${esc(liveDebugValue(value))}</dd></div>`).join("");
 }
 function initLiveDebugPanel(){
@@ -2171,6 +2187,7 @@ async function loadFrontendBuildMetadata(){
     LIVE_APP_BUILD_SHA=sha||"LOCAL";
   }catch{LIVE_APP_BUILD_SHA="LOCAL"}
   document.querySelector('meta[name="hs-app-build-sha"]')?.setAttribute("content",LIVE_APP_BUILD_SHA);
+  document.documentElement.dataset.buildSha=LIVE_APP_BUILD_SHA;
   liveDiagnosticRecord("build_metadata",{app_build_sha:LIVE_APP_BUILD_SHA});
   return LIVE_APP_BUILD_SHA;
 }
