@@ -2141,3 +2141,33 @@ footer{color:#746f67}
   #radarOverview .radarOverviewFactors b{font-size:15px}
   #radarOverview .radarLongNext{font-size:10.5px}
 }
+
+/* ETF Radar detail Phase 2: one score, one status, one compact decision header. */
+.radarDetailDeck.is-open .signalCard.is-selected>.radarDetailSummary{display:none!important}
+.radarDetailDeck.is-open .signalCard.is-selected .radarDecisionSummary .radarDecisionLead>b{display:none}
+.radarDetailStickyNav{min-height:48px;padding:5px 8px}
+.radarDetailStickyBack,.radarDetailStickyCollapse{width:32px;min-height:32px;padding:0}
+.radarDetailStickyBack{font-size:16px}
+.radarDetailStickyMeta{justify-content:center;gap:7px}
+.radarDetailStickyMeta b{font-size:15px}
+.radarDetailStickyMeta small{overflow:hidden;color:#d9c384;font-size:11px;text-overflow:ellipsis;white-space:nowrap}
+.radarDetailCoreStatus{display:grid;gap:10px;margin-bottom:9px;padding:15px 17px;border-color:rgba(178,136,53,.5);background:radial-gradient(circle at 74% 24%,rgba(205,151,41,.15),transparent 34%),linear-gradient(135deg,rgba(21,16,8,.98),rgba(6,6,5,.99) 68%);box-shadow:inset 0 1px rgba(255,226,151,.06),0 10px 24px rgba(0,0,0,.25)}
+.radarDetailCoreIdentity{display:flex;align-items:center;gap:9px;min-width:0}
+.radarDetailCoreIdentity>span{min-width:0}.radarDetailCoreIdentity b,.radarDetailCoreIdentity small{display:block}.radarDetailCoreIdentity b{color:#f0e3ca;font-size:25px;line-height:1}.radarDetailCoreIdentity small{overflow:hidden;margin-top:4px;color:#a69c8e;font-size:12px;text-overflow:ellipsis;white-space:nowrap}
+.radarDetailCoreLead{display:flex;align-items:end;justify-content:space-between;gap:14px;padding:5px 0 11px;border-bottom:1px solid rgba(171,130,52,.21)}
+.radarDetailCoreScore b,.radarDetailCoreScore small{display:block}.radarDetailCoreScore b{color:#f1cf69;font-size:58px;font-weight:950;line-height:.82;letter-spacing:-.045em;text-shadow:0 3px 19px rgba(219,162,37,.17)}.radarDetailCoreScore small{margin-top:8px;color:#958a77;font-size:9px;font-weight:900;letter-spacing:.15em}
+.radarDetailCoreLead>strong{padding-bottom:6px;color:#ead18a;font-size:21px;line-height:1.15;text-align:right}
+.radarDetailCoreFacts{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr) minmax(70px,.55fr);gap:0;border-top:1px solid rgba(171,130,52,.12);border-bottom:1px solid rgba(171,130,52,.12)}
+.radarDetailCoreFacts>div{min-width:0;padding:10px 12px;border-right:1px solid rgba(171,130,52,.17)}.radarDetailCoreFacts>div:first-child{padding-left:0}.radarDetailCoreFacts>div:last-child{padding-right:0;border-right:0}.radarDetailCoreFacts small,.radarDetailCoreFacts b{display:block}.radarDetailCoreFacts small{color:#8f8678;font-size:9px;font-weight:800}.radarDetailCoreFacts b{overflow:hidden;margin-top:4px;color:#e7dcc6;font-size:17px;line-height:1.2;text-overflow:ellipsis;white-space:nowrap}
+.radarDetailCoreDelta span{display:flex;align-items:baseline;gap:9px}.radarDetailCoreDelta em{font-size:13px;font-style:normal;font-weight:900;white-space:nowrap}
+.radarDetailCoreRange .radarRange{margin-top:1px}.radarDetailCoreRange .radarRangeTrack{height:4px;background:linear-gradient(90deg,#383734 0 40%,#806721 40% 65%,#b37a21 65% 80%,#a75b32 80%)}.radarDetailCoreRange .radarRangeTrack i{width:8px;height:8px;border-width:1px}.radarDetailCoreRange .radarRangeLabels{margin-top:4px;color:#81796d;font-size:7px;font-weight:750}
+.radarDetailCoreAsOf{color:#756f65;font-size:8px;line-height:1.3;text-align:right}
+.radarDetailCoreStatus+.radarDecisionSummary{margin-top:0}
+
+@media(max-width:430px){
+  .radarDetailStickyNav{gap:5px;min-height:48px;padding:5px 6px}.radarDetailStickyMeta{gap:5px}.radarDetailStickyMeta b{font-size:14px}.radarDetailStickyMeta small{font-size:10px}
+  .radarDetailCoreStatus{gap:9px;padding:13px 14px}.radarDetailCoreIdentity b{font-size:23px}.radarDetailCoreIdentity small{font-size:11px}
+  .radarDetailCoreScore b{font-size:52px}.radarDetailCoreLead>strong{max-width:52%;font-size:19px}
+  .radarDetailCoreFacts{grid-template-columns:minmax(0,1fr) minmax(0,.78fr)}.radarDetailCoreFacts>div{padding:9px 10px}.radarDetailCoreFacts>div:first-child{grid-column:1/-1;padding:7px 0 9px;border-right:0;border-bottom:1px solid rgba(171,130,52,.17)}.radarDetailCoreFacts>div:nth-child(2){padding-left:0}.radarDetailCoreFacts b{font-size:15px}.radarDetailCoreDelta span{justify-content:space-between}.radarDetailCoreDelta b{font-size:18px}.radarDetailCoreDelta em{font-size:14px}
+  .radarDetailCoreAsOf{text-align:left}
+}
