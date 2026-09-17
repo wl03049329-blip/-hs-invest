@@ -35,9 +35,9 @@ assert.match(radarBlock, /資料尚未齊備[\s\S]*暫不提供決策摘要/);
 // 13–16: 00631L branch and historical formal score paths remain separate.
 assert.doesNotMatch(html.slice(html.indexOf('if(mode==="leveraged")'), html.indexOf('const s=x.swingDecision', html.indexOf('if(mode==="leveraged")'))), /radarDecisionSummaryHtml/);
 assert.match(html, /leverageRadarDashboardHtml\(x\)/);
-assert.match(html, /radarScoreTrendHtml\(x\.id\)/);
-assert.match(html, /盤中 Core 不納入此趨勢/);
-assert.match(html, /officialCount>=20[\s\S]*1M[\s\S]*officialCount>=60[\s\S]*3M/);
+assert.match(html, /radarScoreTrendHtml\(x\)/);
+assert.match(html, /僅使用正式盤後資料，不含盤中試算/);
+assert.match(html, /"10D":10,"20D":20,"60D":60,"120D":120/);
 
 // 17: Homepage and Radar resolve exactly the same interpreter output for one canonical input.
 const input = {symbol:"0050",score:58,sourceStatus:"SUCCESS",currentFactors:{weeklyJ:{contribution:18},dd52:{contribution:31},crash:{contribution:9}},baseline:{type:"FINALIZED_CLOSE",score:52,factors:{weeklyJ:{contribution:16},dd52:{contribution:27},crash:{contribution:9}}}};

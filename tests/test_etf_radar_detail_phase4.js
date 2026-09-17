@@ -1,0 +1,27 @@
+"use strict";
+const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path"),vm=require("node:vm");
+const root=path.resolve(__dirname,".."),html=fs.readFileSync(path.join(root,"index.html"),"utf8"),css=fs.readFileSync(path.join(root,"formal-black-gold.css"),"utf8");
+const decision=require(path.join(root,"hs-decision-layer-v1.js"));
+const official=html.slice(html.indexOf("function officialArtifactCoreScoreHistory"),html.indexOf("function localCoreScoreHistory"));
+const phase4=html.slice(html.indexOf("const RADAR_TREND_PHASE4_PERIODS"),html.indexOf("function featuredDiagnosticFor"));
+assert.ok(official.startsWith("function")&&phase4.startsWith("const"));
+const context={Number,Math,String,Map,Object,window:{HSDecisionLayerV1:decision},LONG_TERM_CORE_SCORE_VERSION:"FINAL_CORE_WEIGHT_V1",HSFinalCoreProduction:{labelFor:score=>({label:score>=50?"小額加碼":"回檔觀察"})},isCompletedTradingDate:date=>/^\d{4}-\d{2}-\d{2}$/.test(date),esc:value=>String(value),coreScoreTrendRanges:new Map(),radarOfficialFactorPair:(symbol,artifact)=>{const row=artifact.snapshots.find(snapshot=>snapshot.finalized&&snapshot.snapshot_type==="FINALIZED_CLOSE")?.rows.find(item=>item.symbol===symbol);return{current:row?{date:row.data_as_of.slice(0,10),factors:[{key:"dd52",available:true,raw:row.factors.dd52.raw}]}:null}},finalizedCoreScoreHistoryArtifact:null};
+vm.createContext(context);vm.runInContext(`${official}\n${phase4}\nthis.api={state:radarTrendPhase4State,events:radarTrendPhase4Events,thresholds:radarTrendPhase4Thresholds,priceRows:radarTrendPhase4PriceRows,render:radarScoreTrendHtml};`,context);
+const dates=[];for(let day=new Date("2026-09-17T00:00:00Z");dates.length<125;day.setUTCDate(day.getUTCDate()-1))if(day.getUTCDay()>=1&&day.getUTCDay()<=5)dates.unshift(day.toISOString().slice(0,10));
+const snapshots=dates.map((date,index)=>({date,snapshot_type:"FINALIZED_CLOSE",finalized:true,rows:[{symbol:"00830",final_core_score:30+index*.21,core_score_version:"FINAL_CORE_WEIGHT_V1",data_as_of:`${date}T13:30:00+08:00`,tier:"回檔觀察",factors:{dd52:{raw:-21.28}}}]}));
+const artifact={schema_version:1,core_score_version:"FINAL_CORE_WEIGHT_V1",snapshots:[...snapshots].reverse()};
+const prices=dates.map((date,index)=>({date,close:100+index,max:102+index,min:98+index}));
+const item={id:"00830",officialRows:prices,officialRowsAdjusted:true};context.finalizedCoreScoreHistoryArtifact=artifact;
+for(const [period,count] of Object.entries({"10D":10,"20D":20,"60D":60,"120D":120})){const state=context.api.state(item,period,artifact);assert.equal(state.kind,"READY");assert.equal(state.rows.length,count);assert.equal(state.current.tradingDate,dates.at(-1));assert.equal(state.first.tradingDate,dates.at(-count));assert.equal(state.delta,state.current.displayScore-state.first.displayScore);assert.equal(state.high,Math.max(...state.rows.map(row=>row.displayScore)));assert.equal(state.low,Math.min(...state.rows.map(row=>row.displayScore)))}
+const state=context.api.state(item,"10D",artifact);for(const days of [1,5,20,60])assert.ok(Math.abs(state.priceReturns[days]-((prices.at(-1).close/prices.at(-days-1).close-1)*100))<1e-9);assert.equal(state.dd52,-21.28);assert.ok(Math.abs(state.distance60-((prices.at(-1).close/Math.max(...prices.slice(-60).map(row=>row.max))-1)*100))<1e-9);assert.ok(Math.abs(state.rebound20-((prices.at(-1).close/Math.min(...prices.slice(-20).map(row=>row.min))-1)*100))<1e-9);
+const thresholds=context.api.thresholds();assert.deepEqual(Array.from(thresholds,row=>row.value),decision.NEXT_THRESHOLDS);
+const crossing=(a,b)=>context.api.events([{displayScore:a,tradingDate:"2026-09-16"},{displayScore:b,tradingDate:"2026-09-17"}],thresholds);
+assert.match(crossing(46,51)[0].label,/進入「小額加碼」/);assert.match(crossing(51,49)[0].label,/退出「小額加碼」，回到「觀察」/);assert.match(crossing(37,45)[0].label,/進入「觀察」/);assert.match(crossing(48,67)[0].label,/進入「正式分批」/);assert.match(crossing(48,67)[0].detail,/小額加碼/);assert.match(crossing(72,48)[0].label,/由「深跌加碼」回到「觀察」/);assert.equal(crossing(45,46).length,0);
+let rendered=context.api.render(item);assert.match(rendered,/data-radar-trend-phase="4"/);assert.match(rendered,/近期沒有跨級事件/);assert.match(rendered,/價格表現/);assert.match(rendered,/回撤與位置/);assert.match(rendered,/近期狀態/);
+context.coreScoreTrendRanges.set("00830","120D");rendered=context.api.render(item);assert.match(rendered,/aria-pressed="true" data-core-trend-range="120D"/);
+const short={...artifact,snapshots:artifact.snapshots.slice(0,7)};assert.equal(context.api.state(item,"120D",short).rows.length,7);context.finalizedCoreScoreHistoryArtifact=short;assert.match(context.api.render(item),/可用資料 7 日／目標 120 日/);
+const invalid={...artifact,snapshots:artifact.snapshots.map(snapshot=>({...snapshot,finalized:false}))};assert.equal(context.api.state(item,"10D",invalid).kind,"UNAVAILABLE");assert.equal(context.api.state({id:"009815"},"10D",artifact).kind,"WAIT_NATIVE");
+assert.equal(context.api.state({...item,officialRows:prices.slice(0,3)},"10D",artifact).priceReturns[1],null);assert.equal(context.api.state({...item,officialRowsAdjusted:false},"10D",artifact).distance60,null);
+assert.match(css,/@media\(max-width:600px\)[\s\S]*\.radarTrendP4Scores\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+assert.match(css,/@media\(max-width:600px\)[\s\S]*\.radarTrendP4Prices\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+console.log("PASS ETF Radar Detail Phase 4 periods, finalized-only inputs, metrics, events, missing data and responsive guards");

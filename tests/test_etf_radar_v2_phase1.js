@@ -28,13 +28,11 @@ assert.match(core,/weeklyJ[\s\S]{0,120}weight:30/);
 assert.match(core,/dd52[\s\S]{0,120}weight:55/);
 assert.match(core,/crash[\s\S]{0,120}weight:15/);
 
-// SCORE TREND stays formal EOD only and cannot insert the intraday current score.
-assert.match(html,/function radarScoreTrendHtml\(ticker,history=loadDailyLongRankHistory\(\)\)/);
-assert.match(html,/if\(ticker==="009815"\)return.*WAIT_NATIVE；原生正式 Core Score 歷史尚未建立/s);
-assert.match(html,/coreScoreHistoryState\(ticker,history\)/);
-assert.match(html,/historyLabel=state\.source==="official"\?"正式盤後":"本機盤後試算"/);
-assert.match(html,/本機盤後試算紀錄/);
-assert.match(html,/盤中 Core 不納入此趨勢/);
+// Phase 4 detail trend uses only finalized records; legacy local history stays isolated.
+assert.match(html,/function radarScoreTrendHtml\(x\)/);
+assert.match(html,/data-radar-trend-phase="4"/);
+assert.match(html,/officialArtifactCoreScoreHistory\(artifact,x\?\.id,120\)/);
+assert.match(html,/正式盤後資料暫缺；不以盤中或本機資料補值/);
 assert.match(html,/if\(rows\.length>=Math\.max\(1,Math\.min\(10,Number\(limit\)\|\|10\)\)\)break/);
 assert.match(html,/snapshotType&&snapshotType!=="FINALIZED_CLOSE"/);
 
@@ -60,4 +58,4 @@ assert.match(css,/\.radarScoreTrend svg\{/);
 assert.match(css,/\.radarMaGrid\{display:grid/);
 assert.match(css,/@media\(max-width:430px\)\{\.radarV2Section/);
 
-console.log("PASS ETF Radar V2 Phase 1 TODAY / WHY SCORE / 10D EOD trend / diagnostics-only guards");
+console.log("PASS ETF Radar V2 Phase 1 TODAY / WHY SCORE / Phase 4 EOD trend / diagnostics-only guards");
