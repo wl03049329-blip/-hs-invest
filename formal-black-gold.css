@@ -2089,3 +2089,8 @@ footer{color:#746f67}
   .hsLeverageCompact dl>div{padding:8px 8px}
   .hsLeverageCompactVelocity .hsLeverageCompactProgress{height:5px;margin-top:6px}
 }
+
+.hsLiveDebugPanel{position:fixed;z-index:9999;right:max(10px,env(safe-area-inset-right));bottom:calc(82px + env(safe-area-inset-bottom));width:min(360px,calc(100vw - 20px));max-height:62vh;overflow:auto;color:#e9dfca;background:rgba(8,8,7,.96);border:1px solid rgba(216,174,85,.42);border-radius:14px;box-shadow:0 16px 42px #000b;font:11px/1.35 ui-monospace,SFMono-Regular,Consolas,monospace}
+.hsLiveDebugPanel details{padding:0}.hsLiveDebugPanel summary{position:sticky;top:0;padding:10px 12px;color:#f0c963;background:#11100d;cursor:pointer;font-weight:900;letter-spacing:.08em}
+.hsLiveDebugPanel dl{display:grid;grid-template-columns:1fr;margin:0;padding:8px 12px 12px}.hsLiveDebugPanel dl>div{display:grid;grid-template-columns:42% minmax(0,1fr);gap:8px;padding:4px 0;border-bottom:1px solid rgba(216,174,85,.1)}
+.hsLiveDebugPanel dt{color:#958d80}.hsLiveDebugPanel dd{margin:0;color:#f1eadc;overflow-wrap:anywhere;text-align:right}

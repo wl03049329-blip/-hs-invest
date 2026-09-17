@@ -4,6 +4,7 @@ const assert=require("node:assert/strict");
 const fs=require("node:fs");
 const vm=require("node:vm");
 const decision=require("../hs-decision-layer-v1.js");
+const liveDiagnostics=require("../frontend-live-diagnostics.js");
 
 const html=fs.readFileSync("index.html","utf8"),css=fs.readFileSync("formal-black-gold.css","utf8"),symbols=["0050","00662","00757","00830","00935"];
 const start=html.indexOf("function decisionCenterMarketLabel"),end=html.indexOf("function renderDecisionCenter",start),source=html.slice(start,end);
@@ -53,13 +54,15 @@ assert.match(html,/HS_DASHBOARD_C4_SYMBOLS=Object\.freeze\(\["0050","00662","007
 assert.match(html,/WAIT_NATIVE/);
 assert.match(html,/系統不使用替代值估算/);
 assert.match(html,/前日 FINAL/);
-assert.match(html,/盤中軌跡<\/dt><dd>尚未開始/);
+assert.match(html,/盤中狀態<\/dt><dd>\$\{esc\(emptyMessage\)\}/);
 assert.match(html,/獨立策略｜不納入 C4 排名/);
 assert.match(html,/市場情緒：\$\{esc\(overviewValue\)\}/);
 assert.match(css,/\.hsDashboardC4Grid\{[^}]*grid-template-columns:repeat\(2/);
 assert.match(css,/\.hsDashboardC4Card\.is-leader\{grid-column:1\/-1/);
 assert.match(html,/data-home-c4-sort="score"/);assert.match(html,/data-home-c4-sort="change"/);assert.match(html,/data-home-c4-sort="threshold"/);
-assert.match(html,/今日盤中軌跡尚未累積/);
+assert.equal(liveDiagnostics.messageFor("FRONTEND_STATE_PENDING"),"盤中資料同步中");
+assert.equal(liveDiagnostics.messageFor("SNAPSHOT_STALE"),"盤中行情暫時過期");
+assert.equal(liveDiagnostics.messageFor("MARKET_CLOSED"),"今日盤中軌跡已封存");
 assert.doesNotMatch(html,/id="homeSwingBrief"/);
 assert.doesNotMatch(source,/calculateFinalCore|buildFinal\(|buildAdHocScore\(|evaluateCrashVelocity|localStorage|sessionStorage|\.setItem\(/);
 console.log("PASS HS mockup dashboard is responsive, six-symbol and presentation-only");
@@ -75,7 +78,8 @@ sandbox.archivedIntradayCoreSnapshots=[mockSnapshot("2026-09-13","13:30",45),moc
 assert.equal(sandbox.homeC4PreviousSessionSummary("00830","2026-09-21").date,"2026-09-18","Monday premarket must use Friday's nearest stored trajectory");
 assert.equal(sandbox.homeC4PreviousSessionSummary("00830","2026-09-17").date,"2026-09-13","missing prior-day snapshots must search backward to the nearest stored trajectory");
 assert.match(source,/snapshot\?\.trading_date<targetDate/);
-assert.match(source,/trackStarted\?homeC4Sparkline\(row\.series,row\.symbol\):premarket&&row\.previousSession\?homeC4PreviousSessionPanel/);
+assert.match(source,/trackStarted\?homeC4Sparkline\(row\.series,row\.symbol,emptyMessage\):premarket&&row\.previousSession\?homeC4PreviousSessionPanel/);
 assert.match(source,/waitingPreviousDate[\s\S]*等待原生資料[\s\S]*WAIT_NATIVE/);
-assert.match(html,/archivedIntradayCoreSnapshots=parseCanonicalCoreSnapshots\(payload\)/);
+assert.match(html,/function applyLiveCoreState\(sequence/);
+assert.match(html,/archivedIntradayCoreSnapshots=archivedSnapshots/);
 console.log("PASS previous-session intraday summary uses the nearest stored trajectory, switches away during today's track and preserves WAIT_NATIVE");
