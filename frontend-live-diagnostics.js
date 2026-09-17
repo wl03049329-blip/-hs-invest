@@ -22,6 +22,23 @@
     return (Array.isArray(snapshots)?snapshots:[]).map(snapshot=>String(snapshot?.market_as_of||snapshot?.calculated_at||snapshot?.captured_at||""))
       .filter(value=>safeTime(value)!==null).sort((a,b)=>safeTime(b)-safeTime(a))[0]||null;
   }
+  function normalizeBuildSha(value){
+    const sha=String(value||"").trim();
+    return /^[0-9a-f]{40}$/i.test(sha)?sha.toLowerCase():"LOCAL";
+  }
+  function archiveSummary(snapshots,tradingDate){
+    const rows=Array.isArray(snapshots)?snapshots:[],date=String(tradingDate||"");
+    const today=rows.filter(snapshot=>snapshot?.status==="SUCCESS"&&String(snapshot?.trading_date||"")===date);
+    return Object.freeze({total:rows.length,today:today.length,archive_date:date,latest_today_snapshot_time:latestSnapshotTime(today)});
+  }
+  function diagnosticMarketState(value){
+    const state=String(value||"UNAVAILABLE");
+    return state==="CLOSED"||state==="HOLIDAY"?"MARKET_CLOSED":state;
+  }
+  function diagnosticRenderState({marketState,liveSnapshotCount=0,archivedTodaySnapshotCount=0,baseState="FRONTEND_STATE_PENDING"}={}){
+    if(["CLOSED","HOLIDAY","MARKET_CLOSED"].includes(String(marketState||"")))return archivedTodaySnapshotCount>0?"FINAL_WITH_ARCHIVED_INTRADAY":"FINAL_ONLY_MARKET_CLOSED";
+    return String(baseState||"FRONTEND_STATE_PENDING");
+  }
   function sanitizeError(value){
     const text=String(value?.message||value||"UNKNOWN").replace(/https?:\/\/\S+/gi,"[URL]")
       .replace(/(?:token|authorization|api[_-]?key|x-api-key)\s*[:=]\s*\S+/gi,"credential=[REDACTED]");
@@ -77,5 +94,5 @@
   }
   function messageFor(state){return RENDER_MESSAGES[state]||RENDER_MESSAGES.FRONTEND_STATE_PENDING}
 
-  return Object.freeze({RENDER_MESSAGES,latestSnapshotTime,sanitizeError,createTelemetry,createRequestCoordinator,classifyRenderState,messageFor});
+  return Object.freeze({RENDER_MESSAGES,latestSnapshotTime,normalizeBuildSha,archiveSummary,diagnosticMarketState,diagnosticRenderState,sanitizeError,createTelemetry,createRequestCoordinator,classifyRenderState,messageFor});
 });

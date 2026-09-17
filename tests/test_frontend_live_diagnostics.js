@@ -2,7 +2,7 @@
 
 const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path");
 const diagnostics=require("../frontend-live-diagnostics.js"),adapter=require("../hs-live-source-adapter.js");
-const root=path.resolve(__dirname,".."),html=fs.readFileSync(path.join(root,"index.html"),"utf8");
+const root=path.resolve(__dirname,".."),html=fs.readFileSync(path.join(root,"index.html"),"utf8"),buildInfo=fs.readFileSync(path.join(root,"build-info.json"),"utf8");
 const symbols=["0050","00662","00757","00830","00935"],date="2026-09-17",scoreVersion="FINAL_CORE_WEIGHT_V1";
 function payload(time="09:15:30"){
   const tickers=Object.fromEntries(symbols.map((symbol,index)=>[symbol,{score:40+index,display_score:40+index,delta_vs_official:0,quote_as_of:`${date}T${time}+08:00`,freshness:"FRESH",quote_source:"MIS_Z",status:"AVAILABLE"}]));
@@ -57,3 +57,22 @@ event=telemetry.record("state",{store_live_snapshot_count:1,selected_snapshot_ti
 assert.equal(event.anomaly,"SOURCE_SELECTION_FAILED");
 assert.doesNotMatch(diagnostics.sanitizeError("token=secret https://example.test/key"),/secret|example\.test/);
 console.log("ANOMALY PASS: state gaps and sanitized errors are diagnosable without secrets");
+
+assert.equal(diagnostics.normalizeBuildSha("{{ site.github.build_revision }}"),"LOCAL");
+assert.equal(diagnostics.normalizeBuildSha("ABCDEF0123456789ABCDEF0123456789ABCDEF01"),"abcdef0123456789abcdef0123456789abcdef01");
+assert.doesNotMatch(html,/\{\{|site\.github|github\.sha/);
+assert.match(buildInfo,/site\.github\.build_revision/);
+console.log("BUILD SHA PASS: runtime metadata resolves exact SHA and raw template text cannot leak into the page");
+
+const archives=[];
+for(let index=0;index<53;index+=1) archives.push({trading_date:date,status:"SUCCESS",market_as_of:`${date}T09:${String(index%60).padStart(2,"0")}:00+08:00`});
+for(let index=0;index<57;index+=1) archives.push({trading_date:"2026-09-16",status:"SUCCESS",market_as_of:`2026-09-16T09:${String(index%60).padStart(2,"0")}:00+08:00`});
+const archive=diagnostics.archiveSummary(archives,date);
+assert.equal(archive.total,110);assert.equal(archive.today,53);assert.equal(archive.archive_date,date);
+assert.equal(diagnostics.diagnosticMarketState("CLOSED"),"MARKET_CLOSED");
+assert.equal(diagnostics.diagnosticRenderState({marketState:"CLOSED",liveSnapshotCount:0,archivedTodaySnapshotCount:archive.today,baseState:"MARKET_CLOSED"}),"FINAL_WITH_ARCHIVED_INTRADAY");
+const nextDay=diagnostics.archiveSummary(archives,"2026-09-18");
+assert.equal(nextDay.total,110);assert.equal(nextDay.today,0);
+assert.equal(diagnostics.diagnosticRenderState({marketState:"CLOSED",liveSnapshotCount:0,archivedTodaySnapshotCount:nextDay.today,baseState:"MARKET_CLOSED"}),"FINAL_ONLY_MARKET_CLOSED");
+assert.doesNotMatch(diagnostics.archiveSummary.toString(),/2026-09-17|\b53\b/);
+console.log("ARCHIVE PASS: MARKET_CLOSED remains market state while render state and dynamic today/total counts stay distinct");

@@ -12,8 +12,8 @@
 <meta name="description" content="台股延遲行情、ETF買點、估值、籌碼與個人持股雷達" />
 <meta name="hs-live-source" content="railway" />
 <meta name="hs-live-railway-url" content="https://hs-invest-production.up.railway.app/api/live-scores" />
-<meta name="hs-app-build-sha" content="{{ site.github.build_revision | default: 'local-dev' }}" />
-<meta name="hs-frontend-bundle-version" content="20260917-live-diagnostics-v1" />
+<meta name="hs-app-build-sha" content="LOCAL" />
+<meta name="hs-frontend-bundle-version" content="20260917-live-diagnostics-v2" />
 <link rel="icon" type="image/png" sizes="64x64" href="assets/favicon-v3.png?v=5" />
 <link rel="shortcut icon" href="assets/favicon-v3.ico?v=5" />
 <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon-v3.png?v=5" />
@@ -1007,8 +1007,8 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 <script src="backtest/long-term/final-core-score-v1.js?v=20260813-phase6b"></script>
 <script src="final-core-production.js?v=20260826-trigger-p0"></script>
 <script src="canonical-score-resolver.js?v=20260910-live-cutover"></script>
-<script src="hs-live-source-adapter.js?v=20260917-live-diagnostics-v1"></script>
-<script src="frontend-live-diagnostics.js?v=20260917-live-diagnostics-v1"></script>
+<script src="hs-live-source-adapter.js?v=20260917-live-diagnostics-v2"></script>
+<script src="frontend-live-diagnostics.js?v=20260917-live-diagnostics-v2"></script>
 <script src="hs-decision-layer-v1.js?v=20260823-dl1"></script>
 <script src="swing-strategy-core.js?v=20260809a"></script>
 <script src="leverage-v1-core.js?v=20260822-l1"></script>
@@ -1134,7 +1134,7 @@ let liveRadarRefreshAttempt=null;
 let liveRadarCompleteness=null;
 let liveCanonicalCoreSnapshot=null;
 const LIVE_FRONTEND_BUNDLE_VERSION=document.querySelector('meta[name="hs-frontend-bundle-version"]')?.content||"unknown";
-const LIVE_APP_BUILD_SHA=document.querySelector('meta[name="hs-app-build-sha"]')?.content||"unknown";
+let LIVE_APP_BUILD_SHA=window.HSLiveDiagnostics?.normalizeBuildSha(document.querySelector('meta[name="hs-app-build-sha"]')?.content)||"LOCAL";
 const liveRequestCoordinator=window.HSLiveDiagnostics?.createRequestCoordinator();
 const liveTelemetry=window.HSLiveDiagnostics?.createTelemetry({base:{page_load_time:new Date().toISOString(),frontend_live_source:window.HSLiveSourceAdapter?.selectedSource?.()||"UNKNOWN",document_visibility_state:document.visibilityState,navigator_online:navigator.onLine,service_worker_controlled:Boolean(navigator.serviceWorker?.controller),service_worker_version:navigator.serviceWorker?.controller?.scriptURL||"NONE",app_build_sha:LIVE_APP_BUILD_SHA,backend_build_sha:"NOT_EXPOSED",frontend_bundle_version:LIVE_FRONTEND_BUNDLE_VERSION}});
 const LONG_RANK_STORAGE_KEY=HSStorage.keys.longRank;
@@ -2140,10 +2140,20 @@ function currentFrontendLiveRenderState(dualTrack=currentDualTrackCoreView(taipe
   const marketState=decisionCenterEffectiveMarketState(dualTrack),selectedSnapshotTime=window.HSLiveDiagnostics?.latestSnapshotTime(liveCanonicalCoreSnapshots),diagnostics=liveCoreSourceState?.diagnostics||{};
   return window.HSLiveDiagnostics?.classifyRenderState({marketState,sourceStatus:liveCoreSourceState?.status,transportError:liveCoreSourceState?.transport_error===true,pending:Boolean(liveQuoteInFlight),liveSnapshotCount:liveCanonicalCoreSnapshots.length,selectedSnapshotTime,freshnessCheck:diagnostics.freshness_check})||"FRONTEND_STATE_PENDING";
 }
+function currentArchiveDiagnostics(targetDate=taipeiToday()){
+  return window.HSLiveDiagnostics?.archiveSummary(archivedIntradayCoreSnapshots,targetDate)||{total:0,today:0,archive_date:targetDate,latest_today_snapshot_time:null};
+}
+function currentFrontendDiagnosticMarketState(dualTrack=currentDualTrackCoreView(taipeiToday(),new Date())){
+  return window.HSLiveDiagnostics?.diagnosticMarketState(decisionCenterEffectiveMarketState(dualTrack))||"UNAVAILABLE";
+}
+function currentFrontendDiagnosticRenderState(dualTrack=currentDualTrackCoreView(taipeiToday(),new Date())){
+  const archive=currentArchiveDiagnostics(dualTrack?.target_date||taipeiToday());
+  return window.HSLiveDiagnostics?.diagnosticRenderState({marketState:decisionCenterEffectiveMarketState(dualTrack),liveSnapshotCount:liveCanonicalCoreSnapshots.length,archivedTodaySnapshotCount:archive.today,baseState:currentFrontendLiveRenderState(dualTrack)})||currentFrontendLiveRenderState(dualTrack);
+}
 function liveDebugValue(value){return value===null||value===undefined||value===""?"—":String(value)}
 function renderLiveDebugPanel(current=liveTelemetry?.snapshot()?.current){
   const host=document.getElementById("hsLiveDebugPanel");if(!host||!current)return;
-  const fields=[["Frontend source",current.frontend_live_source],["API status",current.api_fetch_status],["API latency",Number.isFinite(current.api_fetch_ms)?`${current.api_fetch_ms} ms`:null],["Live snapshots",current.store_live_snapshot_count],["Archived snapshots",current.store_archived_snapshot_count],["Latest snapshot",current.store_latest_snapshot_time],["Selected snapshot",current.selected_snapshot_time],["Freshness",current.freshness_check],["Reject reason",current.reject_reason],["Market state",current.market_state],["Render state",current.render_state_after||currentFrontendLiveRenderState()],["Last poll",current.poll_time],["Last successful update",current.store_latest_snapshot_time],["Frontend build SHA",current.app_build_sha],["Backend build SHA",current.backend_build_sha],["Bundle",current.frontend_bundle_version],["Service worker",current.service_worker_version],["Anomaly",current.anomaly]];
+  const fields=[["Frontend source",current.frontend_live_source],["API status",current.api_fetch_status],["API latency",Number.isFinite(current.api_fetch_ms)?`${current.api_fetch_ms} ms`:null],["Live snapshots",current.store_live_snapshot_count],["Archived today",current.archived_snapshot_count_today],["Archived total",current.archived_snapshot_count_total],["Archive date",current.archive_date],["Latest snapshot",current.latest_snapshot_time],["Selected live snapshot",current.selected_snapshot_time],["Freshness",current.freshness_check],["Reject reason",current.reject_reason],["Maximum quote age",Number.isFinite(current.maximum_quote_age_sec)?`${current.maximum_quote_age_sec} sec`:null],["Freshness threshold",Number.isFinite(current.threshold_sec)?`${current.threshold_sec} sec`:null],["Market state",current.market_state],["Render state",current.render_state_after||currentFrontendDiagnosticRenderState()],["Last poll",current.poll_time],["Last successful update",current.last_successful_update],["Frontend build SHA",current.app_build_sha],["Backend build SHA",current.backend_build_sha],["Bundle",current.frontend_bundle_version],["Service worker",current.service_worker_version],["Anomaly",current.anomaly]];
   host.querySelector("dl").innerHTML=fields.map(([label,value])=>`<div><dt>${esc(label)}</dt><dd>${esc(liveDebugValue(value))}</dd></div>`).join("");
 }
 function initLiveDebugPanel(){
@@ -2155,6 +2165,15 @@ function liveDiagnosticRecord(event,patch={}){
   renderLiveDebugPanel(result?.current);
   return result;
 }
+async function loadFrontendBuildMetadata(){
+  try{
+    const payload=await fetchNoStore(`build-info.json?ts=${Date.now()}`),sha=window.HSLiveDiagnostics?.normalizeBuildSha(payload?.sha);
+    LIVE_APP_BUILD_SHA=sha||"LOCAL";
+  }catch{LIVE_APP_BUILD_SHA="LOCAL"}
+  document.querySelector('meta[name="hs-app-build-sha"]')?.setAttribute("content",LIVE_APP_BUILD_SHA);
+  liveDiagnosticRecord("build_metadata",{app_build_sha:LIVE_APP_BUILD_SHA});
+  return LIVE_APP_BUILD_SHA;
+}
 function applyLiveCoreState(sequence,{state,liveSnapshots,archivedSnapshots}){
   if(!liveRequestCoordinator?.canApply(sequence,liveSnapshots,state?.status)){
     liveDiagnosticRecord("state_update_rejected",{error_category:"STALE_RESPONSE_IGNORED",state_update_attempted:"YES",state_update_success:"NO",received_new_snapshot:liveSnapshots?.length?"YES":"NO"});
@@ -2164,8 +2183,9 @@ function applyLiveCoreState(sequence,{state,liveSnapshots,archivedSnapshots}){
   liveCanonicalCoreSnapshots=liveSnapshots;
   archivedIntradayCoreSnapshots=archivedSnapshots;
   liveRequestCoordinator?.applied(sequence,liveSnapshots);
-  const selectedSnapshotTime=window.HSLiveDiagnostics?.latestSnapshotTime(liveSnapshots),selectedSnapshotAgeSec=selectedSnapshotTime?Math.max(0,Math.round((Date.now()-Date.parse(selectedSnapshotTime))/1000)):null;
-  const statePatch={api_live_snapshot_count:Number(state?.diagnostics?.api_live_snapshot_count||0),api_archived_snapshot_count:archivedSnapshots.length,api_latest_snapshot_time:state?.diagnostics?.api_latest_snapshot_time||null,store_live_snapshot_count:liveSnapshots.length,store_archived_snapshot_count:archivedSnapshots.length,store_latest_snapshot_time:selectedSnapshotTime,selected_source:state?.source||"NONE",selected_snapshot_time:selectedSnapshotTime,selected_snapshot_age_sec:selectedSnapshotAgeSec,market_state:state?.market_state||"UNAVAILABLE",freshness_check:state?.diagnostics?.freshness_check||"REJECTED",reject_reason:state?.diagnostics?.reject_reason||state?.reason||null,quote_age_sec:state?.diagnostics?.quote_age_sec??state?.diagnostics?.maximum_quote_age_sec??null,maximum_quote_age_sec:state?.diagnostics?.maximum_quote_age_sec??null,threshold_sec:state?.diagnostics?.threshold_sec??600,received_new_snapshot:liveSnapshots.length?"YES":"NO",state_update_attempted:"YES",state_update_success:"YES",fallback_used:"NO"};
+  const selectedSnapshotTime=window.HSLiveDiagnostics?.latestSnapshotTime(liveSnapshots),selectedSnapshotAgeSec=selectedSnapshotTime?Math.max(0,Math.round((Date.now()-Date.parse(selectedSnapshotTime))/1000)):null,archive=window.HSLiveDiagnostics?.archiveSummary(archivedSnapshots,taipeiToday())||{total:archivedSnapshots.length,today:0,archive_date:taipeiToday(),latest_today_snapshot_time:null},marketState=window.HSLiveDiagnostics?.diagnosticMarketState(state?.market_state),baseRenderState=window.HSLiveDiagnostics?.classifyRenderState({marketState:state?.market_state,sourceStatus:state?.status,transportError:state?.transport_error===true,pending:false,liveSnapshotCount:liveSnapshots.length,selectedSnapshotTime,freshnessCheck:state?.diagnostics?.freshness_check}),diagnosticRenderState=window.HSLiveDiagnostics?.diagnosticRenderState({marketState:state?.market_state,liveSnapshotCount:liveSnapshots.length,archivedTodaySnapshotCount:archive.today,baseState:baseRenderState});
+  const latestSnapshotTime=selectedSnapshotTime||archive.latest_today_snapshot_time;
+  const statePatch={api_live_snapshot_count:Number(state?.diagnostics?.api_live_snapshot_count||0),api_archived_snapshot_count:archivedSnapshots.length,api_latest_snapshot_time:state?.diagnostics?.api_latest_snapshot_time||null,store_live_snapshot_count:liveSnapshots.length,store_archived_snapshot_count:archivedSnapshots.length,store_latest_snapshot_time:selectedSnapshotTime,archived_snapshot_count_today:archive.today,archived_snapshot_count_total:archive.total,archive_date:archive.archive_date,archive_latest_snapshot_time:archive.latest_today_snapshot_time,latest_snapshot_time:latestSnapshotTime,last_successful_update:latestSnapshotTime,selected_source:state?.source||"NONE",selected_snapshot_time:selectedSnapshotTime,selected_snapshot_age_sec:selectedSnapshotAgeSec,market_state:marketState,render_state_after:diagnosticRenderState,freshness_check:state?.diagnostics?.freshness_check||"REJECTED",reject_reason:state?.diagnostics?.reject_reason||state?.reason||null,quote_age_sec:state?.diagnostics?.quote_age_sec??state?.diagnostics?.maximum_quote_age_sec??null,maximum_quote_age_sec:state?.diagnostics?.maximum_quote_age_sec??null,threshold_sec:state?.diagnostics?.threshold_sec??600,received_new_snapshot:liveSnapshots.length?"YES":"NO",state_update_attempted:"YES",state_update_success:"YES",fallback_used:"NO"};
   liveDiagnosticRecord("freshness_evaluation",statePatch);
   liveDiagnosticRecord("fallback_decision",{...statePatch,fallback_used:"NO"});
   liveDiagnosticRecord("state_store_update",statePatch);
@@ -2314,7 +2334,7 @@ async function refreshLiveQuotes({force=false}={}){
     }
     if(proxyResult.status==="fulfilled"&&proxyResult.value){applyAuthorizedMarket(proxyResult.value,{includeCommodities:false});successes++}
     else if(proxyResult.status==="rejected")liveQuoteHttpStatus=Number(proxyResult.reason?.status)||0;
-    if(railwaySelected&&all.length){renderTop();renderCards();liveDiagnosticRecord("render_decision",{request_sequence:requestSequence,render_state_after:currentFrontendLiveRenderState(),triggered_rerender:"YES"})}
+    if(railwaySelected&&all.length){renderTop();renderCards();liveDiagnosticRecord("render_decision",{request_sequence:requestSequence,market_state:currentFrontendDiagnosticMarketState(),render_state_after:currentFrontendDiagnosticRenderState(),triggered_rerender:"YES"})}
     if(!successes)throw new Error("all quote sources failed");
     liveQuoteFailures=0;liveQuoteHttpStatus=0;
     return true;
@@ -3285,7 +3305,7 @@ function renderDecisionCenter(longs,dualTrack,leverageState){
   const headerState=$("#homeHeaderMarketState"),headerUpdate=$("#homeHeaderLastUpdate");if(headerState)headerState.textContent=decisionCenterMarketLabel(health.marketState);if(headerUpdate)headerUpdate.textContent=`最後更新 ${lastUpdate}`;
   const c4Grid=$("#hsDashboardC4Grid");if(c4Grid)c4Grid.innerHTML=decisionCenterC4Cards(dashboardOfficialRows,longs,dualTrack)||'<div class="newsEmpty">正式 C4 資料暫不可用。</div>';
   document.querySelectorAll("[data-home-c4-sort]").forEach(button=>button.classList.toggle("is-active",button.dataset.homeC4Sort===homeC4SortMode));
-  liveDiagnosticRecord("render_decision",{market_state:marketState,render_state_after:currentFrontendLiveRenderState(dualTrack),selected_snapshot_time:window.HSLiveDiagnostics?.latestSnapshotTime(liveCanonicalCoreSnapshots),triggered_rerender:"YES"});
+  liveDiagnosticRecord("render_decision",{market_state:currentFrontendDiagnosticMarketState(dualTrack),render_state_after:currentFrontendDiagnosticRenderState(dualTrack),selected_snapshot_time:window.HSLiveDiagnostics?.latestSnapshotTime(liveCanonicalCoreSnapshots),triggered_rerender:"YES"});
 }
 function renderTop(){
   const longIds=new Set(["0050","00830","00662","00757","009815","00935"]),swingIds=new Set(["00733","006201"]);
@@ -4297,7 +4317,7 @@ window.HSLiveMarket=Object.freeze({
   state:()=>Object.freeze({rankTimerCount:longRankTimer===null?0:1,inFlight:Boolean(liveQuoteInFlight),failures:liveQuoteFailures,lastAttemptAt:liveQuoteLastAttemptAt,liveSource:liveCoreSourceState.source,liveSourceStatus:liveCoreSourceState.status,renderState:currentFrontendLiveRenderState()}),
   diagnostics:()=>liveTelemetry?.snapshot()
 });
-initLiveDebugPanel();liveDiagnosticRecord("initial_page_load",{render_state_before:"FRONTEND_STATE_PENDING",render_state_after:"FRONTEND_STATE_PENDING"});loadAlerts();renderWatchlist();renderEvents();renderTrump();switchChipTab(localStorage.getItem(CHIP_TAB_STORAGE_KEY)||"overview",{scroll:false});switchTab(sessionStorage.getItem("hsRadar.activeTab")||"today",{scroll:false});scheduleCnnPoll();refreshLiveQuotes({force:true});scheduleLongRankRefresh();ensureStockCatalog().finally(load);
+initLiveDebugPanel();liveDiagnosticRecord("initial_page_load",{render_state_before:"FRONTEND_STATE_PENDING",render_state_after:"FRONTEND_STATE_PENDING"});loadFrontendBuildMetadata();loadAlerts();renderWatchlist();renderEvents();renderTrump();switchChipTab(localStorage.getItem(CHIP_TAB_STORAGE_KEY)||"overview",{scroll:false});switchTab(sessionStorage.getItem("hsRadar.activeTab")||"today",{scroll:false});scheduleCnnPoll();refreshLiveQuotes({force:true});scheduleLongRankRefresh();ensureStockCatalog().finally(load);
 
 </script>
 <script src="portfolio-core.js?v=20260818-rebalance2"></script>
