@@ -46,7 +46,7 @@ assert.strictEqual(current00830.label,expected00830Classification.label);
 const overviewBlock=html.slice(html.indexOf("function longOverviewCardHtml"),html.indexOf("function scoreFactorValue"));
 const sheetBlock=html.slice(html.indexOf("function openCoreScoreModal"),html.indexOf("function closeCoreScoreModal"));
 const breakdownBlock=html.slice(html.indexOf("function strategyBreakdownHtml"),html.indexOf("function valuationDetailsHtml",html.indexOf("function strategyBreakdownHtml")));
-assert.match(overviewBlock,/historicalTriggerText\(decision\?\.coreScore\)/);
+assert.doesNotMatch(overviewBlock,/historicalTriggerText\(decision\?\.coreScore\)/,"overview card keeps historical trigger detail out of the comparison surface");
 assert.match(sheetBlock,/historicalTriggerText\(decision\.coreScore\)/);
 assert.match(sheetBlock,/HSFinalCoreProduction\.LABELS/);
 assert.match(breakdownBlock,/historicalTriggerText\(decision\.coreScore,\{compact:true\}\)/);

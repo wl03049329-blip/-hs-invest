@@ -3346,9 +3346,24 @@ function rankBadgeHtml(rank){
   const medal={1:"🥇",2:"🥈",3:"🥉"}[rank];
   return medal?`<span class="rankBadge emojiRank" aria-label="第${rank}名">${medal}</span>`:`<span class="rankBadge regular" aria-label="第${rank}名"><i>${rank}</i><small>名次</small></span>`;
 }
+function radarOverviewRankBadgeHtml(rank){return`<span class="radarOverviewRankBadge rank-${rank}" aria-label="第${rank}名">#${String(rank).padStart(2,"0")}</span>`}
 function uiRankMovement(change){return change>0?`▲ ${change}`:change<0?`▼ ${Math.abs(change)}`:"排名不變"}
 function uiScoreMovement(change){return Number.isFinite(change)?change>0?`+${change}`:change<0?`${change}`:"0":"首次"}
-function radarRangeBar(score,stage){const value=Number.isFinite(score)?Math.max(0,Math.min(100,score)):0;return`<div class="radarRange"><div class="radarRangeTrack"><i style="left:${value}%"></i></div><div class="radarRangeLabels"><span>偏高勿追</span><span>觀察</span><span>分批</span><span>強力區</span></div><b>${esc(stage?.label||"資料不足")}</b></div>`}
+function radarOverviewNextLevel(displayScoreValue,contract=window.HSDecisionLayerV1){
+  const value=displayScoreValue===null||displayScoreValue===undefined||displayScoreValue===""?null:Number(displayScoreValue),score=Number.isFinite(value)?Math.max(0,Math.min(100,Math.floor(value))):null;
+  if(score===null)return{available:false,isMaxLevel:false,nextThreshold:null,nextLabel:"資料不足",distance:null};
+  const thresholds=[...(contract?.NEXT_THRESHOLDS||[])].map(Number).filter(Number.isFinite).sort((a,b)=>a-b),nextThreshold=thresholds.find(threshold=>threshold>score);
+  if(nextThreshold===undefined)return{available:true,isMaxLevel:true,nextThreshold:null,nextLabel:null,distance:0};
+  const nextStage=(contract?.STAGES||[]).find(stage=>Number(stage?.min)===nextThreshold);
+  return{available:true,isMaxLevel:false,nextThreshold,nextLabel:String(nextStage?.label||"下一級"),distance:nextThreshold-score};
+}
+function radarOverviewScoreDelta(change){
+  if(!Number.isFinite(change))return{label:"— 今日",tone:"is-flat"};
+  const value=Math.round(change*10)/10,absolute=Number.isInteger(Math.abs(value))?String(Math.abs(value)):Math.abs(value).toFixed(1);
+  return value>0?{label:`▲${absolute} 今日`,tone:"is-up"}:value<0?{label:`▼${absolute} 今日`,tone:"is-down"}:{label:"±0 今日",tone:"is-flat"};
+}
+function radarOverviewFactorRaw(decision,key){const value=Number(decision?.coreFactors?.[key]?.raw);return Number.isFinite(value)?value:null}
+function radarRangeBar(score){const value=Number.isFinite(score)?Math.max(0,Math.min(100,score)):0;return`<div class="radarRange"><div class="radarRangeTrack"><i style="left:${value}%"></i></div><div class="radarRangeLabels"><span>一般</span><span>觀察</span><span>分批</span><span>強力</span></div></div>`}
 function dailyFactorValue(decision,key){const row=(decision?.breakdown||[]).find(item=>item.key===key);return Number.isFinite(row?.value)?row.value:null}
 function createDailyLongRankSnapshot(items,finalizedAt=new Date().toISOString()){
   const candidates=(Array.isArray(items)?items:[]).map(item=>({item,state:item.formalState,decision:item.formalStrategyDecisions?.long_term_core})).filter(row=>row.state&&/^\d{4}-\d{2}-\d{2}$/.test(String(row.state.date||""))&&Number.isFinite(row.decision?.score));
@@ -3465,9 +3480,10 @@ async function loadFinalizedCoreScoreHistory(){
   try{const response=await fetch("finalized-core-score-snapshots-v1.json",{cache:"no-store"});if(!response.ok)throw new Error("history unavailable");const payload=await response.json();if(payload?.schema_version===1&&payload?.core_score_version===LONG_TERM_CORE_SCORE_VERSION&&Array.isArray(payload?.snapshots))finalizedCoreScoreHistoryArtifact=payload;}catch{finalizedCoreScoreHistoryArtifact={schema_version:1,core_score_version:LONG_TERM_CORE_SCORE_VERSION,snapshots:[]}}
 }
 function longOverviewCardHtml(x,index,dailyMovement){
-  const rank=index+1,decision=homepageFinalDecision(x)||strategyDecisionFor(x,"long_term_core"),presentation=decision?.finalPresentation,score=displayScore(x,"long_term_core"),stage=decision?.stage,rankChange=dailyMovement?.rankDelta,scoreChange=dailyMovement?.scoreDelta,badgeLabel=finalDecisionBadgeLabel(presentation);
-  const trigger=historicalTriggerText(decision?.coreScore);
-  return`<button class="radarLongCard" type="button" data-open-radar-detail="${esc(x.id)}"><div class="radarLongTop">${rankBadgeHtml(rank)}<span class="radarLongIdentity"><b>${esc(x.id)}</b><small>${esc(x.name)}</small></span><span class="radarLongScore"><b>${Number.isFinite(score)?score:"—"}</b><small>長期核心分</small></span><span class="radarLongMoves" title="較前一交易日收盤"><em class="${rankChange>0?"is-up":rankChange<0?"is-down":"is-flat"}">${esc(dailyMovement?.displayRankChange||"日排名首次")}</em><em class="${scoreChange>0?"is-up":scoreChange<0?"is-down":"is-flat"}">${esc(dailyMovement?.displayScoreChange||"—")}</em></span></div><div class="radarCoreMetrics"><span><small>週 J</small><b>${fmt(x.j)}</b><em>${uiMetricStatus("j",x.j)}</em></span><span><small>52週回檔</small><b>${Number.isFinite(x.fromHigh)?fmt(x.fromHigh)+"%":"—"}</b><em>${uiMetricStatus("drawdown",x.fromHigh)}</em></span><span><small>正式訊號</small><b>${esc(badgeLabel)}</b><em>${esc(trigger)}</em></span><span><small>當日漲跌</small><b class="${x.changePct>=0?"up":"down"}">${signed(x.changePct)}</b><em>${uiMetricStatus("change",x.changePct)}</em></span></div><div class="radarLongDecision"><strong>${esc(decision?.cta?.detail||stage?.recommendation||"等待資料更新")}</strong>${radarRangeBar(score,stage)}</div></button>`;
+  const rank=index+1,decision=homepageFinalDecision(x)||strategyDecisionFor(x,"long_term_core"),presentation=decision?.finalPresentation,score=displayScore(x,"long_term_core"),scoreChange=dailyMovement?.scoreDelta,badgeLabel=finalDecisionBadgeLabel(presentation),scoreDelta=radarOverviewScoreDelta(scoreChange),next=radarOverviewNextLevel(score);
+  const weeklyJ=radarOverviewFactorRaw(decision,"weeklyJ")??(Number.isFinite(x.j)?x.j:null),dd52=radarOverviewFactorRaw(decision,"dd52")??(Number.isFinite(x.fromHigh)?x.fromHigh:null),crash=radarOverviewFactorRaw(decision,"crash"),changeTone=Number(x.changePct)>0?"up":Number(x.changePct)<0?"down":"is-flat";
+  const nextText=!next.available?"下一級資料暫缺":next.isMaxLevel?"已進入最高級別":`距 ${next.nextThreshold} ${esc(next.nextLabel)}：${next.distance} 分`;
+  return`<button class="radarLongCard" type="button" data-open-radar-detail="${esc(x.id)}"><div class="radarLongIdentityRow">${radarOverviewRankBadgeHtml(rank)}<span class="radarLongIdentity"><b>${esc(x.id)}</b><small>${esc(x.name)}</small></span><span class="radarLongPriceMove ${changeTone}">${signed(x.changePct)}</span></div><div class="radarLongScoreRow"><span class="radarLongScore"><b>${Number.isFinite(score)?score:"—"}</b><small>CORE SCORE</small></span><span class="radarLongState"><b>${esc(badgeLabel)}</b><em class="${scoreDelta.tone}">${esc(scoreDelta.label)}</em></span></div><div class="radarCoreMetrics radarOverviewFactors"><span><small>DD52</small><b>${Number.isFinite(dd52)?fmt(dd52)+"%":"—"}</b><em>${Number.isFinite(dd52)?uiMetricStatus("drawdown",dd52):"資料暫缺"}</em></span><span><small>Weekly J</small><b>${Number.isFinite(weeklyJ)?fmt(weeklyJ):"—"}</b><em>${Number.isFinite(weeklyJ)?uiMetricStatus("j",weeklyJ):"資料暫缺"}</em></span><span><small>Crash 20D</small><b>${Number.isFinite(crash)?fmt(crash)+"%":"—"}</b>${Number.isFinite(crash)?"":'<em>資料暫缺</em>'}</span></div><div class="radarLongNext">${nextText}</div>${radarRangeBar(score)}</button>`;
 }
 function scoreFactorValue(swing,...keys){for(const key of keys){const item=swing?.scoreFactors?.find(part=>part.key===key);if(Number.isFinite(item?.value))return item.value}return null}
 function scoreGaugeHtml(label,value){const safe=Number.isFinite(value)?Math.max(0,Math.min(100,value)):0;return`<div class="scoreGauge" style="--gauge:${safe}"><div><b>${Number.isFinite(value)?Math.round(value):"—"}</b><small>/100</small></div><span>${esc(label)}</span></div>`}

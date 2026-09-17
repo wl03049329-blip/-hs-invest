@@ -2094,3 +2094,50 @@ footer{color:#746f67}
 .hsLiveDebugPanel details{padding:0}.hsLiveDebugPanel summary{position:sticky;top:0;padding:10px 12px;color:#f0c963;background:#11100d;cursor:pointer;font-weight:900;letter-spacing:.08em}
 .hsLiveDebugPanel dl{display:grid;grid-template-columns:1fr;margin:0;padding:8px 12px 12px}.hsLiveDebugPanel dl>div{display:grid;grid-template-columns:42% minmax(0,1fr);gap:8px;padding:4px 0;border-bottom:1px solid rgba(216,174,85,.1)}
 .hsLiveDebugPanel dt{color:#958d80}.hsLiveDebugPanel dd{margin:0;color:#f1eadc;overflow-wrap:anywhere;text-align:right}
+
+/* ETF Radar overview Phase 1: compact, comparison-first cards only. */
+#radarOverview .radarOverviewLong{gap:8px!important}
+#radarOverview .radarLongCard{display:block;padding:15px 17px 13px;border-color:rgba(169,128,53,.3);border-radius:14px;background:linear-gradient(145deg,rgba(18,14,8,.96),rgba(5,5,5,.98) 58%);box-shadow:0 8px 20px rgba(0,0,0,.42),inset 0 1px rgba(255,225,153,.025)}
+#radarOverview .radarLongIdentityRow{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:9px;align-items:center;min-width:0}
+#radarOverview .radarOverviewRankBadge{display:grid;place-items:center;width:28px;height:25px;border:1px solid rgba(196,156,74,.32);border-radius:7px;color:#9b8658;background:rgba(34,27,16,.56);font-size:8px;font-weight:900;letter-spacing:.04em}
+#radarOverview .radarOverviewRankBadge.rank-1{border-color:rgba(228,185,87,.52);color:#d5b45e;background:rgba(70,49,15,.55)}
+#radarOverview .radarOverviewRankBadge.rank-2{border-color:rgba(188,188,184,.32);color:#b9b7b1;background:rgba(43,43,41,.48)}
+#radarOverview .radarOverviewRankBadge.rank-3{border-color:rgba(183,116,59,.38);color:#c28a5d;background:rgba(65,37,19,.48)}
+#radarOverview .radarLongIdentity{min-width:0}
+#radarOverview .radarLongIdentity b{font-size:23px;line-height:1.05;letter-spacing:.02em}
+#radarOverview .radarLongIdentity small{overflow:hidden;margin-top:3px;color:#a9a094;font-size:10px;line-height:1.25;text-overflow:ellipsis;white-space:nowrap}
+#radarOverview .radarLongPriceMove{align-self:start;padding-top:2px;font-size:13px;font-weight:900;line-height:1.2;white-space:nowrap}
+#radarOverview .radarLongScoreRow{display:flex;align-items:end;justify-content:space-between;gap:12px;margin-top:10px;padding:9px 0 10px;border-bottom:1px solid rgba(169,129,53,.17)}
+#radarOverview .radarLongScore{text-align:left}
+#radarOverview .radarLongScore b{color:#f0d074;font-size:47px;font-weight:950;line-height:.88;letter-spacing:-.045em;text-shadow:0 3px 18px rgba(220,169,50,.13)}
+#radarOverview .radarLongScore small{margin-top:6px;color:#8d826f;font-size:8px;font-weight:850;letter-spacing:.14em}
+#radarOverview .radarLongState{display:grid;justify-items:end;gap:6px;min-width:0;text-align:right}
+#radarOverview .radarLongState>b{color:#e5d3a7;font-size:16px;line-height:1.15}
+#radarOverview .radarLongState>em{font-size:11px;font-style:normal;font-weight:900;line-height:1.1;white-space:nowrap}
+#radarOverview .radarOverviewFactors{grid-template-columns:repeat(3,minmax(0,1fr));gap:0;margin-top:8px}
+#radarOverview .radarOverviewFactors>span{min-height:55px;padding:7px 8px;border:0;border-right:1px solid rgba(151,116,50,.17);border-radius:0;background:transparent;text-align:left}
+#radarOverview .radarOverviewFactors>span:last-child{border-right:0}
+#radarOverview .radarOverviewFactors small{color:#8d8477;font-size:8px;font-weight:800;letter-spacing:.025em}
+#radarOverview .radarOverviewFactors b{margin:4px 0 2px;color:#eee6d9;font-size:17px;line-height:1.05}
+#radarOverview .radarOverviewFactors em{min-height:11px;color:#aaa196;font-size:8px;line-height:1.25;white-space:nowrap}
+#radarOverview .radarLongNext{margin-top:5px;color:#dcc274;font-size:11px;font-weight:900;line-height:1.25}
+#radarOverview .radarRange{margin-top:7px}
+#radarOverview .radarRangeTrack{height:4px;background:linear-gradient(90deg,#383734 0 40%,#806721 40% 65%,#b37a21 65% 80%,#a75b32 80%)}
+#radarOverview .radarRangeTrack i{width:8px;height:8px;border-width:1px;box-shadow:0 0 6px rgba(228,189,86,.65)}
+#radarOverview .radarRangeLabels{margin-top:4px;color:#81796d;font-size:6.5px;font-weight:750;letter-spacing:.02em}
+
+@media(max-width:430px){
+  #radarOverview .radarLongCard{padding:13px 14px 11px}
+  #radarOverview .radarLongIdentityRow{grid-template-columns:28px minmax(0,1fr) auto;gap:8px}
+  #radarOverview .radarOverviewRankBadge{width:26px;height:23px;font-size:7.5px}
+  #radarOverview .radarLongIdentity b{font-size:21px}
+  #radarOverview .radarLongIdentity small{font-size:9.5px}
+  #radarOverview .radarLongPriceMove{font-size:12px}
+  #radarOverview .radarLongScoreRow{margin-top:8px;padding:8px 0 9px}
+  #radarOverview .radarLongScore b{font-size:43px}
+  #radarOverview .radarLongState>b{font-size:15px}
+  #radarOverview .radarLongState>em{font-size:10px}
+  #radarOverview .radarOverviewFactors>span{min-height:51px;padding:6px 7px}
+  #radarOverview .radarOverviewFactors b{font-size:15px}
+  #radarOverview .radarLongNext{font-size:10.5px}
+}
