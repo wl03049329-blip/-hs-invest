@@ -33,6 +33,16 @@ output=render(row(0,{dd52:0,weekly:0,crash:0}),row(0,{dd52:0,weekly:0,crash:0}))
 context.finalizedCoreScoreHistoryArtifact={schema_version:1,core_score_version:"FINAL_CORE_WEIGHT_V1",snapshots:[snapshot("2026-09-17",{symbol:"00830",status:"WAIT_NATIVE",final_core_score:null,core_score_version:"FINAL_CORE_WEIGHT_V1",data_as_of:"2026-09-17T13:30:00+08:00"})]};
 assert.match(context.render({id:"00830"},{}),/資料暫缺/);
 
-assert.match(css,/\.radarExplainFactorMetrics\{display:grid;grid-template-columns:/);assert.match(css,/@media\(max-width:430px\)[\s\S]*?\.radarExplainLead\{grid-template-columns:1fr\}/);assert.match(css,/\.radarWhyScore \.radarExplainFactors\{display:grid;grid-template-columns:minmax\(0,1fr\)/);assert.match(css,/\.radarWhyScore \.radarExplainFactor\{width:100%;min-width:0;max-width:100%/);assert.match(css,/\.radarWhyScore \.radarExplainFactorMetrics>span\{display:grid;grid-template-columns:minmax\(0,1fr\) auto/);assert.match(css,/\.radarWhyScore \.radarExplainFactor h4\{min-width:0;font-size:15px;line-height:1\.25;white-space:normal;word-break:keep-all;overflow-wrap:normal/);assert.match(html,/formal-black-gold\.css\?v=20260918-radar-phase31-hotfix/);assert.match(css,/@media\(max-width:375px\)/);assert.doesNotMatch(html.slice(start,end),/fetch\(|localStorage|intraday|provisional/i);
+const renderedDom=render(row(45.35));
+assert.match(renderedDom,/<section class="radarV2Section radarWhyScore">[\s\S]*?<div class="radarExplainFactors"><article class="radarExplainFactor/);
+assert.equal((renderedDom.match(/<article class="radarExplainFactor/g)||[]).length,3,"production renderer must place exactly three factor cards under the styled parent");
+const mobileRule=css.slice(css.lastIndexOf("@media(max-width:430px){"),css.indexOf("@media(max-width:375px)",css.lastIndexOf("@media(max-width:430px){")));
+assert.match(mobileRule,/\.radarWhyScore \.radarExplainFactors\{display:grid;grid-template-columns:1fr;/);
+assert.match(mobileRule,/\.radarWhyScore \.radarExplainFactor\{width:100%;min-width:0;max-width:none;height:auto;overflow:visible/);
+assert.match(mobileRule,/\.radarWhyScore \.radarExplainFactor>header\{display:block\}/);
+assert.match(mobileRule,/\.radarWhyScore \.radarExplainFactorMetrics>span\{display:flex;align-items:baseline;justify-content:space-between/);
+assert.match(mobileRule,/\.radarWhyScore \.radarExplainFactor h4\{[^}]*white-space:normal;word-break:keep-all;overflow-wrap:normal/);
+assert.match(html,/formal-black-gold\.css\?v=20260918-radar-phase31-mobile-v2/);
+assert.doesNotMatch(html.slice(start,end),/fetch\(|localStorage|intraday|provisional/i);
 assert.match(html.slice(start,end),/snapshot\?\.snapshot_type!=="FINALIZED_CLOSE"/);assert.match(html.slice(start,end),/snapshot\?\.finalized!==true/);assert.match(html.slice(start,end),/current\.factors\.map\(factor=>/);
 console.log("PASS ETF Radar Detail Phase 3 finalized-only score explainability, attribution, missing-data and mobile guards");
