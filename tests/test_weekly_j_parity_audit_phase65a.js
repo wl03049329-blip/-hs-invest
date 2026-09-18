@@ -8,6 +8,8 @@ const core = require("../final-core-production.js");
 
 const protectedFiles = ["finalized-core-score-snapshots-v1.json", "intraday-core-snapshots-v1.json"];
 const before = protectedFiles.map(file => fs.readFileSync(path.join(__dirname, "..", file)));
+const researchFile = path.join(__dirname, "..", "research", "c4_historical", "0050.json");
+const beforeResearch = fs.existsSync(researchFile) ? fs.readFileSync(researchFile) : null;
 const originalTimezone = process.env.TZ;
 const example = [
   {date: "2026-09-11", open: 100, max: 101, min: 99, close: 100, Trading_Volume: 100},
@@ -74,7 +76,8 @@ assert.equal(result.as_of_safety.future_daily_rows_used, false);
 assert.equal(result.as_of_safety.future_corporate_actions_used, false);
 assert.equal(result.research.corporate_action_input_counts.dividend, 0);
 assert.equal(result.production.weekly_bars, "NOT_STORED");
-assert(!fs.existsSync(path.join(__dirname, "..", "research", "c4_historical", "0050.json")), "failed research dataset unpublished");
+assert.deepEqual(fs.existsSync(researchFile) ? fs.readFileSync(researchFile) : null, beforeResearch,
+  "audit-only replay does not publish or alter a Phase 6.5B research dataset");
 protectedFiles.forEach((file, i) => assert(before[i].equals(fs.readFileSync(path.join(__dirname, "..", file)))));
 const script = fs.readFileSync(path.join(__dirname, "..", "scripts", "audit_weekly_j_parity_phase65a.js"), "utf8");
 assert(script.includes("research\", \"audits\""));
