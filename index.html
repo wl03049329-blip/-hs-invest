@@ -303,7 +303,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 </style>
 <link rel="stylesheet" href="portfolio-v6.css?v=20260818-rebalance2" />
 <link rel="stylesheet" href="v62-tech.css?v=20260809b" />
-<link rel="stylesheet" href="formal-black-gold.css?v=20260918-radar-phase5-market-v1" />
+<link rel="stylesheet" href="formal-black-gold.css?v=20260918-radar-phase6-history-v1" />
 <style id="radarPhase32CriticalLayout">
 /* Phase 3.2 structural fallback: the renderer is mobile-first even if external CSS is stale. */
 .radarFactorStackV32{display:flex;flex-direction:column;width:100%;min-width:0}
@@ -3730,7 +3730,36 @@ function radarDecisionSummaryHtml(x){
   const nextLabel=hsTodayStageLabel(decision.next_stage),distance=Number.isFinite(Number(decision.distance_to_next_stage))?(decision.distance_to_next_stage>0?`距${nextLabel} ${decision.distance_to_next_stage} 分`:"已進入最高決策摘要區"):"目前無距離資料",driver=hsTodayDriverLabel(decision.primary_driver),driverText=driver?`主要變化：${driver}${Number(decision.primary_driver_delta)>=0?"增加":"走弱"}`:(decision.comparison_basis==="NONE"?"目前無可比較基準":decision.explanation_text_zh);
   return`<section class="radarDecisionSummary" data-decision-stage="${esc(decision.decision_stage)}"><header><span>HS DECISION</span><h4>HS 決策摘要</h4></header><div class="radarDecisionLead"><b>${esc(decision.decision_label_zh)}</b><small>${esc(distance)}</small></div><p>${esc(driverText)}</p><small class="radarDecisionExplanation">${esc(decision.explanation_text_zh)}</small><p><span>資金姿態</span>${esc(hsTodayPosture(decision.capital_posture))}</p></section>`;
 }
-function detailAdvancedHtml(x){return`<details class="detailAdvanced"><summary>估值、歷史統計與其他詳細資料</summary>${valuationDetailsHtml(x)}${legacyComparisonHtml(x)}<section class="detailSection"><h4>歷史相似訊號統計</h4>${similarStatsHtml(x.historyStats.sameEnvironment,`相同市場環境｜${x.environment}`)}${similarStatsHtml(x.historyStats.allEnvironments,"全部市場環境")}</section>${buyPlanHtml(x)}</details>`}
+function radarHistoryPhase6State(x,artifact=finalizedCoreScoreHistoryArtifact,contract=window.HSDecisionLayerV1){
+  if(x?.id==="009815")return{kind:"WAIT_NATIVE"};
+  const scores=officialArtifactCoreScoreHistory(artifact,x?.id,Number.MAX_SAFE_INTEGER).reverse(),stages=contract?.STAGES;
+  if(!scores.length||!Array.isArray(stages)||!stages.length)return{kind:"UNAVAILABLE"};
+  const snapshots=Array.isArray(artifact?.snapshots)?artifact.snapshots:[],byDate=new Map(),rows=[];
+  for(const snapshot of snapshots)if(snapshot?.snapshot_type==="FINALIZED_CLOSE"&&snapshot?.finalized===true){const date=String(snapshot.date||"");if(!byDate.has(date))byDate.set(date,[]);byDate.get(date).push(snapshot)}
+  for(const score of scores){
+    const source=(byDate.get(score.tradingDate)||[]).find(snapshot=>(snapshot.rows||[]).some(item=>item?.symbol===x.id&&item.final_core_score===score.finalCoreScore&&item.core_score_version===LONG_TERM_CORE_SCORE_VERSION&&String(item.data_as_of||"").startsWith(`${score.tradingDate}T`)));
+    const raw=source?.rows?.find(item=>item?.symbol===x.id&&item.final_core_score===score.finalCoreScore)?.factors?.dd52?.raw;
+    if(typeof raw!=="number"||!Number.isFinite(raw))continue;
+    const stage=stages.find(item=>score.displayScore>=item.min);
+    if(stage)rows.push({...score,dd52:raw,stage:stage.stage,stageLabel:stage.label});
+  }
+  const current=rows.at(-1);
+  if(!current||current.tradingDate!==scores.at(-1).tradingDate)return{kind:"UNAVAILABLE"};
+  const size=rows.length,percentile=Math.round(rows.filter(row=>row.displayScore<=current.displayScore).length/size*100),depth=value=>Math.abs(Math.min(value,0)),dd52Percentile=Math.round(rows.filter(row=>depth(row.dd52)<=depth(current.dd52)).length/size*100);
+  const levelDays=rows.filter(row=>row.stage===current.stage).length,next=radarOverviewNextLevel(current.displayScore,contract),nextDays=next.available&&!next.isMaxLevel?rows.filter(row=>row.displayScore>=next.nextThreshold).length:null;
+  let start=rows.length-1;while(start>0&&rows[start-1].stage===current.stage)start--;
+  const lastEntry=start>0?rows[start].tradingDate:null,streak=rows.length-start,yearStart=Math.max(0,rows.length-252),yearRows=rows.slice(yearStart),yearDays=yearRows.filter(row=>row.stage===current.stage).length;
+  let yearEntries=0;for(let i=yearStart;i<rows.length;i++)if(rows[i].stage===current.stage&&i>0&&rows[i-1].stage!==current.stage)yearEntries++;
+  return{kind:"READY",rows,current,size,percentile,dd52Percentile,levelDays,levelRate:levelDays/size*100,next,nextDays,nextRate:nextDays===null?null:nextDays/size*100,lastEntry,streak,streakCensored:start===0,yearSize:yearRows.length,yearDays,yearEntries};
+}
+function radarHistoryPhase6Html(x){
+  if(!LONG_RADAR_CODES.has(x?.id))return"";
+  const state=radarHistoryPhase6State(x),heading='<header><h4>歷史位置與稀有度</h4><small>僅計正式盤後；統計位置不是投資訊號</small></header>';
+  if(state.kind!=="READY")return`<section class="detailSection radarHistoryPhase6" data-radar-history-phase="6">${heading}<p class="radarHistoryP6Empty">${state.kind==="WAIT_NATIVE"?"等待原生資料；正式歷史資料暫缺。":"正式分數或 52 週回檔歷史資料暫缺。"}</p></section>`;
+  const date=value=>value.replaceAll("-","/"),p=value=>`${value.toFixed(1)}%`,current=state.current,next=state.next;
+  return`<section class="detailSection radarHistoryPhase6" data-radar-history-phase="6">${heading}<div class="radarHistoryP6Group"><h5>Core Score 歷史位置</h5><div class="radarHistoryP6Lead"><span>目前正式分數 <b>${current.displayScore}</b></span><span>歷史百分位 <b>P${state.percentile}</b></span></div><p>歷史正式交易日中，分數不高於目前者占 ${state.percentile}%（含同分）。</p></div><div class="radarHistoryP6Group"><h5>目前級別</h5><div class="radarHistoryP6Line"><span>${esc(current.stageLabel)}</span><strong>歷史出現率 ${p(state.levelRate)}</strong></div><p>${state.levelDays} / ${state.size} 個正式交易日</p><div class="radarHistoryP6Line"><span>最近一次進入</span><strong>${state.lastEntry?date(state.lastEntry):"樣本起點前不可判定"}</strong></div><div class="radarHistoryP6Line"><span>目前已持續</span><strong>${state.streakCensored?"至少 ":""}${state.streak} 日</strong></div></div><div class="radarHistoryP6Group"><h5>下一級門檻</h5>${next.isMaxLevel?"<p>已進入最高級別；無下一級門檻。</p>":`<div class="radarHistoryP6Line"><span>${esc(next.nextLabel)}（${next.nextThreshold}+）</span><strong>歷史達到率 ${p(state.nextRate)}</strong></div><p>正式分數 ≥ ${next.nextThreshold}：${state.nextDays} / ${state.size} 日</p>`}</div><div class="radarHistoryP6Group"><h5>52週回檔歷史位置</h5><div class="radarHistoryP6Lead"><span>目前 DD52 <b>${current.dd52.toFixed(2)}%</b></span><span>歷史回撤深度 <b>P${state.dd52Percentile}</b></span></div><p>目前回撤深度不淺於 ${state.dd52Percentile}% 的正式交易日（含相同深度）；約 ${100-state.dd52Percentile}% 的交易日回撤更深。</p></div><div class="radarHistoryP6Group"><h5>過去一年</h5><div class="radarHistoryP6Line"><span>目前級別出現交易日</span><strong>${state.yearDays} 日</strong></div><div class="radarHistoryP6Line"><span>進入此級別次數</span><strong>${state.yearEntries} 次</strong></div><p>最近 ${state.yearSize} 個可用正式交易日；僅計從其他級別跨入的事件。</p></div><p class="radarHistoryP6Foot">統計期間 ${date(state.rows[0].tradingDate)} ～ ${date(current.tradingDate)}｜共同有效樣本 ${state.size} 日。${state.size<120?"樣本較短，歷史位置僅供參考。":""}舊版「歷史觸發率」為凍結校準口徑，與此處正式歷史樣本出現率不同。</p></section>`;
+}
+function detailAdvancedHtml(x){return`<details class="detailAdvanced"><summary>估值、歷史統計與其他詳細資料</summary>${radarHistoryPhase6Html(x)}${valuationDetailsHtml(x)}${legacyComparisonHtml(x)}<section class="detailSection"><h4>歷史相似訊號統計</h4>${similarStatsHtml(x.historyStats.sameEnvironment,`相同市場環境｜${x.environment}`)}${similarStatsHtml(x.historyStats.allEnvironments,"全部市場環境")}</section>${buyPlanHtml(x)}</details>`}
 function buildRadarV2Card({x,mode,decision,stage,score,longRank,longRankChange,longScoreChange,formal,detailScoreState,tradeState,dailyPair}){
   const cardClass=`card signalCard radarV2Card ${x.signal.className} strategy-${mode}`,scoreText=Number.isFinite(score)?score:"—";
   if(mode==="long_term_core"){
