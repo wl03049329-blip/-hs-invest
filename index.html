@@ -303,7 +303,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 </style>
 <link rel="stylesheet" href="portfolio-v6.css?v=20260818-rebalance2" />
 <link rel="stylesheet" href="v62-tech.css?v=20260809b" />
-<link rel="stylesheet" href="formal-black-gold.css?v=20260918-radar-phase4-trend-v2" />
+<link rel="stylesheet" href="formal-black-gold.css?v=20260918-radar-phase5-market-v1" />
 <style id="radarPhase32CriticalLayout">
 /* Phase 3.2 structural fallback: the renderer is mobile-first even if external CSS is stale. */
 .radarFactorStackV32{display:flex;flex-direction:column;width:100%;min-width:0}
@@ -3675,18 +3675,44 @@ function radarScoreTrendHtml(x){
   const legend=state.thresholds.map(item=>`<span>${item.value} ${esc(radarTrendPhase4Level(item.value,state.thresholds))}</span>`).join("");
   return`<section class="radarV2Section radarScoreTrend radarTrendPhase4" data-radar-trend-phase="4" data-etf-id="${esc(ticker)}">${heading}<div class="radarTrendP4Body"><section class="radarTrendP4Block"><h4>分數摘要</h4><div class="radarTrendP4Scores">${scoreSummary}</div><p class="radarTrendP4Note">${state.rows.length<RADAR_TREND_PHASE4_PERIODS[state.period]?`可用資料 ${state.rows.length} 日／目標 ${RADAR_TREND_PHASE4_PERIODS[state.period]} 日`:`最近 ${state.rows.length} 個正式交易日`}｜${esc(state.first.tradingDate)} 至 ${esc(state.current.tradingDate)}</p></section><div class="radarTrendP4Chart">${radarTrendPhase4Chart(state)}</div><div class="radarTrendP4Legend" aria-label="正式分數門檻">${legend}</div><section class="radarTrendP4Block"><h4>價格表現</h4><div class="radarTrendP4Prices">${priceHtml}</div></section><section class="radarTrendP4Block"><h4>回撤與位置</h4><div class="radarTrendP4Positions">${positionHtml}</div></section><section class="radarTrendP4Block"><h4>近期訊號事件</h4><ol class="radarTrendP4Events">${events}</ol></section><section class="radarTrendP4Block radarTrendP4Status"><h4>近期狀態</h4><p>${esc(radarTrendPhase4Summary(state))}</p></section></div></section>`;
 }
-function featuredDiagnosticFor(x){
+function featuredDiagnosticFor(x,rows=x.officialRows||[],asOfDate=null){
   const evaluator=window.HSGenericEtfDiagnostics;if(!evaluator?.evaluate)return null;
   const meta=DEFAULT_WATCHLIST.find(item=>item.id===x.id)||META[x.id]||x,benchmark=evaluator.APPROVED_BENCHMARKS?.[x.id]||null,benchmarkItem=benchmark&&benchmark!=="MARKET_BASELINE"?all.find(item=>item.id===benchmark):null;
-  return evaluator.evaluate({symbol:x.id,metadata:{...meta,...x},rows:x.officialRows||[],benchmark,benchmarkRows:benchmarkItem?.officialRows||null});
+  const candidateRows=benchmarkItem?.officialRowsAdjusted===true?benchmarkItem.officialRows.filter(row=>!asOfDate||String(row.date||"")<=asOfDate):null;
+  const benchmarkRows=candidateRows?.at(-1)?.date===asOfDate?candidateRows:null;
+  return evaluator.evaluate({symbol:x.id,metadata:{...meta,...x},rows,benchmark,benchmarkRows});
 }
-function radarDistanceLabel(value){return Number.isFinite(value)?`${value>=0?"上方 +":"下方 -"}${fmt(Math.abs(value))}%`:"—"}
+const RADAR_MARKET_PHASE5_MAS=[{period:20,label:"月線"},{period:60,label:"季線"},{period:120,label:"半年線"},{period:240,label:"年線"}];
+function radarMarketPhase5TrendSummary(mas){
+  const positions=mas.map(item=>Number.isFinite(item.distance)?Math.sign(item.distance):null);
+  if(positions.every(value=>value===1))return"現價位於月線、季線、半年線與年線之上，整體趨勢結構偏強。";
+  if(positions.every(value=>value===-1))return"現價低於主要中長期均線，整體趨勢結構偏弱。";
+  if(positions[0]===-1&&positions[1]===-1&&positions[2]===1&&positions[3]===1)return"短中期偏弱，半年線與年線之上仍維持較長期支撐。";
+  if(positions[0]===1&&positions[1]===1&&positions[2]===-1&&positions[3]===1)return"短期轉強，中期仍在修復，長期仍位於年線之上。";
+  const available=mas.filter(item=>Number.isFinite(item.distance));
+  if(!available.length)return"正式日線資料不足，暫不判讀均線結構。";
+  return`${available.map(item=>`現價${item.distance>0?"高於":item.distance<0?"低於":"貼近"}${item.label}`).join("、")}。${available.length<4?"其餘均線資料尚未累積足夠。":"均線位置分布不一致。"}`;
+}
+function radarMarketPhase5State(x,artifact=finalizedCoreScoreHistoryArtifact){
+  if(x?.id==="009815")return{kind:"WAIT_NATIVE"};
+  const official=officialArtifactCoreScoreHistory(artifact,x?.id,1)[0],date=official?.tradingDate,rows=date?radarTrendPhase4PriceRows(x,date):[];
+  if(!date||!rows.length)return{kind:"UNAVAILABLE"};
+  const price=rows.at(-1).close,closes=rows.map(row=>row.close),sma=window.HSSwingStrategyCore?.simpleMovingAverage;
+  const mas=RADAR_MARKET_PHASE5_MAS.map(({period,label})=>{const value=rows.length>=period&&typeof sma==="function"?sma(closes,period):null;return{period,label,value,distance:Number.isFinite(value)&&value>0?(price/value-1)*100:null}});
+  const diagnostic=featuredDiagnosticFor(x,rows,date),weeklyJ=Number.isFinite(official.weeklyJ)?official.weeklyJ:null,weeklyLabel=weeklyJ===null?"資料暫缺":uiMetricStatus("j",weeklyJ);
+  const bias=x.date===date&&Number.isFinite(x.weekBias)?x.weekBias:null,biasLabel=bias===null?"資料暫缺":uiMetricStatus("bias",bias),rs=diagnostic?.rs,rsValue=rs?.available&&Number.isFinite(rs.rs20)?rs.rs20:null,rsLabel=rs?.available?rs.state:(rs?.reason||"基準資料暫缺"),recovery=diagnostic?.recovery;
+  return{kind:"READY",date,mas,trendSummary:radarMarketPhase5TrendSummary(mas),weeklyJ,weeklyLabel,bias,biasLabel,rsValue,rsLabel,recovery};
+}
 function radarMarketPositionHtml(x){
-  const d=featuredDiagnosticFor(x);
-  if(!d||d.maturityState==="WAIT_NATIVE")return`<section class="radarV2Section radarMarketPosition"><header><span>MARKET POSITION</span><h3>市場位置</h3><small>DIAGNOSTICS｜不參與 Core Score</small></header><div class="radarTrendEmpty">009815 維持 WAIT_NATIVE；資料不夠，不產生 MA 或趨勢判讀。</div></section>`;
-  const trend=d.trend,rs=d.rs?.available?d.rs.state:(d.rs?.reason||"比較基準待驗證"),maturity=watchMaturityLabel(d.maturityState);
-  const structure=trend?`結構：${trend.state}`:maturity;
-  return`<section class="radarV2Section radarMarketPosition"><header><span>MARKET POSITION</span><h3>市場位置</h3><small>DIAGNOSTICS｜不參與 Core Score</small></header><div class="radarMarketStructure"><b>${esc(structure)}</b><span>資料截至 ${esc(d.dataAsOf||"—")}</span></div>${trend?`<div class="radarMaGrid"><div><span>MA43</span><b>${esc(radarDistanceLabel(trend.distance43))}</b></div><div><span>MA87</span><b>${esc(radarDistanceLabel(trend.distance87))}</b></div><div><span>MA200</span><b>${esc(radarDistanceLabel(trend.distance200))}</b></div></div>`:`<div class="radarTrendEmpty">${esc(maturity)}；尚無完整 MA43／87／200 結構。</div>`}<div class="radarDiagnosticMeta"><span>週 J <b>${Number.isFinite(d.weekly?.j)?fmt(d.weekly.j):"—"}</b></span><span>拉回 <b>${esc(d.pullback?.state||"—")}</b></span><span>RS <b>${esc(rs)}</b></span><span>止跌 <b>${esc(d.recovery?.state||"—")}</b></span></div></section>`;
+  const state=radarMarketPhase5State(x),heading='<header><h3>市場位置</h3><small>正式日線診斷｜不參與 Core Score</small></header>';
+  if(state.kind!=="READY")return`<section class="radarV2Section radarMarketPosition radarMarketPhase5" data-radar-market-phase="5">${heading}<div class="radarTrendEmpty">${state.kind==="WAIT_NATIVE"?"等待原生資料；不產生均線、動能或止跌判讀。":"正式日線資料暫缺；不使用盤中價格補值。"}</div></section>`;
+  const maRows=state.mas.map(item=>`<div class="radarMarketP5MaRow"><div><strong>${item.label}<small>MA${item.period}</small></strong><b class="${item.distance>0?"is-up":item.distance<0?"is-down":""}">${Number.isFinite(item.distance)?`${item.distance>0?"+":""}${item.distance.toFixed(2)}%`:"—"}</b></div><small>${Number.isFinite(item.distance)?`現價${item.distance>0?"高於":item.distance<0?"低於":"貼近"}${item.label}`:"正式資料不足"}</small></div>`).join("");
+  const momentum=[{label:"週 J 值",value:Number.isFinite(state.weeklyJ)?fmt(state.weeklyJ):"—",status:state.weeklyLabel},{label:"週乖離",value:Number.isFinite(state.bias)?`${fmt(state.bias)}%`:"—",status:state.biasLabel},{label:"相對強弱",tag:"RS",value:Number.isFinite(state.rsValue)?`${state.rsValue>0?"+":""}${fmt(state.rsValue)}%`:"—",status:state.rsLabel}];
+  const momentumRows=momentum.map(item=>`<div class="radarMarketP5MomentumRow"><div><strong>${item.label}${item.tag?`<small>${item.tag}</small>`:""}</strong><b>${item.value}</b></div><small>${esc(item.status)}</small></div>`).join("");
+  const recovery=state.recovery,checks=recovery?.available&&recovery.checks&&typeof recovery.checks==="object"?Object.entries(recovery.checks).filter(([,value])=>typeof value==="boolean"):[],count=checks.filter(([,value])=>value).length,recoveryLabel=recovery?.state&&recovery.state!=="—"?recovery.state:"尚未確認";
+  const recoveryRows=checks.length?`<ul class="radarMarketP5Checks">${checks.map(([key,value])=>`<li><span aria-hidden="true">${value?"✓":"○"}</span><b>${esc(diagnosticCheckLabel(key))}</b><small>${value?"已成立":"尚未成立"}</small></li>`).join("")}</ul><p class="radarMarketP5RecoveryNote">${count===checks.length?"止跌條件已全部成立。":`目前仍有 ${checks.filter(([,value])=>!value).map(([key])=>diagnosticCheckLabel(key)).join("、")} 尚未成立。`}</p>`:"<p class=\"radarMarketP5RecoveryNote\">正式止跌細項資料不足，不拆分假條件。</p>";
+  const momentumSummary=`週 J ${state.weeklyJ===null?"資料暫缺":state.weeklyLabel}，週乖離${state.bias===null?"資料暫缺":state.biasLabel}，相對強弱${state.rsValue===null?"資料暫缺":state.rsLabel}。`;
+  return`<section class="radarV2Section radarMarketPosition radarMarketPhase5" data-radar-market-phase="5">${heading}<p class="radarMarketP5AsOf">資料截至 ${esc(state.date)}｜僅供市場位置診斷</p><div class="radarMarketP5Group"><h4>趨勢結構</h4><div class="radarMarketP5MaRows">${maRows}</div><p class="radarMarketP5Summary"><b>目前結構</b>${esc(state.trendSummary)}</p></div><div class="radarMarketP5Group"><h4>動能與超賣</h4><div class="radarMarketP5MomentumRows">${momentumRows}</div><p class="radarMarketP5Summary"><b>目前動能</b>${esc(momentumSummary)}</p></div><div class="radarMarketP5Group"><h4>止跌確認</h4><div class="radarMarketP5RecoveryHead"><strong>目前：${esc(recoveryLabel)}</strong>${checks.length?`<span>已成立 ${count} / ${checks.length}</span>`:""}</div>${recoveryRows}</div><p class="radarMarketP5Overall"><b>市場位置摘要</b>${esc(state.trendSummary)}${esc(momentumSummary)}止跌狀態：${esc(recoveryLabel)}。</p></section>`;
 }
 // ETF Radar deliberately reuses the Homepage canonical adapter and interpreter.
 // It does not derive a score, stage, distance, driver, or posture of its own.

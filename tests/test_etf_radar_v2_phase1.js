@@ -37,11 +37,11 @@ assert.match(html,/if\(rows\.length>=Math\.max\(1,Math\.min\(10,Number\(limit\)\
 assert.match(html,/snapshotType&&snapshotType!=="FINALIZED_CLOSE"/);
 
 // FEATURED diagnostics are on-demand and retain evaluator maturity / benchmark protections.
-assert.match(html,/function featuredDiagnosticFor\(x\)/);
-assert.match(html,/rows:x\.officialRows\|\|\[\]/);
-assert.match(html,/benchmarkRows:benchmarkItem\?\.officialRows\|\|null/);
-assert.match(html,/DIAGNOSTICS｜不參與 Core Score/);
-assert.match(html,/d\.maturityState==="WAIT_NATIVE"/);
+assert.match(html,/function featuredDiagnosticFor\(x,rows=x\.officialRows\|\|\[\],asOfDate=null\)/);
+assert.match(html,/rows,benchmark,benchmarkRows/);
+assert.match(html,/benchmarkItem\?\.officialRowsAdjusted===true/);
+assert.match(html,/正式日線診斷｜不參與 Core Score/);
+assert.match(html,/if\(x\?\.id==="009815"\)return\{kind:"WAIT_NATIVE"\}/);
 assert.doesNotMatch(html,/Generic Swing Score|genericSwingScore|MA284/);
 
 // Detail order and responsive presentation hooks are available without changing My Watchlist mode.
@@ -55,7 +55,7 @@ assert.ok(longDetail.indexOf("radarWhyScoreHtml")<longDetail.indexOf("radarScore
 assert.ok(longDetail.indexOf("radarScoreTrendHtml")<longDetail.indexOf("radarMarketPositionHtml"));
 assert.match(css,/\.radarV2Section\{/);
 assert.match(css,/\.radarScoreTrend svg\{/);
-assert.match(css,/\.radarMaGrid\{display:grid/);
+assert.match(css,/\.radarMarketP5MaRows\{display:grid/);
 assert.match(css,/@media\(max-width:430px\)\{\.radarV2Section/);
 
 console.log("PASS ETF Radar V2 Phase 1 TODAY / WHY SCORE / Phase 4 EOD trend / diagnostics-only guards");

@@ -1,0 +1,27 @@
+"use strict";
+const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path"),vm=require("node:vm");
+const root=path.resolve(__dirname,".."),html=fs.readFileSync(path.join(root,"index.html"),"utf8"),css=fs.readFileSync(path.join(root,"formal-black-gold.css"),"utf8");
+const generic=require(path.join(root,"generic-etf-diagnostics.js")),swing=require(path.join(root,"swing-strategy-core.js"));
+const official=html.slice(html.indexOf("function officialArtifactCoreScoreHistory"),html.indexOf("function localCoreScoreHistory"));
+const priceRows=html.slice(html.indexOf("function radarTrendPhase4PriceRows"),html.indexOf("function radarTrendPhase4Return"));
+const phase5=html.slice(html.indexOf("function featuredDiagnosticFor"),html.indexOf("// ETF Radar deliberately reuses"));
+assert.ok(official.startsWith("function")&&priceRows.startsWith("function")&&phase5.startsWith("function"));
+const context={Number,Math,String,Map,Object,window:{HSGenericEtfDiagnostics:generic,HSSwingStrategyCore:swing},DEFAULT_WATCHLIST:[],META:{},all:[],LONG_TERM_CORE_SCORE_VERSION:"FINAL_CORE_WEIGHT_V1",HSFinalCoreProduction:{labelFor:()=>({label:"回檔觀察"})},isCompletedTradingDate:date=>/^\d{4}-\d{2}-\d{2}$/.test(date),fmt:value=>Number(value).toFixed(2).replace(/\.00$/, ""),esc:value=>String(value),uiMetricStatus:(kind,value)=>kind==="bias"?(value<0?"低於均線":"均線上方"):"中性",diagnosticCheckLabel:key=>({dailyKdjRising:"日 KD 回升",momentum10:"10 日動能改善",lowStopped:"近期低點未再破",reclaimedMa20:"站回 MA20",shortReversal:"短線價格反轉"})[key]||key,finalizedCoreScoreHistoryArtifact:null};
+vm.createContext(context);vm.runInContext(`${official}\n${priceRows}\n${phase5}\nthis.api={state:radarMarketPhase5State,render:radarMarketPositionHtml,summary:radarMarketPhase5TrendSummary};`,context);
+const dates=[];for(let day=new Date("2025-09-17T00:00:00Z");dates.length<260;day.setUTCDate(day.getUTCDate()+1))if(day.getUTCDay()>=1&&day.getUTCDay()<=5)dates.push(day.toISOString().slice(0,10));
+const latest=dates.at(-1),rows=dates.map((date,index)=>({date,close:90+index*.1,max:91+index*.1,min:89+index*.1,Trading_Volume:1000})),item={id:"00830",date:latest,weekBias:-4.8,officialRows:rows,officialRowsAdjusted:true};
+const snapshot={date:latest,snapshot_type:"FINALIZED_CLOSE",finalized:true,rows:[{symbol:"00830",final_core_score:45.1,core_score_version:"FINAL_CORE_WEIGHT_V1",data_as_of:`${latest}T13:30:00+08:00`,factors:{weekly_j:{raw:31.7}}}]};
+const artifact={schema_version:1,core_score_version:"FINAL_CORE_WEIGHT_V1",snapshots:[snapshot]};context.finalizedCoreScoreHistoryArtifact=artifact;
+let state=context.api.state(item,artifact);assert.equal(state.kind,"READY");assert.deepEqual(Array.from(state.mas,row=>row.period),[20,60,120,240]);assert.equal(state.weeklyJ,31.7);assert.equal(state.weeklyLabel,"中性");
+for(const ma of state.mas){const expected=swing.simpleMovingAverage(rows.map(row=>row.close),ma.period);assert.ok(Math.abs(ma.value-expected)<1e-9);assert.ok(Math.abs(ma.distance-((rows.at(-1).close/expected-1)*100))<1e-9)}
+assert.match(context.api.render(item),/月線<small>MA20<\/small>/);assert.match(context.api.render(item),/季線<small>MA60<\/small>/);assert.match(context.api.render(item),/半年線<small>MA120<\/small>/);assert.match(context.api.render(item),/年線<small>MA240<\/small>/);
+const positions=values=>values.map((distance,index)=>({label:["月線","季線","半年線","年線"][index],distance}));
+assert.match(context.api.summary(positions([-1,-1,1,1])),/短中期偏弱，半年線與年線之上/);assert.match(context.api.summary(positions([1,1,1,1])),/整體趨勢結構偏強/);assert.match(context.api.summary(positions([-1,-1,-1,-1])),/整體趨勢結構偏弱/);assert.match(context.api.summary(positions([1,1,-1,1])),/中期仍在修復/);
+const low={...item,officialRows:rows.slice(-25)};state=context.api.state(low,artifact);assert.ok(Number.isFinite(state.mas[0].value));assert.deepEqual(Array.from(state.mas.slice(1),ma=>ma.value),[null,null,null]);assert.match(context.api.render(low),/正式資料不足/);
+const normal=context.api.render(item);assert.match(normal,/data-radar-market-phase="5"/);assert.match(normal,/週 J 值/);assert.match(normal,/週乖離/);assert.match(normal,/相對強弱<small>RS<\/small>/);assert.match(normal,/低於均線/);assert.match(normal,/已成立 \d \/ 5/);assert.match(normal,/日 KD 回升/);assert.match(normal,/尚未成立|止跌條件已全部成立/);
+const original=context.featuredDiagnosticFor;context.featuredDiagnosticFor=()=>({recovery:{available:true,state:"確認回升"},weekly:{j:31.7,state:"中性"},rs:{available:false,reason:"比較基準待驗證"}});const booleanOnly=context.api.render(item);assert.doesNotMatch(booleanOnly,/已成立 \d \/ 5/);assert.match(booleanOnly,/不拆分假條件/);context.featuredDiagnosticFor=original;
+assert.equal(context.api.state({id:"009815"},artifact).kind,"WAIT_NATIVE");assert.equal(context.api.state(item,{...artifact,snapshots:[{...snapshot,finalized:false}]}).kind,"UNAVAILABLE");assert.equal(context.api.state({...item,officialRowsAdjusted:false},artifact).kind,"UNAVAILABLE");
+const future={...item,officialRows:[...rows,{date:"2099-01-01",close:99999}]};assert.equal(context.api.state(future,artifact).mas[0].value,context.api.state(item,artifact).mas[0].value);
+assert.match(css,/\.radarMarketP5MaRows\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);assert.match(css,/@media\(max-width:600px\)\{\.radarMarketP5MaRows,\.radarMarketP5Checks\{grid-template-columns:minmax\(0,1fr\)\}/);
+assert.doesNotMatch(phase5,/MA43|MA87|MA200/);assert.doesNotMatch(normal,/建議買進|建議加碼|適合進場/);
+console.log("PASS ETF Radar Detail Phase 5 finalized MA20/60/120/240, momentum, stop checks, missing data and layout guards");
