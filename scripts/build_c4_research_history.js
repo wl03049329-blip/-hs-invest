@@ -22,6 +22,8 @@ const canonical = value => JSON.stringify(stable(value));
 const sha = value => crypto.createHash("sha256").update(typeof value === "string" || Buffer.isBuffer(value) ? value : canonical(value)).digest("hex");
 const validDate = value => /^\d{4}-\d{2}-\d{2}$/.test(String(value || ""));
 const finite = value => typeof value === "number" && Number.isFinite(value);
+const builderHash = () => sha(fs.readFileSync(__filename));
+const weeklyHelperHash = () => sha(fs.readFileSync(path.join(ROOT, "research", "c4_historical", "weekly_j_versions.js")));
 
 function normalizePrice(rows, start, end) {
   return (Array.isArray(rows) ? rows : []).map(row => ({
@@ -150,7 +152,8 @@ function artifact(symbol, source, records, parity, generatedAt, generationCommit
       source_ohlc_artifact: `research/c4_historical/source/${symbol}.json`,
       source_ohlc_sha256: sha(source), model_version: FORMULA_VERSION,
       formula_version: FORMULA_VERSION, weekly_j_version: weeklyVersions.LEGACY,
-      generation_commit: generationCommit
+      generation_commit: generationCommit, builder_sha256: builderHash(),
+      weekly_j_helper_sha256: weeklyHelperHash()
     },
     sample_start: records[0]?.date ?? null, sample_end: records.at(-1)?.date ?? null,
     record_count: records.length, records_sha256: sha(records),
@@ -166,7 +169,8 @@ function comparisonSummary(symbol, rows, source, generatedAt, generationCommit) 
   return {etf: symbol, data_status: "RESEARCH_WEEKLY_J_TW_V2_COMPARISON",
     legacy_weekly_j_version: weeklyVersions.LEGACY, tw_weekly_j_version: weeklyVersions.TW,
     source_ohlc_sha256: sha(source), strategy_id: FORMULA_VERSION, generated_at: generatedAt,
-    generation_commit: generationCommit, sample_start: rows[0]?.date ?? null,
+    generation_commit: generationCommit, builder_sha256: builderHash(),
+    weekly_j_helper_sha256: weeklyHelperHash(), sample_start: rows[0]?.date ?? null,
     sample_end: rows.at(-1)?.date ?? null, record_count: rows.length,
     weekly_j_differing_days: diffs.filter(value => value > 1e-10).length,
     weekly_j_mean_absolute_difference: diffs.length ? diffs.reduce((a, b) => a + b, 0) / diffs.length : null,
