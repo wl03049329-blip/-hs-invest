@@ -59,9 +59,9 @@ for (const symbol of research.SYMBOLS) {
   assert.equal(artifact.metadata.weekly_j_version, weekly.LEGACY);
   assert.equal(artifact.metadata.provenance.source_ohlc_sha256, research.sha(source));
   assert.equal(artifact.metadata.provenance.builder_sha256,
-    research.sha(fs.readFileSync(path.join(ROOT, "scripts", "build_c4_research_history.js"))));
+    research.sha(fs.readFileSync(path.join(ROOT, "scripts", "build_c4_research_history.js"), "utf8").replace(/\r\n/g, "\n")));
   assert.equal(artifact.metadata.provenance.weekly_j_helper_sha256,
-    research.sha(fs.readFileSync(path.join(dir, "weekly_j_versions.js"))));
+    research.sha(fs.readFileSync(path.join(dir, "weekly_j_versions.js"), "utf8").replace(/\r\n/g, "\n")));
   assert.equal(artifact.metadata.records_sha256, research.sha(artifact.records));
   assert.equal(artifact.artifact_sha256, research.sha({metadata: artifact.metadata, records: artifact.records}));
   assert.equal(artifact.metadata.record_count, artifact.records.length);

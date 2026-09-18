@@ -22,8 +22,9 @@ const canonical = value => JSON.stringify(stable(value));
 const sha = value => crypto.createHash("sha256").update(typeof value === "string" || Buffer.isBuffer(value) ? value : canonical(value)).digest("hex");
 const validDate = value => /^\d{4}-\d{2}-\d{2}$/.test(String(value || ""));
 const finite = value => typeof value === "number" && Number.isFinite(value);
-const builderHash = () => sha(fs.readFileSync(__filename));
-const weeklyHelperHash = () => sha(fs.readFileSync(path.join(ROOT, "research", "c4_historical", "weekly_j_versions.js")));
+const codeHash = file => sha(fs.readFileSync(file, "utf8").replace(/\r\n/g, "\n"));
+const builderHash = () => codeHash(__filename);
+const weeklyHelperHash = () => codeHash(path.join(ROOT, "research", "c4_historical", "weekly_j_versions.js"));
 
 function normalizePrice(rows, start, end) {
   return (Array.isArray(rows) ? rows : []).map(row => ({
