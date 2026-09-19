@@ -19,3 +19,4 @@ test("12 SW has no fetch handler",()=>assert.doesNotMatch(sw,/addEventListener\s
 test("13 SW has no cache API",()=>assert.doesNotMatch(sw,/\bcaches\b|precache|workbox/i));
 test("14 SW accepts formal bundle and route",()=>{assert.match(sw,/ETF_ALERT_BUNDLE/);assert.match(sw,/radarEtf/);assert.match(sw,/clients\.openWindow/)});
 test("15 VAPID private material absent",()=>assert.doesNotMatch(html+sw+fs.readFileSync(path.join(root,"radar-push-subscription-v1.js"),"utf8"),/VAPID_PRIVATE_KEY|private_key/));
+test("16 existing active subscription syncs rules after normal data load",()=>{assert.match(html,/function ensureRadarPushRulesSync/);assert.match(html,/await load\(\);await ensureRadarPushRulesSync\(\)/)});
