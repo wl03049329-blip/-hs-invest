@@ -42,6 +42,60 @@
     const p0=aligned[0].portfolio,b0=aligned[0].benchmark,points=aligned.map(row=>({date:row.date,portfolio:Number((row.portfolio/p0*100).toFixed(4)),benchmark:Number((row.benchmark/b0*100).toFixed(4))})),portfolioChange=points.at(-1).portfolio-100,benchmarkChange=points.at(-1).benchmark-100;
     return{available:true,points,portfolioChange,benchmarkChange,gapPt:portfolioChange-benchmarkChange};
   }
+  const CAPITAL_EVENT_TYPES=Object.freeze(["CASH_CHANGED","HOLDING_QUANTITY_CHANGED","HOLDING_ADDED","HOLDING_REMOVED"]);
+  function portfolioSignature(snapshot){
+    const valid=validateSnapshot(snapshot);if(!valid)return"";
+    return Object.entries(valid.holdings).sort(([a],[b])=>a.localeCompare(b)).map(([symbol,item])=>`${symbol}:${Number(item.quantity).toFixed(8)}`).join("|");
+  }
+  function analyzePortfolioContinuity(snapshotRows,{tradingDates=[],invalidCount=0}={}){
+    const source=Array.isArray(snapshotRows)?snapshotRows:[],validated=source.map(validateSnapshot),invalid=Number(invalidCount)||validated.filter(row=>!row).length,rows=validated.filter(Boolean).sort((a,b)=>a.date.localeCompare(b.date)||a.timestamp.localeCompare(b.timestamp)),events=[];
+    const expected=[...new Set((Array.isArray(tradingDates)?tradingDates:[]).map(date).filter(Boolean))].sort(),expectedIndex=new Map(expected.map((value,index)=>[value,index]));
+    for(let index=1;index<rows.length;index+=1){
+      const previous=rows[index-1],current=rows[index],from=previous.date,to=current.date,previousSymbols=new Set(Object.keys(previous.holdings)),currentSymbols=new Set(Object.keys(current.holdings));
+      if(Math.abs(previous.cash-current.cash)>0.01)events.push({type:"CASH_CHANGED",from,to,previous:previous.cash,current:current.cash});
+      for(const symbol of currentSymbols){
+        if(!previousSymbols.has(symbol))events.push({type:"HOLDING_ADDED",from,to,symbol});
+        else if(Math.abs(previous.holdings[symbol].quantity-current.holdings[symbol].quantity)>1e-8)events.push({type:"HOLDING_QUANTITY_CHANGED",from,to,symbol,previous:previous.holdings[symbol].quantity,current:current.holdings[symbol].quantity});
+      }
+      for(const symbol of previousSymbols)if(!currentSymbols.has(symbol))events.push({type:"HOLDING_REMOVED",from,to,symbol});
+      const left=expectedIndex.get(from),right=expectedIndex.get(to);
+      if(Number.isInteger(left)&&Number.isInteger(right)&&right-left>1)events.push({type:"DATA_GAP",from,to,missingTradingDays:right-left-1});
+    }
+    const capitalEvents=events.filter(event=>CAPITAL_EVENT_TYPES.includes(event.type)),dataGaps=events.filter(event=>event.type==="DATA_GAP");
+    return{status:invalid?"INVALID_DATA":capitalEvents.length?"CAPITAL_EVENT":rows.length<2||dataGaps.length?"INSUFFICIENT_HISTORY":"COMPLETE",valid:invalid===0,rows,events,capitalEvents,dataGaps,hasCapitalEvent:Boolean(capitalEvents.length),hasDataGap:Boolean(dataGaps.length),complete:invalid===0&&!capitalEvents.length&&!dataGaps.length};
+  }
+  function guardBenchmark(comparison,continuity){
+    if(continuity?.hasCapitalEvent)return{...(comparison||{}),available:false,gapPt:null,guarded:true,reason:"CAPITAL_EVENT"};
+    return{...(comparison||{}),guarded:false,reason:null};
+  }
+  function calculateConcentration(inputRows){
+    const valid=(Array.isArray(inputRows)?inputRows:[]).map(row=>({symbol:String(row?.code||row?.symbol||""),marketValue:finite(row?.marketValue),weight:finite(row?.weight)})).filter(row=>row.marketValue!==null&&row.marketValue>=0||row.weight!==null&&row.weight>=0),marketTotal=valid.reduce((sum,row)=>sum+(row.marketValue||0),0);
+    const weights=valid.map(row=>({symbol:row.symbol,weight:row.weight!==null?row.weight:marketTotal>0?(row.marketValue||0)/marketTotal*100:0})).filter(row=>row.weight>=0).sort((a,b)=>b.weight-a.weight||a.symbol.localeCompare(b.symbol)),totalWeight=weights.reduce((sum,row)=>sum+row.weight,0);
+    if(!weights.length||totalWeight<=0)return{available:false,largest:null,top3:null,hhi:null,effectiveHoldings:null,totalWeight,rows:weights};
+    const normalized=weights.map(row=>({...row,normalizedWeight:row.weight/totalWeight})),hhi=normalized.reduce((sum,row)=>sum+row.normalizedWeight**2,0);
+    return{available:true,largest:normalized[0].normalizedWeight*100,top3:normalized.slice(0,3).reduce((sum,row)=>sum+row.normalizedWeight,0)*100,hhi,effectiveHoldings:hhi>0?1/hhi:null,totalWeight,rows:normalized};
+  }
+  function calculateAllocationDeviation(inputRows){
+    const rows=(Array.isArray(inputRows)?inputRows:[]).map(row=>({symbol:String(row?.code||row?.symbol||""),current:finite(row?.weight),target:finite(row?.targetAllocation)}));
+    if(!rows.length||rows.some(row=>row.current===null||row.target===null))return{available:false,totalDeviation:null,largestUnderweight:null,largestOverweight:null,rows:[]};
+    const output=rows.map(row=>({...row,gap:row.current-row.target})),under=[...output].sort((a,b)=>a.gap-b.gap)[0],over=[...output].sort((a,b)=>b.gap-a.gap)[0];
+    return{available:true,totalDeviation:output.reduce((sum,row)=>sum+Math.abs(row.gap),0)/2,largestUnderweight:under?.gap<0?under:null,largestOverweight:over?.gap>0?over:null,rows:output};
+  }
+  function historicalGuard(snapshotRows,continuity,minimum){
+    const rows=(Array.isArray(snapshotRows)?snapshotRows:[]).map(validateSnapshot);if(rows.some(row=>!row))return{available:false,status:"INVALID_DATA",rows:[]};
+    const valid=rows.filter(Boolean).sort((a,b)=>a.date.localeCompare(b.date));if(continuity?.hasCapitalEvent)return{available:false,status:"CAPITAL_EVENT",rows:valid};if(continuity?.hasDataGap)return{available:false,status:"INSUFFICIENT_HISTORY",rows:valid};if(valid.length<minimum)return{available:false,status:"INSUFFICIENT_HISTORY",rows:valid};return{available:true,status:"COMPLETE",rows:valid};
+  }
+  function calculateMaxDrawdown(snapshotRows,{continuity,minimumSnapshots=10}={}){
+    const guard=historicalGuard(snapshotRows,continuity,minimumSnapshots);if(!guard.available)return{available:false,status:guard.status,value:null,observations:guard.rows.length};
+    let peak=0,maximum=0;for(const row of guard.rows){const value=finite(row.totalAssets);if(value===null||value<=0)return{available:false,status:"INVALID_DATA",value:null,observations:guard.rows.length};peak=Math.max(peak,value);maximum=Math.min(maximum,value/peak-1);}
+    return{available:true,status:"COMPLETE",value:maximum*100,observations:guard.rows.length};
+  }
+  function calculateAnnualizedVolatility(snapshotRows,{continuity,minimumReturns=20}={}){
+    const guard=historicalGuard(snapshotRows,continuity,minimumReturns+1);if(!guard.available)return{available:false,status:guard.status,value:null,observations:Math.max(0,guard.rows.length-1)};
+    const returns=[];for(let index=1;index<guard.rows.length;index+=1){const previous=finite(guard.rows[index-1].totalAssets),current=finite(guard.rows[index].totalAssets);if(previous===null||previous<=0||current===null||current<=0)return{available:false,status:"INVALID_DATA",value:null,observations:returns.length};returns.push(current/previous-1);}
+    const mean=returns.reduce((sum,value)=>sum+value,0)/returns.length,variance=returns.reduce((sum,value)=>sum+(value-mean)**2,0)/(returns.length-1);
+    return{available:true,status:"COMPLETE",value:Math.sqrt(variance)*Math.sqrt(252)*100,observations:returns.length};
+  }
   function buildCapitalAllocationPlan({rows=[],availableCash=0,allocationHealthScore}={}){
     const cash=Math.max(0,finite(availableCash)||0),valid=(Array.isArray(rows)?rows:[]).map(row=>{const symbol=String(row?.code||row?.symbol||"").toUpperCase(),marketValue=finite(row?.marketValue),current=finite(row?.weight),target=finite(row?.targetAllocation),price=finite(row?.price??row?.quote?.price),score=finite(row?.coreScore);return{symbol,marketValue,current,target,price,score};}).filter(row=>/^[0-9A-Z]{4,10}$/.test(row.symbol));
     if(!valid.length)return{status:"EMPTY_HOLDINGS",cash,allocated:0,remaining:cash,rows:[],healthBefore:null,healthAfter:null};
@@ -53,5 +107,5 @@
     const allocated=Math.round(cash)-remainingCash,remaining=remainingCash,healthFn=typeof allocationHealthScore==="function"?allocationHealthScore:()=>null;
     return{status:cash<=0?"ZERO_CASH":eligible.length?"READY":"NO_ELIGIBLE_TARGET",cash,allocated,remaining,rows:planned.sort((a,b)=>b.allocationAmount-a.allocationAmount||a.symbol.localeCompare(b.symbol)),healthBefore:healthFn(valid.map(row=>({weight:row.current,targetAllocation:row.target}))),healthAfter:healthFn(planned.map(row=>({weight:row.afterAllocation,targetAllocation:row.targetAllocation})))};
   }
-  return Object.freeze({VERSION,STORAGE_KEY,PERIOD_DAYS,validateSnapshot,appendDailySnapshot,selectPeriod,assetChange,alignBenchmark,buildCapitalAllocationPlan});
+  return Object.freeze({VERSION,STORAGE_KEY,PERIOD_DAYS,CAPITAL_EVENT_TYPES,validateSnapshot,appendDailySnapshot,selectPeriod,assetChange,alignBenchmark,portfolioSignature,analyzePortfolioContinuity,guardBenchmark,calculateConcentration,calculateAllocationDeviation,calculateMaxDrawdown,calculateAnnualizedVolatility,buildCapitalAllocationPlan});
 });

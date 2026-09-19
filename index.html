@@ -301,7 +301,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 .homeOpportunityGroup{display:grid;gap:7px;background:#07130e;border:1px solid var(--line);border-radius:15px;padding:10px}.homeOpportunityGroup h3{font-size:13px;margin:0;color:#dffff0}.homeOpportunityRow{display:grid;grid-template-columns:1fr auto;gap:3px 8px;width:100%;text-align:left;color:inherit;background:#102219;border:1px solid #244332;border-radius:11px;padding:9px}.homeOpportunityRow span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.homeOpportunityRow strong{color:#dffff0}.homeOpportunityRow small{grid-column:1/-1;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.strategyBadge{font-size:11px;font-weight:900;color:#dffff0;background:#173126;border-radius:999px;padding:6px 9px}.watchStrategy label{display:grid;gap:3px;color:var(--muted);font-size:10px}.watchStrategy select,.drawdownReference select,.drawdownReference input{background:#07130e;border:1px solid var(--line);color:#fff;border-radius:9px;padding:7px;max-width:150px}.drawdownTool{margin:12px 0}.drawdownForm{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin:12px 0}.drawdownForm label{display:grid;gap:5px;color:var(--muted);font-size:12px}.drawdownForm input{width:100%;background:#07130e;border:1px solid var(--line);color:#fff;border-radius:12px;padding:11px}.drawdownSummary{margin-top:12px}.drawdownTitle,.drawdownReference,.drawdownHeadline{display:flex;gap:10px;align-items:center;justify-content:space-between}.drawdownTitle h3{margin:0}.drawdownTitle span{font-size:11px;color:#dffff0;background:#173126;border-radius:999px;padding:6px 9px}.drawdownReference{justify-content:flex-start;margin:12px 0;flex-wrap:wrap}.drawdownReference label{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:12px}.drawdownHeadline{display:grid;grid-template-columns:repeat(3,1fr)}.drawdownHeadline>div{background:#07130e;border:1px solid var(--line);border-radius:13px;padding:10px}.drawdownHeadline span,.drawdownHeadline small{display:block;color:var(--muted);font-size:10px}.drawdownHeadline b{display:block;font-size:20px;margin:4px 0}.drawdownTableWrap{overflow:auto;margin-top:12px;border:1px solid var(--line);border-radius:13px}.drawdownTable{min-width:0}.drawdownTable th,.drawdownTable td{padding:10px;text-align:left}.drawdownTable tr.current{background:#453c10;color:#ffe46f}.drawdownTable th:first-child,.drawdownTable td:first-child{position:static;background:transparent}.strategyBreakdown small{display:block;margin-top:8px;color:var(--muted)}
 @media(max-width:620px){.watchRow{grid-template-columns:minmax(0,1fr) auto}.watchStrategy{grid-column:1/-1}.watchStrategy select{max-width:none;width:100%}.homeOpportunityRow{font-size:12px}.drawdownHeadline{gap:6px}.drawdownHeadline>div{padding:8px}.drawdownHeadline b{font-size:16px}.drawdownForm{grid-template-columns:1fr}.drawdownForm .btn{width:100%}}
 </style>
-<link rel="stylesheet" href="portfolio-v6.css?v=20260920-portfolio-performance-p2" />
+<link rel="stylesheet" href="portfolio-v6.css?v=20260920-portfolio-risk-p3" />
 <link rel="stylesheet" href="v62-tech.css?v=20260809b" />
 <link rel="stylesheet" href="formal-black-gold.css?v=20260920-radar-header-compact-v1" />
 <style id="radarPhase32CriticalLayout">
@@ -481,6 +481,16 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
     <section class="panel portfolioPerformancePanel" aria-labelledby="portfolioPerformanceTitle">
       <header class="portfolioPerformanceHead"><div><p class="eyebrow">PERFORMANCE</p><h2 id="portfolioPerformanceTitle">投資績效</h2></div><div id="portfolioPerformancePeriods" class="portfolioPeriodTabs" role="tablist" aria-label="績效期間"><button class="active" data-performance-period="1M" type="button">1M</button><button data-performance-period="3M" type="button">3M</button><button data-performance-period="YTD" type="button">YTD</button><button data-performance-period="1Y" type="button">1Y</button><button data-performance-period="ALL" type="button">ALL</button></div></header>
       <div class="portfolioPerformanceBody"><div class="portfolioPerformanceChart"><canvas id="portfolioPerformanceChart" role="img" aria-label="我的投資組合與 0050 基準比較"></canvas><div id="portfolioPerformanceEmpty" class="portfolioPerformanceEmpty"></div></div><aside class="portfolioPerformanceSummary"><label><input id="portfolioBenchmarkToggle" type="checkbox" checked> 顯示 0050 Benchmark</label><div id="portfolioPerformanceMetrics"></div><small id="portfolioPerformanceCoverage"></small></aside></div>
+      <p id="portfolioPerformanceIntegrity" class="portfolioPerformanceIntegrity" hidden></p>
+    </section>
+
+    <section class="panel portfolioRiskCenter" aria-labelledby="portfolioRiskTitle">
+      <header class="portfolioRiskHead"><div><p class="eyebrow">PORTFOLIO RISK</p><h2 id="portfolioRiskTitle">投資組合風險</h2><small id="portfolioRiskPeriod">目前區間：1M</small></div><span id="portfolioRiskQuality" class="portfolioRiskQuality" data-quality="INSUFFICIENT_HISTORY">歷史累積中</span></header>
+      <div id="portfolioRiskMetrics" class="portfolioRiskMetrics" aria-live="polite"></div>
+      <div class="portfolioRiskDetails">
+        <article class="portfolioRiskDetail"><h3>配置與集中度</h3><div id="portfolioConcentration"></div></article>
+        <article class="portfolioRiskDetail"><h3>ETF 重疊與底層曝險</h3><div id="portfolioOverlapState" class="portfolioOverlapUnavailable">ETF 重疊分析尚無可靠成分股資料。</div></article>
+      </div>
     </section>
 
     <div class="portfolioDecisionGrid">
@@ -4893,8 +4903,8 @@ initLiveDebugPanel();liveDiagnosticRecord("initial_page_load",{render_state_befo
 
 </script>
 <script src="portfolio-core.js?v=20260920-portfolio-decision-center-p1"></script>
-<script src="portfolio-performance-core.js?v=20260920-portfolio-performance-p2"></script>
-<script src="portfolio-v6.js?v=20260920-portfolio-performance-p2"></script>
+<script src="portfolio-performance-core.js?v=20260920-portfolio-risk-p3"></script>
+<script src="portfolio-v6.js?v=20260920-portfolio-risk-p3"></script>
 <script src="personal-capital-ui.js?v=20260824-phase4"></script>
 </body>
 </html>

@@ -40,6 +40,7 @@
   let resizeFrame = 0;
   let rebalanceSettings = loadRebalanceSettings();
   let latestRebalanceAdvice = null;
+  let portfolioHistoryInvalidCount = 0;
   let portfolioHistory = loadPortfolioHistory();
   let benchmarkRows = [];
   let performancePeriod = "1M";
@@ -47,8 +48,11 @@
   function loadPortfolioHistory() {
     try {
       const parsed = JSON.parse(localStorage.getItem(performanceCore.STORAGE_KEY) || "[]");
-      return (Array.isArray(parsed) ? parsed : []).map(performanceCore.validateSnapshot).filter(Boolean).sort((a, b) => a.date.localeCompare(b.date));
-    } catch { return []; }
+      const source = Array.isArray(parsed) ? parsed : [];
+      const validated = source.map(performanceCore.validateSnapshot);
+      portfolioHistoryInvalidCount = validated.filter(row => !row).length;
+      return validated.filter(Boolean).sort((a, b) => a.date.localeCompare(b.date));
+    } catch { portfolioHistoryInvalidCount = 1; return []; }
   }
 
   function savePortfolioHistory() {
@@ -503,27 +507,66 @@
   }
 
   function renderPerformance() {
-    const rows = performanceCore.selectPeriod(portfolioHistory, performancePeriod), change = performanceCore.assetChange(rows), comparison = performanceCore.alignBenchmark(rows, benchmarkRows), benchmarkVisible = $v6("#portfolioBenchmarkToggle").checked;
-    const empty = $v6("#portfolioPerformanceEmpty"), metrics = $v6("#portfolioPerformanceMetrics"), coverage = $v6("#portfolioPerformanceCoverage");
+    const rows = performanceCore.selectPeriod(portfolioHistory, performancePeriod), change = performanceCore.assetChange(rows), continuity = performanceCore.analyzePortfolioContinuity(rows, {tradingDates: benchmarkRows.map(row => row.date), invalidCount: portfolioHistoryInvalidCount}), rawComparison = performanceCore.alignBenchmark(rows, benchmarkRows), comparison = performanceCore.guardBenchmark(rawComparison, continuity), benchmarkVisible = $v6("#portfolioBenchmarkToggle").checked;
+    const empty = $v6("#portfolioPerformanceEmpty"), metrics = $v6("#portfolioPerformanceMetrics"), coverage = $v6("#portfolioPerformanceCoverage"), integrity = $v6("#portfolioPerformanceIntegrity");
     $v6("#portfolioPerformancePeriods").querySelectorAll("[data-performance-period]").forEach(button => button.classList.toggle("active", button.dataset.performancePeriod === performancePeriod));
     if (rows.length < 2) {
       const firstDate = portfolioHistory[0]?.date;
       empty.innerHTML = `<b>績效紀錄將從現在開始累積</b><span>目前歷史資料尚不足，HS 不會以目前持股反推過去績效。${firstDate ? `已開始記錄：${displayDate(firstDate)}` : "建立完整持股與有效行情後開始記錄。"}</span>`;
       metrics.innerHTML = '<article class="portfolioPerformanceMetric"><span>區間資產變化</span><b>尚未解鎖</b><small>至少需要 2 個有效交易日</small></article>';
       coverage.textContent = firstDate ? `FORWARD_SNAPSHOT_ONLY｜資料起始 ${displayDate(firstDate)}` : "FORWARD_SNAPSHOT_ONLY｜尚無有效日資料";
-      drawPerformanceChart([], false); return;
+      integrity.hidden = true; integrity.textContent = ""; drawPerformanceChart([], false); return;
     }
     empty.innerHTML = "";
     const metricRows = [
       ["區間資產變化率", percent(change.rate), "不含現金流校正"],
       ["區間資產變化", money(change.amount), `${displayDate(rows[0].date)} 至 ${displayDate(rows.at(-1).date)}`],
-      ["0050 Benchmark", comparison.available ? percent(comparison.benchmarkChange) : "資料不足", comparison.available ? "既有還原權息收盤價｜相同交易日" : "既有還原權息歷史｜無足夠對齊日期"],
-      ["相對差異", comparison.available ? point(comparison.gapPt) : "—", "資產變化率減 0050"]
+      ["0050 Benchmark", rawComparison.available ? percent(rawComparison.benchmarkChange) : "資料不足", rawComparison.available ? "既有還原權息收盤價｜相同交易日" : "既有還原權息歷史｜無足夠對齊日期"],
+      ["相對差異", continuity.hasCapitalEvent ? "暂不計算" : comparison.available ? point(comparison.gapPt) : "—", continuity.hasCapitalEvent ? "期間內持股或現金有變動" : "資產變化率減 0050"]
     ];
     metrics.innerHTML = metricRows.map(([label, value, note]) => `<article class="portfolioPerformanceMetric"><span>${label}</span><b>${escapeHtml(value)}</b><small>${escapeHtml(note)}</small></article>`).join("");
     coverage.textContent = `FORWARD_SNAPSHOT_ONLY｜實際涵蓋 ${displayDate(rows[0].date)} 至 ${displayDate(rows.at(-1).date)}｜${rows.length} 個交易日`;
-    const points = comparison.available ? comparison.points : rows.map((row, index) => ({date: row.date, portfolio: row.totalAssets / rows[0].totalAssets * 100, benchmark: null}));
-    drawPerformanceChart(points, benchmarkVisible && comparison.available);
+    integrity.hidden = !continuity.hasCapitalEvent;
+    integrity.textContent = continuity.hasCapitalEvent ? "此區間包含資金或持股異動，資產變化不等同投資報酬率。" : "";
+    const points = rawComparison.available ? rawComparison.points : rows.map(row => ({date: row.date, portfolio: row.totalAssets / rows[0].totalAssets * 100, benchmark: null}));
+    drawPerformanceChart(points, benchmarkVisible && rawComparison.available);
+  }
+
+  function riskStatusText(status) {
+    return ({COMPLETE:"資料完整",CAPITAL_EVENT:"有投資組合異動",INSUFFICIENT_HISTORY:"歷史累積中",INVALID_DATA:"資料無法驗證"})[status] || "歷史累積中";
+  }
+
+  function historicalRiskNote(result, kind) {
+    if (result.status === "CAPITAL_EVENT") return kind === "drawdown" ? "期間內投資組合有異動，暂不計算" : "期間內持股或資金變動，暂不計算";
+    if (result.status === "INVALID_DATA") return "資料無法驗證";
+    return "資料累積中";
+  }
+
+  function renderRiskCenter() {
+    const rows = performanceCore.selectPeriod(portfolioHistory, performancePeriod);
+    const continuity = performanceCore.analyzePortfolioContinuity(rows, {tradingDates: benchmarkRows.map(row => row.date), invalidCount: portfolioHistoryInvalidCount});
+    const concentration = performanceCore.calculateConcentration(computed.rows.filter(row => row.quoteStatus === "current").map(row => ({code: row.code, marketValue: row.marketValue, weight: row.weight})));
+    const allocation = performanceCore.calculateAllocationDeviation(computed.rows.map(row => ({code: row.code, weight: row.weight, targetAllocation: row.targetAllocation})));
+    const drawdown = performanceCore.calculateMaxDrawdown(rows, {continuity});
+    const volatility = performanceCore.calculateAnnualizedVolatility(rows, {continuity});
+    const quality = portfolioHistoryInvalidCount ? "INVALID_DATA" : continuity.hasCapitalEvent ? "CAPITAL_EVENT" : rows.length < 10 || continuity.hasDataGap ? "INSUFFICIENT_HISTORY" : "COMPLETE";
+    const qualityNode = $v6("#portfolioRiskQuality");
+    qualityNode.dataset.quality = quality; qualityNode.textContent = riskStatusText(quality);
+    $v6("#portfolioRiskPeriod").textContent = `目前區間：${performancePeriod}`;
+    const metricRows = [
+      ["最大單一部位", concentration.available ? plainPercent(concentration.largest) : "—", concentration.available ? "依目前持股市值" : "等待完整市值"],
+      ["前三大部位", concentration.available ? plainPercent(concentration.top3) : "—", concentration.available ? "依目前持股市值" : "等待完整市值"],
+      ["最大回撤", drawdown.available ? percent(drawdown.value) : "—", drawdown.available ? `${drawdown.observations} 個有效 snapshots` : historicalRiskNote(drawdown, "drawdown")],
+      ["年化波動率", volatility.available ? plainPercent(volatility.value) : "—", volatility.available ? `${volatility.observations} 個 daily returns` : historicalRiskNote(volatility, "volatility")]
+    ];
+    $v6("#portfolioRiskMetrics").innerHTML = metricRows.map(([label,value,note]) => `<article class="portfolioRiskMetric"><span>${escapeHtml(label)}</span><b>${escapeHtml(value)}</b><small>${escapeHtml(note)}</small></article>`).join("");
+    const concentrationRows = [
+      ["有效分散程度", concentration.available ? `約 ${number(concentration.effectiveHoldings, 1)} 檔` : "—", "依持股權重估算，未對 ETF 成分股去重"],
+      ["配置偏離", allocation.available ? point(allocation.totalDeviation) : "—", Number.isFinite(core.allocationHealthScore(computed.rows)) ? `配置健康度 ${core.allocationHealthScore(computed.rows)}` : "目標配置尚未完整"],
+      ["最大低配", allocation.largestUnderweight ? allocation.largestUnderweight.symbol : "—", allocation.largestUnderweight ? point(allocation.largestUnderweight.gap) : "無可驗證低配"],
+      ["最大高配", allocation.largestOverweight ? allocation.largestOverweight.symbol : "—", allocation.largestOverweight ? point(allocation.largestOverweight.gap) : "無可驗證高配"]
+    ];
+    $v6("#portfolioConcentration").innerHTML = `<div class="portfolioRiskRows">${concentrationRows.map(([label,value,note]) => `<div class="portfolioRiskRow"><span>${escapeHtml(label)}</span><b>${escapeHtml(value)}</b><small>${escapeHtml(note)}</small></div>`).join("")}</div>`;
   }
 
   function capitalReasonText(codes) {
@@ -556,6 +599,7 @@
     renderRebalance(focusTarget);
     recordPortfolioSnapshot();
     renderPerformance();
+    renderRiskCenter();
     renderCapitalPlan();
     renderQuoteStatus();
     window.dispatchEvent(new CustomEvent("hs:portfolio-state"));
@@ -1182,6 +1226,7 @@
       if (!button) return;
       performancePeriod = button.dataset.performancePeriod;
       renderPerformance();
+      renderRiskCenter();
     });
     $v6("#portfolioBenchmarkToggle").addEventListener("change", renderPerformance);
     $v6("#portfolioChart").addEventListener("click", chartHit);
@@ -1205,7 +1250,7 @@
     });
     window.addEventListener("resize", () => {
       cancelAnimationFrame(resizeFrame);
-      resizeFrame = requestAnimationFrame(() => { drawAllocation(); renderPerformance(); });
+      resizeFrame = requestAnimationFrame(() => { drawAllocation(); renderPerformance(); renderRiskCenter(); });
     }, {passive: true});
     document.addEventListener("keydown", event => {
       if (event.key === "Escape" && $v6("#portfolioModal").classList.contains("show")) closePortfolioModal();
@@ -1222,8 +1267,8 @@
     return response.json();
   }).then(payload => {
     benchmarkRows = Array.isArray(payload?.items?.["0050"]?.rows) ? payload.items["0050"].rows : [];
-    renderPerformance();
-  }).catch(() => { benchmarkRows = []; renderPerformance(); });
+    renderPerformance(); renderRiskCenter();
+  }).catch(() => { benchmarkRows = []; renderPerformance(); renderRiskCenter(); });
   renderHomeSentiment();
   const initialShared=window.HSLiveMarket?.latestQuotes?.();
   if(initialShared instanceof Map&&initialShared.size)applySharedQuotes({detail:{quotes:initialShared,sourceUpdatedAt:"",source:"shared_cache"}});
