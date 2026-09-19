@@ -13,7 +13,7 @@
 <meta name="hs-live-source" content="railway" />
 <meta name="hs-live-railway-url" content="https://hs-invest-production.up.railway.app/api/live-scores" />
 <meta name="hs-app-build-sha" content="LOCAL" />
-<meta name="hs-frontend-bundle-version" content="20260919-radar-events-phase10" />
+<meta name="hs-frontend-bundle-version" content="20260919-radar-events-phase105" />
 <link rel="icon" type="image/png" sizes="64x64" href="assets/favicon-v3.png?v=5" />
 <link rel="shortcut icon" href="assets/favicon-v3.ico?v=5" />
 <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon-v3.png?v=5" />
@@ -303,7 +303,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 </style>
 <link rel="stylesheet" href="portfolio-v6.css?v=20260818-rebalance2" />
 <link rel="stylesheet" href="v62-tech.css?v=20260809b" />
-<link rel="stylesheet" href="formal-black-gold.css?v=20260919-radar-events-phase10" />
+<link rel="stylesheet" href="formal-black-gold.css?v=20260919-radar-events-phase105" />
 <style id="radarPhase32CriticalLayout">
 /* Phase 3.2 structural fallback: the renderer is mobile-first even if external CSS is stale. */
 .radarFactorStackV32{display:flex;flex-direction:column;width:100%;min-width:0}
@@ -721,8 +721,8 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
           <header><div><span>正式狀態摘要</span><h3 id="radarTodayFocusTitle">今日重點</h3></div><small>依最新正式盤後資料</small></header>
           <div id="radarTodayFocusCards" class="radarTodayFocusCards"><p class="radarTodayFocusEmpty">正在整理最新正式狀態…</p></div>
         </section>
-        <section id="radarEventCenter" class="radarEventCenter" aria-labelledby="radarEventCenterTitle" data-radar-events-phase="10">
-          <header><div><span>RECENT FORMAL EVENTS</span><h3 id="radarEventCenterTitle">事件中心</h3></div><small>近期客觀狀態變化</small></header>
+        <section id="radarEventCenter" class="radarEventCenter" aria-labelledby="radarEventCenterTitle" data-radar-events-phase="10.5">
+          <header><div><span>RECENT FORMAL EVENTS</span><h3 id="radarEventCenterTitle">事件中心</h3></div><small id="radarEventSummary">最近7個正式交易日</small></header>
           <div id="radarEventFilters" class="radarEventFilters" role="group" aria-label="事件類型篩選">
             <button class="active" type="button" data-radar-event-filter="ALL" aria-pressed="true">全部</button>
             <button type="button" data-radar-event-filter="CROSS_LEVEL" aria-pressed="false">跨級</button>
@@ -730,6 +730,15 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
             <button type="button" data-radar-event-filter="FIVE_DAY_CHANGE" aria-pressed="false">快速變化</button>
             <button type="button" data-radar-event-filter="HISTORICAL_PERCENTILE" aria-pressed="false">歷史位置</button>
             <button type="button" data-radar-event-filter="DATA_STATUS" aria-pressed="false">資料狀態</button>
+          </div>
+          <div class="radarEventControls">
+            <div class="radarEventModes" role="group" aria-label="事件時間範圍">
+              <button class="active" type="button" data-radar-event-mode="RECENT" aria-pressed="true">最近7個交易日</button>
+              <button type="button" data-radar-event-mode="ALL" aria-pressed="false">全部事件</button>
+            </div>
+            <label class="radarEventEtfSelect">ETF
+              <select id="radarEventEtfFilter" aria-label="依 ETF 篩選事件"><option value="ALL">全部</option></select>
+            </label>
           </div>
           <div id="radarEventList" class="radarEventList"><p class="radarEventEmpty">正在重建近期正式事件…</p></div>
         </section>
@@ -3450,7 +3459,7 @@ function radarTodayFocusHtml(state){
   return state.cards.map(card=>`<button class="radarTodayFocusCard" type="button" data-open-radar-detail="${esc(card.symbol)}"><header><span><b>${esc(card.symbol)}</b><small>${esc(card.name)}</small></span><strong>${esc(card.stageLabel)} · ${card.score}</strong></header><ul>${card.events.map(event=>`<li class="${event.tone}"><span>${esc(event.label)}</span><b>${esc(event.text)}</b>${event.note?`<small>${esc(event.note)}</small>`:""}</li>`).join("")}</ul><footer>查看詳情 <i aria-hidden="true">→</i></footer></button>`).join("");
 }
 const RADAR_EVENT_WINDOW=60,RADAR_EVENT_LIMIT=20,RADAR_EVENT_PERCENTILES=[85,90,95];
-let radarEventFilter="ALL",radarEventState={events:[],latestDate:""};
+let radarEventFilter="ALL",radarEventEtfFilter="ALL",radarEventMode="RECENT",radarEventRecentExpanded=false,radarEventState={events:[],latestDate:"",tradingDates:[]};
 function radarEventId(symbol,date,type,qualifier=""){return`${symbol}:${date}:${type}:${qualifier}`}
 function radarEventStage(score,contract=window.HSDecisionLayerV1){const value=Number(score);return Number.isFinite(value)?(contract?.STAGES||[]).find(stage=>value>=Number(stage.min))||null:null}
 function radarEventTimestamp(row){return String(row?.dataAsOf||`${row?.tradingDate||""}T13:30:00+08:00`)}
@@ -3488,13 +3497,43 @@ function buildRadarEvents({items=[],finalizedArtifact=finalizedCoreScoreHistoryA
 }
 function radarEventGroupLabel(dateValue,now=new Date()){const date=String(dateValue||""),today=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Taipei",year:"numeric",month:"2-digit",day:"2-digit"}).format(now),yesterdayDate=new Date(`${today}T12:00:00+08:00`);yesterdayDate.setDate(yesterdayDate.getDate()-1);const yesterday=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Taipei",year:"numeric",month:"2-digit",day:"2-digit"}).format(yesterdayDate);return date===today?"今天":date===yesterday?"昨天":date.slice(5).replace("-","/")}
 function radarEventMatches(event,filter){return filter==="ALL"||event.event_type===filter||event.event_types?.includes(filter)}
-function radarEventCenterHtml(state,filter=radarEventFilter){
-  const events=(state?.events||[]).filter(event=>radarEventMatches(event,filter));if(!events.length)return`<div class="radarEventEmpty"><b>目前沒有新的重要事件。</b><small>最近正式更新：${esc(state?.latestDate||"—")}</small></div>`;
-  const groups=new Map();for(const event of events){if(!groups.has(event.date))groups.set(event.date,[]);groups.get(event.date).push(event)}
-  return[...groups].map(([date,rows])=>`<section class="radarEventDay"><h4>${esc(radarEventGroupLabel(date))}</h4>${rows.map(event=>`<button class="radarEventItem" type="button" data-open-radar-detail="${esc(event.etf)}"><span class="radarEventTime">${esc(String(event.timestamp).slice(11,16)||"13:30")}</span><span class="radarEventIdentity"><b>${esc(event.etf)}</b><small>${esc(event.etf_name)}</small></span><span class="radarEventCopy"><b>${esc(event.title)}</b>${event.description?`<small>${esc(event.description)}</small>`:""}</span><i aria-hidden="true">→</i></button>`).join("")}</section>`).join("");
+function radarEventDisplayParts(event){
+  if(event.event_type!=="SUMMARY")return[event];
+  const segments=String(event.description||"").split("；").filter(Boolean),types=event.event_types||[];
+  return segments.map((segment,index)=>{const [title,...details]=segment.split("｜");return{...event,event_type:types[index]||types.at(-1)||"SUMMARY",event_types:[types[index]||types.at(-1)||"SUMMARY"],title,description:details.join("｜")}});
 }
-function radarEventStateFor(items){const events=buildRadarEvents({items}),latestDate=(items||[]).flatMap(item=>officialArtifactCoreScoreHistory(finalizedCoreScoreHistoryArtifact,item.id,1)).map(row=>row.tradingDate).filter(Boolean).sort().at(-1)||"";return{events,latestDate}}
-function renderRadarEventCenter(){const target=$("#radarEventList");if(!target)return;target.innerHTML=radarEventCenterHtml(radarEventState,radarEventFilter);target.querySelectorAll("[data-open-radar-detail]").forEach(button=>button.addEventListener("click",()=>showRadarDetail(button.dataset.openRadarDetail)))}
+function radarEventPresentationSeverity(event){
+  if(event.event_type==="DATA_STATUS")return String(event.title).includes("恢復")?"LOW":"HIGH";
+  if(event.event_type==="CROSS_LEVEL")return"HIGH";
+  if(event.event_type==="HISTORICAL_PERCENTILE")return Number(String(event.title).match(/P(\d+)/)?.[1])>=90?"MEDIUM":"LOW";
+  if(event.event_type==="FIVE_DAY_CHANGE")return Math.abs(Number(event.score_after)-Number(event.score_before))>=15?"MEDIUM":"LOW";
+  if(event.event_type==="NEXT_LEVEL")return Number(String(event.title).match(/還差\s*(\d+)/)?.[1])===1?"MEDIUM":"LOW";
+  return"LOW";
+}
+function radarEventPrimaryOrder(event){if(event.event_type==="DATA_STATUS")return String(event.title).includes("恢復")?6:1;return{CROSS_LEVEL:2,HISTORICAL_PERCENTILE:3,FIVE_DAY_CHANGE:4,NEXT_LEVEL:5}[event.event_type]||7}
+function radarEventCompactTitle(event){
+  if(event.event_type==="FIVE_DAY_CHANGE"){const delta=Number(event.score_after)-Number(event.score_before);return`近5日 Core Score ${delta>0?"+":""}${delta} 分`}
+  if(event.event_type==="HISTORICAL_PERCENTILE")return String(event.title).replace(/\s*以上$/,"");
+  return event.title;
+}
+function groupRadarEventsForDisplay(events,{typeFilter="ALL",etfFilter="ALL"}={}){
+  const groups=new Map();
+  for(const event of events||[]){if(etfFilter!=="ALL"&&event.etf!==etfFilter)continue;for(const part of radarEventDisplayParts(event)){if(typeFilter!=="ALL"&&part.event_type!==typeFilter)continue;const key=`${part.date}:${part.etf}`;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(part)}}
+  const severityOrder={HIGH:0,MEDIUM:1,LOW:2};
+  return[...groups.entries()].map(([key,parts])=>{parts.sort((a,b)=>radarEventPrimaryOrder(a)-radarEventPrimaryOrder(b)||severityOrder[radarEventPresentationSeverity(a)]-severityOrder[radarEventPresentationSeverity(b)]||a.event_id.localeCompare(b.event_id));const primary=parts[0],eventIds=[...new Set(parts.map(item=>item.event_id))].sort();return{event_id:`DISPLAY:${key}:${eventIds.join("+")}`,etf:primary.etf,etf_name:primary.etf_name,date:primary.date,timestamp:parts.map(item=>item.timestamp).sort().at(-1),severity:radarEventPresentationSeverity(primary),primary:{...primary,display_title:radarEventCompactTitle(primary)},supplements:parts.slice(1,3).map(item=>({...item,display_title:radarEventCompactTitle(item)})),extra_count:Math.max(0,parts.length-3),raw_event_count:eventIds.length,event_types:[...new Set(parts.map(item=>item.event_type))]}}).sort((a,b)=>b.date.localeCompare(a.date)||severityOrder[a.severity]-severityOrder[b.severity]||a.event_id.localeCompare(b.event_id));
+}
+function radarEventDisplayState(state,{typeFilter=radarEventFilter,etfFilter=radarEventEtfFilter,mode=radarEventMode,expanded=radarEventRecentExpanded}={}){
+  let cards=groupRadarEventsForDisplay(state?.events||[],{typeFilter,etfFilter});const tradingDates=(state?.tradingDates?.length?state.tradingDates:[...new Set(cards.map(card=>card.date))]).slice().sort().reverse(),recentDates=new Set(tradingDates.slice(0,7));if(mode==="RECENT")cards=cards.filter(card=>recentDates.has(card.date));const total=cards.length,limit=mode==="ALL"?20:(expanded?20:8),visible=cards.slice(0,limit);return{cards:visible,total,hidden:Math.max(0,total-visible.length),etfCount:new Set(cards.map(card=>card.etf)).size,mode};
+}
+function radarEventCenterHtml(state,filter=radarEventFilter,etfFilter=radarEventEtfFilter,mode=radarEventMode,expanded=radarEventRecentExpanded){
+  const view=radarEventDisplayState(state,{typeFilter:filter,etfFilter,mode,expanded});if(!view.cards.length)return`<div class="radarEventEmpty"><b>目前篩選條件下沒有事件</b><small>最近正式更新：${esc(state?.latestDate||"—")}</small></div>`;
+  const groups=new Map();for(const card of view.cards){if(!groups.has(card.date))groups.set(card.date,[]);groups.get(card.date).push(card)}
+  const cards=[...groups].map(([date,rows])=>`<section class="radarEventDay"><h4>${esc(radarEventGroupLabel(date))}</h4>${rows.map(card=>`<button class="radarEventItem radarEventGrouped severity-${card.severity.toLowerCase()}" type="button" data-open-radar-detail="${esc(card.etf)}"><span class="radarEventMeta"><b>${esc(card.etf)}</b><small>${esc(card.etf_name)} · ${esc(String(card.timestamp).slice(11,16)||"13:30")}</small>${card.severity==="HIGH"?`<em>重要變化</em>`:""}</span><span class="radarEventCopy"><b>${esc(card.primary.display_title)}</b>${card.primary.description?`<small>${esc(card.primary.description)}</small>`:""}${card.supplements.length?`<ul>${card.supplements.map(event=>`<li>${esc(event.display_title)}</li>`).join("")}</ul>`:""}${card.extra_count?`<small class="radarEventMoreCount">+${card.extra_count} 項變化</small>`:""}</span><i aria-hidden="true">→</i></button>`).join("")}</section>`).join("");
+  return cards+(view.hidden?`<button class="radarEventShowMore" type="button" data-radar-event-more>查看更多（尚有 ${view.hidden} 筆）</button>`:"");
+}
+function radarEventStateFor(items){const events=buildRadarEvents({items}),tradingDates=[...new Set((items||[]).flatMap(item=>officialArtifactCoreScoreHistory(finalizedCoreScoreHistoryArtifact,item.id,RADAR_EVENT_WINDOW)).map(row=>row.tradingDate).filter(Boolean))].sort().reverse(),latestDate=tradingDates[0]||"";return{events,latestDate,tradingDates}}
+function renderRadarEventEtfOptions(){const select=$("#radarEventEtfFilter");if(!select)return;const present=new Set((radarEventState?.events||[]).map(event=>event.etf)),symbols=["0050","00662","00757","00830","00935",...(present.has("009815")?["009815"]:[])];select.innerHTML=`<option value="ALL">全部</option>`+symbols.map(symbol=>`<option value="${symbol}">${symbol}</option>`).join("");select.value=symbols.includes(radarEventEtfFilter)?radarEventEtfFilter:"ALL";radarEventEtfFilter=select.value}
+function renderRadarEventCenter(){const target=$("#radarEventList");if(!target)return;renderRadarEventEtfOptions();const view=radarEventDisplayState(radarEventState),summary=$("#radarEventSummary");if(summary)summary.textContent=`${view.mode==="RECENT"?"最近7個正式交易日":"全部事件"}｜${view.total} 筆重要事件 · ${view.etfCount} 檔 ETF`;target.innerHTML=radarEventCenterHtml(radarEventState);target.querySelectorAll("[data-open-radar-detail]").forEach(button=>button.addEventListener("click",()=>showRadarDetail(button.dataset.openRadarDetail)))}
 function radarRangeBar(score){const value=Number.isFinite(score)?Math.max(0,Math.min(100,score)):0,contract=window.HSDecisionLayerV1,stage=contract?.STAGES?.find(row=>value>=row.min),next=(contract?.NEXT_THRESHOLDS||[]).find(threshold=>threshold>value),nextStage=contract?.STAGES?.find(row=>row.min===next);return`<div class="radarRange" data-score-level-version="${esc(contract?.SCORE_LEVEL_VERSION||"")}"><div class="radarRangeTrack"><i style="left:${value}%"></i></div><div class="radarRangeLabels"><span>${esc(stage?.label||"資料不足")}</span><span>${esc(nextStage?.label||"最高級別")}</span></div></div>`}
 function dailyFactorValue(decision,key){const row=(decision?.breakdown||[]).find(item=>item.key===key);return Number.isFinite(row?.value)?row.value:null}
 function createDailyLongRankSnapshot(items,finalizedAt=new Date().toISOString()){
@@ -4065,7 +4104,7 @@ function renderCards(){
   }).join(""):'<div class="watchEmpty">我的自選尚未加入 ETF。</div>';
   const longOverview=radar.filter(item=>strategyModeFor(item)==="long_term_core").sort(longRankComparator);
   $("#radarTodayFocusCards").innerHTML=radarTodayFocusHtml(radarTodayFocusState(longOverview));
-  radarEventState=radarEventStateFor(longOverview);$("#radarEventList").innerHTML=radarEventCenterHtml(radarEventState,radarEventFilter);
+  radarEventState=radarEventStateFor(longOverview);renderRadarEventCenter();
   $("#radarOverviewLong").innerHTML=longOverview.map((item,index)=>longOverviewCardHtml(item,index,dailyLongRankMovement(dailyPair,item.id))).join("")||'<div class="newsEmpty">長期 ETF 資料載入中</div>';
   const swingRoles={"00631L":"HS LEVERAGE","00733":"強勢趨勢拉回型","006201":"低檔止跌轉折型"};
   const swingOverviewItems=["00631L","00733","006201"].map(id=>radar.find(item=>item.id===id)).filter(Boolean);
@@ -4567,7 +4606,10 @@ $("#closeCoreScoreHistoryModal").addEventListener("click",closeCoreScoreHistoryM
 $("#coreScoreHistoryModal").addEventListener("click",event=>{if(event.target===$("#coreScoreHistoryModal"))closeCoreScoreHistoryModal()});
 document.addEventListener("click",event=>{const button=event.target.closest("[data-core-score-history]");if(!button)return;event.preventDefault();event.stopPropagation();openCoreScoreHistoryModal(button.dataset.coreScoreHistory,button)});
 document.addEventListener("click",event=>{const button=event.target.closest("[data-core-trend-range]");if(!button)return;event.preventDefault();event.stopPropagation();const ticker=button.dataset.coreTrendTicker,x=all.find(item=>item.id===ticker),host=button.closest("[data-radar-trend-phase]");if(!x||!host)return;coreScoreTrendRanges.set(ticker,button.dataset.coreTrendRange);host.outerHTML=radarScoreTrendHtml(x)});
-document.addEventListener("click",event=>{const button=event.target.closest("[data-radar-event-filter]");if(!button)return;event.preventDefault();radarEventFilter=button.dataset.radarEventFilter||"ALL";document.querySelectorAll("[data-radar-event-filter]").forEach(item=>{const active=item===button;item.classList.toggle("active",active);item.setAttribute("aria-pressed",String(active))});renderRadarEventCenter()});
+document.addEventListener("click",event=>{const button=event.target.closest("[data-radar-event-filter]");if(!button)return;event.preventDefault();radarEventFilter=button.dataset.radarEventFilter||"ALL";radarEventRecentExpanded=false;document.querySelectorAll("[data-radar-event-filter]").forEach(item=>{const active=item===button;item.classList.toggle("active",active);item.setAttribute("aria-pressed",String(active))});renderRadarEventCenter()});
+document.addEventListener("click",event=>{const button=event.target.closest("[data-radar-event-mode]");if(!button)return;event.preventDefault();radarEventMode=button.dataset.radarEventMode||"RECENT";radarEventRecentExpanded=false;document.querySelectorAll("[data-radar-event-mode]").forEach(item=>{const active=item===button;item.classList.toggle("active",active);item.setAttribute("aria-pressed",String(active))});renderRadarEventCenter()});
+document.addEventListener("click",event=>{if(!event.target.closest("[data-radar-event-more]"))return;event.preventDefault();radarEventRecentExpanded=true;renderRadarEventCenter()});
+$("#radarEventEtfFilter")?.addEventListener("change",event=>{radarEventEtfFilter=event.target.value||"ALL";radarEventRecentExpanded=false;renderRadarEventCenter()});
 document.addEventListener("click",event=>{const button=event.target.closest("[data-radar-outcome-tab],[data-radar-outcome-switch]");if(!button)return;event.preventDefault();event.stopPropagation();const host=button.closest("[data-radar-outcomes-phase]"),card=button.closest("[data-etf-id]"),ticker=card?.dataset.etfId,x=all.find(item=>item.id===ticker),mode=button.dataset.radarOutcomeTab||button.dataset.radarOutcomeSwitch;if(!host||!x||!["current","next","drawdown"].includes(mode))return;radarOutcomeModes.set(ticker,mode);host.outerHTML=radarOutcomePhase7BHtml(x)});
 document.addEventListener("toggle",event=>{const disclosure=event.target;if(!(disclosure instanceof HTMLDetailsElement)||!disclosure.matches(".radarResearchHub,.radarMarketP5Disclosure,.detailAdvanced"))return;disclosure.querySelector(":scope>summary")?.setAttribute("aria-expanded",String(disclosure.open))},true);
 document.addEventListener("click",event=>{const button=event.target.closest("[data-official-c4-range]");if(!button)return;event.preventDefault();event.stopPropagation();const symbol=button.dataset.officialC4Symbol,range=button.dataset.officialC4Range,host=button.closest(".hsC4Trend"),card=host?.closest(".hsLiveCard");officialC4TrendRanges.set(symbol,range);if(host){host.outerHTML=officialC4TrendHtml(symbol);const replacement=card?.querySelector(`[data-official-c4-trend="${symbol}"]`);if(replacement)replacement.open=true}});

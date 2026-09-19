@@ -25,7 +25,7 @@ const waitNative=card(39,39,{symbol:"009815"});assert(waitNative);assert.equal(w
 const multi=card(51,39);assert.equal(event(multi,"CROSS_LEVEL").note,"本次跨越多個分級");
 const rendered=context.api.html({cards:[merged,waitNative,{...merged,symbol:"0050"}],latestDate:"2026-09-18"});assert.equal((rendered.match(/class="radarTodayFocusCard"/g)||[]).length,3);assert.match(rendered,/查看詳情/);assert.match(html,/function radarTodayFocusState[\s\S]*?\.slice\(0,3\)/);
 assert.match(context.api.html({cards:[],latestDate:"2026-09-18"}),/目前沒有新的重要狀態變化[。\s\S]*2026-09-18/);
-assert.match(html,/data-radar-focus-phase="9"/);assert.match(html,/20260919-radar-events-phase10/);assert.match(html,/依最新正式盤後資料/);
+assert.match(html,/data-radar-focus-phase="9"/);assert.match(html,/20260919-radar-events-phase105/);assert.match(html,/依最新正式盤後資料/);
 for(const forbidden of ["最佳 ETF","Top Pick","最值得買","買進建議","預測報酬","勝率排序"])assert(!html.includes(forbidden));
 assert.match(css,/\.radarTodayFocusCards\{[^}]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);assert.match(css,/@media\(max-width:700px\)\{\.radarTodayFocusCards\{grid-template-columns:1fr\}/);assert.match(css,/\.radarTodayFocusCard footer\{[^}]*font-size:10px/);
 const artifact=JSON.parse(fs.readFileSync(path.join(root,"finalized-core-score-snapshots-v1.json"),"utf8")),names={"0050":"元大台灣50","00662":"富邦NASDAQ","00757":"統一FANG+","00830":"國泰費城半導體","00935":"野村臺灣新科技50","009815":"大華美國MAG7+"};
