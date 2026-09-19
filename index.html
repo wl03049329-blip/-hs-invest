@@ -13,7 +13,7 @@
 <meta name="hs-live-source" content="railway" />
 <meta name="hs-live-railway-url" content="https://hs-invest-production.up.railway.app/api/live-scores" />
 <meta name="hs-app-build-sha" content="LOCAL" />
-<meta name="hs-frontend-bundle-version" content="20260919-detail-ux-phase85" />
+<meta name="hs-frontend-bundle-version" content="20260919-radar-focus-phase9" />
 <link rel="icon" type="image/png" sizes="64x64" href="assets/favicon-v3.png?v=5" />
 <link rel="shortcut icon" href="assets/favicon-v3.ico?v=5" />
 <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon-v3.png?v=5" />
@@ -303,7 +303,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 </style>
 <link rel="stylesheet" href="portfolio-v6.css?v=20260818-rebalance2" />
 <link rel="stylesheet" href="v62-tech.css?v=20260809b" />
-<link rel="stylesheet" href="formal-black-gold.css?v=20260919-detail-ux-phase85" />
+<link rel="stylesheet" href="formal-black-gold.css?v=20260919-radar-focus-phase9" />
 <style id="radarPhase32CriticalLayout">
 /* Phase 3.2 structural fallback: the renderer is mobile-first even if external CSS is stale. */
 .radarFactorStackV32{display:flex;flex-direction:column;width:100%;min-width:0}
@@ -717,6 +717,10 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
         <button type="button" role="tab" aria-selected="false" data-radar-view="explain">分數解釋</button>
       </div>
       <div id="radarOverviewPane" data-radar-view-panel="overview">
+        <section id="radarTodayFocus" class="radarTodayFocus" aria-labelledby="radarTodayFocusTitle" data-radar-focus-phase="9">
+          <header><div><span>正式狀態摘要</span><h3 id="radarTodayFocusTitle">今日重點</h3></div><small>依最新正式盤後資料</small></header>
+          <div id="radarTodayFocusCards" class="radarTodayFocusCards"><p class="radarTodayFocusEmpty">正在整理最新正式狀態…</p></div>
+        </section>
         <article class="panel radarOverviewPanel"><div class="radarOverviewTitle"><span>LONG TERM</span><h3>長期 ETF 買點判讀中心</h3></div><div id="radarOverviewLong" class="radarOverviewLong"><div class="skeleton">載入排名中…</div></div></article>
         <article class="panel radarOverviewPanel"><div class="radarOverviewTitle"><span>SWING</span><h3>波段 ETF 判讀</h3></div><div id="radarOverviewSwingTabs" class="radarOverviewSwingTabs" role="tablist" aria-label="波段 ETF 切換"></div><div id="radarOverviewSwing" class="radarOverviewSwing"><div class="skeleton">載入波段訊號中…</div></div></article>
         <button id="radarSentimentShortcut" class="radarSentimentShortcut" type="button"><span><small>MARKET SENTIMENT</small><b id="radarSentimentText">市場情緒資料彙整中…</b></span><strong>查看完整市場情緒</strong></button>
@@ -3399,6 +3403,40 @@ function radarOverviewResearchHtml(x,next){
   const state=radarOverviewResearchSummary(x),nextValue=!next?.available?"—":next.isMaxLevel?"目前已為最高級別":`${next.nextThreshold}｜${esc(next.nextLabel)}`,nextNote=!next?.available?"資料暫缺":next.isMaxLevel?"":`還差 ${next.distance} 分`,position=Number.isFinite(state.percentile)?`P${state.percentile}`:"—",outcomeLabel=state.sampleMode==="NEXT_THRESHOLD"?"下一級以上20日後":"歷史20日後",outcomeValue=state.available?radarOutcomePercent(state.median20):"—",outcomeTone=state.available?radarOutcomeTone(state.median20):"is-neutral",sampleNote=state.kind==="WAIT_NATIVE"?"歷史資料暫缺":state.available?`N=${state.sampleCount}${state.sampleWarning?` · ${state.sampleWarning}`:""}`:"歷史樣本不足";
   return`<div class="radarOverviewResearch" aria-label="歷史研究摘要"><div><small>距下一級</small><span><b>${esc(nextValue)}</b>${nextNote?`<em>${esc(nextNote)}</em>`:""}</span></div><div><small>歷史位置</small><span><b>${esc(position)}</b></span></div><div><small>${esc(outcomeLabel)}</small><span><b class="${outcomeTone}">${esc(outcomeValue)}</b><em>${esc(sampleNote)}</em></span></div></div>`;
 }
+function radarFocusStageFor(score,contract=window.HSDecisionLayerV1){
+  if(score===null||score===undefined||score==="")return null;const value=Number(score);return Number.isFinite(value)?contract?.STAGES?.find(stage=>value>=Number(stage.min))||null:null;
+}
+function radarFocusHistoricalPercentile(symbol,score,artifacts=researchC4HistoryArtifacts,statuses=researchC4HistoryStatus){
+  if(statuses?.get?.(symbol)!=="READY"||!Number.isFinite(Number(score)))return null;
+  const records=artifacts?.get?.(symbol)?.records;if(!Array.isArray(records)||!records.length)return null;
+  const usable=records.map(row=>Number(row?.display_score)).filter(Number.isFinite);if(!usable.length)return null;
+  return Math.round(usable.filter(value=>value<=Number(score)).length/usable.length*100);
+}
+function radarTodayFocusCard({symbol,name,rows,percentile},contract=window.HSDecisionLayerV1){
+  const history=(Array.isArray(rows)?rows:[]).filter(row=>Number.isFinite(Number(row?.displayScore))),current=history[0],previous=history[1],fiveDaysAgo=history[5];
+  if(!current)return null;
+  const currentScore=Math.floor(Number(current.displayScore)),previousScore=previous?Math.floor(Number(previous.displayScore)):null,currentStage=radarFocusStageFor(currentScore,contract),previousStage=radarFocusStageFor(previousScore,contract),events=[];
+  if(currentStage&&previousStage&&currentStage.stage!==previousStage.stage){
+    const stages=contract?.STAGES||[],currentIndex=stages.findIndex(stage=>stage.stage===currentStage.stage),previousIndex=stages.findIndex(stage=>stage.stage===previousStage.stage),up=currentScore>previousScore,multi=Math.abs(currentIndex-previousIndex)>1;
+    events.push({type:"CROSS_LEVEL",priority:1,label:"今日跨級",text:up?(multi?`由「${previousStage.label}」進入「${currentStage.label}」`:`今日進入「${currentStage.label}」`):`今日由「${previousStage.label}」回到「${currentStage.label}」`,note:multi?"本次跨越多個分級":"",tone:up?"is-up":"is-down"});
+  }
+  const next=radarOverviewNextLevel(currentScore,contract);
+  if(next.available&&!next.isMaxLevel&&next.distance<=2)events.push({type:"NEXT_LEVEL",priority:2,label:"距下一級",text:`距「${next.nextLabel}」還差 ${next.distance} 分`,note:"",tone:"is-near"});
+  if(Number.isFinite(percentile)&&percentile>=85)events.push({type:"HISTORICAL_PERCENTILE",priority:3,label:"歷史位置",text:`P${percentile}`,note:"屬於較少見的高分區間",tone:"is-history"});
+  const delta5=fiveDaysAgo?currentScore-Math.floor(Number(fiveDaysAgo.displayScore)):null;
+  if(Number.isFinite(delta5)&&Math.abs(delta5)>=10)events.push({type:"FIVE_DAY_CHANGE",priority:4,label:"近5日",text:`分數${delta5>0?"上升":"下降"} ${Math.abs(delta5)} 分`,note:`${Math.floor(Number(fiveDaysAgo.displayScore))} → ${currentScore}`,tone:delta5>0?"is-up":"is-down"});
+  if(!events.length)return null;
+  return{symbol:String(symbol||current.symbol||""),name:String(name||""),date:String(current.tradingDate||""),score:currentScore,stageLabel:currentStage?.label||"資料不足",priority:Math.min(...events.map(event=>event.priority)),events:events.sort((a,b)=>a.priority-b.priority).slice(0,3)};
+}
+function radarTodayFocusState(items,artifact=finalizedCoreScoreHistoryArtifact,artifacts=researchC4HistoryArtifacts,statuses=researchC4HistoryStatus,contract=window.HSDecisionLayerV1){
+  const allItems=Array.isArray(items)?items:[],cards=allItems.map(item=>{const rows=officialArtifactCoreScoreHistory(artifact,item.id,6),score=rows[0]?.displayScore,percentile=radarFocusHistoricalPercentile(item.id,score,artifacts,statuses);return radarTodayFocusCard({symbol:item.id,name:item.name,rows,percentile},contract)}).filter(Boolean).sort((a,b)=>a.priority-b.priority||a.symbol.localeCompare(b.symbol)).slice(0,3);
+  const latestDate=allItems.flatMap(item=>officialArtifactCoreScoreHistory(artifact,item.id,1)).map(row=>row.tradingDate).filter(Boolean).sort().at(-1)||"";
+  return{cards,latestDate};
+}
+function radarTodayFocusHtml(state){
+  if(!state?.cards?.length)return`<div class="radarTodayFocusEmpty"><b>目前沒有新的重要狀態變化。</b><small>最近正式更新：${esc(state?.latestDate||"—")}</small></div>`;
+  return state.cards.map(card=>`<button class="radarTodayFocusCard" type="button" data-open-radar-detail="${esc(card.symbol)}"><header><span><b>${esc(card.symbol)}</b><small>${esc(card.name)}</small></span><strong>${esc(card.stageLabel)} · ${card.score}</strong></header><ul>${card.events.map(event=>`<li class="${event.tone}"><span>${esc(event.label)}</span><b>${esc(event.text)}</b>${event.note?`<small>${esc(event.note)}</small>`:""}</li>`).join("")}</ul><footer>查看詳情 <i aria-hidden="true">→</i></footer></button>`).join("");
+}
 function radarRangeBar(score){const value=Number.isFinite(score)?Math.max(0,Math.min(100,score)):0,contract=window.HSDecisionLayerV1,stage=contract?.STAGES?.find(row=>value>=row.min),next=(contract?.NEXT_THRESHOLDS||[]).find(threshold=>threshold>value),nextStage=contract?.STAGES?.find(row=>row.min===next);return`<div class="radarRange" data-score-level-version="${esc(contract?.SCORE_LEVEL_VERSION||"")}"><div class="radarRangeTrack"><i style="left:${value}%"></i></div><div class="radarRangeLabels"><span>${esc(stage?.label||"資料不足")}</span><span>${esc(nextStage?.label||"最高級別")}</span></div></div>`}
 function dailyFactorValue(decision,key){const row=(decision?.breakdown||[]).find(item=>item.key===key);return Number.isFinite(row?.value)?row.value:null}
 function createDailyLongRankSnapshot(items,finalizedAt=new Date().toISOString()){
@@ -3967,6 +4005,7 @@ function renderCards(){
     return `${groupHead}<details class="card signalCard ${x.signal.className} strategy-${mode}" data-signal-level="${esc(x.signal.label)}" data-etf-id="${esc(x.id)}"><summary class="signalCardSummary" aria-label="${esc(x.id)} ${esc(x.name)}，${esc(strategyModeLabel(mode))}，${Number.isFinite(score)?score+"分":"資料不足"}，${esc(stage?.label||"資料不足")}"><div class="signalCompactIdentity">${radarRankUi}<div class="signalTickerLine"><b>${x.id}</b><span>${esc(x.name)}</span></div><div class="signalPriceLine">$${fmt(x.price)} <small class="${x.changePct>=0?"up":"down"}">${signed(x.changePct)}</small></div><div class="modelMeta"><span>${esc(strategyModeLabel(mode))}</span></div></div><div class="signalCompactMetrics"><b class="radarPrimaryScore ${Number.isFinite(score)?"":"scoreUnavailable"}">${esc(strategyScoreLabel(x,mode))}</b><span>週 J ${fmt(x.j)}｜週乖離 ${Number.isFinite(x.weekBias)?`${fmt(x.weekBias)}%`:"—"}｜估值 ${esc(valuationScoreLabel(x))}</span><span>${swing?`Raw ${metricScore(swing.rawBuyScore)}｜Exit ${metricScore(swing.exitPressure?.score)}｜`:""}距高點 ${Number.isFinite(x.fromHigh)?fmt(x.fromHigh)+"%":"—"}</span><span>${swing?`Trend Structure ${esc(swing.trendStructure?.label||"—")}`:`${esc(homeMovingAverageStates(x))}｜資料完整度 ${Number.isFinite(decision?.coverage)?Math.round(decision.coverage)+"%":"—"}`}${next?`｜${esc(next)}`:""}</span></div><div class="signalCompactAction"><span class="signalLevel ${x.signal.className}">${esc(stage?.label||"資料不足")}</span><p>${esc(stage?.recommendation||stage?.conclusion||"等待資料更新")}</p><span class="signalExpandMark" aria-hidden="true"></span></div></summary><div class="signalCardDetails"><div class="signalDetailHero"><span>${esc(strategyModeLabel(mode))}</span><b>${Number.isFinite(score)?score:"—"}<small>／100</small></b><strong>${esc(stage?.label||"資料不足")}</strong><em>${esc(detailScoreState)}｜資料完整度 ${Number.isFinite(decision?.coverage)?Math.round(decision.coverage)+"%":"—"}</em></div><div class="signalDetailGrid"><div><span>買點分數</span><b>${Number.isFinite(score)?score:"資料不足"}</b></div><div><span>盤後正式分數</span><b>${Number.isFinite(formal)?formal:"—"}</b></div><div><span>Bias40W（40週均線）</span><b>${Number.isFinite(x.weekBias)?fmt(x.weekBias)+"%":"—"}</b></div><div><span>估值吸引力</span><b>${esc(valuationScoreLabel(x))}</b></div><div><span>止跌確認度</span><b>${metricScore(x.stopConfirmation?.score)}｜${esc(x.stopConfirmation?.label||"—")}</b></div><div><span>高點回檔幅度</span><b>${Number.isFinite(x.fromHigh)?fmt(x.fromHigh)+"%":"—"}</b></div><div><span>均線狀態</span><b>${esc(homeMovingAverageStates(x))}</b></div><div><span>週 K／D／J</span><b>${fmt(x.k)}／${fmt(x.d)}／${fmt(x.j)}｜${esc(x.direction)}</b></div><div><span>估值標的</span><b>${esc(proxy)}</b></div></div>${x.id==="00935"?'<div class="modelWarning">臺灣科技主題 ETF｜產業集中、波動較高；長期加碼仍需分批並控管單一產業曝險。</div>':""}${x.intradayProvisionalHigh?'<div class="modelWarning">盤中暫定新高；正式 52 週高點待收盤後確認。</div>':""}${swingDetails}${strategyBreakdownHtml(x,mode)}${mode==="long_term_core"?longTermDrawdownTableHtml(x):""}${valuationDetailsHtml(x)}${legacyComparisonHtml(x)}<section class="detailSection"><h4>歷史相似訊號統計</h4>${similarStatsHtml(x.historyStats.sameEnvironment,`相同市場環境｜${x.environment}`)}${similarStatsHtml(x.historyStats.allEnvironments,"全部市場環境")}</section>${buyPlanHtml(x)}<div class="dataFreshnessGrid"><span>價格：${esc(x.quoteTime?`${x.date} ${x.quoteTime}`:`${x.date} 收盤`)}</span><span>週 KD：${esc(x.kdDataDate)}｜${esc(x.weekDataLabel)}</span><span>估值：${esc(x.valuation?.sourceDate||"資料建立中")}</span><span>歷史統計截止：${esc(x.historyCutoff)}</span></div>${isHighVolatilityType(x.strategyType)?'<section class="leverageWarning"><b>槓桿型 ETF｜高波動模型</b><p>估值僅作標的市場背景；每日重設與波動耗損可能使長期結果偏離標的倍數。</p></section>':""}<div class="signalDetailActions"><button class="miniBtn" type="button" data-detail="${x.id}">查看走勢</button><button class="miniBtn" type="button" data-compare="${x.id}">加入比較</button><button class="miniBtn" type="button" data-drawdown="${x.id}">查看回檔價位</button></div></div></details>`;
   }).join(""):'<div class="watchEmpty">我的自選尚未加入 ETF。</div>';
   const longOverview=radar.filter(item=>strategyModeFor(item)==="long_term_core").sort(longRankComparator);
+  $("#radarTodayFocusCards").innerHTML=radarTodayFocusHtml(radarTodayFocusState(longOverview));
   $("#radarOverviewLong").innerHTML=longOverview.map((item,index)=>longOverviewCardHtml(item,index,dailyLongRankMovement(dailyPair,item.id))).join("")||'<div class="newsEmpty">長期 ETF 資料載入中</div>';
   const swingRoles={"00631L":"HS LEVERAGE","00733":"強勢趨勢拉回型","006201":"低檔止跌轉折型"};
   const swingOverviewItems=["00631L","00733","006201"].map(id=>radar.find(item=>item.id===id)).filter(Boolean);
