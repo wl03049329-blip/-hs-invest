@@ -3380,7 +3380,7 @@ function radarOverviewScoreDelta(change){
   return value>0?{label:`▲${absolute} 今日`,tone:"is-up"}:value<0?{label:`▼${absolute} 今日`,tone:"is-down"}:{label:"±0 今日",tone:"is-flat"};
 }
 function radarOverviewFactorRaw(decision,key){const value=Number(decision?.coreFactors?.[key]?.raw);return Number.isFinite(value)?value:null}
-function radarRangeBar(score){const value=Number.isFinite(score)?Math.max(0,Math.min(100,score)):0;return`<div class="radarRange"><div class="radarRangeTrack"><i style="left:${value}%"></i></div><div class="radarRangeLabels"><span>一般</span><span>觀察</span><span>分批</span><span>強力</span></div></div>`}
+function radarRangeBar(score){const value=Number.isFinite(score)?Math.max(0,Math.min(100,score)):0,contract=window.HSDecisionLayerV1,stage=contract?.STAGES?.find(row=>value>=row.min),next=(contract?.NEXT_THRESHOLDS||[]).find(threshold=>threshold>value),nextStage=contract?.STAGES?.find(row=>row.min===next);return`<div class="radarRange" data-score-level-version="${esc(contract?.SCORE_LEVEL_VERSION||"")}"><div class="radarRangeTrack"><i style="left:${value}%"></i></div><div class="radarRangeLabels"><span>${esc(stage?.label||"資料不足")}</span><span>${esc(nextStage?.label||"最高級別")}</span></div></div>`}
 function dailyFactorValue(decision,key){const row=(decision?.breakdown||[]).find(item=>item.key===key);return Number.isFinite(row?.value)?row.value:null}
 function createDailyLongRankSnapshot(items,finalizedAt=new Date().toISOString()){
   const candidates=(Array.isArray(items)?items:[]).map(item=>({item,state:item.formalState,decision:item.formalStrategyDecisions?.long_term_core})).filter(row=>row.state&&/^\d{4}-\d{2}-\d{2}$/.test(String(row.state.date||""))&&Number.isFinite(row.decision?.score));

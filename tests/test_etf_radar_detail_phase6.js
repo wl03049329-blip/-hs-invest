@@ -30,7 +30,7 @@ function officialFor(symbol,currentScore,currentDd52,previousScores=[35,41]){
   const artifact=officialFor("00830",45,-21.28,[35,42]);context.finalizedCoreScoreHistoryArtifact=artifact;
   let state=context.api.state({id:"00830"},artifact,researchArtifacts,contract,researchStatuses);
   assert.equal(state.kind,"READY");assert.equal(state.size,1548);assert.equal(state.current.displayScore,45);assert.equal(state.current.dd52,-21.28);
-  assert.equal(state.officialRows.length,3);assert.equal(state.lastEntry,"2026-09-17");assert.equal(state.streak,2);
+  assert.equal(state.officialRows.length,3);assert.equal(state.lastEntry,"2026-09-18");assert.equal(state.streak,1);
   const expectedPercentile=Math.round(original.records.filter(row=>row.display_score<=45).length/original.records.length*100),expectedDepth=Math.round(original.records.filter(row=>Math.abs(Math.min(row.dd52_raw,0))<=21.28).length/original.records.length*100);
   assert.equal(state.percentile,expectedPercentile);assert.equal(state.dd52Percentile,expectedDepth);
   assert.equal(state.nextDays,original.records.filter(row=>row.display_score>=50).length);

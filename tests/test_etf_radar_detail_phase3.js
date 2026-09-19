@@ -46,7 +46,7 @@ assert.match(css,/\.radarFactorTitleV32\{[^}]*word-break:keep-all;overflow-wrap:
 assert.match(css,/\.radarFactorMetricV32\{display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%/);
 assert.doesNotMatch(css,/\.radarFactorStackV32\{[^}]*repeat\(/,"V32 base layout must never use a multi-column grid");
 assert.match(css,/@media\(max-width:430px\)\{[\s\S]*?\.radarFactorModelV32\{display:none\}/);
-const stylesheetAt=html.indexOf('formal-black-gold.css?v=20260919-radar-history-research-v1'),criticalAt=html.indexOf('id="radarPhase32CriticalLayout"');
+const stylesheetAt=html.indexOf('formal-black-gold.css?v=20260919-c4-levels-v2'),criticalAt=html.indexOf('id="radarPhase32CriticalLayout"');
 assert.ok(stylesheetAt>=0&&criticalAt>stylesheetAt,"fresh HTML must load the versioned CSS before the critical cache safeguard");
 const critical=html.slice(criticalAt,html.indexOf("</style>",criticalAt));
 assert.doesNotMatch(critical,/@media/);assert.match(critical,/\.radarFactorStackV32\{display:flex;flex-direction:column/);assert.match(critical,/\.radarFactorMetricV32\{display:flex;justify-content:space-between/);assert.match(critical,/word-break:keep-all;overflow-wrap:normal/);

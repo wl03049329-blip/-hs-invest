@@ -8,6 +8,8 @@ const engine = require("../scripts/build_c4_historical_outcomes.js");
 
 const ROOT = path.resolve(__dirname, "..");
 const hashFile = file => crypto.createHash("sha256").update(fs.readFileSync(path.join(ROOT, file))).digest("hex");
+assert.equal(engine.SCORE_LEVEL_VERSION,"HS_C4_LEVELS_V2");
+assert.deepEqual(engine.THRESHOLDS,[30,40,45,50,65,70,80,90]);
 
 // Core statistics: zero is not positive; odd/even median and interpolated quartiles are deterministic.
 let stats = engine.statistics([{forward_5d:.10}, {forward_5d:0}, {forward_5d:-.05}], 5);
@@ -75,6 +77,7 @@ const protectedFiles=["index.html","formal-black-gold.css","finalized-core-score
 const protectedBefore=Object.fromEntries(protectedFiles.map(file=>[file,hashFile(file)]));
 const built=engine.buildAll({generatedAt:"2026-09-19T00:00:00.000Z",generationCommit:"TEST_COMMIT"});
 assert.deepEqual([...built.artifacts.keys()],engine.SYMBOLS);
+assert.equal(built.index.metadata.score_level_version,"HS_C4_LEVELS_V2");
 assert.equal(built.index.etfs.find(row=>row.etf==="009815").status,"HOLD");
 assert.equal(built.index.etfs.find(row=>row.etf==="009815").reason,"WAIT_NATIVE_NO_RESEARCH_HISTORY");
 
@@ -84,6 +87,7 @@ for(const symbol of engine.SYMBOLS){
   const result=built.artifacts.get(symbol),rows=result.raw.daily_samples,entries=result.raw.level_entry_all;
   assert.equal(rows.length,research.metadata.record_count);
   assert.equal(result.summary.metadata.source_research_hash,research.artifact_sha256);
+  assert.equal(result.summary.metadata.score_level_version,"HS_C4_LEVELS_V2");
   assert.equal(result.summary.metadata.price_source_hash,engine.sha(source));
   assert.equal(result.summary.metadata.transaction_costs,"EXCLUDED");
   assert.equal(result.summary.metadata.horizon_unit,"TRADING_SESSION");

@@ -5,7 +5,7 @@ const root=path.resolve(__dirname,".."),html=fs.readFileSync(path.join(root,"ind
 const helperStart=html.indexOf("function radarOverviewRankBadgeHtml"),helperEnd=html.indexOf("function dailyFactorValue",helperStart),cardStart=html.indexOf("function longOverviewCardHtml"),cardEnd=html.indexOf("function scoreFactorValue",cardStart);
 assert.ok(helperStart>=0&&helperEnd>helperStart,"overview-only helper block must exist");
 assert.ok(cardStart>=0&&cardEnd>cardStart,"overview renderer must exist");
-const context={window:{HSDecisionLayerV1:decisionLayer}};vm.createContext(context);vm.runInContext(html.slice(helperStart,helperEnd),context);
+const context={window:{HSDecisionLayerV1:decisionLayer},esc:String};vm.createContext(context);vm.runInContext(html.slice(helperStart,helperEnd),context);
 
 for(const [score,threshold,label,distance] of [[45,50,"正式加碼訊號",5],[19,30,"回檔訊號出現",11],[29,30,"回檔訊號出現",1],[39,40,"加碼條件浮現",1],[40,45,"試探加碼",5],[44,45,"試探加碼",1],[49,50,"正式加碼訊號",1],[64,65,"積極加碼訊號",1],[69,70,"強力加碼訊號",1],[79,80,"重大加碼機會",1],[89,90,"歷史極端機會",1]]){
   const result=context.radarOverviewNextLevel(score);
@@ -13,6 +13,7 @@ for(const [score,threshold,label,distance] of [[45,50,"正式加碼訊號",5],[1
 }
 assert.equal(context.radarOverviewNextLevel(90).isMaxLevel,true);assert.equal(context.radarOverviewNextLevel(100).isMaxLevel,true);
 assert.equal(context.radarOverviewNextLevel(null).available,false);assert.equal(context.radarOverviewNextLevel(undefined).available,false);
+assert.match(context.radarRangeBar(44),/HS_C4_LEVELS_V2[\s\S]*加碼條件浮現[\s\S]*試探加碼/);
 assert.deepEqual({...context.radarOverviewScoreDelta(2)},{label:"▲2 今日",tone:"is-up"});
 assert.deepEqual({...context.radarOverviewScoreDelta(-2.4)},{label:"▼2.4 今日",tone:"is-down"});
 assert.deepEqual({...context.radarOverviewScoreDelta(0)},{label:"±0 今日",tone:"is-flat"});
