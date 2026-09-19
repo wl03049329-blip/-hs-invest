@@ -124,4 +124,15 @@ for(const symbol of engine.SYMBOLS){
 assert.deepEqual(Object.fromEntries(protectedFiles.map(file=>[file,hashFile(file)])),protectedBefore);
 assert.doesNotMatch(fs.readFileSync(path.join(ROOT,"index.html"),"utf8"),/c4_outcomes|RESEARCH_HISTORICAL_OUTCOME_V1/);
 assert.doesNotMatch(fs.readFileSync(path.join(ROOT,"formal-black-gold.css"),"utf8"),/c4_outcomes|Historical Outcome/);
+
+// Generated artifacts are self-verifying and keep raw/summary separate.
+for(const file of ["index.json",...engine.SYMBOLS.flatMap(symbol=>[`raw/${symbol}.json`,`summary/${symbol}.json`])]){
+  const artifactPath=path.join(ROOT,"research","c4_outcomes",file);
+  if(!fs.existsSync(artifactPath))continue;
+  const artifact=JSON.parse(fs.readFileSync(artifactPath,"utf8")),unsigned={...artifact};delete unsigned.artifact_sha256;
+  assert.equal(artifact.artifact_sha256,engine.sha(unsigned),`${file} artifact hash`);
+  const metadata={...artifact.metadata};delete metadata.generated_at;delete metadata.content_sha256;
+  const body={...artifact};delete body.metadata;delete body.artifact_sha256;
+  assert.equal(artifact.metadata.content_sha256,engine.sha({metadata,...body}),`${file} deterministic content hash`);
+}
 console.log("PASS Phase 7A Historical Outcome Research Engine: forward horizons, entry/daily/non-overlap, integrity, determinism and production isolation");
