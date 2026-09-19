@@ -13,7 +13,7 @@
 <meta name="hs-live-source" content="railway" />
 <meta name="hs-live-railway-url" content="https://hs-invest-production.up.railway.app/api/live-scores" />
 <meta name="hs-app-build-sha" content="LOCAL" />
-<meta name="hs-frontend-bundle-version" content="20260919-radar-history-research-v1" />
+<meta name="hs-frontend-bundle-version" content="20260919-c4-levels-v2" />
 <link rel="icon" type="image/png" sizes="64x64" href="assets/favicon-v3.png?v=5" />
 <link rel="shortcut icon" href="assets/favicon-v3.ico?v=5" />
 <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon-v3.png?v=5" />
@@ -303,7 +303,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 </style>
 <link rel="stylesheet" href="portfolio-v6.css?v=20260818-rebalance2" />
 <link rel="stylesheet" href="v62-tech.css?v=20260809b" />
-<link rel="stylesheet" href="formal-black-gold.css?v=20260919-radar-history-research-v1" />
+<link rel="stylesheet" href="formal-black-gold.css?v=20260919-c4-levels-v2" />
 <style id="radarPhase32CriticalLayout">
 /* Phase 3.2 structural fallback: the renderer is mobile-first even if external CSS is stale. */
 .radarFactorStackV32{display:flex;flex-direction:column;width:100%;min-width:0}
@@ -1013,11 +1013,11 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 <script src="etf-model-core.js"></script>
 <script src="strategy-mode-core.js?v=20260804a"></script>
 <script src="backtest/long-term/final-core-score-v1.js?v=20260813-phase6b"></script>
-<script src="final-core-production.js?v=20260826-trigger-p0"></script>
+<script src="final-core-production.js?v=20260919-c4-levels-v2"></script>
 <script src="canonical-score-resolver.js?v=20260910-live-cutover"></script>
 <script src="hs-live-source-adapter.js?v=20260917-live-diagnostics-v2"></script>
 <script src="frontend-live-diagnostics.js?v=20260917-live-diagnostics-v2"></script>
-<script src="hs-decision-layer-v1.js?v=20260823-dl1"></script>
+<script src="hs-decision-layer-v1.js?v=20260919-c4-levels-v2"></script>
 <script src="swing-strategy-core.js?v=20260809a"></script>
 <script src="leverage-v1-core.js?v=20260822-l1"></script>
 <script src="generic-etf-diagnostics.js?v=20260815-phase2e"></script>
@@ -1163,6 +1163,7 @@ const LONG_RADAR_SCORED_CODES=new Set(["0050","00662","00757","00830","00935"]);
 const LONG_TERM_CORE_SCORE_VERSION=window.HS_LONG_TERM_CORE_SCORE_VERSION||"FINAL_CORE_WEIGHT_V1";
 let finalizedCoreScoreHistoryArtifact={schema_version:1,core_score_version:LONG_TERM_CORE_SCORE_VERSION,snapshots:[]};
 const RADAR_RESEARCH_HISTORY_VERSION="WEEKLY_J_PRODUCTION_LEGACY_V1";
+const RADAR_SCORE_LEVEL_VERSION="HS_C4_LEVELS_V2";
 const RADAR_RESEARCH_HISTORY_SYMBOLS=["0050","00662","00830","00935","009815"];
 let researchC4HistoryArtifacts=new Map();
 let researchC4HistoryStatus=new Map();
@@ -2252,12 +2253,11 @@ function finalDecisionPresentation(item,record=item?.intraday?.canonical){
   }catch{return null}
 }
 function finalDecisionBadgeLabel(decision){
-  const labels={GENERAL:"一般持有",PULLBACK_WATCH:"回檔觀察",SMALL_ADD:"小額加碼訊號",FORMAL_SCALE_IN:"正式分批訊號",DEEP_PULLBACK_ADD:"深跌加碼訊號",RARE_OPPORTUNITY:"罕見機會",EXTREME_REFERENCE:"極端機會"};
-  return labels[decision?.decision_stage]||decision?.decision_label_zh||"資料不足";
+  return decision?.decision_label_zh||"資料不足";
 }
 function finalDecisionStatusTier(decision){
-  const tiers={GENERAL:1,PULLBACK_WATCH:3,SMALL_ADD:5,FORMAL_SCALE_IN:6,DEEP_PULLBACK_ADD:7,RARE_OPPORTUNITY:8,EXTREME_REFERENCE:9};
-  return Number.isFinite(tiers[decision?.decision_stage])?`status-tier-${tiers[decision.decision_stage]}`:"status-tier-na";
+  const stages=window.HSDecisionLayerV1?.STAGES||[],index=stages.findIndex(row=>row.stage===decision?.decision_stage),tier=index<0?null:stages.length-index;
+  return Number.isFinite(tier)?`status-tier-${tier}`:"status-tier-na";
 }
 function applyCanonicalCoreSnapshot(snapshot){
   if(!snapshot||!canonicalScoreProductionInvariant(snapshot))return false;
@@ -3015,7 +3015,7 @@ function officialC4RangeRows(rows,range){
   return rows.filter(row=>end-Date.parse(`${row.date}T00:00:00Z`)<=span);
 }
 function officialC4ThresholdContract(){
-  const layer=window.HSDecisionLayerV1,values=Array.isArray(layer?.NEXT_THRESHOLDS)?layer.NEXT_THRESHOLDS.slice(0,4):[];
+  const layer=window.HSDecisionLayerV1,values=Array.isArray(layer?.NEXT_THRESHOLDS)?layer.NEXT_THRESHOLDS:[];
   return values.map(value=>({value,label:layer.STAGES?.find(stage=>stage.min===value)?.label||"正式門檻"}));
 }
 function officialC4ThresholdCrossings(rows,thresholds=officialC4ThresholdContract()){
@@ -3139,8 +3139,8 @@ function selectHSTodayCandidate(rows){
   return rows.filter(row=>row.item?.id!=="00631L"&&row.decision?.source_status==="SUCCESS"&&row.decision?.decision_stage).sort((a,b)=>hsTodayStageRank(a.decision.decision_stage)-hsTodayStageRank(b.decision.decision_stage)||Number(a.decision.distance_to_next_stage)-Number(b.decision.distance_to_next_stage)||Number(b.decision.score)-Number(a.decision.score)||a.index-b.index)[0]||null;
 }
 function hsTodayHeadline(decision){
-  const copy={GENERAL:"今天暫無額外加碼訊號",PULLBACK_WATCH:"市場開始出現回檔機會，可留意買點",SMALL_ADD:"今天已有 ETF 進入小額加碼區",FORMAL_SCALE_IN:"今天已有 ETF 進入正式分批區",DEEP_PULLBACK_ADD:"今天出現較深回檔加碼條件",RARE_OPPORTUNITY:"今天出現罕見低檔條件",EXTREME_REFERENCE:"今天出現極端參考條件"};
-  return copy[decision?.decision_stage]||"資料尚未齊備，暫不提供今日決策摘要";
+  if(decision?.decision_stage==="GENERAL")return"今天暫無額外加碼訊號";
+  return decision?.decision_label_zh?`今天已有 ETF 進入「${decision.decision_label_zh}」`:`資料尚未齊備，暫不提供今日決策摘要`;
 }
 function hsTodayStageLabel(stage){return (window.HSDecisionLayerV1?.STAGES||[]).find(row=>row.stage===stage)?.label||"下一階段";}
 function hsTodayPosture(posture){return {PRESERVE_CASH:"保留主要資金",PREPARE_CAPITAL:"準備資金，等待條件成熟",DEPLOY_SMALL:"可小額部署，保留後續資金",DEPLOY_IN_STAGES:"依紀律分批部署",RARE_EVENT:"罕見行情，仍需分批與保留資金"}[posture]||"保留主要資金";}
@@ -3505,7 +3505,7 @@ async function researchSha256(value){
 }
 async function validateResearchHistoryArtifact(symbol,artifact){
   const metadata=artifact?.metadata,records=artifact?.records,hash=/^[0-9a-f]{64}$/;
-  if(metadata?.data_status!=="RESEARCH_HISTORICAL"||metadata?.weekly_j_version!==RADAR_RESEARCH_HISTORY_VERSION||metadata?.strategy_id!==LONG_TERM_CORE_SCORE_VERSION||metadata?.formula_version!==LONG_TERM_CORE_SCORE_VERSION)return{ok:false,reason:"VERSION_INCOMPATIBLE"};
+  if(metadata?.data_status!=="RESEARCH_HISTORICAL"||metadata?.weekly_j_version!==RADAR_RESEARCH_HISTORY_VERSION||metadata?.score_level_version!==RADAR_SCORE_LEVEL_VERSION||metadata?.strategy_id!==LONG_TERM_CORE_SCORE_VERSION||metadata?.formula_version!==LONG_TERM_CORE_SCORE_VERSION)return{ok:false,reason:"VERSION_INCOMPATIBLE"};
   if(metadata?.schema_version!==1||metadata?.etf!==symbol||!Array.isArray(records)||metadata.record_count!==records.length||!hash.test(String(metadata.records_sha256||""))||!hash.test(String(metadata?.provenance?.source_ohlc_sha256||""))||!hash.test(String(artifact?.artifact_sha256||"")))return{ok:false,reason:"INTEGRITY_FAILED"};
   const parityOk=records.length===0?metadata.parity_status==="NO_FINALIZED_OVERLAP":metadata.parity_status==="CHECKED"&&Number(metadata?.parity?.overlap_dates)>0&&Array.isArray(metadata?.parity?.mismatches)&&metadata.parity.mismatches.length===0;
   if(!parityOk)return{ok:false,reason:"INTEGRITY_FAILED"};
@@ -3650,7 +3650,7 @@ function radarTrendPhase4Thresholds(){
 function radarTrendPhase4Level(score,thresholds){
   const contract=window.HSDecisionLayerV1,threshold=[...thresholds].reverse().find(item=>score>=item.value);
   const label=threshold?.label||contract?.STAGES?.find(stage=>stage.min===0)?.label||"一般";
-  return label.replace(/^回檔觀察$/,"觀察").replace(/^一般持有$/,"一般").replace(/^罕見機會$/,"罕見").replace(/^極端機會$/,"極端");
+  return label;
 }
 function radarTrendPhase4Events(rows,thresholds){
   const events=[];

@@ -17,6 +17,7 @@ const SYMBOLS = Object.freeze(["0050", "00662", "00830", "00935", "009815"]);
 const STATUS = "RESEARCH_HISTORICAL";
 const SOURCE_VERSION = "FINMIND_AS_OF_ADJUSTED_OHLC_V1";
 const FORMULA_VERSION = core.LONG_TERM_CORE_SCORE_VERSION;
+const SCORE_LEVEL_VERSION = decisionLayer.SCORE_LEVEL_VERSION;
 const stable = value => Array.isArray(value) ? value.map(stable) : value && typeof value === "object" ? Object.fromEntries(Object.keys(value).sort().map(key => [key, stable(value[key])])) : value;
 const canonical = value => JSON.stringify(stable(value));
 const sha = value => crypto.createHash("sha256").update(typeof value === "string" || Buffer.isBuffer(value) ? value : canonical(value)).digest("hex");
@@ -90,6 +91,7 @@ function reconstruct(symbol, source, generatedAt, generationCommit, comparison =
       crash_raw: factors.crash.raw, crash_score: factors.crash.score,
       crash_contribution: factors.crash.contribution,
       raw_total: decision.coreScore, display_score: display, level,
+      score_level_version: SCORE_LEVEL_VERSION,
       source_version: SOURCE_VERSION, formula_version: FORMULA_VERSION, generated_at: generatedAt,
       provenance: {source_ohlc_sha256: sourceHash}
     });
@@ -147,6 +149,7 @@ function checkParity(symbol, records, finalized) {
 function artifact(symbol, source, records, parity, generatedAt, generationCommit) {
   const metadata = {
     schema_version: 1, etf: symbol, strategy_id: FORMULA_VERSION, data_status: STATUS,
+    score_level_version: SCORE_LEVEL_VERSION,
     weekly_j_version: weeklyVersions.LEGACY,
     source_version: SOURCE_VERSION, formula_version: FORMULA_VERSION, generated_at: generatedAt,
     provenance: {
@@ -168,6 +171,7 @@ function artifact(symbol, source, records, parity, generatedAt, generationCommit
 function comparisonSummary(symbol, rows, source, generatedAt, generationCommit) {
   const diffs = rows.map(row => Math.abs(row.legacy_j - row.tw_j));
   return {etf: symbol, data_status: "RESEARCH_WEEKLY_J_TW_V2_COMPARISON",
+    score_level_version: SCORE_LEVEL_VERSION,
     legacy_weekly_j_version: weeklyVersions.LEGACY, tw_weekly_j_version: weeklyVersions.TW,
     source_ohlc_sha256: sha(source), strategy_id: FORMULA_VERSION, generated_at: generatedAt,
     generation_commit: generationCommit, builder_sha256: builderHash(),
@@ -264,12 +268,13 @@ async function main() {
     console.log(JSON.stringify({etf: symbol, start: result.metadata.sample_start, end: result.metadata.sample_end, count: result.metadata.record_count, parity: result.metadata.parity}));
   }
   const comparison = {schema_version: 1, data_status: "RESEARCH_WEEKLY_J_TW_V2_COMPARISON",
+    score_level_version: SCORE_LEVEL_VERSION,
     legacy_weekly_j_version: weeklyVersions.LEGACY, tw_weekly_j_version: weeklyVersions.TW,
     etfs: comparisons};
   writeResearch(path.join(RESEARCH_DIR, "weekly_j_comparison.json"),
     {...comparison, content_sha256: sha(comparison)}, regenerate);
 }
 
-module.exports = {SYMBOLS, STATUS, SOURCE_VERSION, FORMULA_VERSION, sha, normalizePrice, sourceRows,
+module.exports = {SYMBOLS, STATUS, SOURCE_VERSION, FORMULA_VERSION, SCORE_LEVEL_VERSION, sha, normalizePrice, sourceRows,
   decisionFromAdjusted, reconstruct, checkParity, artifact, comparisonSummary, writeResearch};
 if (require.main === module) main().catch(error => {console.error(error.message); process.exitCode = 1});

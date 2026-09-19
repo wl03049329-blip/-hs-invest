@@ -1,8 +1,8 @@
 (function(root,factory){
-  const api=factory();
+  const api=factory(typeof module==="object"&&module.exports?require("./final-core-production.js"):root.HSFinalCoreProduction);
   if(typeof module==="object"&&module.exports)module.exports=api;
   else root.HSDecisionLayerV1=api;
-})(typeof globalThis!=="undefined"?globalThis:this,function(){
+})(typeof globalThis!=="undefined"?globalThis:this,function(core){
   "use strict";
 
   // This module interprets already-canonical Core outputs. It never scores ETFs.
@@ -12,16 +12,10 @@
     {input:"weeklyJ",id:"WEEKLY_J",label:"短期超賣程度"},
     {input:"crash",id:"CRASH",label:"急跌程度"}
   ]);
-  const STAGES=Object.freeze([
-    {min:90,stage:"EXTREME_REFERENCE",label:"極端機會",action:"HIGH_PRIORITY_ADD",posture:"RARE_EVENT"},
-    {min:80,stage:"RARE_OPPORTUNITY",label:"罕見機會",action:"HIGH_PRIORITY_ADD",posture:"RARE_EVENT"},
-    {min:70,stage:"DEEP_PULLBACK_ADD",label:"深跌加碼",action:"HIGH_PRIORITY_ADD",posture:"DEPLOY_IN_STAGES"},
-    {min:65,stage:"FORMAL_SCALE_IN",label:"正式分批",action:"SCALE_IN",posture:"DEPLOY_IN_STAGES"},
-    {min:50,stage:"SMALL_ADD",label:"小額加碼",action:"OPTIONAL_SMALL_ADD",posture:"DEPLOY_SMALL"},
-    {min:40,stage:"PULLBACK_WATCH",label:"回檔觀察",action:"WATCH",posture:"PREPARE_CAPITAL"},
-    {min:0,stage:"GENERAL",label:"一般持有",action:"NONE",posture:"PRESERVE_CASH"}
-  ]);
-  const NEXT_THRESHOLDS=Object.freeze([40,50,65,70,80,90]);
+  if(core?.SCORE_LEVEL_VERSION!=="HS_C4_LEVELS_V2"||!Array.isArray(core?.LABELS))throw new Error("HS_C4_LEVEL_SOURCE_UNAVAILABLE");
+  const SCORE_LEVEL_VERSION=core.SCORE_LEVEL_VERSION;
+  const STAGES=Object.freeze(core.LABELS.map(({min,stage,label,action,posture})=>Object.freeze({min,stage,label,action,posture})));
+  const NEXT_THRESHOLDS=Object.freeze([...STAGES].reverse().map(row=>row.min).filter(value=>value>0));
   const BASIS=Object.freeze(new Set(["FINALIZED_CLOSE","INTRADAY_SUCCESS","NONE"]));
   const finite=value=>value===null||value===undefined||value===""?null:(Number.isFinite(Number(value))?Number(value):null);
 
@@ -61,13 +55,15 @@
   function explanation(stage,driver){
     if(driver&&driver.delta<0)return {code:"DRIVER_DOWN",text:`本次分數變化主要受${driver.label}走弱影響。`};
     if(stage.stage==="GENERAL")return {code:"GENERAL_NO_CHANGE",text:"目前屬一般持有，尚未進入額外加碼區。"};
-    if(stage.stage==="PULLBACK_WATCH")return {code:"PULLBACK_WATCH",text:"目前屬回檔觀察，可開始留意，但尚未進入正式分批區。"};
-    if(stage.stage==="SMALL_ADD"&&driver&&driver.delta>0)return {code:"SMALL_ADD_DRIVER_UP",text:`目前進入小額加碼區，主要因${driver.label}使正式分數提高。`};
+    if(stage.stage==="PULLBACK_SIGNAL")return {code:"PULLBACK_SIGNAL",text:"目前已有回檔訊號，可開始留意，但尚未進入正式加碼區。"};
+    if(stage.stage==="ADD_CONDITION")return {code:"ADD_CONDITION",text:"目前加碼條件開始浮現，先保留資金並持續觀察。"};
+    if(stage.stage==="PROBE_ADD"&&driver&&driver.delta>0)return {code:"PROBE_ADD_DRIVER_UP",text:`目前進入試探加碼區，主要因${driver.label}使正式分數提高。`};
     if(!driver)return {code:"DRIVER_UNAVAILABLE",text:`目前屬${stage.label}，主要變化來源尚無可比較資料。`};
-    if(stage.stage==="FORMAL_SCALE_IN")return {code:"FORMAL_SCALE_IN",text:"目前已進入正式分批區，仍應保留後續加碼資金。"};
-    if(stage.stage==="DEEP_PULLBACK_ADD")return {code:"DEEP_PULLBACK_ADD",text:"目前屬深跌加碼區，依既有資金紀律分批處理。"};
-    if(stage.stage==="RARE_OPPORTUNITY")return {code:"RARE_OPPORTUNITY",text:"目前出現罕見低檔條件，仍不代表最低點。"};
-    return {code:"EXTREME_REFERENCE",text:"目前位於極端參考區，僅依既有紀律分批，不作報酬保證。"};
+    if(stage.stage==="FORMAL_ADD_SIGNAL")return {code:"FORMAL_ADD_SIGNAL",text:"目前已出現正式加碼訊號，仍應保留後續加碼資金。"};
+    if(stage.stage==="ACTIVE_ADD_SIGNAL")return {code:"ACTIVE_ADD_SIGNAL",text:"目前屬積極加碼訊號區，依既有資金紀律分批處理。"};
+    if(stage.stage==="STRONG_ADD_SIGNAL")return {code:"STRONG_ADD_SIGNAL",text:"目前屬強力加碼訊號區，仍應分批並保留資金。"};
+    if(stage.stage==="MAJOR_ADD_OPPORTUNITY")return {code:"MAJOR_ADD_OPPORTUNITY",text:"目前出現重大加碼機會，仍不代表最低點。"};
+    return {code:"HISTORICAL_EXTREME_OPPORTUNITY",text:"目前位於歷史極端機會區，僅依既有紀律分批，不作報酬保證。"};
   }
   function interpret(input={}){
     const symbol=String(input.symbol||"");
@@ -80,5 +76,5 @@
     const copy=explanation(stage,driver);
     return {...output,decision_stage:stage.stage,decision_label_zh:stage.label,action_required:stage.action,distance_to_next_stage:distance.distance,next_stage:distance.next,primary_driver:driver?.id||null,primary_driver_delta:driver?.delta??null,today_score_delta:baselineScore===null?null:score-baselineScore,comparison_basis:baselineScore===null?"NONE":basis,capital_posture:stage.posture,explanation_code:copy.code,explanation_text_zh:copy.text};
   }
-  return Object.freeze({STAGES,NEXT_THRESHOLDS,EXCLUDED_SYMBOLS,normalizeDecisionScore,interpret});
+  return Object.freeze({SCORE_LEVEL_VERSION,STAGES,NEXT_THRESHOLDS,EXCLUDED_SYMBOLS,normalizeDecisionScore,interpret});
 });

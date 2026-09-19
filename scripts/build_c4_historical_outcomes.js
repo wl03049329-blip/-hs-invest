@@ -19,6 +19,7 @@ const HORIZONS = Object.freeze([5, 20, 40, 60]);
 const STATUS = "RESEARCH_HISTORICAL_OUTCOME_V1";
 const WEEKLY_J_VERSION = "WEEKLY_J_PRODUCTION_LEGACY_V1";
 const FORMULA_VERSION = historyBuilder.FORMULA_VERSION;
+const SCORE_LEVEL_VERSION = decision.SCORE_LEVEL_VERSION;
 const THRESHOLDS = Object.freeze([...decision.NEXT_THRESHOLDS]);
 const DD52_BANDS = Object.freeze([
   {id: "DD52_0_TO_NEG5", label: "0% ～ -5%", upper: 0, lower: -5},
@@ -83,6 +84,7 @@ function validateInputs(symbol, research, source) {
   if (!SYMBOLS.includes(symbol)) throw Error(`OUTCOME_SYMBOL_NOT_ALLOWED:${symbol}`);
   const metadata = research?.metadata, records = research?.records;
   if (metadata?.data_status !== historyBuilder.STATUS || metadata?.weekly_j_version !== WEEKLY_J_VERSION ||
+      metadata?.score_level_version !== SCORE_LEVEL_VERSION ||
       metadata?.strategy_id !== FORMULA_VERSION || metadata?.formula_version !== FORMULA_VERSION) {
     throw Error(`OUTCOME_RESEARCH_VERSION_MISMATCH:${symbol}`);
   }
@@ -99,7 +101,8 @@ function validateInputs(symbol, research, source) {
   for (const row of records) {
     const stage = stageFor(row.display_score);
     if (row.etf !== symbol || row.data_status !== historyBuilder.STATUS || row.weekly_j_version !== WEEKLY_J_VERSION ||
-        row.strategy_id !== FORMULA_VERSION || row.formula_version !== FORMULA_VERSION || !validDate(row.date) ||
+        row.strategy_id !== FORMULA_VERSION || row.formula_version !== FORMULA_VERSION ||
+        row.score_level_version !== SCORE_LEVEL_VERSION || !validDate(row.date) ||
         row.date <= previous || !finite(row.display_score) || !finite(row.raw_total) || !finite(row.dd52_raw) ||
         !finite(row.weekly_j_raw) || !finite(row.crash_raw) || !stage || row.level !== stage.label) {
       throw Error(`OUTCOME_RESEARCH_ROW_INVALID:${symbol}:${row?.date || "UNKNOWN"}`);
@@ -196,6 +199,7 @@ function summaryBody(samples, events, nonOverlap) {
 function metadataFor(symbol, research, sourceHash, adjusted, generatedAt, generationCommit) {
   return {
     schema_version: 1, data_status: STATUS, etf: symbol, strategy_id: FORMULA_VERSION,
+    score_level_version: SCORE_LEVEL_VERSION,
     formula_version: FORMULA_VERSION, weekly_j_version: WEEKLY_J_VERSION,
     source_research_artifact: `research/c4_historical/${symbol}.json`,
     source_research_hash: research.artifact_sha256,
@@ -263,6 +267,7 @@ function buildAll(options = {}) {
     throw Error(`OUTCOME_BUILD_HOLD:${failed.map(item => `${item.etf}:${item.reason}`).join(",")}`);
   }
   const indexMetadata = {schema_version: 1, data_status: STATUS, strategy_id: FORMULA_VERSION,
+    score_level_version: SCORE_LEVEL_VERSION,
     weekly_j_version: WEEKLY_J_VERSION, generated_at: generatedAt, generation_commit: generationCommit,
     builder_sha256: codeHash(__filename), transaction_costs: "EXCLUDED", pooled_etfs: false};
   return {artifacts, index: signedArtifact(indexMetadata, {etfs: indexEntries})};
@@ -299,7 +304,7 @@ function main() {
   console.log(JSON.stringify({status: "OUTCOME_INDEX_READY", etfs: built.index.etfs}));
 }
 
-module.exports = {SYMBOLS, EXCLUDED, HORIZONS, STATUS, WEEKLY_J_VERSION, FORMULA_VERSION, THRESHOLDS,
+module.exports = {SYMBOLS, EXCLUDED, HORIZONS, STATUS, WEEKLY_J_VERSION, FORMULA_VERSION, SCORE_LEVEL_VERSION, THRESHOLDS,
   DD52_BANDS, stable, canonical, sha, stageFor, dd52Band, quantile, statistics, aggregate,
   validateInputs, adjustedPrices, outcomeFields, dailySamples, entryEvents, nonOverlap60,
   summaryBody, metadataFor, signedArtifact, buildOne, buildAll, writeArtifact};

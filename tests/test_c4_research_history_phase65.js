@@ -38,6 +38,7 @@ assert(records.every(row => row.data_status === "RESEARCH_HISTORICAL" && row.str
 assert(records.every(row => row.weekly_j_version === "WEEKLY_J_PRODUCTION_LEGACY_V1"));
 assert(records.every(row => row.display_score === canonical.displayFinalCoreScoreV1(row.raw_total)));
 assert(records.every(row => row.level === stages.STAGES.find(stage => row.display_score >= stage.min).label));
+assert(records.every(row => row.score_level_version === "HS_C4_LEVELS_V2"));
 assert(records.every(row => Math.abs(row.weekly_j_contribution + row.dd52_contribution + row.crash_contribution - row.raw_total) < 1e-9));
 assert.deepEqual(research.reconstruct("0050", initial, at, "another-commit"), records, "same source/code gives stable records");
 
@@ -70,6 +71,7 @@ assert.equal(research.checkParity("0050", [last], official).mismatches[0].field,
 assert.equal(research.checkParity("0050", [last], {snapshots: []}).overlap_dates, 0, "zero overlap must be explicit");
 
 const sampleArtifact = research.artifact("0050", initial, records, {overlap_dates: 0, matching_dates: 0, mismatches: []}, at, commit);
+assert.equal(sampleArtifact.metadata.score_level_version,"HS_C4_LEVELS_V2");
 assert.equal(sampleArtifact.metadata.parity_status, "NO_FINALIZED_OVERLAP");
 assert.equal(sampleArtifact.metadata.records_sha256, research.sha(records));
 assert.equal(sampleArtifact.artifact_sha256, research.sha({metadata: sampleArtifact.metadata, records}));

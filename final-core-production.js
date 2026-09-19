@@ -7,18 +7,19 @@
 })(typeof globalThis!=="undefined"?globalThis:this,function(canonical,strategy){
   "use strict";
   const LONG_TERM_CORE_SCORE_VERSION="FINAL_CORE_WEIGHT_V1";
+  const SCORE_LEVEL_VERSION="HS_C4_LEVELS_V2";
   const LEGACY_VERSION="LEGACY_LONG_TERM_V62";
   const SUPPORTED_TICKERS=Object.freeze(["0050","00662","00757","00830","00935"]);
   const LABELS=Object.freeze([
-    {min:90,label:"歷史極端機會",triggerRate:.27},
-    {min:80,label:"重大加碼機會",triggerRate:1.32},
-    {min:70,label:"強力加碼訊號",triggerRate:2.80},
-    {min:65,label:"積極加碼訊號",triggerRate:3.62},
-    {min:50,label:"正式加碼訊號",triggerRate:9.04},
-    {min:45,label:"試探加碼",triggerRate:11.6},
-    {min:40,label:"加碼條件浮現",triggerRate:14.8},
-    {min:30,label:"回檔訊號出現",triggerRate:22.1},
-    {min:0,label:"一般持有",triggerRate:null}
+    {min:90,stage:"HISTORICAL_EXTREME_OPPORTUNITY",label:"歷史極端機會",triggerRate:.27,action:"HIGH_PRIORITY_ADD",posture:"RARE_EVENT"},
+    {min:80,stage:"MAJOR_ADD_OPPORTUNITY",label:"重大加碼機會",triggerRate:1.32,action:"HIGH_PRIORITY_ADD",posture:"RARE_EVENT"},
+    {min:70,stage:"STRONG_ADD_SIGNAL",label:"強力加碼訊號",triggerRate:2.80,action:"HIGH_PRIORITY_ADD",posture:"DEPLOY_IN_STAGES"},
+    {min:65,stage:"ACTIVE_ADD_SIGNAL",label:"積極加碼訊號",triggerRate:3.62,action:"SCALE_IN",posture:"DEPLOY_IN_STAGES"},
+    {min:50,stage:"FORMAL_ADD_SIGNAL",label:"正式加碼訊號",triggerRate:9.04,action:"SCALE_IN",posture:"DEPLOY_IN_STAGES"},
+    {min:45,stage:"PROBE_ADD",label:"試探加碼",triggerRate:11.6,action:"OPTIONAL_SMALL_ADD",posture:"DEPLOY_SMALL"},
+    {min:40,stage:"ADD_CONDITION",label:"加碼條件浮現",triggerRate:14.8,action:"WATCH",posture:"PREPARE_CAPITAL"},
+    {min:30,stage:"PULLBACK_SIGNAL",label:"回檔訊號出現",triggerRate:22.1,action:"WATCH",posture:"PREPARE_CAPITAL"},
+    {min:0,stage:"GENERAL",label:"一般持有",triggerRate:null,action:"NONE",posture:"PRESERVE_CASH"}
   ]);
   function finite(value){return typeof value==="number"&&Number.isFinite(value)?value:null;}
   function clamp(value,min=0,max=100){return Math.max(min,Math.min(max,value));}
@@ -121,5 +122,5 @@
     if(av===null)return 1;if(bv===null)return-1;
     return bv-av||String(a?.ticker||"").localeCompare(String(b?.ticker||""));
   }
-  return{LONG_TERM_CORE_SCORE_VERSION,LEGACY_VERSION,SUPPORTED_TICKERS,LABELS,resolveVersion,labelFor,historicalTriggerForScore,ctaFor,crashRawFromRows,crashScore,buildAdHocScore,buildFinal,buildDecision,compare};
+  return{LONG_TERM_CORE_SCORE_VERSION,SCORE_LEVEL_VERSION,LEGACY_VERSION,SUPPORTED_TICKERS,LABELS,resolveVersion,labelFor,historicalTriggerForScore,ctaFor,crashRawFromRows,crashScore,buildAdHocScore,buildFinal,buildDecision,compare};
 });

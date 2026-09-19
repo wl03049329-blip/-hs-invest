@@ -58,7 +58,7 @@ console.log("O PASS: all production Formal trends render without protected mutat
 assert.equal(sandbox.officialC4ComparableSeries("009815",production).status,"UNAVAILABLE");assert.doesNotMatch(source,/00631L|HS_LEVERAGE/);
 console.log("P/Q PASS: 009815 WAIT_NATIVE remains outside the trend and 00631L is untouched");
 
-const thresholds=sandbox.officialC4ThresholdContract();assert.deepEqual(Array.from(thresholds,row=>row.value),Array.from(decision.NEXT_THRESHOLDS.slice(0,4)));assert.equal(sandbox.officialC4TrendRanges.get("00830"),undefined);
+const thresholds=sandbox.officialC4ThresholdContract();assert.deepEqual(Array.from(thresholds,row=>row.value),Array.from(decision.NEXT_THRESHOLDS));assert.equal(sandbox.officialC4TrendRanges.get("00830"),undefined);
 for(const text of ["C4 正式趨勢","目前正式 C4","期間變化","最近跨過 50","最近跨過 65","只連接合法 FINALIZED_CLOSE"])assert.ok(html.includes(text));
 assert.match(html,/data-official-c4-range/);assert.match(css,/\.hsC4TrendChart\{/);assert.match(css,/\.hsC4TrendTooltip\{/);assert.match(css,/@media\(max-width:430px\)[\s\S]*?\.hsC4TrendChart svg/);
 console.log("UI PASS: default 90D, 30D/90D/1Y controls, fixed-scale SVG, tooltip and mobile guards exist");

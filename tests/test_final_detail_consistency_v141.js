@@ -13,7 +13,7 @@ const artifact=JSON.parse(fs.readFileSync(path.join(root,"finalized-core-score-s
 const symbols=["0050","00662","00757","00830","00935"];
 const version="FINAL_CORE_WEIGHT_V1";
 
-for(const [score,stage,label] of [[49,"PULLBACK_WATCH","回檔觀察"],[50,"SMALL_ADD","小額加碼"],[62,"SMALL_ADD","小額加碼"],[64,"SMALL_ADD","小額加碼"],[65,"FORMAL_SCALE_IN","正式分批"],[69,"FORMAL_SCALE_IN","正式分批"],[70,"DEEP_PULLBACK_ADD","深跌加碼"]]){
+for(const [score,stage,label] of [[29,"GENERAL","一般持有"],[30,"PULLBACK_SIGNAL","回檔訊號出現"],[39,"PULLBACK_SIGNAL","回檔訊號出現"],[40,"ADD_CONDITION","加碼條件浮現"],[44,"ADD_CONDITION","加碼條件浮現"],[45,"PROBE_ADD","試探加碼"],[49,"PROBE_ADD","試探加碼"],[50,"FORMAL_ADD_SIGNAL","正式加碼訊號"],[64,"FORMAL_ADD_SIGNAL","正式加碼訊號"],[65,"ACTIVE_ADD_SIGNAL","積極加碼訊號"],[69,"ACTIVE_ADD_SIGNAL","積極加碼訊號"],[70,"STRONG_ADD_SIGNAL","強力加碼訊號"]]){
   const result=decision.interpret({symbol:"00830",score,sourceStatus:"SUCCESS",asOf:"2026-09-02T13:30:00+08:00",currentFactors:{},baseline:{type:"NONE"}});
   assert.deepEqual([result.decision_stage,result.decision_label_zh],[stage,label]);
 }
@@ -32,8 +32,8 @@ const context={Number,Math,Set,window:{HSDecisionLayerV1:decision},LONG_RADAR_SC
 vm.createContext(context);vm.runInContext(`${html.slice(presentationStart,presentationEnd)}\n${html.slice(driverStart,driverEnd)}`,context);
 const item={id:"00830",intraday:{canonical:row}};
 const interpreted=context.finalDecisionPresentation(item,row);
-assert.deepEqual([interpreted.score,interpreted.decision_stage,interpreted.decision_label_zh,interpreted.distance_to_next_stage,interpreted.next_stage],[62,"SMALL_ADD","小額加碼",3,"FORMAL_SCALE_IN"]);
-assert.equal(context.finalDecisionBadgeLabel(interpreted),"小額加碼訊號");
+assert.deepEqual([interpreted.score,interpreted.decision_stage,interpreted.decision_label_zh,interpreted.distance_to_next_stage,interpreted.next_stage],[62,"FORMAL_ADD_SIGNAL","正式加碼訊號",3,"ACTIVE_ADD_SIGNAL"]);
+assert.equal(context.finalDecisionBadgeLabel(interpreted),"正式加碼訊號");
 const drivers=context.hsLiveDriverSummary(row);
 assert.match(drivers,/週線位置<\/b><i>中性偏多/);
 assert.match(drivers,/回檔程度<\/b><i>偏強/);
@@ -51,7 +51,7 @@ assert.match(html,/009815 目前維持 WAIT_NATIVE/);
 assert.match(html,/00631L · HS LEVERAGE/);
 console.log("PASS 5 intraday authority disabled; WAIT_NATIVE and HS LEVERAGE unchanged");
 
-for(const [symbol,score,label] of [["0050",7,"一般持有"],["00662",9,"一般持有"],["00757",5,"一般持有"],["00830",62,"小額加碼"],["00935",20,"一般持有"]]){
+for(const [symbol,score,label] of [["0050",7,"一般持有"],["00662",9,"一般持有"],["00757",5,"一般持有"],["00830",62,"正式加碼訊號"],["00935",20,"一般持有"]]){
   const actual=current.items[symbol];assert.equal(actual.display_score,score);
   const result=decision.interpret({symbol,score:actual.display_score,sourceStatus:"SUCCESS",asOf:actual.market_as_of,currentFactors:actual.core_factors,baseline:{type:"NONE"}});
   assert.equal(result.decision_label_zh,label);

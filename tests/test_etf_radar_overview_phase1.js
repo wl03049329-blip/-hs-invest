@@ -7,7 +7,7 @@ assert.ok(helperStart>=0&&helperEnd>helperStart,"overview-only helper block must
 assert.ok(cardStart>=0&&cardEnd>cardStart,"overview renderer must exist");
 const context={window:{HSDecisionLayerV1:decisionLayer}};vm.createContext(context);vm.runInContext(html.slice(helperStart,helperEnd),context);
 
-for(const [score,threshold,label,distance] of [[45,50,"小額加碼",5],[19,40,"回檔觀察",21],[8,40,"回檔觀察",32],[6,40,"回檔觀察",34],[40,50,"小額加碼",10],[49,50,"小額加碼",1],[50,65,"正式分批",15],[64,65,"正式分批",1],[65,70,"深跌加碼",5],[79,80,"罕見機會",1],[89,90,"極端機會",1]]){
+for(const [score,threshold,label,distance] of [[45,50,"正式加碼訊號",5],[19,30,"回檔訊號出現",11],[29,30,"回檔訊號出現",1],[39,40,"加碼條件浮現",1],[40,45,"試探加碼",5],[44,45,"試探加碼",1],[49,50,"正式加碼訊號",1],[64,65,"積極加碼訊號",1],[69,70,"強力加碼訊號",1],[79,80,"重大加碼機會",1],[89,90,"歷史極端機會",1]]){
   const result=context.radarOverviewNextLevel(score);
   assert.equal(result.nextThreshold,threshold,`score ${score} threshold`);assert.equal(result.nextLabel,label,`score ${score} label`);assert.equal(result.distance,distance,`score ${score} distance`);
 }

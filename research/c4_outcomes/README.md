@@ -13,7 +13,7 @@ This directory is research-only. It is not imported by the homepage, ETF ranking
 ## Outputs
 
 - `raw/{symbol}.json`: every level daily sample, every upward level-entry event (`ENTRY_ALL`), and the condition-specific `NON_OVERLAP_60D` subset.
-- `summary/{symbol}.json`: per-ETF aggregates for level daily samples, level entry events, non-overlapping entry events, `40+/50+/65+/70+/80+/90+` threshold samples, and DD52 daily bands.
+- `summary/{symbol}.json`: per-ETF aggregates for level daily samples, level entry events, non-overlapping entry events, `30+/40+/45+/50+/65+/70+/80+/90+` threshold samples, and DD52 daily bands. All level and threshold classifications use `HS_C4_LEVELS_V2` from the shared production source of truth.
 - `index.json`: artifact paths, hashes, counts and fail-closed coverage. `009815` is `HOLD` until native research history exists. `00631L` is excluded.
 
 Each horizon reports `sample_count`, mean, median, positive rate (`return > 0`; zero is not positive), best, worst, p25 and p75. `sample_class` is `VERY_SMALL` below 10, `SMALL` for 10–29 and `NORMAL` at 30 or more.

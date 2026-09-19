@@ -13,7 +13,7 @@ const between = (start, end) => {
 const today = between("function hsTodayFactorAdapter", "function renderTop");
 
 // 1–2: Homepage uses the shared interpreter and does not create score rules.
-assert.match(html, /<script src="hs-decision-layer-v1\.js\?v=20260823-dl1"><\/script>/);
+assert.match(html, /<script src="hs-decision-layer-v1\.js\?v=20260919-c4-levels-v2"><\/script>/);
 assert.match(today, /interpreter\.interpret\(buildHSTodayDecisionInput\(item\)\)/);
 assert.doesNotMatch(today, /HSFinalCoreProduction\.buildFinal|computeCoreScore|calculateWeekly|buildIntradayRadarBatch/);
 assert.doesNotMatch(today, /score\s*(?:>=|<=|>|<)\s*\d/);
@@ -31,11 +31,11 @@ const candidateSource = html.slice(html.indexOf("function hsTodayStageRank"), ht
 const candidateSandbox = {window:{HSDecisionLayerV1:decision}};
 vm.runInNewContext(candidateSource, candidateSandbox);
 const row = (id, stage, distance, score, index, status = "SUCCESS") => ({item:{id}, index, decision:{source_status:status, decision_stage:stage, distance_to_next_stage:distance, score}});
-assert.strictEqual(candidateSandbox.selectHSTodayCandidate([row("0050", "GENERAL", 11, 29, 0), row("00830", "SMALL_ADD", 7, 58, 1)]).item.id, "00830");
-assert.strictEqual(candidateSandbox.selectHSTodayCandidate([row("0050", "SMALL_ADD", 7, 58, 0), row("00830", "SMALL_ADD", 3, 52, 1)]).item.id, "00830");
-assert.strictEqual(candidateSandbox.selectHSTodayCandidate([row("0050", "SMALL_ADD", 3, 52, 0), row("00830", "SMALL_ADD", 3, 58, 1)]).item.id, "00830");
-assert.strictEqual(candidateSandbox.selectHSTodayCandidate([row("0050", "SMALL_ADD", 3, 58, 0), row("00830", "SMALL_ADD", 3, 58, 1)]).item.id, "0050");
-assert.strictEqual(candidateSandbox.selectHSTodayCandidate([row("00631L", "EXTREME_REFERENCE", 0, 90, 0), row("0050", "GENERAL", 11, 25, 1)]).item.id, "0050");
+assert.strictEqual(candidateSandbox.selectHSTodayCandidate([row("0050", "GENERAL", 1, 29, 0), row("00830", "FORMAL_ADD_SIGNAL", 7, 58, 1)]).item.id, "00830");
+assert.strictEqual(candidateSandbox.selectHSTodayCandidate([row("0050", "FORMAL_ADD_SIGNAL", 7, 58, 0), row("00830", "FORMAL_ADD_SIGNAL", 3, 52, 1)]).item.id, "00830");
+assert.strictEqual(candidateSandbox.selectHSTodayCandidate([row("0050", "FORMAL_ADD_SIGNAL", 3, 52, 0), row("00830", "FORMAL_ADD_SIGNAL", 3, 58, 1)]).item.id, "00830");
+assert.strictEqual(candidateSandbox.selectHSTodayCandidate([row("0050", "FORMAL_ADD_SIGNAL", 3, 58, 0), row("00830", "FORMAL_ADD_SIGNAL", 3, 58, 1)]).item.id, "0050");
+assert.strictEqual(candidateSandbox.selectHSTodayCandidate([row("00631L", "HISTORICAL_EXTREME_OPPORTUNITY", 0, 90, 0), row("0050", "GENERAL", 5, 25, 1)]).item.id, "0050");
 assert.strictEqual(candidateSandbox.selectHSTodayCandidate([row("009815", null, null, null, 0, "WAIT_NATIVE"), row("0050", null, null, null, 1, "FAIL_CLOSED")]), null);
 
 // 8–12: UI only translates established Decision Layer fields.
@@ -55,12 +55,12 @@ assert.match(today, /資料尚未齊備，暫不提供今日決策摘要/);
 assert.match(today, /source_status==="SUCCESS"/);
 
 // 17–20: Existing HS LIVE path remains canonical, formal tiers remain owned elsewhere, and IDs stay unique.
-assert.match(html, /function longRankRow\(x,index,previous,rank=index\+1\)/);
+assert.match(html, /function longRankRow\(x,index,previous,rank=index\+1,dualTrackItem=null\)/);
 assert.match(html, /item\.intraday\?\.canonical/);
 assert.match(html, /function coreStatusTier\(score,label=""\)/);
 assert.strictEqual((html.match(/id="hsTodaySummary"/g) || []).length, 1);
 assert.match(css, /#homeEtfBrief\.hsLivePanel \.hsTodaySummary/);
 
 // Ensure the shared contract still owns all formal decision thresholds.
-assert.deepStrictEqual(decision.NEXT_THRESHOLDS, [40, 50, 65, 70, 80, 90]);
+assert.deepStrictEqual(decision.NEXT_THRESHOLDS, [30, 40, 45, 50, 65, 70, 80, 90]);
 console.log("HS TODAY Phase 3 integration contract: PASS");

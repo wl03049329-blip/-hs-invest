@@ -18,14 +18,7 @@ stats = engine.statistics([{forward_5d:1}, {forward_5d:3}, {forward_5d:2}, {forw
 assert.equal(stats.median_return, 2.5);
 
 // Level and DD52 boundaries reuse the production decision-layer source of truth.
-assert.equal(engine.stageFor(39).stage, "GENERAL");
-assert.equal(engine.stageFor(40).stage, "PULLBACK_WATCH");
-assert.equal(engine.stageFor(49).stage, "PULLBACK_WATCH");
-assert.equal(engine.stageFor(50).stage, "SMALL_ADD");
-assert.equal(engine.stageFor(65).stage, "FORMAL_SCALE_IN");
-assert.equal(engine.stageFor(70).stage, "DEEP_PULLBACK_ADD");
-assert.equal(engine.stageFor(80).stage, "RARE_OPPORTUNITY");
-assert.equal(engine.stageFor(90).stage, "EXTREME_REFERENCE");
+for(const [score,stage] of [[29,"GENERAL"],[30,"PULLBACK_SIGNAL"],[39,"PULLBACK_SIGNAL"],[40,"ADD_CONDITION"],[44,"ADD_CONDITION"],[45,"PROBE_ADD"],[49,"PROBE_ADD"],[50,"FORMAL_ADD_SIGNAL"],[64,"FORMAL_ADD_SIGNAL"],[65,"ACTIVE_ADD_SIGNAL"],[69,"ACTIVE_ADD_SIGNAL"],[70,"STRONG_ADD_SIGNAL"],[79,"STRONG_ADD_SIGNAL"],[80,"MAJOR_ADD_OPPORTUNITY"],[89,"MAJOR_ADD_OPPORTUNITY"],[90,"HISTORICAL_EXTREME_OPPORTUNITY"],[100,"HISTORICAL_EXTREME_OPPORTUNITY"]])assert.equal(engine.stageFor(score).stage,stage);
 for (const [value, id] of [[0,"DD52_0_TO_NEG5"],[-5,"DD52_NEG5_TO_NEG10"],[-10,"DD52_NEG10_TO_NEG15"],[-15,"DD52_NEG15_TO_NEG20"],[-20,"DD52_NEG20_TO_NEG25"],[-25,"DD52_NEG25_TO_NEG30"],[-30,"DD52_NEG30_OR_DEEPER"]]) assert.equal(engine.dd52Band(value).id, id);
 
 const sample = (date, score, extra = {}) => ({etf:"X", date, event_type:"LEVEL_DAILY",
@@ -33,20 +26,20 @@ const sample = (date, score, extra = {}) => ({etf:"X", date, event_type:"LEVEL_D
   raw_total:score+.25, dd52:-10, weekly_j:30, crash:-2, dd52_band:"DD52_NEG10_TO_NEG15",
   adjusted_close:100, mature_5d:true, forward_5d:.01, mature_20d:true, forward_20d:.02,
   mature_40d:true, forward_40d:.03, mature_60d:true, forward_60d:.04, ...extra});
-let samples = [sample("2026-01-01",38),sample("2026-01-02",42),sample("2026-01-03",45),sample("2026-01-04",48),sample("2026-01-05",51)];
+let samples = [sample("2026-01-01",28),sample("2026-01-02",32),sample("2026-01-03",42),sample("2026-01-04",47),sample("2026-01-05",53)];
 let events = engine.entryEvents(samples);
 assert.deepEqual(events.map(row=>[row.date,row.from_level,row.to_level]),[
-  ["2026-01-02","GENERAL","PULLBACK_WATCH"],["2026-01-05","PULLBACK_WATCH","SMALL_ADD"]]);
+  ["2026-01-02","GENERAL","PULLBACK_SIGNAL"],["2026-01-03","PULLBACK_SIGNAL","ADD_CONDITION"],["2026-01-04","ADD_CONDITION","PROBE_ADD"],["2026-01-05","PROBE_ADD","FORMAL_ADD_SIGNAL"]]);
 
 // A multi-level jump creates one final-level event while recording every crossed threshold.
-samples = [sample("2026-02-01",48), sample("2026-02-02",67)];
+samples = [sample("2026-02-01",44), sample("2026-02-02",67)];
 events = engine.entryEvents(samples);
-assert.equal(events.length,1); assert.equal(events[0].to_level,"FORMAL_SCALE_IN");
-assert.deepEqual(events[0].crossed_thresholds,[50,65]);
+assert.equal(events.length,1); assert.equal(events[0].to_level,"ACTIVE_ADD_SIGNAL");
+assert.deepEqual(events[0].crossed_thresholds,[45,50,65]);
 
 // NON_OVERLAP_60D is condition-specific and keeps ENTRY_ALL separately.
 const dates = Array.from({length:130},(_,index)=>`D${String(index).padStart(3,"0")}`);
-const eventAt = index => ({...sample(dates[index],42),date:dates[index],to_level:"PULLBACK_WATCH"});
+const eventAt = index => ({...sample(dates[index],42),date:dates[index],to_level:"ADD_CONDITION"});
 const allEvents=[eventAt(0),eventAt(30),eventAt(60),eventAt(119),eventAt(120)];
 assert.deepEqual(engine.nonOverlap60(allEvents,dates).map(row=>row.date),[dates[0],dates[60],dates[120]]);
 
@@ -65,10 +58,11 @@ const adjusted=engine.adjustedPrices({source_version:"FINMIND_AS_OF_ADJUSTED_OHL
 assert.equal(adjusted[0].close,90); assert.equal(adjusted[1].close,90);
 
 // Threshold and DD52 aggregates preserve daily overlapping samples and do not discard outliers.
-samples=[sample("2026-03-01",39),sample("2026-03-02",40),sample("2026-03-03",50,{dd52_band:"DD52_NEG20_TO_NEG25"}),sample("2026-03-04",90,{forward_5d:5})];
+samples=[sample("2026-03-01",29),sample("2026-03-02",30),sample("2026-03-03",45,{dd52_band:"DD52_NEG20_TO_NEG25"}),sample("2026-03-04",90,{forward_5d:5})];
 const summary=engine.summaryBody(samples,engine.entryEvents(samples),engine.nonOverlap60(engine.entryEvents(samples),samples.map(row=>row.date)));
-assert.equal(summary.threshold_samples.SCORE_40_PLUS.total_records,3);
-assert.equal(summary.threshold_samples.SCORE_50_PLUS.total_records,2);
+assert.equal(summary.threshold_samples.SCORE_30_PLUS.total_records,3);
+assert.equal(summary.threshold_samples.SCORE_40_PLUS.total_records,2);
+assert.equal(summary.threshold_samples.SCORE_45_PLUS.total_records,2);
 assert.equal(summary.threshold_samples.SCORE_90_PLUS.total_records,1);
 assert.equal(summary.threshold_samples.SCORE_90_PLUS.horizons["5d"].best_return,5);
 assert.equal(summary.dd52_bands.DD52_NEG20_TO_NEG25.total_records,1);
