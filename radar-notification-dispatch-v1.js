@@ -18,11 +18,12 @@
   function mark(state,key,ids){state[key]=unique([...(state[key]||[]),...ids])}
   function failureCount(store,key){return store instanceof Map?Number(store.get(key)||0):(store?.has?.(key)?2:0)}
   function recordFailure(store,key){if(store instanceof Map)store.set(key,failureCount(store,key)+1);else store?.add?.(key)}
-  function dispatchRadarNotifications({pendingAlerts=[],bundleAlerts,preferences,state,NotificationApi,visibilityState="visible",now=()=>new Date().toISOString(),sessionFailedIds=new Map(),onOpen=()=>{},onFocus=()=>{}}={}){
+  function dispatchRadarNotifications({pendingAlerts=[],bundleAlerts,preferences,state,NotificationApi,visibilityState="visible",backgroundActive=false,now=()=>new Date().toISOString(),sessionFailedIds=new Map(),onOpen=()=>{},onFocus=()=>{}}={}){
     const prefs=normalizePreferences(preferences),next=normalizeState(state),alerts=(Array.isArray(pendingAlerts)?pendingAlerts:[]).filter(item=>item&&item.alert_id),allIds=alerts.map(item=>String(item.alert_id)),bundles=typeof bundleAlerts==="function"?bundleAlerts(alerts):[],results=[],errors=[];
     if(!next.baseline_initialized){next.baseline_initialized=true;mark(next,"handled_alert_ids",allIds);mark(next,"handled_bundle_ids",bundles.map(item=>String(item.bundle_id)));return{nextState:next,results,errors,baseline:true}}
     const handled=new Set([...next.handled_alert_ids,...next.dispatched_alert_ids]),candidates=alerts.filter(item=>!handled.has(String(item.alert_id))),candidateIds=candidates.map(item=>String(item.alert_id));
     if(!candidateIds.length)return{nextState:next,results,errors,baseline:false};
+    if(backgroundActive){mark(next,"handled_alert_ids",candidateIds);mark(next,"handled_bundle_ids",(typeof bundleAlerts==="function"?bundleAlerts(candidates):[]).map(item=>String(item.bundle_id)));return{nextState:next,results,errors,baseline:false,suppressed:"BACKGROUND_PUSH"}}
     if(visibilityState!=="hidden"&&prefs.suppress_when_visible){mark(next,"in_app_seen_alert_ids",candidateIds);mark(next,"handled_alert_ids",candidateIds);mark(next,"handled_bundle_ids",(typeof bundleAlerts==="function"?bundleAlerts(candidates):[]).map(item=>String(item.bundle_id)));return{nextState:next,results,errors,baseline:false,suppressed:"VISIBLE"}}
     const cap=capability(NotificationApi);
     if(!prefs.enabled||!cap.supported||cap.permission!=="granted")return{nextState:next,results,errors,baseline:false,blocked:!prefs.enabled?"APP_DISABLED":cap.permission.toUpperCase()};

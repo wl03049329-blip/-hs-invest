@@ -6,27 +6,27 @@ function storage(value=null){const data=new Map(value?[[push.PREFERENCES_KEY,JSO
 function documentMock(){return{baseURI:"https://wl03049329-blip.github.io/-hs-invest/",querySelector:selector=>selector.includes("hs-live-railway-url")?{content:"https://hs-invest-production.up.railway.app/api/live-scores"}:null}}
 function NotificationMock(permission="granted"){return class NotificationApi{static permission=permission;static async requestPermission(){return permission}}}
 function channelMock(){return class Channel{constructor(){this.port1={onmessage:null};this.port2={peer:this.port1}}}}
-function worker(){return{postMessage(message,ports){ports[0].peer.onmessage({data:{type:message.type,version:"HS_PUSH_SW_V1"}})}}}
+function worker(){return{postMessage(message,ports){ports[0].peer.onmessage({data:{type:message.type,version:"HS_PUSH_SW_V2"}})}}}
 function subscription(){return{toJSON:()=>({endpoint:"https://fcm.googleapis.com/fcm/send/test",keys:{p256dh:"A".repeat(87),auth:"B".repeat(22)}}),unsubscribe:async()=>true}}
 function browser({permission="granted",existing=null,subscribeError=null}={}){const sub=existing;const registration={active:worker(),pushManager:{getSubscription:async()=>sub,subscribe:async()=>{if(subscribeError)throw subscribeError;return subscription()}}};const navigatorObj={serviceWorker:{register:async()=>registration,ready:Promise.resolve(registration),getRegistration:async()=>registration}};const windowObj={navigator:navigatorObj,PushManager:function(){},Notification:NotificationMock(permission),isSecureContext:true,localStorage:storage(),fetch:null};return{windowObj,navigatorObj,registration}}
 function ok(data,status=200){return Promise.resolve({ok:status>=200&&status<300,status,json:async()=>data})}
 function fetchSequence(...responses){const calls=[];const fn=(...args)=>{calls.push(args);const next=responses.shift();return typeof next==="function"?next(...args):next};fn.calls=calls;return fn}
 
-test("01 runtime marker and versioned asset are present",()=>{assert.match(html,/data-radar-push-phase="11b2a"/);assert.match(html,/20260919-background-web-push-phase11b2a/)});
+test("01 runtime marker and versioned asset are present",()=>{assert.match(html,/data-radar-push-phase="11b2b"/);assert.match(html,/20260919-background-web-push-phase11b2b/)});
 test("02 background and system notification UI are separate",()=>{assert.match(html,/系統通知/);assert.match(html,/背景通知/);assert.match(html,/Background Web Push/)});
-test("03 default preference is opt-out",()=>assert.deepEqual(push.defaults(),{version:1,enabled:false,subscription_id:null,last_sync_at:null,status:"OFF"}));
+test("03 default preference is opt-out",()=>assert.deepEqual(push.defaults(),{version:1,enabled:false,subscription_id:null,last_sync_at:null,status:"OFF",rules_sync_status:"NOT_SYNCED",rules_version:null}));
 test("04 unsupported without secure context",()=>assert.equal(push.capability({windowObj:{PushManager(){},isSecureContext:false,Notification:NotificationMock()},navigatorObj:{serviceWorker:{}}}).supported,false));
 test("05 unsupported without service worker",()=>assert.equal(push.capability({windowObj:{PushManager(){},isSecureContext:true,Notification:NotificationMock()},navigatorObj:{}}).supported,false));
 test("06 denied state is detected before subscribe",()=>assert.equal(push.capability({windowObj:{PushManager(){},isSecureContext:true,Notification:NotificationMock("denied")},navigatorObj:{serviceWorker:{}}}).permission,"denied"));
 test("07 service worker URL respects GitHub Pages base path",()=>assert.equal(push.swUrl(documentMock()),"https://wl03049329-blip.github.io/-hs-invest/push-service-worker.js"));
 test("08 service worker scope respects GitHub Pages base path",()=>assert.equal(push.swScope(documentMock()),"https://wl03049329-blip.github.io/-hs-invest/"));
-test("09 registration reports exact service worker version",async()=>{const b=browser();assert.equal(await push.workerVersion(b.registration,{MessageChannelApi:channelMock()}),"HS_PUSH_SW_V1")});
-test("10 SW version marker is exact",()=>assert.match(swSource,/HS_PUSH_SW_VERSION\s*=\s*"HS_PUSH_SW_V1"/));
+test("09 registration reports exact service worker version",async()=>{const b=browser();assert.equal(await push.workerVersion(b.registration,{MessageChannelApi:channelMock()}),"HS_PUSH_SW_V2")});
+test("10 SW version marker is exact",()=>assert.match(swSource,/HS_PUSH_SW_VERSION\s*=\s*"HS_PUSH_SW_V2"/));
 test("11 SW has no fetch event handler",()=>assert.doesNotMatch(swSource,/addEventListener\s*\(\s*["']fetch["']/));
 test("12 SW uses no Cache API",()=>assert.doesNotMatch(swSource,/\bcaches\b|CacheStorage|precache|workbox/i));
 test("13 SW handles only required lifecycle events",()=>{for(const event of ["install","activate","push","notificationclick","pushsubscriptionchange"])assert.match(swSource,new RegExp(`addEventListener\\(\\"${event}\\"`))});
 test("14 push handler enforces fixed test type and copy",()=>{assert.match(swSource,/payload\.type === "TEST_PUSH"/);assert.match(swSource,/payload\.title === TEST_TITLE/);assert.match(swSource,/payload\.body === TEST_BODY/)});
-test("15 notification tag deduplicates tests",()=>{assert.match(swSource,/tag: "hs-radar-test-push"/);assert.match(swSource,/renotify: false/)});
+test("15 notification tag deduplicates tests",()=>{assert.match(swSource,/"hs-radar-test-push"/);assert.match(swSource,/renotify: false/)});
 test("16 test notification is not requireInteraction and not silent",()=>{assert.match(swSource,/requireInteraction: false/);assert.match(swSource,/silent: false/)});
 test("17 click route focuses existing client then opens safe scope",()=>{assert.match(swSource,/clients\.matchAll/);assert.match(swSource,/existing\.focus/);assert.match(swSource,/clients\.openWindow\(appUrl\)/);assert.match(swSource,/self\.registration\.scope/)});
 test("18 subscription change never performs fake resubscribe",()=>{const handler=swSource.slice(swSource.indexOf('addEventListener("pushsubscriptionchange"'));assert.match(handler,/RE_ENABLE_REQUIRED/);assert.doesNotMatch(handler,/\.subscribe\(/)});
