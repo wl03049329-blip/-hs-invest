@@ -530,6 +530,12 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       <p class="capitalPlanDisclaimer">僅為配置模擬，不會修改真實持股，也不會自動下單。</p>
     </section>
 
+    <section class="panel portfolioLedgerPanel" aria-labelledby="portfolioLedgerTitle">
+      <header class="portfolioLedgerHead"><div><p class="eyebrow">TRANSACTION LEDGER</p><h2 id="portfolioLedgerTitle">最近交易</h2><small id="portfolioLedgerStart">交易帳本尚未建立</small></div><div><button id="portfolioLedgerViewBtn" class="miniBtn" type="button">查看全部交易 ›</button><button id="portfolioTransactionAddBtn" class="btn" type="button">＋ 新增交易</button></div></header>
+      <div id="portfolioLedgerReconciliation" class="portfolioLedgerReconciliation" hidden></div>
+      <div id="portfolioLedgerContent" class="portfolioLedgerContent" aria-live="polite"></div>
+    </section>
+
     <details class="panel rebalancePanel" aria-labelledby="rebalanceTitle">
       <summary class="rebalanceEntry">
         <span><small>ALLOCATION SETTINGS</small><b id="rebalanceTitle">目標配置與再平衡設定</b><em>編輯目標比例與進階容忍區間。</em></span>
@@ -981,6 +987,40 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       </div>
       <button id="portfolioSaveBtn" class="btn portfolioSaveBtn" type="submit">儲存持股</button>
     </form>
+  </div>
+</div>
+
+<div id="portfolioLedgerMigrationModal" class="modal portfolioModal" role="dialog" aria-modal="true" aria-labelledby="portfolioLedgerMigrationTitle" aria-hidden="true">
+  <div class="sheet portfolioSheet portfolioLedgerMigrationSheet">
+    <div class="sheetHead"><div><p class="eyebrow">PORTFOLIO BASELINE</p><h3 id="portfolioLedgerMigrationTitle">建立交易帳本</h3></div><button class="close" type="button" data-ledger-close>稍後</button></div>
+    <p class="portfolioLedgerIntro">目前持股將以「期初部位」匯入，HS 不會假設過去的實際買入日期。績效將從今天開始正式追蹤。</p>
+    <div id="portfolioLedgerMigrationSummary" class="portfolioLedgerMigrationSummary"></div>
+    <button id="portfolioLedgerMigrateBtn" class="btn portfolioSaveBtn" type="button">建立交易帳本</button>
+  </div>
+</div>
+
+<div id="portfolioTransactionModal" class="modal portfolioModal" role="dialog" aria-modal="true" aria-labelledby="portfolioTransactionTitle" aria-hidden="true">
+  <div class="sheet portfolioSheet portfolioTransactionSheet">
+    <div class="sheetHead"><div><p class="eyebrow">TRANSACTION LEDGER</p><h3 id="portfolioTransactionTitle">新增交易</h3></div><button class="close" type="button" data-ledger-close>關閉</button></div>
+    <form id="portfolioTransactionForm" novalidate>
+      <label class="portfolioField">類型<select id="portfolioTransactionType"><option value="BUY">買入</option><option value="SELL">賣出</option><option value="DEPOSIT">入金</option><option value="WITHDRAWAL">出金</option><option value="DIVIDEND">股息</option><option value="FEE">其他費用</option><option value="TAX">額外稅額</option></select></label>
+      <label class="portfolioField">日期<input id="portfolioTransactionDate" type="date" required></label>
+      <label class="portfolioField" data-transaction-symbol>ETF 代號<input id="portfolioTransactionSymbol" maxlength="10" placeholder="例如 0050"></label>
+      <div class="portfolioFieldGrid" data-transaction-trade><label class="portfolioField">股數<input id="portfolioTransactionQuantity" type="number" inputmode="decimal" min="0" step="any"></label><label class="portfolioField">成交價<input id="portfolioTransactionPrice" type="number" inputmode="decimal" min="0" step="any"></label></div>
+      <label class="portfolioField" data-transaction-amount>金額<input id="portfolioTransactionAmount" type="number" inputmode="decimal" min="0" step="any"></label>
+      <div class="portfolioFieldGrid" data-transaction-costs><label class="portfolioField">手續費<input id="portfolioTransactionFee" type="number" inputmode="decimal" min="0" step="any" value="0"></label><label class="portfolioField" data-transaction-tax>交易稅<input id="portfolioTransactionTax" type="number" inputmode="decimal" min="0" step="any" value="0"></label></div>
+      <label class="portfolioField">備註（選填）<input id="portfolioTransactionNote" maxlength="240"></label>
+      <div id="portfolioTransactionWarning" class="portfolioTransactionWarning" hidden></div><div id="portfolioTransactionError" class="formError" role="alert"></div>
+      <button class="btn portfolioSaveBtn" type="submit">儲存交易</button>
+    </form>
+  </div>
+</div>
+
+<div id="portfolioLedgerModal" class="modal portfolioModal" role="dialog" aria-modal="true" aria-labelledby="portfolioLedgerAllTitle" aria-hidden="true">
+  <div class="sheet portfolioSheet portfolioLedgerSheet">
+    <div class="sheetHead"><div><p class="eyebrow">LOCAL LEDGER</p><h3 id="portfolioLedgerAllTitle">交易紀錄</h3></div><button class="close" type="button" data-ledger-close>關閉</button></div>
+    <div id="portfolioLedgerFilters" class="portfolioLedgerFilters"><button class="active" type="button" data-ledger-filter="ALL">全部</button><button type="button" data-ledger-filter="BUY">買入</button><button type="button" data-ledger-filter="SELL">賣出</button><button type="button" data-ledger-filter="CASH">入金／出金</button><button type="button" data-ledger-filter="DIVIDEND">股息</button><button type="button" data-ledger-filter="COST">費用</button></div>
+    <div id="portfolioLedgerAllList" class="portfolioLedgerAllList"></div>
   </div>
 </div>
 
@@ -4904,7 +4944,8 @@ initLiveDebugPanel();liveDiagnosticRecord("initial_page_load",{render_state_befo
 </script>
 <script src="portfolio-core.js?v=20260920-portfolio-decision-center-p1"></script>
 <script src="portfolio-performance-core.js?v=20260920-portfolio-risk-p3"></script>
-<script src="portfolio-v6.js?v=20260920-portfolio-risk-p3"></script>
+<script src="portfolio-ledger-core.js?v=20260920-portfolio-ledger-p4"></script>
+<script src="portfolio-v6.js?v=20260920-portfolio-ledger-p4"></script>
 <script src="personal-capital-ui.js?v=20260824-phase4"></script>
 </body>
 </html>

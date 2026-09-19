@@ -16,13 +16,18 @@
       if(!/^[0-9A-Z]{4,10}$/.test(symbol)||quantity===null||quantity<=0||marketPrice===null||marketPrice<=0||marketValue===null||marketValue<0)return null;
       holdings[symbol]={quantity,marketPrice,marketValue};
     }
-    return{version:VERSION,date:tradingDate,timestamp:time,totalMarketValue:market,investedMarketValue:market,cash,totalAssets:assets,unrealizedPnL:pnl,holdings};
+    const ledgerVersion=raw?.ledgerVersion?String(raw.ledgerVersion):null,ledgerLastEventId=raw?.ledgerLastEventId?String(raw.ledgerLastEventId):null,portfolioSignature=raw?.portfolioSignature?String(raw.portfolioSignature):null;
+    return{version:VERSION,date:tradingDate,timestamp:time,totalMarketValue:market,investedMarketValue:market,cash,totalAssets:assets,unrealizedPnL:pnl,holdings,ledgerVersion,ledgerLastEventId,portfolioSignature};
   }
   function appendDailySnapshot(history,raw){
     const snapshot=validateSnapshot(raw),rows=(Array.isArray(history)?history:[]).map(validateSnapshot).filter(Boolean).sort((a,b)=>a.date.localeCompare(b.date)||a.timestamp.localeCompare(b.timestamp));
     if(!snapshot)return{status:"INVALID_SNAPSHOT",history:rows,changed:false};
     const index=rows.findIndex(row=>row.date===snapshot.date);
-    if(index>=0){if(rows[index].timestamp>=snapshot.timestamp)return{status:"OLDER_OR_IDENTICAL",history:rows,changed:false};rows[index]=snapshot;return{status:"REPLACED_DAILY_LAST",history:rows,changed:true,snapshot};}
+    if(index>=0){
+      if(rows[index].timestamp>snapshot.timestamp)return{status:"OLDER_OR_IDENTICAL",history:rows,changed:false};
+      if(rows[index].timestamp===snapshot.timestamp&&JSON.stringify(rows[index])===JSON.stringify(snapshot))return{status:"OLDER_OR_IDENTICAL",history:rows,changed:false};
+      rows[index]=snapshot;return{status:"REPLACED_DAILY_LAST",history:rows,changed:true,snapshot};
+    }
     rows.push(snapshot);rows.sort((a,b)=>a.date.localeCompare(b.date));return{status:"APPENDED",history:rows,changed:true,snapshot};
   }
   function selectPeriod(history,period="1M",asOf){
