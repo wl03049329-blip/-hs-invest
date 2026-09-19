@@ -2,7 +2,8 @@
   "use strict";
 
   const core = window.HSPortfolioCore;
-  if (!core) return;
+  const performanceCore = window.HSPortfolioPerformanceCore;
+  if (!core || !performanceCore) return;
 
   const storageKeys = window.HSPersistenceCore?.keys || {};
   const HOLDINGS_KEY = storageKeys.holdings || "hsRadar.portfolio.holdings";
@@ -14,6 +15,7 @@
   const TPEX_URL = "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_quotes";
   const MARKET_CACHE_URL = "market-quotes.json";
   const MARKET_META_URL = "market-quotes-meta.json";
+  const BENCHMARK_URL = "backtest/long-term/historical-adjusted.json";
   const COLORS = ["#52e38c", "#72b8ff", "#ff9d42", "#bd72ff", "#ff6674", "#ffd84d", "#42d7d1", "#d9a7ff"];
   const $v6 = selector => document.querySelector(selector);
   const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[char]));
@@ -38,6 +40,20 @@
   let resizeFrame = 0;
   let rebalanceSettings = loadRebalanceSettings();
   let latestRebalanceAdvice = null;
+  let portfolioHistory = loadPortfolioHistory();
+  let benchmarkRows = [];
+  let performancePeriod = "1M";
+
+  function loadPortfolioHistory() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(performanceCore.STORAGE_KEY) || "[]");
+      return (Array.isArray(parsed) ? parsed : []).map(performanceCore.validateSnapshot).filter(Boolean).sort((a, b) => a.date.localeCompare(b.date));
+    } catch { return []; }
+  }
+
+  function savePortfolioHistory() {
+    localStorage.setItem(performanceCore.STORAGE_KEY, JSON.stringify(portfolioHistory));
+  }
 
   function loadRebalanceSettings() {
     const fallback = {cash: 0, profile: "trend", customTolerance: 3, reminder: "90", customDays: 60, cashFirst: true, trendProtection: true};
@@ -436,6 +452,99 @@
     }
   }
 
+  function quoteTimestamp(quote) {
+    const candidates = [quote?.asOf, quote?.fetchedAt, quote?.date && quote?.quoteTime ? `${quote.date}T${quote.quoteTime}+08:00` : ""];
+    return candidates.map(value => ({value: String(value || ""), time: Date.parse(value)})).filter(item => Number.isFinite(item.time)).sort((a, b) => b.time - a.time)[0] || null;
+  }
+
+  function recordPortfolioSnapshot() {
+    if (!holdings.length || computed.rows.length !== holdings.length) return "EMPTY_OR_INCOMPLETE";
+    const currentRows = computed.rows.filter(row => row.quoteStatus === "current" && Number.isFinite(row.marketValue) && Number.isFinite(row.totalPnl));
+    if (currentRows.length !== holdings.length) return "INVALID_OR_STALE_QUOTES";
+    const dates = [...new Set(currentRows.map(row => String(row.quote?.date || "")))];
+    const timestamps = currentRows.map(row => quoteTimestamp(row.quote));
+    if (dates.length !== 1 || !/^\d{4}-\d{2}-\d{2}$/.test(dates[0]) || timestamps.some(item => !item)) return "MIXED_OR_INVALID_QUOTE_TIME";
+    if (dates[0] !== taipeiToday()) return "NOT_CURRENT_TRADING_DATE";
+    const totalMarketValue = currentRows.reduce((sum, row) => sum + row.marketValue, 0);
+    const unrealizedPnL = currentRows.reduce((sum, row) => sum + row.totalPnl, 0);
+    const snapshot = {
+      date: dates[0],
+      timestamp: new Date(Math.max(...timestamps.map(item => item.time))).toISOString(),
+      totalMarketValue,
+      cash: rebalanceSettings.cash,
+      totalAssets: totalMarketValue + rebalanceSettings.cash,
+      unrealizedPnL,
+      holdings: Object.fromEntries(currentRows.map(row => [row.code, {quantity: row.shares, marketPrice: row.quote.price, marketValue: row.marketValue}]))
+    };
+    const result = performanceCore.appendDailySnapshot(portfolioHistory, snapshot);
+    portfolioHistory = result.history;
+    if (result.changed) savePortfolioHistory();
+    return result.status;
+  }
+
+  function displayDate(value) {
+    const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    return match ? `${match[1]}/${match[2]}/${match[3]}` : "—";
+  }
+
+  function drawPerformanceChart(points, benchmarkVisible) {
+    const canvas = $v6("#portfolioPerformanceChart"), ctx = canvas.getContext("2d"), wrap = canvas.parentElement;
+    const width = Math.max(260, Math.round(wrap.clientWidth || 640)), height = matchMedia("(max-width:430px)").matches ? 190 : 220, ratio = Math.min(devicePixelRatio || 1, 2);
+    canvas.width = Math.round(width * ratio); canvas.height = Math.round(height * ratio); canvas.style.width = `${width}px`; canvas.style.height = `${height}px`;
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0); ctx.clearRect(0, 0, width, height);
+    if (!points.length) return;
+    const pad = {left: 38, right: 14, top: 18, bottom: 25}, plotW = width - pad.left - pad.right, plotH = height - pad.top - pad.bottom;
+    const values = points.flatMap(point => benchmarkVisible ? [point.portfolio, point.benchmark] : [point.portfolio]).filter(Number.isFinite), min = Math.min(...values), max = Math.max(...values), spread = Math.max(2, max - min), low = min - spread * .14, high = max + spread * .14;
+    ctx.lineWidth = 1; ctx.font = "9px system-ui"; ctx.textAlign = "right"; ctx.fillStyle = "#756f65";
+    for (let index = 0; index < 4; index += 1) { const y = pad.top + plotH * index / 3, label = high - (high - low) * index / 3; ctx.strokeStyle = "#262720"; ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(width - pad.right, y); ctx.stroke(); ctx.fillText(label.toFixed(0), pad.left - 6, y + 3); }
+    const draw = (key, color) => { ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath(); points.forEach((point, index) => { const x = pad.left + plotW * (points.length === 1 ? 0 : index / (points.length - 1)), y = pad.top + (high - point[key]) / (high - low) * plotH; if (index) ctx.lineTo(x, y); else ctx.moveTo(x, y); }); ctx.stroke(); };
+    if (benchmarkVisible) draw("benchmark", "#7088a4"); draw("portfolio", "#dfbd63");
+    ctx.textAlign = "left"; ctx.fillStyle = "#777168"; ctx.fillText(displayDate(points[0].date).slice(5), pad.left, height - 7); ctx.textAlign = "right"; ctx.fillText(displayDate(points.at(-1).date).slice(5), width - pad.right, height - 7);
+  }
+
+  function renderPerformance() {
+    const rows = performanceCore.selectPeriod(portfolioHistory, performancePeriod), change = performanceCore.assetChange(rows), comparison = performanceCore.alignBenchmark(rows, benchmarkRows), benchmarkVisible = $v6("#portfolioBenchmarkToggle").checked;
+    const empty = $v6("#portfolioPerformanceEmpty"), metrics = $v6("#portfolioPerformanceMetrics"), coverage = $v6("#portfolioPerformanceCoverage");
+    $v6("#portfolioPerformancePeriods").querySelectorAll("[data-performance-period]").forEach(button => button.classList.toggle("active", button.dataset.performancePeriod === performancePeriod));
+    if (rows.length < 2) {
+      const firstDate = portfolioHistory[0]?.date;
+      empty.innerHTML = `<b>績效紀錄將從現在開始累積</b><span>目前歷史資料尚不足，HS 不會以目前持股反推過去績效。${firstDate ? `已開始記錄：${displayDate(firstDate)}` : "建立完整持股與有效行情後開始記錄。"}</span>`;
+      metrics.innerHTML = '<article class="portfolioPerformanceMetric"><span>區間資產變化</span><b>尚未解鎖</b><small>至少需要 2 個有效交易日</small></article>';
+      coverage.textContent = firstDate ? `FORWARD_SNAPSHOT_ONLY｜資料起始 ${displayDate(firstDate)}` : "FORWARD_SNAPSHOT_ONLY｜尚無有效日資料";
+      drawPerformanceChart([], false); return;
+    }
+    empty.innerHTML = "";
+    const metricRows = [
+      ["區間資產變化率", percent(change.rate), "不含現金流校正"],
+      ["區間資產變化", money(change.amount), `${displayDate(rows[0].date)} 至 ${displayDate(rows.at(-1).date)}`],
+      ["0050 Benchmark", comparison.available ? percent(comparison.benchmarkChange) : "資料不足", comparison.available ? "既有還原權息收盤價｜相同交易日" : "既有還原權息歷史｜無足夠對齊日期"],
+      ["相對差異", comparison.available ? point(comparison.gapPt) : "—", "資產變化率減 0050"]
+    ];
+    metrics.innerHTML = metricRows.map(([label, value, note]) => `<article class="portfolioPerformanceMetric"><span>${label}</span><b>${escapeHtml(value)}</b><small>${escapeHtml(note)}</small></article>`).join("");
+    coverage.textContent = `FORWARD_SNAPSHOT_ONLY｜實際涵蓋 ${displayDate(rows[0].date)} 至 ${displayDate(rows.at(-1).date)}｜${rows.length} 個交易日`;
+    const points = comparison.available ? comparison.points : rows.map((row, index) => ({date: row.date, portfolio: row.totalAssets / rows[0].totalAssets * 100, benchmark: null}));
+    drawPerformanceChart(points, benchmarkVisible && comparison.available);
+  }
+
+  function capitalReasonText(codes) {
+    const labels = {UNDERWEIGHT:"低於目標配置",OVERWEIGHT:"高於目標，不投入新資金",NEAR_TARGET:"接近目標配置",HIGH_CORE_SCORE:"正式 HS 分數提供次要加權",PRICE_UNAVAILABLE:"價格暫缺",TARGET_MISSING:"目標配置未設定",INSUFFICIENT_CASH:"尚未設定投入金額"};
+    return codes.map(code => labels[code] || code).join("｜");
+  }
+
+  function renderCapitalPlan() {
+    const plan = performanceCore.buildCapitalAllocationPlan({
+      rows: computed.rows.map(row => ({code: row.code, marketValue: row.quoteStatus === "current" ? row.marketValue : null, weight: row.weight, targetAllocation: row.targetAllocation, price: row.quoteStatus === "current" ? row.quote?.price : null, coreScore: radarFor(row.code)?.score ?? null})),
+      availableCash: rebalanceSettings.cash,
+      allocationHealthScore: core.allocationHealthScore
+    });
+    const summary = $v6("#capitalPlanSummary"), output = $v6("#capitalPlanRows");
+    summary.innerHTML = [["可投入",money(plan.cash)],["建議配置",money(plan.allocated)],["保留現金",money(plan.remaining)],["健康度",Number.isFinite(plan.healthBefore)&&Number.isFinite(plan.healthAfter)?`${plan.healthBefore} → ${plan.healthAfter}`:"—"]].map(([label,value])=>`<article><span>${label}</span><b>${escapeHtml(value)}</b></article>`).join("");
+    if (!holdings.length) { output.innerHTML = '<div class="capitalPlanEmpty">新增持股後才會建立投入模擬。</div>'; return; }
+    if (plan.cash <= 0) { output.innerHTML = '<div class="capitalPlanEmpty">輸入本次可投入金額後，系統會依目標配置差異產生模擬。</div>'; return; }
+    const visible = plan.rows.filter(row => row.allocationAmount > 0 || row.reasonCodes.includes("PRICE_UNAVAILABLE") || row.reasonCodes.includes("TARGET_MISSING"));
+    output.innerHTML = visible.length ? visible.map(row => `<article class="capitalPlanRow"><div class="capitalPlanIdentity"><b>${escapeHtml(row.symbol)}</b><small>目標 ${Number.isFinite(row.targetAllocation)?plainPercent(row.targetAllocation):"未設定"}</small></div><div class="capitalPlanReason"><b>${escapeHtml(capitalReasonText(row.reasonCodes))}</b><span>${Number.isFinite(row.coreScore)?`正式 HS ${number(row.coreScore,0)}`:"正式 HS 分數暫缺，不阻斷配置"}</span></div><div class="capitalPlanAmount"><b>${row.allocationAmount>0?money(row.allocationAmount):"不配置"}</b><small>${Number.isFinite(row.estimatedUnits)&&row.allocationAmount>0?`約 ${number(row.estimatedUnits,2)} 股｜模擬`:"等待必要資料"}</small></div></article>`).join("") : '<div class="capitalPlanEmpty">目前沒有符合投入條件的低配部位，資金維持保留。</div>';
+  }
+
   function refreshPortfolio(animate = false, {focusTarget = ""} = {}) {
     computed = core.calculatePortfolio(holdings, quoteMap, {now: Date.now()});
     const simulation = $v6("#rebalanceSimulation");
@@ -445,6 +554,9 @@
     renderList();
     drawAllocation();
     renderRebalance(focusTarget);
+    recordPortfolioSnapshot();
+    renderPerformance();
+    renderCapitalPlan();
     renderQuoteStatus();
     window.dispatchEvent(new CustomEvent("hs:portfolio-state"));
     if (animate) {
@@ -1035,6 +1147,7 @@
     });
     const rebalanceIds = ["rebalanceCash", "rebalanceProfile", "rebalanceCustomTolerance", "rebalanceReminder", "rebalanceCustomDays", "rebalanceCashFirst", "rebalanceTrendProtection"];
     $v6("#rebalanceCash").value = rebalanceSettings.cash;
+    $v6("#capitalPlanCash").value = rebalanceSettings.cash;
     $v6("#rebalanceProfile").value = rebalanceSettings.profile;
     $v6("#rebalanceCustomTolerance").value = rebalanceSettings.customTolerance;
     $v6("#rebalanceReminder").value = rebalanceSettings.reminder;
@@ -1052,13 +1165,25 @@
         customDays: Number($v6("#rebalanceCustomDays").value), cashFirst: $v6("#rebalanceCashFirst").checked,
         trendProtection: $v6("#rebalanceTrendProtection").checked
       };
+      $v6("#capitalPlanCash").value = rebalanceSettings.cash;
       saveRebalanceSettings(); syncRebalanceControls(); refreshPortfolio();
     };
     $v6("#rebalanceCash").addEventListener("input", updateRebalanceSettings);
+    $v6("#capitalPlanCash").addEventListener("input", event => {
+      $v6("#rebalanceCash").value = Math.max(0, Number(event.target.value) || 0);
+      updateRebalanceSettings();
+    });
     rebalanceIds.filter(id => id !== "rebalanceCash").forEach(id => $v6(`#${id}`).addEventListener("change", updateRebalanceSettings));
     $v6("#rebalanceUseCurrentBtn").addEventListener("click", useCurrentAllocationAsTargets);
     $v6("#rebalanceApplyBtn").addEventListener("click", showRebalanceSimulation);
     syncRebalanceControls();
+    $v6("#portfolioPerformancePeriods").addEventListener("click", event => {
+      const button = event.target.closest("[data-performance-period]");
+      if (!button) return;
+      performancePeriod = button.dataset.performancePeriod;
+      renderPerformance();
+    });
+    $v6("#portfolioBenchmarkToggle").addEventListener("change", renderPerformance);
     $v6("#portfolioChart").addEventListener("click", chartHit);
     $v6("#portfolioChart").addEventListener("touchstart", chartHit, {passive: true});
     $v6("#portfolioChart").addEventListener("keydown", event => {
@@ -1080,7 +1205,7 @@
     });
     window.addEventListener("resize", () => {
       cancelAnimationFrame(resizeFrame);
-      resizeFrame = requestAnimationFrame(drawAllocation);
+      resizeFrame = requestAnimationFrame(() => { drawAllocation(); renderPerformance(); });
     }, {passive: true});
     document.addEventListener("keydown", event => {
       if (event.key === "Escape" && $v6("#portfolioModal").classList.contains("show")) closePortfolioModal();
@@ -1092,6 +1217,13 @@
 
   bindEvents();
   refreshPortfolio();
+  fetch(BENCHMARK_URL, {cache: "no-store", headers: {"Accept": "application/json"}}).then(response => {
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response.json();
+  }).then(payload => {
+    benchmarkRows = Array.isArray(payload?.items?.["0050"]?.rows) ? payload.items["0050"].rows : [];
+    renderPerformance();
+  }).catch(() => { benchmarkRows = []; renderPerformance(); });
   renderHomeSentiment();
   const initialShared=window.HSLiveMarket?.latestQuotes?.();
   if(initialShared instanceof Map&&initialShared.size)applySharedQuotes({detail:{quotes:initialShared,sourceUpdatedAt:"",source:"shared_cache"}});
@@ -1100,6 +1232,7 @@
     storageKey: HOLDINGS_KEY,
     quoteStorageKey: QUOTES_KEY,
     quoteSources: Object.freeze([TWSE_URL, TPEX_URL]),
+    snapshotMode: "FORWARD_SNAPSHOT_ONLY",
     refresh: () => updateQuotes({force: true, applyPortfolio: true}),
     getState: () => ({holdings: holdings.map(item => ({...item})), quotes: new Map([...quoteMap].map(([code, quote]) => [code, {...quote}]))})
   });

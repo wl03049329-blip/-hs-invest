@@ -301,7 +301,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 .homeOpportunityGroup{display:grid;gap:7px;background:#07130e;border:1px solid var(--line);border-radius:15px;padding:10px}.homeOpportunityGroup h3{font-size:13px;margin:0;color:#dffff0}.homeOpportunityRow{display:grid;grid-template-columns:1fr auto;gap:3px 8px;width:100%;text-align:left;color:inherit;background:#102219;border:1px solid #244332;border-radius:11px;padding:9px}.homeOpportunityRow span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.homeOpportunityRow strong{color:#dffff0}.homeOpportunityRow small{grid-column:1/-1;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.strategyBadge{font-size:11px;font-weight:900;color:#dffff0;background:#173126;border-radius:999px;padding:6px 9px}.watchStrategy label{display:grid;gap:3px;color:var(--muted);font-size:10px}.watchStrategy select,.drawdownReference select,.drawdownReference input{background:#07130e;border:1px solid var(--line);color:#fff;border-radius:9px;padding:7px;max-width:150px}.drawdownTool{margin:12px 0}.drawdownForm{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin:12px 0}.drawdownForm label{display:grid;gap:5px;color:var(--muted);font-size:12px}.drawdownForm input{width:100%;background:#07130e;border:1px solid var(--line);color:#fff;border-radius:12px;padding:11px}.drawdownSummary{margin-top:12px}.drawdownTitle,.drawdownReference,.drawdownHeadline{display:flex;gap:10px;align-items:center;justify-content:space-between}.drawdownTitle h3{margin:0}.drawdownTitle span{font-size:11px;color:#dffff0;background:#173126;border-radius:999px;padding:6px 9px}.drawdownReference{justify-content:flex-start;margin:12px 0;flex-wrap:wrap}.drawdownReference label{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:12px}.drawdownHeadline{display:grid;grid-template-columns:repeat(3,1fr)}.drawdownHeadline>div{background:#07130e;border:1px solid var(--line);border-radius:13px;padding:10px}.drawdownHeadline span,.drawdownHeadline small{display:block;color:var(--muted);font-size:10px}.drawdownHeadline b{display:block;font-size:20px;margin:4px 0}.drawdownTableWrap{overflow:auto;margin-top:12px;border:1px solid var(--line);border-radius:13px}.drawdownTable{min-width:0}.drawdownTable th,.drawdownTable td{padding:10px;text-align:left}.drawdownTable tr.current{background:#453c10;color:#ffe46f}.drawdownTable th:first-child,.drawdownTable td:first-child{position:static;background:transparent}.strategyBreakdown small{display:block;margin-top:8px;color:var(--muted)}
 @media(max-width:620px){.watchRow{grid-template-columns:minmax(0,1fr) auto}.watchStrategy{grid-column:1/-1}.watchStrategy select{max-width:none;width:100%}.homeOpportunityRow{font-size:12px}.drawdownHeadline{gap:6px}.drawdownHeadline>div{padding:8px}.drawdownHeadline b{font-size:16px}.drawdownForm{grid-template-columns:1fr}.drawdownForm .btn{width:100%}}
 </style>
-<link rel="stylesheet" href="portfolio-v6.css?v=20260920-portfolio-decision-center-p1" />
+<link rel="stylesheet" href="portfolio-v6.css?v=20260920-portfolio-performance-p2" />
 <link rel="stylesheet" href="v62-tech.css?v=20260809b" />
 <link rel="stylesheet" href="formal-black-gold.css?v=20260920-radar-header-compact-v1" />
 <style id="radarPhase32CriticalLayout">
@@ -478,6 +478,11 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       </div>
     </article>
 
+    <section class="panel portfolioPerformancePanel" aria-labelledby="portfolioPerformanceTitle">
+      <header class="portfolioPerformanceHead"><div><p class="eyebrow">PERFORMANCE</p><h2 id="portfolioPerformanceTitle">投資績效</h2></div><div id="portfolioPerformancePeriods" class="portfolioPeriodTabs" role="tablist" aria-label="績效期間"><button class="active" data-performance-period="1M" type="button">1M</button><button data-performance-period="3M" type="button">3M</button><button data-performance-period="YTD" type="button">YTD</button><button data-performance-period="1Y" type="button">1Y</button><button data-performance-period="ALL" type="button">ALL</button></div></header>
+      <div class="portfolioPerformanceBody"><div class="portfolioPerformanceChart"><canvas id="portfolioPerformanceChart" role="img" aria-label="我的投資組合與 0050 基準比較"></canvas><div id="portfolioPerformanceEmpty" class="portfolioPerformanceEmpty"></div></div><aside class="portfolioPerformanceSummary"><label><input id="portfolioBenchmarkToggle" type="checkbox" checked> 顯示 0050 Benchmark</label><div id="portfolioPerformanceMetrics"></div><small id="portfolioPerformanceCoverage"></small></aside></div>
+    </section>
+
     <div class="portfolioDecisionGrid">
     <article class="panel allocationPanel portfolioPrimaryPanel">
       <div class="panelTitle compactTitle">
@@ -508,9 +513,16 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       <div id="portfolioList" class="portfolioList"></div>
     </section>
 
-    <details class="panel rebalancePanel" aria-labelledby="rebalanceTitle" open>
+    <section class="panel portfolioCapitalPlan" aria-labelledby="portfolioCapitalPlanTitle">
+      <header class="portfolioCapitalHead"><div><p class="eyebrow">SMART CAPITAL</p><h2 id="portfolioCapitalPlanTitle">智慧投入方案</h2><small>依目標配置差異為主、正式 HS 分數為輔的決定性模擬</small></div><label>本次可投入<input id="capitalPlanCash" type="number" min="0" step="1000" inputmode="decimal" value="0" aria-label="本次可投入金額"></label></header>
+      <div id="capitalPlanSummary" class="capitalPlanSummary"></div>
+      <div id="capitalPlanRows" class="capitalPlanRows"></div>
+      <p class="capitalPlanDisclaimer">僅為配置模擬，不會修改真實持股，也不會自動下單。</p>
+    </section>
+
+    <details class="panel rebalancePanel" aria-labelledby="rebalanceTitle">
       <summary class="rebalanceEntry">
-        <span><small>SMART REBALANCE</small><b id="rebalanceTitle">智慧再平衡</b><em>設定目標配置，檢查低配、高配與新增資金。</em></span>
+        <span><small>ALLOCATION SETTINGS</small><b id="rebalanceTitle">目標配置與再平衡設定</b><em>編輯目標比例與進階容忍區間。</em></span>
         <strong>開啟</strong>
       </summary>
       <div class="rebalancePanelBody">
@@ -4881,7 +4893,8 @@ initLiveDebugPanel();liveDiagnosticRecord("initial_page_load",{render_state_befo
 
 </script>
 <script src="portfolio-core.js?v=20260920-portfolio-decision-center-p1"></script>
-<script src="portfolio-v6.js?v=20260920-portfolio-decision-center-p1"></script>
+<script src="portfolio-performance-core.js?v=20260920-portfolio-performance-p2"></script>
+<script src="portfolio-v6.js?v=20260920-portfolio-performance-p2"></script>
 <script src="personal-capital-ui.js?v=20260824-phase4"></script>
 </body>
 </html>

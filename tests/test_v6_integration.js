@@ -73,10 +73,10 @@ check("首頁五項情緒精簡卡片可切換籌碼頁", () => {
 });
 
 check("首頁固定四區順序且市場摘要移至我的頁", () => {
-  const highlightsIndex = html.indexOf('id="todayHighlights"');
+  const highlightsIndex = html.indexOf('id="hsDecisionRoom"');
   const sentimentIndex = html.indexOf('id="homeSentiment"');
   const briefIndex = html.indexOf('id="homeEtfBrief"');
-  const swingIndex = html.indexOf('id="homeSwingBrief"');
+  const swingIndex = html.indexOf('id="homeLeverageBrief"');
   assert.ok(highlightsIndex > 0 && highlightsIndex < sentimentIndex);
   assert.ok(sentimentIndex < briefIndex && briefIndex < swingIndex);
   assert.match(html, /class="dashboard tabHidden" data-tab-section="more"/);
