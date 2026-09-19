@@ -4,8 +4,8 @@ const html=fs.readFileSync(path.join(root,"index.html"),"utf8"),sw=fs.readFileSy
 const storage=value=>{const m=new Map(value?[[client.PREFERENCES_KEY,JSON.stringify(value)]]:[]);return{getItem:k=>m.get(k)||null,setItem:(k,v)=>m.set(k,v)}};
 const doc={baseURI:"https://example.test/app/",querySelector:s=>s.includes("hs-live-railway-url")?{content:"https://api.test/api/live-scores"}:null};
 const response=data=>Promise.resolve({ok:true,status:200,json:async()=>data});
-test("01 phase marker",()=>assert.match(html,/data-radar-push-phase="11b2b"/));
-test("02 runtime asset marker",()=>assert.match(html,/20260919-background-web-push-phase11b2b/));
+test("01 phase marker",()=>assert.match(html,/data-radar-push-phase="11b2c"/));
+test("02 runtime asset marker",()=>assert.match(html,/20260920-background-alert-cutover-phase11b2c/));
 test("03 client worker v2",()=>assert.equal(client.SW_VERSION,"HS_PUSH_SW_V2"));
 test("04 rules default unsynced",()=>assert.equal(client.defaults().rules_sync_status,"NOT_SYNCED"));
 test("05 rules sync posts only id and rules",async()=>{const s=storage({enabled:true,subscription_id:"opaque",status:"ON"}),calls=[],fetchFn=(...a)=>{calls.push(a);return response({status:"SYNCED",rule_version:"HS_RADAR_PUSH_RULES_V1"})};await client.syncRules({version:"HS_RADAR_ALERT_RULES_V1"},{windowObj:{localStorage:s,fetch:fetchFn},documentObj:doc,storage:s,fetchFn});assert.deepEqual(Object.keys(JSON.parse(calls[0][1].body)).sort(),["rules","subscription_id"])});
@@ -19,4 +19,6 @@ test("12 SW has no fetch handler",()=>assert.doesNotMatch(sw,/addEventListener\s
 test("13 SW has no cache API",()=>assert.doesNotMatch(sw,/\bcaches\b|precache|workbox/i));
 test("14 SW accepts formal bundle and route",()=>{assert.match(sw,/ETF_ALERT_BUNDLE/);assert.match(sw,/radarEtf/);assert.match(sw,/clients\.openWindow/)});
 test("15 VAPID private material absent",()=>assert.doesNotMatch(html+sw+fs.readFileSync(path.join(root,"radar-push-subscription-v1.js"),"utf8"),/VAPID_PRIVATE_KEY|private_key/));
-test("16 existing active subscription syncs rules after normal data load",()=>{assert.match(html,/function ensureRadarPushRulesSync/);assert.match(html,/await load\(\);await ensureRadarPushRulesSync\(\)/)});
+test("16 existing active subscription loads production status before alert evaluation",()=>{assert.match(html,/function ensureRadarPushRulesSync/);assert.match(html,/await ensureRadarPushRulesSync\(\);await load\(\)/)});
+test("17 production status reads server cutover flag",async()=>{const fetchFn=()=>response({background_alerts_enabled:true,background_alert_engine:"HS_BACKGROUND_ALERT_ENGINE_V1"});const result=await client.productionStatus({windowObj:{fetch:fetchFn},documentObj:doc,fetchFn});assert.deepEqual(result,{available:true,enabled:true,engine:"HS_BACKGROUND_ALERT_ENGINE_V1"})});
+test("18 disabled cutover keeps B1 fallback",()=>{assert.match(html,/radarPushProductionStatus\.enabled===true/);assert.match(html,/\?"\u80cc\u666f\u901a\u77e5":"\u7cfb\u7d71\u901a\u77e5"/)});

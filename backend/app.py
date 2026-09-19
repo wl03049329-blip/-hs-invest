@@ -104,7 +104,11 @@ def create_app(
 
     @instance.get("/api/push/config")
     def push_config() -> dict:
-        return active_push_service.public_config()
+        return {
+            **active_push_service.public_config(),
+            "background_alerts_enabled": active_background_evaluator.enabled,
+            "background_alert_engine": active_background_evaluator.diagnostics()["background_alert_engine"],
+        }
 
     @instance.post("/api/push/subscribe")
     def push_subscribe(body: PushSubscribeInput, request: Request) -> dict:

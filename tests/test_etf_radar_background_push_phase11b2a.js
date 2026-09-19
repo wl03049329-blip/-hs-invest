@@ -12,7 +12,7 @@ function browser({permission="granted",existing=null,subscribeError=null}={}){co
 function ok(data,status=200){return Promise.resolve({ok:status>=200&&status<300,status,json:async()=>data})}
 function fetchSequence(...responses){const calls=[];const fn=(...args)=>{calls.push(args);const next=responses.shift();return typeof next==="function"?next(...args):next};fn.calls=calls;return fn}
 
-test("01 runtime marker and versioned asset are present",()=>{assert.match(html,/data-radar-push-phase="11b2b"/);assert.match(html,/20260919-background-web-push-phase11b2b/)});
+test("01 runtime marker and versioned asset are present",()=>{assert.match(html,/data-radar-push-phase="11b2c"/);assert.match(html,/20260920-background-alert-cutover-phase11b2c/)});
 test("02 background and system notification UI are separate",()=>{assert.match(html,/系統通知/);assert.match(html,/背景通知/);assert.match(html,/Background Web Push/)});
 test("03 default preference is opt-out",()=>assert.deepEqual(push.defaults(),{version:1,enabled:false,subscription_id:null,last_sync_at:null,status:"OFF",rules_sync_status:"NOT_SYNCED",rules_version:null}));
 test("04 unsupported without secure context",()=>assert.equal(push.capability({windowObj:{PushManager(){},isSecureContext:false,Notification:NotificationMock()},navigatorObj:{serviceWorker:{}}}).supported,false));

@@ -15,6 +15,7 @@ from typing import Any
 
 SCHEMA_VERSION = "HS_PUSH_SUBSCRIPTIONS_V2"
 LEGACY_SCHEMA_VERSION = "HS_PUSH_SUBSCRIPTIONS_V1"
+CUTOVER_VERSION = "HS_BACKGROUND_ALERT_CUTOVER_V1"
 
 
 def utc_now() -> str:
@@ -42,6 +43,7 @@ class PushSubscriptionStore:
         if value.get("schema_version") not in (SCHEMA_VERSION, LEGACY_SCHEMA_VERSION) or not isinstance(value.get("subscriptions"), list):
             return {"schema_version": SCHEMA_VERSION, "subscriptions": []}
         value["schema_version"] = SCHEMA_VERSION
+        value.setdefault("background_alert_cutover", None)
         for record in value["subscriptions"]:
             record.setdefault("push_rules_version", None)
             record.setdefault("push_rules", None)
@@ -161,19 +163,87 @@ class PushSubscriptionStore:
             record = next((item for item in data["subscriptions"] if secrets.compare_digest(str(item.get("subscription_id", "")), subscription_id)), None)
             if not record or record.get("status") != "ACTIVE":
                 raise KeyError("UNKNOWN_SUBSCRIPTION")
-            first_sync = not record.get("baseline_finalized_fingerprint")
-            fields = {"push_rules": deepcopy(rules), "push_rules_version": rule_version, "rules_sync_status": "SYNCED", "updated_at": utc_now()}
-            if first_sync:
-                fields.update({
-                    "baseline_finalized_date": baseline["date"],
-                    "baseline_finalized_fingerprint": baseline["fingerprint"],
-                    "baseline_rule_version": rule_version,
-                    "last_evaluated_finalized_fingerprint": baseline["fingerprint"],
-                    "alert_state": deepcopy(baseline["alert_state"]),
-                })
+            fields = {
+                "push_rules": deepcopy(rules),
+                "push_rules_version": rule_version,
+                "rules_sync_status": "SYNCED",
+                "baseline_finalized_date": baseline["date"],
+                "baseline_finalized_fingerprint": baseline["fingerprint"],
+                "baseline_rule_version": rule_version,
+                "last_evaluated_finalized_fingerprint": baseline["fingerprint"],
+                "alert_state": deepcopy(baseline["alert_state"]),
+                "updated_at": utc_now(),
+            }
             record.update(fields)
             self._save(data)
             return deepcopy(record)
+
+    def rebaseline(self, subscription_id: str, *, baseline: dict[str, Any]) -> None:
+        self._update(subscription_id, {
+            "baseline_finalized_date": baseline["date"],
+            "baseline_finalized_fingerprint": baseline["fingerprint"],
+            "last_evaluated_finalized_fingerprint": baseline["fingerprint"],
+            "alert_state": deepcopy(baseline["alert_state"]),
+            "updated_at": utc_now(),
+        })
+
+    def ensure_cutover(self, *, baseline: dict[str, Any], engine_version: str, rule_schema_version: str) -> dict[str, Any]:
+        with self._lock:
+            data = self._load()
+            current = data.get("background_alert_cutover")
+            if not isinstance(current, dict) or current.get("version") != CUTOVER_VERSION:
+                now = utc_now()
+                current = {
+                    "version": CUTOVER_VERSION,
+                    "cutover_at": now,
+                    "baseline_finalized_date": baseline["date"],
+                    "baseline_finalized_fingerprint": baseline["fingerprint"],
+                    "engine_version": engine_version,
+                    "rule_schema_version": rule_schema_version,
+                    "last_evaluation_at": None,
+                    "last_evaluated_finalized_date": baseline["date"],
+                    "last_evaluated_finalized_fingerprint": baseline["fingerprint"],
+                    "last_push_success_at": None,
+                    "push_success_count": 0,
+                    "push_failure_count": 0,
+                    "pending_production_alerts": 0,
+                }
+                data["background_alert_cutover"] = current
+                self._save(data)
+            return deepcopy(current)
+
+    def cutover_metadata(self) -> dict[str, Any] | None:
+        with self._lock:
+            value = self._load().get("background_alert_cutover")
+            return deepcopy(value) if isinstance(value, dict) else None
+
+    def record_cutover_evaluation(
+        self,
+        *,
+        finalized_date: str,
+        fingerprint: str,
+        success_count: int,
+        failure_count: int,
+        pending_count: int,
+        pushed_at: str | None,
+    ) -> dict[str, Any] | None:
+        with self._lock:
+            data = self._load()
+            current = data.get("background_alert_cutover")
+            if not isinstance(current, dict) or current.get("version") != CUTOVER_VERSION:
+                return None
+            current.update({
+                "last_evaluation_at": utc_now(),
+                "last_evaluated_finalized_date": finalized_date,
+                "last_evaluated_finalized_fingerprint": fingerprint,
+                "push_success_count": int(current.get("push_success_count") or 0) + success_count,
+                "push_failure_count": int(current.get("push_failure_count") or 0) + failure_count,
+                "pending_production_alerts": pending_count,
+            })
+            if pushed_at:
+                current["last_push_success_at"] = pushed_at
+            self._save(data)
+            return deepcopy(current)
 
     def mark_rules_sync_failed(self, subscription_id: str) -> None:
         self._update(subscription_id, {"rules_sync_status": "FAILED", "updated_at": utc_now()})

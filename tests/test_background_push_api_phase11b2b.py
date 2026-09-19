@@ -14,7 +14,7 @@ class SchedulerStub:
 
 class ApiTests(unittest.TestCase):
     def setUp(self):
-        self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup);os.environ["HS_LIVE_DISABLE_SCHEDULER"]="1";os.environ["HS_BACKGROUND_ALERT_DISABLE"]="1";os.environ["HS_LIVE_VOLUME_PATH"]=self.temp.name;from backend.app import create_app;store=StateStore(self.temp.name);self.sent=[];service=PushService(PushSubscriptionStore(store.root),config=PushConfig("B"+"A"*86,"private-test","https://example.test"),sender=lambda **kw:self.sent.append(kw));self.client=TestClient(create_app(store,SchedulerStub(),backend_mode="production",push_service=service))
+        self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup);os.environ["HS_LIVE_DISABLE_SCHEDULER"]="1";os.environ["HS_BACKGROUND_ALERT_DISABLE"]="1";os.environ["BACKGROUND_ETF_ALERTS_ENABLED"]="false";os.environ["HS_LIVE_VOLUME_PATH"]=self.temp.name;from backend.app import create_app;store=StateStore(self.temp.name);self.sent=[];service=PushService(PushSubscriptionStore(store.root),config=PushConfig("B"+"A"*86,"private-test","https://example.test"),sender=lambda **kw:self.sent.append(kw));self.client=TestClient(create_app(store,SchedulerStub(),backend_mode="production",push_service=service))
     def subscribe(self): return self.client.post("/api/push/subscribe",json={"subscription":SUB,"rules":PREF})
     def test_01_subscribe_syncs_rules_and_baselines_zero(self):
         response=self.subscribe();self.assertEqual(response.status_code,200);self.assertEqual(response.json()["rules"]["status"],"SYNCED");self.assertEqual(response.json()["rules"]["pending_push_count"],0);self.assertEqual(self.sent,[])
@@ -25,4 +25,6 @@ class ApiTests(unittest.TestCase):
         sid=self.subscribe().json()["subscription_id"];response=self.client.post("/api/push/test-alert",json={"subscription_id":sid,"etf":"0050","message":"buy"});self.assertEqual(response.status_code,422)
     def test_05_health_exposes_engine_without_secret(self):
         response=self.client.get("/healthz");self.assertEqual(response.json()["background_alert_engine"],"HS_BACKGROUND_ALERT_ENGINE_V1");self.assertNotIn("private-test",response.text)
+    def test_06_config_exposes_kill_switch_without_secret(self):
+        response=self.client.get("/api/push/config");self.assertFalse(response.json()["background_alerts_enabled"]);self.assertEqual(response.json()["background_alert_engine"],"HS_BACKGROUND_ALERT_ENGINE_V1");self.assertNotIn("private-test",response.text)
 if __name__=="__main__":unittest.main(verbosity=2)
