@@ -21,7 +21,7 @@ for(let tier=1;tier<=9;tier++)assert.match(css,new RegExp(`\\.status-tier-${tier
 assert.match(css,/\.status-tier-na\{[^}]*--status-border:[^;]+;[^}]*--status-bg:[^;]+;[^}]*--status-text:/);
 console.log("TEST 2 PASS: all tiers use one black-gold token system");
 
-assert.match(html,/longRankStage \$\{statusTier\}/);assert.match(html,/coreStatusTier\(Number\.isFinite\(decision\?\.coreScore\)/);
+assert.match(html,/longRankStage \$\{statusTier\}/);assert.match(html,/statusTier=finalDecisionStatusTier\(presentation\)/);
 console.log("TEST 3 PASS: homepage badge uses the shared status tier mapping");
 
 assert.match(html,/class="status-tier-\$\{index\+1\} \$\{Number\.isFinite\(score\)/);assert.match(html,/coreScoreHero \$\{statusTier\}/);
