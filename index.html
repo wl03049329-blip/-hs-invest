@@ -303,7 +303,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 </style>
 <link rel="stylesheet" href="portfolio-v6.css?v=20260818-rebalance2" />
 <link rel="stylesheet" href="v62-tech.css?v=20260809b" />
-<link rel="stylesheet" href="formal-black-gold.css?v=20260919-background-web-push-phase11b2a" />
+<link rel="stylesheet" href="formal-black-gold.css?v=20260920-radar-header-compact-v1" />
 <style id="radarPhase32CriticalLayout">
 /* Phase 3.2 structural fallback: the renderer is mobile-first even if external CSS is stale. */
 .radarFactorStackV32{display:flex;flex-direction:column;width:100%;min-width:0}
@@ -686,32 +686,26 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 
   <section id="signals" class="section tabHidden" data-tab-section="signals">
     <header class="radarPageHeader" aria-labelledby="radarPageTitle">
-      <p class="eyebrow">ETF RADAR</p>
+      <div class="radarUpdateStrip radarPageUpdate"><span id="radarOverviewCurrent">資料更新｜—</span><span id="radarOverviewNext">下次更新｜—</span></div>
       <h2 id="radarPageTitle">ETF 雷達</h2>
-      <p>快速查看 HS 精選標的與你的自選 ETF</p>
+      <p>精選標的與自選 ETF 的訊號總覽</p>
     </header>
     <div class="radarModeLauncher" role="group" aria-label="ETF 雷達主要模式">
       <button class="radarModeCard radarModeCardFeatured active" type="button" data-radar-mode="featured" aria-pressed="true">
         <span class="hsSelectBadge">HS SELECT</span>
         <strong>弘昇精選</strong>
-        <small>弘昇長期追蹤、研究與模型驗證的 ETF</small>
-        <em>查看弘昇精選 →</em>
+        <small>長期追蹤・研究模型驗證的 ETF</small>
+        <em aria-hidden="true">›</em>
       </button>
       <button class="radarModeCard radarModeCardWatchlist" type="button" data-radar-mode="my" aria-pressed="false">
         <span class="watchlistBadge">MY WATCHLIST</span>
         <strong>我的自選</strong>
-        <small>加入你想追蹤的 ETF，查看趨勢、拉回、動能與相對強弱狀態</small>
-        <em>查看我的自選 →</em>
+        <small>查看追蹤 ETF 的趨勢與訊號</small>
+        <em aria-hidden="true">›</em>
       </button>
     </div>
-    <header id="radarModeContext" class="radarModeContext" aria-live="polite">
-      <span id="radarModeBadge" class="hsSelectBadge">HS SELECT · 弘昇精選</span>
-      <h2 id="radarModeHeading">弘昇精選</h2>
-      <p id="radarModeDescription">經過資料、策略與長期追蹤後，HS 持續關注的 ETF。</p>
-    </header>
     <section id="radarOverview" class="radarOverview" aria-labelledby="radarOverviewTitle" data-radar-overview-phase="8a" data-radar-consistency-phase="9.5">
       <div class="sectionHead radarOverviewHead"><div><p class="eyebrow">ETF 雷達總覽</p><h2 id="radarOverviewTitle">ETF 加碼與波段總覽</h2></div><div class="radarOverviewActions"><small>點擊標的查看完整評分與風險資料</small><button id="openRadarAlertSettings" type="button" aria-haspopup="dialog">提醒設定</button></div></div>
-      <div class="radarUpdateStrip"><span id="radarOverviewCurrent">本次更新時段：—</span><span id="radarOverviewNext">下一次更新：—</span></div>
       <div class="radarViewTabs" role="tablist" aria-label="ETF 雷達檢視方式">
         <button class="active" type="button" role="tab" aria-selected="true" data-radar-view="overview">總覽</button>
         <button type="button" role="tab" aria-selected="false" data-radar-view="explain">分數解釋</button>
@@ -3403,8 +3397,8 @@ function renderTop(){
   $("#updatedTop").textContent=finalDate?`盤後正式 ${esc(finalDate)}｜FINAL`:`盤後正式分數暫不可用`;
   $("#radarCurrentSlot").textContent=finalDate?`目前顯示 盤後正式 ${finalDate}`:"盤後正式分數暫不可用";
   $("#radarNextSlot").textContent="不使用舊盤中快照";
-  if($("#radarOverviewCurrent"))$("#radarOverviewCurrent").textContent=`本次更新時段：${actualSnapshotTime}${failedAttempt?`｜${failedAttempt}`:""}`;
-  if($("#radarOverviewNext"))$("#radarOverviewNext").textContent=`下一次更新：${radarDisplay.next.replace(/^下一次更新\s*/,"")}`;
+  if($("#radarOverviewCurrent"))$("#radarOverviewCurrent").textContent=`資料更新｜${actualSnapshotTime}${failedAttempt?`｜${failedAttempt}`:""}`;
+  if($("#radarOverviewNext"))$("#radarOverviewNext").textContent=`下次更新｜${radarDisplay.next.replace(/^下一次更新\s*/,"")}`;
 }
 function uiMetricStatus(kind,value){
   if(!Number.isFinite(value))return"資料暫缺";
@@ -4459,11 +4453,6 @@ function renderWatchlist(){
   document.querySelector("#signals>.radarDetailHeading")?.toggleAttribute("hidden",isMy);
   document.querySelector("#signals>.signalLegend")?.toggleAttribute("hidden",isMy);
   $("#watchManageDetails").open=isMy;
-  $("#radarModeBadge").textContent=isMy?"MY WATCHLIST":"HS SELECT · 弘昇精選";
-  $("#radarModeBadge").classList.toggle("is-watchlist",isMy);
-  $("#radarModeContext").classList.toggle("is-watchlist",isMy);
-  $("#radarModeHeading").textContent=isMy?"我的自選":"弘昇精選";
-  $("#radarModeDescription").textContent=isMy?"加入你想追蹤的 ETF，查看趨勢、拉回、動能與相對強弱狀態。":"經過資料、策略與長期追蹤後，HS 持續關注的 ETF。";
   document.querySelectorAll("[data-radar-mode]").forEach(button=>{const active=button.dataset.radarMode===radarMode;button.classList.toggle("active",active);button.setAttribute("aria-pressed",String(active))});
   $("#watchList").innerHTML=`<div class="watchCount">${isMy?"我的自選":"弘昇精選"} ${list.length}${isMy?" / 20":""} 檔</div>`+(list.length?list.map((x,i)=>`<div class="watchRow"><div class="watchIdentity"><b>${esc(x.id)}｜${esc(x.name)}</b><small>${esc(HSEtfModelCore.categoryLabel(x.category||"other"))}｜${esc(x.market||"台灣ETF")}</small></div>${isMy?`<div class="watchStrategy"><label>策略<select data-watch-strategy="${i}" aria-label="${esc(x.id)} 持有策略"><option value="user_selected" ${x.strategyMode==="user_selected"?"selected":""}>使用預設模型</option><option value="long_term_core" ${x.strategyMode==="long_term_core"?"selected":""}>長期核心</option><option value="swing" ${x.strategyMode==="swing"?"selected":""}>波段操作</option></select></label></div><div class="watchControls"><button class="watchIcon" type="button" data-watch-up="${i}" aria-label="上移 ${esc(x.id)}">↑</button><button class="watchIcon" type="button" data-watch-down="${i}" aria-label="下移 ${esc(x.id)}">↓</button><button class="watchIcon danger" type="button" data-watch-remove="${i}" aria-label="刪除 ${esc(x.id)}">×</button></div>`:`<span class="strategyBadge">${esc(strategyModeLabel(x.strategyMode))}</span>`}</div>`).join(""):'<div class="watchEmpty">尚未加入自選 ETF。</div>');
   document.querySelectorAll("[data-watch-up]").forEach(b=>b.addEventListener("click",()=>moveWatch(+b.dataset.watchUp,-1)));

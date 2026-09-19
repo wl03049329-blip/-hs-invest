@@ -1254,46 +1254,40 @@ footer{color:#746f67}
 #signals:not(.tabHidden){display:flex;flex-direction:column}
 #signals>.radarPageHeader{order:0}
 #signals>.radarModeLauncher{order:1}
-#signals>.radarModeContext{order:2}
-#signals>.watchPanel{order:3}
-#signals>#radarOverview{order:4}
-#signals>.radarDetailHeading{order:5}
-#signals>#radarDetailBack{order:6}
-#signals>#radarDetailStickyNav{order:6}
-#signals>#cards{order:7}
-#signals>.signalLegend{order:8}
+#signals>.watchPanel{order:2}
+#signals>#radarOverview{order:3}
+#signals>.radarDetailHeading{order:4}
+#signals>#radarDetailBack{order:5}
+#signals>#radarDetailStickyNav{order:5}
+#signals>#cards{order:6}
+#signals>.signalLegend{order:7}
 #signals>.watchPanel[hidden]{display:none!important}
 
-.radarPageHeader{margin:2px 1px 10px}
-.radarPageHeader .eyebrow{display:block!important;margin:0 0 4px;color:#b89750;font-size:9px;font-weight:900;letter-spacing:.18em}
+.radarPageHeader{display:grid;gap:1px;margin:0 1px 6px;padding:0 1px 1px}
 .radarPageHeader h2{margin:0;color:#f4ede1;font-size:clamp(24px,5vw,32px);line-height:1.1}
-.radarPageHeader>p:last-child{margin:6px 0 0;color:#9b9386;font-size:12px;line-height:1.5}
+.radarPageHeader>p:last-child{margin:1px 0 0;color:#9b9386;font-size:11px;line-height:1.35}
+.radarPageHeader .radarPageUpdate{order:-1;margin:0 0 2px;color:#756f65;font-size:8px;line-height:1.2}
+.radarPageHeader .radarPageUpdate span:last-child{color:#8f8163}
 
-.radarModeLauncher{display:grid;grid-template-columns:minmax(0,1.18fr) minmax(0,1fr);gap:10px;margin-bottom:12px}
-.radarModeCard{position:relative;isolation:isolate;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"badge cta" "title title" "description description";align-content:center;column-gap:10px;min-width:0;min-height:98px;padding:11px 14px;border:1px solid #3a3328;border-radius:17px;background:#080808;color:inherit;overflow:hidden;text-align:left;cursor:pointer;transition:border-color .18s ease,background .18s ease,transform .18s ease}
+.radarModeLauncher{display:grid;grid-template-columns:minmax(0,1.18fr) minmax(0,1fr);gap:7px;margin-bottom:6px}
+.radarModeCard{position:relative;isolation:isolate;display:grid;grid-template-columns:minmax(0,1fr) 26px;grid-template-areas:"badge cta" "title cta" "description cta";align-content:center;column-gap:9px;min-width:0;min-height:94px;padding:9px 12px;border:1px solid #3a3328;border-radius:15px;background:#080808;color:inherit;overflow:hidden;text-align:left;cursor:pointer;transition:border-color .18s ease,background .18s ease,transform .18s ease}
 .radarModeCard>*{position:relative;z-index:1}
 .radarModeCard strong,.radarModeCard small,.radarModeCard em{display:block}
 .radarModeCard>.hsSelectBadge,.radarModeCard>.watchlistBadge{grid-area:badge;align-self:center}
-.radarModeCard strong{grid-area:title;margin-top:6px;color:#eee7dc;font-size:20px;line-height:1.08}
-.radarModeCard small{grid-area:description;margin-top:4px;color:#9e9689;font-size:10px;line-height:1.35}
-.radarModeCard em{grid-area:cta;align-self:center;margin:0;color:#b4a98f;font-size:9px;font-style:normal;font-weight:850;white-space:nowrap}
+.radarModeCard strong{grid-area:title;margin-top:3px;color:#eee7dc;font-size:19px;line-height:1.08}
+.radarModeCard small{grid-area:description;margin-top:2px;color:#9e9689;font-size:9.5px;line-height:1.3}
+.radarModeCard em{grid-area:cta;align-self:center;justify-self:end;margin:0;color:#b4a98f;font-size:25px;font-style:normal;font-weight:500;line-height:1;white-space:nowrap}
 .radarModeCard:hover,.radarModeCard:focus-visible{outline:none;transform:translateY(-1px)}
 .radarModeCardFeatured{border-color:#6b552b;background:linear-gradient(145deg,#0a0907 0%,#050505 70%);box-shadow:inset 0 0 0 1px rgba(239,207,127,.05),0 12px 26px #0007}
-.radarModeCardFeatured::after{content:"";position:absolute;right:-9px;bottom:-18px;width:104px;height:104px;background:url("assets/hs-etf-radar-final.png?v=5") center/contain no-repeat;opacity:.045;filter:sepia(.2) saturate(.7);pointer-events:none}
+.radarModeCardFeatured::after{content:"";position:absolute;right:-5px;bottom:-13px;width:76px;height:76px;background:url("assets/hs-etf-radar-final.png?v=5") center/contain no-repeat;opacity:.028;filter:sepia(.2) saturate(.7);pointer-events:none}
 .radarModeCardFeatured strong{color:#f2e6c8}.radarModeCardFeatured em{color:#d8bd7b}
 .radarModeCardFeatured.active{border-color:#d1ac5a;background:linear-gradient(145deg,#171107 0%,#070605 72%);box-shadow:inset 0 0 0 1px rgba(255,226,156,.16),0 0 22px rgba(184,139,48,.10)}
 .radarModeCardWatchlist{border-color:#343b37;background:linear-gradient(145deg,#090d0b,#060706)}
 .radarModeCardWatchlist em{color:#aeb9ae}.radarModeCardWatchlist.active{border-color:#8e927d;background:linear-gradient(145deg,#111611,#070907);box-shadow:inset 0 0 0 1px rgba(194,191,151,.09)}
 
-.hsSelectBadge,.watchlistBadge{display:inline-flex;align-items:center;justify-content:center;width:max-content;max-width:100%;min-height:22px;padding:4px 9px;border-radius:999px;font-size:8px;font-weight:950;line-height:1;letter-spacing:.16em;white-space:nowrap}
+.hsSelectBadge,.watchlistBadge{display:inline-flex;align-items:center;justify-content:center;width:max-content;max-width:100%;min-height:19px;padding:3px 8px;border-radius:999px;font-size:7.5px;font-weight:950;line-height:1;letter-spacing:.15em;white-space:nowrap}
 .hsSelectBadge{border:1px solid #8c7038;background:#151006;color:#e8cb84;box-shadow:inset 0 0 0 1px rgba(255,226,153,.04)}
 .watchlistBadge,.hsSelectBadge.is-watchlist{border:1px solid #51574f;background:#0d110e;color:#b8bcb4;box-shadow:none}
-
-.radarModeContext{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-areas:"badge title" "badge description";column-gap:10px;align-items:center;margin:0 1px 8px;padding:7px 12px;border-left:2px solid #caa653;border-bottom:1px solid #342b1d;border-radius:0 0 12px 0;background:linear-gradient(90deg,rgba(35,26,12,.68),rgba(7,7,7,0))}
-.radarModeContext.is-watchlist{border-left-color:#858b7d;background:linear-gradient(90deg,rgba(24,29,25,.8),rgba(7,7,7,0))}
-.radarModeContext>.hsSelectBadge,.radarModeContext>.watchlistBadge{grid-area:badge}
-.radarModeContext h2{grid-area:title;margin:0;color:#f0e9dd;font-size:16px;line-height:1.1}
-.radarModeContext p{grid-area:description;margin:2px 0 0;color:#a69e91;font-size:9px;line-height:1.35}
 
 /* ETF Radar ranks 4+ share one restrained premium badge; ranking logic is untouched. */
 #signals .rankBadge.regular{position:relative;width:42px;height:50px;border:1px solid rgba(215,180,103,.58);border-radius:11px 11px 14px 14px;color:#ead099;background:linear-gradient(155deg,#17130d 0%,#070706 58%,#21170a 100%);box-shadow:inset 0 0 0 1px rgba(255,231,177,.045),inset 0 -10px 18px rgba(173,118,32,.08),0 6px 14px rgba(0,0,0,.34)}
@@ -1310,18 +1304,17 @@ footer{color:#746f67}
 #watchPanel .watchActions .miniBtn{flex:1 1 auto}
 
 @media(max-width:760px){
-  .radarModeLauncher{grid-template-columns:1fr;gap:8px}
-  .radarModeCard{min-height:86px;padding:10px 13px}
-  .radarModeCard strong{margin-top:5px;font-size:19px}
-  .radarModeCard small{margin-top:3px;font-size:9px;line-height:1.3}
-  .radarModeCardFeatured::after{right:-7px;bottom:-16px;width:90px;height:90px}
+  .radarModeLauncher{grid-template-columns:1fr;gap:6px}
+  .radarModeCard{min-height:84px;padding:7px 12px}
+  .radarModeCardFeatured::after{right:-4px;bottom:-11px;width:70px;height:70px}
 }
 
 @media(max-width:430px){
-  .radarPageHeader{margin-bottom:8px}.radarPageHeader h2{font-size:26px}.radarPageHeader>p:last-child{font-size:11px}
-  .radarModeCard{min-height:84px;border-radius:15px}
+  .radarPageHeader{margin-bottom:5px}.radarPageHeader h2{font-size:25px}.radarPageHeader>p:last-child{font-size:10.5px}
+  .radarPageHeader .radarPageUpdate{font-size:7.5px}
+  .radarModeCard{min-height:84px;border-radius:14px}
   .radarModeCard small{max-width:100%}
-  .radarModeContext{padding:7px 10px}.radarModeContext h2{font-size:15px}.radarModeContext p{font-size:8px}
+  .radarModeCardFeatured::after{display:none}
   .radarDetailStickyNav{top:max(4px,env(safe-area-inset-top));gap:6px;min-height:48px;margin:3px 0 8px;padding:6px 7px}
   .radarDetailStickyBack{padding:0 8px;font-size:10px}.radarDetailStickyMeta{gap:5px}.radarDetailStickyMeta b{font-size:13px}.radarDetailStickyMeta small{font-size:10px}.radarDetailStickyCollapse{width:32px;min-height:32px}
 }
