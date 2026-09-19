@@ -13,7 +13,7 @@
 <meta name="hs-live-source" content="railway" />
 <meta name="hs-live-railway-url" content="https://hs-invest-production.up.railway.app/api/live-scores" />
 <meta name="hs-app-build-sha" content="LOCAL" />
-<meta name="hs-frontend-bundle-version" content="20260919-outcomes-phase7b" />
+<meta name="hs-frontend-bundle-version" content="20260919-overview-phase8a" />
 <link rel="icon" type="image/png" sizes="64x64" href="assets/favicon-v3.png?v=5" />
 <link rel="shortcut icon" href="assets/favicon-v3.ico?v=5" />
 <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon-v3.png?v=5" />
@@ -303,7 +303,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 </style>
 <link rel="stylesheet" href="portfolio-v6.css?v=20260818-rebalance2" />
 <link rel="stylesheet" href="v62-tech.css?v=20260809b" />
-<link rel="stylesheet" href="formal-black-gold.css?v=20260919-outcomes-phase7b" />
+<link rel="stylesheet" href="formal-black-gold.css?v=20260919-overview-phase8a" />
 <style id="radarPhase32CriticalLayout">
 /* Phase 3.2 structural fallback: the renderer is mobile-first even if external CSS is stale. */
 .radarFactorStackV32{display:flex;flex-direction:column;width:100%;min-width:0}
@@ -709,7 +709,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       <h2 id="radarModeHeading">弘昇精選</h2>
       <p id="radarModeDescription">經過資料、策略與長期追蹤後，HS 持續關注的 ETF。</p>
     </header>
-    <section id="radarOverview" class="radarOverview" aria-labelledby="radarOverviewTitle">
+    <section id="radarOverview" class="radarOverview" aria-labelledby="radarOverviewTitle" data-radar-overview-phase="8a">
       <div class="sectionHead radarOverviewHead"><div><p class="eyebrow">ETF RADAR OVERVIEW</p><h2 id="radarOverviewTitle">ETF 加碼與波段總覽</h2></div><small>點擊標的查看完整評分與風險資料</small></div>
       <div class="radarUpdateStrip"><span id="radarOverviewCurrent">本次更新時段：—</span><span id="radarOverviewNext">下一次更新：—</span></div>
       <div class="radarViewTabs" role="tablist" aria-label="ETF 雷達檢視方式">
@@ -3385,6 +3385,20 @@ function radarOverviewScoreDelta(change){
   return value>0?{label:`▲${absolute} 今日`,tone:"is-up"}:value<0?{label:`▼${absolute} 今日`,tone:"is-down"}:{label:"±0 今日",tone:"is-flat"};
 }
 function radarOverviewFactorRaw(decision,key){const value=Number(decision?.coreFactors?.[key]?.raw);return Number.isFinite(value)?value:null}
+function radarOverviewResearchSummary(x,phase6State=radarHistoryPhase6State(x),outcomeArtifacts=researchC4OutcomeArtifacts,outcomeStatuses=researchC4OutcomeStatus){
+  const symbol=String(x?.id||""),base={percentile:null,median20:null,sampleCount:0,sampleMode:null,sampleWarning:"",available:false};
+  if(symbol==="009815"||phase6State?.kind!=="READY")return{...base,kind:symbol==="009815"?"WAIT_NATIVE":"UNAVAILABLE"};
+  const percentile=Number.isFinite(phase6State.percentile)?phase6State.percentile:null,status=outcomeStatuses?.get?.(symbol),artifact=outcomeArtifacts?.get?.(symbol);
+  if(status!=="READY"||!artifact?.summary)return{...base,kind:"UNAVAILABLE",percentile};
+  const general=phase6State.current?.stage==="GENERAL",sample=general?artifact.summary.threshold_samples?.SCORE_30_PLUS:artifact.summary.level_entry_all?.[phase6State.current?.stage],row=sample?.horizons?.["20d"],sampleCount=Number(row?.sample_count)||0;
+  if(!sampleCount)return{...base,kind:"NO_SAMPLE",percentile,sampleMode:general?"NEXT_THRESHOLD":"CURRENT_LEVEL"};
+  const median20=Number(row?.median_return);if(!Number.isFinite(median20))return{...base,kind:"NO_SAMPLE",percentile,sampleMode:general?"NEXT_THRESHOLD":"CURRENT_LEVEL"};
+  return{kind:"READY",available:true,percentile,median20,sampleCount,sampleMode:general?"NEXT_THRESHOLD":"CURRENT_LEVEL",sampleWarning:sampleCount<10?"樣本偏少":""};
+}
+function radarOverviewResearchHtml(x,next){
+  const state=radarOverviewResearchSummary(x),nextValue=!next?.available?"—":next.isMaxLevel?"目前已為最高級別":`${next.nextThreshold}｜${esc(next.nextLabel)}`,nextNote=!next?.available?"資料暫缺":next.isMaxLevel?"":`還差 ${next.distance} 分`,position=Number.isFinite(state.percentile)?`P${state.percentile}`:"—",outcomeLabel=state.sampleMode==="NEXT_THRESHOLD"?"下一級以上20日後":"歷史20日後",outcomeValue=state.available?radarOutcomePercent(state.median20):"—",outcomeTone=state.available?radarOutcomeTone(state.median20):"is-neutral",sampleNote=state.kind==="WAIT_NATIVE"?"歷史資料暫缺":state.available?`N=${state.sampleCount}${state.sampleWarning?` · ${state.sampleWarning}`:""}`:"歷史樣本不足";
+  return`<div class="radarOverviewResearch" aria-label="歷史研究摘要"><div><small>距下一級</small><span><b>${esc(nextValue)}</b>${nextNote?`<em>${esc(nextNote)}</em>`:""}</span></div><div><small>歷史位置</small><span><b>${esc(position)}</b></span></div><div><small>${esc(outcomeLabel)}</small><span><b class="${outcomeTone}">${esc(outcomeValue)}</b><em>${esc(sampleNote)}</em></span></div></div>`;
+}
 function radarRangeBar(score){const value=Number.isFinite(score)?Math.max(0,Math.min(100,score)):0,contract=window.HSDecisionLayerV1,stage=contract?.STAGES?.find(row=>value>=row.min),next=(contract?.NEXT_THRESHOLDS||[]).find(threshold=>threshold>value),nextStage=contract?.STAGES?.find(row=>row.min===next);return`<div class="radarRange" data-score-level-version="${esc(contract?.SCORE_LEVEL_VERSION||"")}"><div class="radarRangeTrack"><i style="left:${value}%"></i></div><div class="radarRangeLabels"><span>${esc(stage?.label||"資料不足")}</span><span>${esc(nextStage?.label||"最高級別")}</span></div></div>`}
 function dailyFactorValue(decision,key){const row=(decision?.breakdown||[]).find(item=>item.key===key);return Number.isFinite(row?.value)?row.value:null}
 function createDailyLongRankSnapshot(items,finalizedAt=new Date().toISOString()){
@@ -3578,8 +3592,7 @@ async function loadResearchC4Outcomes(){
 function longOverviewCardHtml(x,index,dailyMovement){
   const rank=index+1,decision=homepageFinalDecision(x)||strategyDecisionFor(x,"long_term_core"),presentation=decision?.finalPresentation,score=displayScore(x,"long_term_core"),scoreChange=dailyMovement?.scoreDelta,badgeLabel=finalDecisionBadgeLabel(presentation),scoreDelta=radarOverviewScoreDelta(scoreChange),next=radarOverviewNextLevel(score);
   const weeklyJ=radarOverviewFactorRaw(decision,"weeklyJ")??(Number.isFinite(x.j)?x.j:null),dd52=radarOverviewFactorRaw(decision,"dd52")??(Number.isFinite(x.fromHigh)?x.fromHigh:null),crash=radarOverviewFactorRaw(decision,"crash"),changeTone=Number(x.changePct)>0?"up":Number(x.changePct)<0?"down":"is-flat";
-  const nextText=!next.available?"下一級資料暫缺":next.isMaxLevel?"已進入最高級別":`距 ${next.nextThreshold} ${esc(next.nextLabel)}：${next.distance} 分`;
-  return`<button class="radarLongCard" type="button" data-open-radar-detail="${esc(x.id)}"><div class="radarLongIdentityRow">${radarOverviewRankBadgeHtml(rank)}<span class="radarLongIdentity"><b>${esc(x.id)}</b><small>${esc(x.name)}</small></span><span class="radarLongPriceMove ${changeTone}">${signed(x.changePct)}</span></div><div class="radarLongScoreRow"><span class="radarLongScore"><b>${Number.isFinite(score)?score:"—"}</b><small>CORE SCORE</small></span><span class="radarLongState"><b>${esc(badgeLabel)}</b><em class="${scoreDelta.tone}">${esc(scoreDelta.label)}</em></span></div><div class="radarCoreMetrics radarOverviewFactors"><span><small>DD52</small><b>${Number.isFinite(dd52)?fmt(dd52)+"%":"—"}</b><em>${Number.isFinite(dd52)?uiMetricStatus("drawdown",dd52):"資料暫缺"}</em></span><span><small>Weekly J</small><b>${Number.isFinite(weeklyJ)?fmt(weeklyJ):"—"}</b><em>${Number.isFinite(weeklyJ)?uiMetricStatus("j",weeklyJ):"資料暫缺"}</em></span><span><small>Crash 20D</small><b>${Number.isFinite(crash)?fmt(crash)+"%":"—"}</b>${Number.isFinite(crash)?"":'<em>資料暫缺</em>'}</span></div><div class="radarLongNext">${nextText}</div>${radarRangeBar(score)}</button>`;
+  return`<button class="radarLongCard" type="button" data-open-radar-detail="${esc(x.id)}"><div class="radarLongIdentityRow">${radarOverviewRankBadgeHtml(rank)}<span class="radarLongIdentity"><b>${esc(x.id)}</b><small>${esc(x.name)}</small></span><span class="radarLongPriceMove ${changeTone}">${signed(x.changePct)}</span></div><div class="radarLongScoreRow"><span class="radarLongScore"><b>${Number.isFinite(score)?score:"—"}</b><small>CORE SCORE</small></span><span class="radarLongState"><b>${esc(badgeLabel)}</b><em class="${scoreDelta.tone}">${esc(scoreDelta.label)}</em></span></div><div class="radarCoreMetrics radarOverviewFactors"><span><small>DD52</small><b>${Number.isFinite(dd52)?fmt(dd52)+"%":"—"}</b><em>${Number.isFinite(dd52)?uiMetricStatus("drawdown",dd52):"資料暫缺"}</em></span><span><small>Weekly J</small><b>${Number.isFinite(weeklyJ)?fmt(weeklyJ):"—"}</b><em>${Number.isFinite(weeklyJ)?uiMetricStatus("j",weeklyJ):"資料暫缺"}</em></span><span><small>Crash 20D</small><b>${Number.isFinite(crash)?fmt(crash)+"%":"—"}</b>${Number.isFinite(crash)?"":'<em>資料暫缺</em>'}</span></div>${radarOverviewResearchHtml(x,next)}${radarRangeBar(score)}</button>`;
 }
 function scoreFactorValue(swing,...keys){for(const key of keys){const item=swing?.scoreFactors?.find(part=>part.key===key);if(Number.isFinite(item?.value))return item.value}return null}
 function scoreGaugeHtml(label,value){const safe=Number.isFinite(value)?Math.max(0,Math.min(100,value)):0;return`<div class="scoreGauge" style="--gauge:${safe}"><div><b>${Number.isFinite(value)?Math.round(value):"—"}</b><small>/100</small></div><span>${esc(label)}</span></div>`}

@@ -2120,7 +2120,15 @@ footer{color:#746f67}
 #radarOverview .radarOverviewFactors small{color:#8d8477;font-size:8px;font-weight:800;letter-spacing:.025em}
 #radarOverview .radarOverviewFactors b{margin:4px 0 2px;color:#eee6d9;font-size:17px;line-height:1.05}
 #radarOverview .radarOverviewFactors em{min-height:11px;color:#aaa196;font-size:8px;line-height:1.25;white-space:nowrap}
-#radarOverview .radarLongNext{margin-top:5px;color:#dcc274;font-size:11px;font-weight:900;line-height:1.25}
+#radarOverview .radarOverviewResearch{display:grid;gap:0;margin-top:7px;padding-top:6px;border-top:1px solid rgba(169,129,53,.17)}
+#radarOverview .radarOverviewResearch>div{display:grid;grid-template-columns:minmax(92px,.42fr) minmax(0,1fr);align-items:baseline;gap:9px;min-width:0;padding:4px 0}
+#radarOverview .radarOverviewResearch small{color:#8f8575;font-size:9px;font-weight:800;line-height:1.25;word-break:keep-all}
+#radarOverview .radarOverviewResearch span{display:flex;align-items:baseline;justify-content:flex-end;gap:7px;min-width:0;text-align:right}
+#radarOverview .radarOverviewResearch b{min-width:0;color:#e6d3a6;font-size:11.5px;line-height:1.25;word-break:keep-all}
+#radarOverview .radarOverviewResearch em{flex:none;color:#888074;font-size:8.5px;font-style:normal;line-height:1.25;white-space:nowrap}
+#radarOverview .radarOverviewResearch .is-positive{color:#82d2a4}
+#radarOverview .radarOverviewResearch .is-negative{color:#e38c86}
+#radarOverview .radarOverviewResearch .is-neutral{color:#c9bfae}
 #radarOverview .radarRange{margin-top:7px}
 #radarOverview .radarRangeTrack{height:4px;background:linear-gradient(90deg,#383734 0 40%,#806721 40% 65%,#b37a21 65% 80%,#a75b32 80%)}
 #radarOverview .radarRangeTrack i{width:8px;height:8px;border-width:1px;box-shadow:0 0 6px rgba(228,189,86,.65)}
@@ -2139,7 +2147,10 @@ footer{color:#746f67}
   #radarOverview .radarLongState>em{font-size:10px}
   #radarOverview .radarOverviewFactors>span{min-height:51px;padding:6px 7px}
   #radarOverview .radarOverviewFactors b{font-size:15px}
-  #radarOverview .radarLongNext{font-size:10.5px}
+  #radarOverview .radarOverviewResearch>div{grid-template-columns:minmax(82px,.4fr) minmax(0,1fr);gap:7px;padding:4px 0}
+  #radarOverview .radarOverviewResearch small{font-size:8.5px}
+  #radarOverview .radarOverviewResearch b{font-size:11px}
+  #radarOverview .radarOverviewResearch em{font-size:8px}
 }
 
 /* ETF Radar detail Phase 2: one score, one status, one compact decision header. */
