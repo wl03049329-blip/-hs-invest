@@ -47,7 +47,7 @@ vm.createContext(context);vm.runInContext(`${validation}\n${outcomes}\nthis.api=
   assert.match(context.api.horizon(5,independent),/非常小樣本/);assert.match(context.api.horizon(20,{...independent,sample_count:12}),/小樣本/);assert.match(context.api.horizon(40,{...independent,sample_count:0,median_return:null}),/樣本尚未成熟/);
   assert.match(context.api.horizon(60,independent),/中位數[\s\S]*\+0\.8%[\s\S]*平均報酬[\s\S]*\+1\.1%[\s\S]*正報酬比例[\s\S]*56\.0%/);
 
-  assert.match(html,/data-radar-outcomes-phase="7b"/);assert.match(html,/function radarHistoricalResearchHtml[\s\S]*radarHistoryPhase6Html\(x\)[\s\S]*radarOutcomePhase7BHtml\(x\)/);assert.match(html,/20260919-radar-alerts-phase11a/);
+assert.match(html,/data-radar-outcomes-phase="7b"/);assert.match(html,/function radarHistoricalResearchHtml[\s\S]*radarHistoryPhase6Html\(x\)[\s\S]*radarOutcomePhase7BHtml\(x\)/);assert.match(html,/20260919-radar-notifications-phase11b1/);
   assert.match(css,/\.radarOutcomeGrid\{[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);assert.ok(css.includes("@media(max-width:600px){.radarOutcomesPhase7B{padding:13px!important}.radarOutcomeGrid{grid-template-columns:1fr}"));assert.match(css,/\.radarOutcomeCard dl>div\{[^}]*grid-template-columns:minmax\(0,1fr\) auto/);
   console.log("PASS ETF Radar Phase 7B historical outcomes UI, artifact integrity/version guards, condition modes, sample maturity and responsive layout");
 })().catch(error=>{console.error(error);process.exitCode=1});

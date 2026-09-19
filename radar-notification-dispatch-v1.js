@@ -1,0 +1,34 @@
+(function(root,factory){const api=factory();if(typeof module==="object"&&module.exports)module.exports=api;root.HSRadarNotificationDispatchV1=api})(typeof globalThis!=="undefined"?globalThis:this,function(){
+  "use strict";
+  const VERSION="HS_RADAR_NOTIFICATION_DISPATCH_V1",PREFERENCES_KEY="HS_RADAR_NOTIFICATION_PREFS_V1",STATE_KEY="HS_RADAR_NOTIFICATION_STATE_V1";
+  const clone=value=>JSON.parse(JSON.stringify(value));
+  const unique=value=>[...new Set((Array.isArray(value)?value:[]).map(String))].slice(-300);
+  function defaultPreferences(){return{version:VERSION,enabled:false,suppress_when_visible:true}}
+  function normalizePreferences(value){return{version:VERSION,enabled:value?.version===VERSION&&value.enabled===true,suppress_when_visible:value?.version===VERSION?value.suppress_when_visible!==false:true}}
+  function defaultState(){return{version:VERSION,permission_seen:false,baseline_initialized:false,dispatched_alert_ids:[],dispatched_bundle_ids:[],handled_alert_ids:[],handled_bundle_ids:[],in_app_seen_alert_ids:[],failed_dispatch_ids:[],last_dispatch_at:null}}
+  function normalizeState(value){if(!value||value.version!==VERSION)return defaultState();return{version:VERSION,permission_seen:Boolean(value.permission_seen),baseline_initialized:Boolean(value.baseline_initialized),dispatched_alert_ids:unique(value.dispatched_alert_ids),dispatched_bundle_ids:unique(value.dispatched_bundle_ids),handled_alert_ids:unique(value.handled_alert_ids),handled_bundle_ids:unique(value.handled_bundle_ids),in_app_seen_alert_ids:unique(value.in_app_seen_alert_ids),failed_dispatch_ids:unique(value.failed_dispatch_ids),last_dispatch_at:value.last_dispatch_at||null}}
+  function read(storage,key){try{return JSON.parse(storage?.getItem?.(key)||"null")}catch{return null}}
+  function loadPreferences(storage){return normalizePreferences(read(storage,PREFERENCES_KEY))}
+  function savePreferences(storage,value){const result=normalizePreferences(value);storage?.setItem?.(PREFERENCES_KEY,JSON.stringify(result));return result}
+  function loadState(storage){return normalizeState(read(storage,STATE_KEY))}
+  function saveState(storage,value){const result=normalizeState(value);storage?.setItem?.(STATE_KEY,JSON.stringify(result));return result}
+  function capability(NotificationApi){if(typeof NotificationApi!=="function")return{supported:false,permission:"unsupported"};const permission=["default","granted","denied"].includes(NotificationApi.permission)?NotificationApi.permission:"default";return{supported:true,permission}}
+  function safeToken(value){return String(value||"").replace(/[^a-z0-9_-]+/gi,"-").replace(/^-+|-+$/g,"").slice(0,120)||"alert"}
+  function presentation(bundle){const alerts=Array.isArray(bundle?.alerts)?bundle.alerts:[],first=alerts[0]||{},count=alerts.length,typeTitles={CROSS_LEVEL:"正式跨級",SCORE_THRESHOLD:"Core Score 達門檻",NEXT_LEVEL:"接近下一級",HISTORICAL_PERCENTILE:"歷史位置變化",DATA_STATUS:"資料狀態"},singleTitle=first.rule_type==="DATA_STATUS"?"HS ETF 雷達｜資料狀態":`${bundle.etf}｜${typeTitles[first.rule_type]||"正式狀態更新"}`,title=count>1?`${bundle.etf}｜${count} 項正式變化`:singleTitle,singleBody=first.rule_type==="DATA_STATUS"?`${bundle.etf} ${first.title||"正式盤後資料狀態更新"}`:(first.description?`${first.title}｜${first.description}`:first.title||"正式狀態更新"),body=count>1?`${first.title||"正式狀態更新"}；另有 ${count-1} 項正式變化`:singleBody;return{title,options:{body,tag:`hs-radar-${safeToken(bundle.etf)}-${safeToken(bundle.bundle_id)}`,renotify:false,data:{etf:String(bundle.etf||""),route:"ETF_RADAR_DETAIL",bundle_id:String(bundle.bundle_id||""),alert_ids:alerts.map(item=>String(item.alert_id||""))}}}}
+  function mark(state,key,ids){state[key]=unique([...(state[key]||[]),...ids])}
+  function failureCount(store,key){return store instanceof Map?Number(store.get(key)||0):(store?.has?.(key)?2:0)}
+  function recordFailure(store,key){if(store instanceof Map)store.set(key,failureCount(store,key)+1);else store?.add?.(key)}
+  function dispatchRadarNotifications({pendingAlerts=[],bundleAlerts,preferences,state,NotificationApi,visibilityState="visible",now=()=>new Date().toISOString(),sessionFailedIds=new Map(),onOpen=()=>{},onFocus=()=>{}}={}){
+    const prefs=normalizePreferences(preferences),next=normalizeState(state),alerts=(Array.isArray(pendingAlerts)?pendingAlerts:[]).filter(item=>item&&item.alert_id),allIds=alerts.map(item=>String(item.alert_id)),bundles=typeof bundleAlerts==="function"?bundleAlerts(alerts):[],results=[],errors=[];
+    if(!next.baseline_initialized){next.baseline_initialized=true;mark(next,"handled_alert_ids",allIds);mark(next,"handled_bundle_ids",bundles.map(item=>String(item.bundle_id)));return{nextState:next,results,errors,baseline:true}}
+    const handled=new Set([...next.handled_alert_ids,...next.dispatched_alert_ids]),candidates=alerts.filter(item=>!handled.has(String(item.alert_id))),candidateIds=candidates.map(item=>String(item.alert_id));
+    if(!candidateIds.length)return{nextState:next,results,errors,baseline:false};
+    if(visibilityState!=="hidden"&&prefs.suppress_when_visible){mark(next,"in_app_seen_alert_ids",candidateIds);mark(next,"handled_alert_ids",candidateIds);mark(next,"handled_bundle_ids",(typeof bundleAlerts==="function"?bundleAlerts(candidates):[]).map(item=>String(item.bundle_id)));return{nextState:next,results,errors,baseline:false,suppressed:"VISIBLE"}}
+    const cap=capability(NotificationApi);
+    if(!prefs.enabled||!cap.supported||cap.permission!=="granted")return{nextState:next,results,errors,baseline:false,blocked:!prefs.enabled?"APP_DISABLED":cap.permission.toUpperCase()};
+    const candidateBundles=typeof bundleAlerts==="function"?bundleAlerts(candidates):[];
+    for(const bundle of candidateBundles){const bundleId=String(bundle.bundle_id||""),ids=bundle.alerts.map(item=>String(item.alert_id));if(next.dispatched_bundle_ids.includes(bundleId)||ids.every(id=>handled.has(id)))continue;if(failureCount(sessionFailedIds,bundleId)>=2){results.push({bundle_id:bundleId,status:"RETRY_LIMIT"});continue}const view=presentation(bundle);try{const notification=new NotificationApi(view.title,view.options);notification.onclick=()=>{try{onFocus()}finally{try{onOpen(view.options.data)}finally{notification.close?.()}}};mark(next,"dispatched_alert_ids",ids);mark(next,"handled_alert_ids",ids);mark(next,"dispatched_bundle_ids",[bundleId]);next.last_dispatch_at=now();results.push({bundle_id:bundleId,status:"DISPATCHED",notification})}catch(error){recordFailure(sessionFailedIds,bundleId);mark(next,"failed_dispatch_ids",ids);errors.push({bundle_id:bundleId,error_class:String(error?.name||"NotificationError")});results.push({bundle_id:bundleId,status:"FAILED"})}}
+    return{nextState:next,results,errors,baseline:false};
+  }
+  return{VERSION,PREFERENCES_KEY,STATE_KEY,defaultPreferences,normalizePreferences,defaultState,normalizeState,loadPreferences,savePreferences,loadState,saveState,capability,safeToken,presentation,dispatchRadarNotifications};
+});

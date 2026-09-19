@@ -8,7 +8,7 @@ const market=html.slice(html.indexOf("function radarMarketPositionHtml"),html.in
 const trend=html.slice(html.indexOf("function radarScoreTrendHtml"),html.indexOf("function featuredDiagnosticFor"));
 
 assert.match(html,/data-radar-ux-phase="8\.5"/);
-assert.match(html,/20260919-radar-alerts-phase11a/);
+assert.match(html,/20260919-radar-notifications-phase11b1/);
 assert.ok(longCard.indexOf("radarDetailCoreStatusHtml")<longCard.indexOf("radarDecisionSummaryHtml"));
 assert.ok(longCard.indexOf("radarDecisionSummaryHtml")<longCard.indexOf("radarDetailTrendSummaryHtml"));
 assert.ok(longCard.indexOf("radarDetailTrendSummaryHtml")<longCard.indexOf("radarWhyScoreHtml"));
