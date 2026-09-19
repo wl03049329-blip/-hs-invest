@@ -13,7 +13,7 @@
 <meta name="hs-live-source" content="railway" />
 <meta name="hs-live-railway-url" content="https://hs-invest-production.up.railway.app/api/live-scores" />
 <meta name="hs-app-build-sha" content="LOCAL" />
-<meta name="hs-frontend-bundle-version" content="20260917-live-diagnostics-v2" />
+<meta name="hs-frontend-bundle-version" content="20260919-radar-history-research-v1" />
 <link rel="icon" type="image/png" sizes="64x64" href="assets/favicon-v3.png?v=5" />
 <link rel="shortcut icon" href="assets/favicon-v3.ico?v=5" />
 <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon-v3.png?v=5" />
@@ -303,7 +303,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 </style>
 <link rel="stylesheet" href="portfolio-v6.css?v=20260818-rebalance2" />
 <link rel="stylesheet" href="v62-tech.css?v=20260809b" />
-<link rel="stylesheet" href="formal-black-gold.css?v=20260918-radar-phase6-history-v1" />
+<link rel="stylesheet" href="formal-black-gold.css?v=20260919-radar-history-research-v1" />
 <style id="radarPhase32CriticalLayout">
 /* Phase 3.2 structural fallback: the renderer is mobile-first even if external CSS is stale. */
 .radarFactorStackV32{display:flex;flex-direction:column;width:100%;min-width:0}
@@ -1162,6 +1162,10 @@ const LONG_RADAR_CODES=new Set(["0050","00662","00757","00830","00935","009815"]
 const LONG_RADAR_SCORED_CODES=new Set(["0050","00662","00757","00830","00935"]);
 const LONG_TERM_CORE_SCORE_VERSION=window.HS_LONG_TERM_CORE_SCORE_VERSION||"FINAL_CORE_WEIGHT_V1";
 let finalizedCoreScoreHistoryArtifact={schema_version:1,core_score_version:LONG_TERM_CORE_SCORE_VERSION,snapshots:[]};
+const RADAR_RESEARCH_HISTORY_VERSION="WEEKLY_J_PRODUCTION_LEGACY_V1";
+const RADAR_RESEARCH_HISTORY_SYMBOLS=["0050","00662","00830","00935","009815"];
+let researchC4HistoryArtifacts=new Map();
+let researchC4HistoryStatus=new Map();
 const coreScoreTrendRanges=new Map();
 const officialC4TrendRanges=new Map();
 let officialC4HistoryCache={artifact:null,bySymbol:null};
@@ -3492,6 +3496,38 @@ function coreScoreHistoryState(ticker,history=loadDailyLongRankHistory()){
 async function loadFinalizedCoreScoreHistory(){
   try{const response=await fetch("finalized-core-score-snapshots-v1.json",{cache:"no-store"});if(!response.ok)throw new Error("history unavailable");const payload=await response.json();if(payload?.schema_version===1&&payload?.core_score_version===LONG_TERM_CORE_SCORE_VERSION&&Array.isArray(payload?.snapshots))finalizedCoreScoreHistoryArtifact=payload;}catch{finalizedCoreScoreHistoryArtifact={schema_version:1,core_score_version:LONG_TERM_CORE_SCORE_VERSION,snapshots:[]}}
 }
+function stableResearchValue(value){return Array.isArray(value)?value.map(stableResearchValue):value&&typeof value==="object"?Object.fromEntries(Object.keys(value).sort().map(key=>[key,stableResearchValue(value[key])])):value}
+async function researchSha256(value){
+  if(!globalThis.crypto?.subtle)return null;
+  const bytes=new TextEncoder().encode(typeof value==="string"?value:JSON.stringify(stableResearchValue(value)));
+  const digest=await crypto.subtle.digest("SHA-256",bytes);
+  return[...new Uint8Array(digest)].map(byte=>byte.toString(16).padStart(2,"0")).join("");
+}
+async function validateResearchHistoryArtifact(symbol,artifact){
+  const metadata=artifact?.metadata,records=artifact?.records,hash=/^[0-9a-f]{64}$/;
+  if(metadata?.data_status!=="RESEARCH_HISTORICAL"||metadata?.weekly_j_version!==RADAR_RESEARCH_HISTORY_VERSION||metadata?.strategy_id!==LONG_TERM_CORE_SCORE_VERSION||metadata?.formula_version!==LONG_TERM_CORE_SCORE_VERSION)return{ok:false,reason:"VERSION_INCOMPATIBLE"};
+  if(metadata?.schema_version!==1||metadata?.etf!==symbol||!Array.isArray(records)||metadata.record_count!==records.length||!hash.test(String(metadata.records_sha256||""))||!hash.test(String(metadata?.provenance?.source_ohlc_sha256||""))||!hash.test(String(artifact?.artifact_sha256||"")))return{ok:false,reason:"INTEGRITY_FAILED"};
+  const parityOk=records.length===0?metadata.parity_status==="NO_FINALIZED_OVERLAP":metadata.parity_status==="CHECKED"&&Number(metadata?.parity?.overlap_dates)>0&&Array.isArray(metadata?.parity?.mismatches)&&metadata.parity.mismatches.length===0;
+  if(!parityOk)return{ok:false,reason:"INTEGRITY_FAILED"};
+  const validRecord=(row,index)=>row?.etf===symbol&&row?.strategy_id===LONG_TERM_CORE_SCORE_VERSION&&row?.formula_version===LONG_TERM_CORE_SCORE_VERSION&&row?.data_status==="RESEARCH_HISTORICAL"&&row?.weekly_j_version===RADAR_RESEARCH_HISTORY_VERSION&&/^\d{4}-\d{2}-\d{2}$/.test(String(row?.date||""))&&(index===0||records[index-1].date<row.date)&&Number.isFinite(row?.display_score)&&Number.isFinite(row?.dd52_raw)&&row?.provenance?.source_ohlc_sha256===metadata.provenance.source_ohlc_sha256;
+  if(records.some((row,index)=>!validRecord(row,index))||metadata.sample_start!==(records[0]?.date??null)||metadata.sample_end!==(records.at(-1)?.date??null))return{ok:false,reason:"INTEGRITY_FAILED"};
+  const recordsHash=await researchSha256(records),unsigned={metadata,records},artifactHash=await researchSha256(unsigned);
+  if(!recordsHash||recordsHash!==metadata.records_sha256||artifactHash!==artifact.artifact_sha256)return{ok:false,reason:"INTEGRITY_FAILED"};
+  return{ok:true,artifact};
+}
+async function loadResearchC4History(){
+  const artifacts=new Map(),statuses=new Map();
+  await Promise.all(RADAR_RESEARCH_HISTORY_SYMBOLS.map(async symbol=>{
+    try{
+      const response=await fetch(`research/c4_historical/${symbol}.json`,{cache:"no-store",headers:{Accept:"application/json"}});
+      if(!response.ok)throw new Error("MISSING_ARTIFACT");
+      const checked=await validateResearchHistoryArtifact(symbol,await response.json());
+      statuses.set(symbol,checked.ok?"READY":checked.reason);
+      if(checked.ok)artifacts.set(symbol,checked.artifact);
+    }catch{statuses.set(symbol,"UNAVAILABLE")}
+  }));
+  researchC4HistoryArtifacts=artifacts;researchC4HistoryStatus=statuses;
+}
 function longOverviewCardHtml(x,index,dailyMovement){
   const rank=index+1,decision=homepageFinalDecision(x)||strategyDecisionFor(x,"long_term_core"),presentation=decision?.finalPresentation,score=displayScore(x,"long_term_core"),scoreChange=dailyMovement?.scoreDelta,badgeLabel=finalDecisionBadgeLabel(presentation),scoreDelta=radarOverviewScoreDelta(scoreChange),next=radarOverviewNextLevel(score);
   const weeklyJ=radarOverviewFactorRaw(decision,"weeklyJ")??(Number.isFinite(x.j)?x.j:null),dd52=radarOverviewFactorRaw(decision,"dd52")??(Number.isFinite(x.fromHigh)?x.fromHigh:null),crash=radarOverviewFactorRaw(decision,"crash"),changeTone=Number(x.changePct)>0?"up":Number(x.changePct)<0?"down":"is-flat";
@@ -3730,34 +3766,40 @@ function radarDecisionSummaryHtml(x){
   const nextLabel=hsTodayStageLabel(decision.next_stage),distance=Number.isFinite(Number(decision.distance_to_next_stage))?(decision.distance_to_next_stage>0?`距${nextLabel} ${decision.distance_to_next_stage} 分`:"已進入最高決策摘要區"):"目前無距離資料",driver=hsTodayDriverLabel(decision.primary_driver),driverText=driver?`主要變化：${driver}${Number(decision.primary_driver_delta)>=0?"增加":"走弱"}`:(decision.comparison_basis==="NONE"?"目前無可比較基準":decision.explanation_text_zh);
   return`<section class="radarDecisionSummary" data-decision-stage="${esc(decision.decision_stage)}"><header><span>HS DECISION</span><h4>HS 決策摘要</h4></header><div class="radarDecisionLead"><b>${esc(decision.decision_label_zh)}</b><small>${esc(distance)}</small></div><p>${esc(driverText)}</p><small class="radarDecisionExplanation">${esc(decision.explanation_text_zh)}</small><p><span>資金姿態</span>${esc(hsTodayPosture(decision.capital_posture))}</p></section>`;
 }
-function radarHistoryPhase6State(x,artifact=finalizedCoreScoreHistoryArtifact,contract=window.HSDecisionLayerV1){
-  if(x?.id==="009815")return{kind:"WAIT_NATIVE"};
-  const scores=officialArtifactCoreScoreHistory(artifact,x?.id,Number.MAX_SAFE_INTEGER).reverse(),stages=contract?.STAGES;
-  if(!scores.length||!Array.isArray(stages)||!stages.length)return{kind:"UNAVAILABLE"};
-  const snapshots=Array.isArray(artifact?.snapshots)?artifact.snapshots:[],byDate=new Map(),rows=[];
+function radarHistoryPhase6State(x,artifact=finalizedCoreScoreHistoryArtifact,researchArtifacts=researchC4HistoryArtifacts,contract=window.HSDecisionLayerV1,researchStatuses=researchC4HistoryStatus){
+  const symbol=String(x?.id||""),stages=contract?.STAGES,status=researchStatuses?.get?.(symbol);
+  if(symbol==="009815")return{kind:"WAIT_NATIVE",researchStatus:status};
+  if(status==="VERSION_INCOMPATIBLE")return{kind:"VERSION_INCOMPATIBLE"};
+  if(status&&status!=="READY")return{kind:"RESEARCH_UNAVAILABLE"};
+  const researchArtifact=researchArtifacts?.get?.(symbol),researchRows=researchArtifact?.records;
+  if(!Array.isArray(researchRows)||!researchRows.length||!Array.isArray(stages)||!stages.length)return{kind:"RESEARCH_UNAVAILABLE"};
+  const scores=officialArtifactCoreScoreHistory(artifact,symbol,Number.MAX_SAFE_INTEGER).reverse(),snapshots=Array.isArray(artifact?.snapshots)?artifact.snapshots:[],byDate=new Map(),officialRows=[];
+  if(!scores.length)return{kind:"CURRENT_UNAVAILABLE"};
   for(const snapshot of snapshots)if(snapshot?.snapshot_type==="FINALIZED_CLOSE"&&snapshot?.finalized===true){const date=String(snapshot.date||"");if(!byDate.has(date))byDate.set(date,[]);byDate.get(date).push(snapshot)}
   for(const score of scores){
-    const source=(byDate.get(score.tradingDate)||[]).find(snapshot=>(snapshot.rows||[]).some(item=>item?.symbol===x.id&&item.final_core_score===score.finalCoreScore&&item.core_score_version===LONG_TERM_CORE_SCORE_VERSION&&String(item.data_as_of||"").startsWith(`${score.tradingDate}T`)));
-    const raw=source?.rows?.find(item=>item?.symbol===x.id&&item.final_core_score===score.finalCoreScore)?.factors?.dd52?.raw;
-    if(typeof raw!=="number"||!Number.isFinite(raw))continue;
-    const stage=stages.find(item=>score.displayScore>=item.min);
-    if(stage)rows.push({...score,dd52:raw,stage:stage.stage,stageLabel:stage.label});
+    const source=(byDate.get(score.tradingDate)||[]).find(snapshot=>(snapshot.rows||[]).some(item=>item?.symbol===symbol&&item.final_core_score===score.finalCoreScore&&item.core_score_version===LONG_TERM_CORE_SCORE_VERSION&&String(item.data_as_of||"").startsWith(`${score.tradingDate}T`)));
+    const raw=source?.rows?.find(item=>item?.symbol===symbol&&item.final_core_score===score.finalCoreScore)?.factors?.dd52?.raw,stage=stages.find(item=>score.displayScore>=item.min);
+    if(typeof raw==="number"&&Number.isFinite(raw)&&stage)officialRows.push({...score,dd52:raw,stage:stage.stage,stageLabel:stage.label});
   }
-  const current=rows.at(-1);
-  if(!current||current.tradingDate!==scores.at(-1).tradingDate)return{kind:"UNAVAILABLE"};
+  const current=officialRows.at(-1);
+  if(!current||current.tradingDate!==scores.at(-1).tradingDate)return{kind:"CURRENT_UNAVAILABLE"};
+  const rows=researchRows.map(row=>{const stage=stages.find(item=>row.display_score>=item.min);return{date:row.date,displayScore:row.display_score,dd52:row.dd52_raw,stage:stage?.stage,stageLabel:stage?.label}}).filter(row=>row.stage);
+  if(rows.length!==researchArtifact.metadata.record_count)return{kind:"RESEARCH_UNAVAILABLE"};
   const size=rows.length,percentile=Math.round(rows.filter(row=>row.displayScore<=current.displayScore).length/size*100),depth=value=>Math.abs(Math.min(value,0)),dd52Percentile=Math.round(rows.filter(row=>depth(row.dd52)<=depth(current.dd52)).length/size*100);
   const levelDays=rows.filter(row=>row.stage===current.stage).length,next=radarOverviewNextLevel(current.displayScore,contract),nextDays=next.available&&!next.isMaxLevel?rows.filter(row=>row.displayScore>=next.nextThreshold).length:null;
-  let start=rows.length-1;while(start>0&&rows[start-1].stage===current.stage)start--;
-  const lastEntry=start>0?rows[start].tradingDate:null,streak=rows.length-start,yearStart=Math.max(0,rows.length-252),yearRows=rows.slice(yearStart),yearDays=yearRows.filter(row=>row.stage===current.stage).length;
+  let officialStart=officialRows.length-1;while(officialStart>0&&officialRows[officialStart-1].stage===current.stage)officialStart--;
+  const lastEntry=officialStart>0?officialRows[officialStart].tradingDate:null,streak=officialRows.length-officialStart,streakCensored=officialStart===0;
+  const yearRows=rows.slice(-252),yearDays=yearRows.filter(row=>row.stage===current.stage).length,yearStart=Math.max(0,rows.length-252);
   let yearEntries=0;for(let i=yearStart;i<rows.length;i++)if(rows[i].stage===current.stage&&i>0&&rows[i-1].stage!==current.stage)yearEntries++;
-  return{kind:"READY",rows,current,size,percentile,dd52Percentile,levelDays,levelRate:levelDays/size*100,next,nextDays,nextRate:nextDays===null?null:nextDays/size*100,lastEntry,streak,streakCensored:start===0,yearSize:yearRows.length,yearDays,yearEntries};
+  return{kind:"READY",rows,officialRows,current,size,percentile,dd52Percentile,levelDays,levelRate:levelDays/size*100,next,nextDays,nextRate:nextDays===null?null:nextDays/size*100,lastEntry,streak,streakCensored,yearSize:yearRows.length,yearDays,yearEntries,sampleStart:researchArtifact.metadata.sample_start,sampleEnd:researchArtifact.metadata.sample_end,weeklyJVersion:researchArtifact.metadata.weekly_j_version};
 }
 function radarHistoryPhase6Html(x){
   if(!LONG_RADAR_CODES.has(x?.id))return"";
-  const state=radarHistoryPhase6State(x),heading='<header><h4>歷史位置與稀有度</h4><small>僅計正式盤後；統計位置不是投資訊號</small></header>';
-  if(state.kind!=="READY")return`<section class="detailSection radarHistoryPhase6" data-radar-history-phase="6">${heading}<p class="radarHistoryP6Empty">${state.kind==="WAIT_NATIVE"?"等待原生資料；正式歷史資料暫缺。":"正式分數或 52 週回檔歷史資料暫缺。"}</p></section>`;
+  const state=radarHistoryPhase6State(x),heading='<header><h4>歷史位置與稀有度</h4><small>長期統計：歷史研究重建｜近期狀態：正式盤後紀錄</small></header>';
+  const empty={WAIT_NATIVE:"歷史研究資料暫缺；等待原生資料，不使用替代值。",VERSION_INCOMPATIBLE:"歷史研究資料版本不相容。",RESEARCH_UNAVAILABLE:"歷史研究資料暫不可用。",CURRENT_UNAVAILABLE:"最新正式分數或 52 週回檔資料暫缺。"}[state.kind]||"歷史研究資料暫不可用。";
+  if(state.kind!=="READY")return`<section class="detailSection radarHistoryPhase6" data-radar-history-phase="6" data-radar-history-source="research-historical-v1" data-radar-recent-source="finalized-close">${heading}<p class="radarHistoryP6Empty">${empty}</p></section>`;
   const date=value=>value.replaceAll("-","/"),p=value=>`${value.toFixed(1)}%`,current=state.current,next=state.next;
-  return`<section class="detailSection radarHistoryPhase6" data-radar-history-phase="6">${heading}<div class="radarHistoryP6Group"><h5>Core Score 歷史位置</h5><div class="radarHistoryP6Lead"><span>目前正式分數 <b>${current.displayScore}</b></span><span>歷史百分位 <b>P${state.percentile}</b></span></div><p>歷史正式交易日中，分數不高於目前者占 ${state.percentile}%（含同分）。</p></div><div class="radarHistoryP6Group"><h5>目前級別</h5><div class="radarHistoryP6Line"><span>${esc(current.stageLabel)}</span><strong>歷史出現率 ${p(state.levelRate)}</strong></div><p>${state.levelDays} / ${state.size} 個正式交易日</p><div class="radarHistoryP6Line"><span>最近一次進入</span><strong>${state.lastEntry?date(state.lastEntry):"樣本起點前不可判定"}</strong></div><div class="radarHistoryP6Line"><span>目前已持續</span><strong>${state.streakCensored?"至少 ":""}${state.streak} 日</strong></div></div><div class="radarHistoryP6Group"><h5>下一級門檻</h5>${next.isMaxLevel?"<p>已進入最高級別；無下一級門檻。</p>":`<div class="radarHistoryP6Line"><span>${esc(next.nextLabel)}（${next.nextThreshold}+）</span><strong>歷史達到率 ${p(state.nextRate)}</strong></div><p>正式分數 ≥ ${next.nextThreshold}：${state.nextDays} / ${state.size} 日</p>`}</div><div class="radarHistoryP6Group"><h5>52週回檔歷史位置</h5><div class="radarHistoryP6Lead"><span>目前 DD52 <b>${current.dd52.toFixed(2)}%</b></span><span>歷史回撤深度 <b>P${state.dd52Percentile}</b></span></div><p>目前回撤深度不淺於 ${state.dd52Percentile}% 的正式交易日（含相同深度）；約 ${100-state.dd52Percentile}% 的交易日回撤更深。</p></div><div class="radarHistoryP6Group"><h5>過去一年</h5><div class="radarHistoryP6Line"><span>目前級別出現交易日</span><strong>${state.yearDays} 日</strong></div><div class="radarHistoryP6Line"><span>進入此級別次數</span><strong>${state.yearEntries} 次</strong></div><p>最近 ${state.yearSize} 個可用正式交易日；僅計從其他級別跨入的事件。</p></div><p class="radarHistoryP6Foot">統計期間 ${date(state.rows[0].tradingDate)} ～ ${date(current.tradingDate)}｜共同有效樣本 ${state.size} 日。${state.size<120?"樣本較短，歷史位置僅供參考。":""}舊版「歷史觸發率」為凍結校準口徑，與此處正式歷史樣本出現率不同。</p></section>`;
+  return`<section class="detailSection radarHistoryPhase6" data-radar-history-phase="6.6" data-radar-history-source="research-historical-v1" data-radar-recent-source="finalized-close">${heading}<div class="radarHistoryP6Source"><span><b>長期統計</b>歷史研究重建</span><span><b>近期狀態</b>正式盤後紀錄</span></div><div class="radarHistoryP6Group"><h5>Core Score 歷史位置</h5><div class="radarHistoryP6Lead"><span>目前正式分數 <b>${current.displayScore}</b></span><span>歷史百分位 <b>P${state.percentile}</b></span></div><p>高於 ${state.percentile}% 的歷史交易日（含同分）。</p></div><div class="radarHistoryP6Group"><h5>目前級別</h5><div class="radarHistoryP6Line"><span>${esc(current.stageLabel)}</span><strong>歷史出現率 ${p(state.levelRate)}</strong></div><p>${state.levelDays} / ${state.size} 個歷史研究交易日</p><div class="radarHistoryP6Line"><span>最近一次正式進入</span><strong>${state.lastEntry?date(state.lastEntry):"正式樣本起點前不可判定"}</strong></div><div class="radarHistoryP6Line"><span>目前正式持續</span><strong>${state.streakCensored?"至少 ":""}${state.streak} 日</strong></div></div><div class="radarHistoryP6Group"><h5>下一級門檻</h5>${next.isMaxLevel?"<p>已進入最高級別；無下一級門檻。</p>":`<div class="radarHistoryP6Line"><span>${esc(next.nextLabel)}（${next.nextThreshold}+）</span><strong>歷史達到率 ${p(state.nextRate)}</strong></div><p>歷史研究分數 ≥ ${next.nextThreshold}：${state.nextDays} / ${state.size} 日</p>`}</div><div class="radarHistoryP6Group"><h5>52週回檔歷史位置</h5><div class="radarHistoryP6Lead"><span>目前正式 DD52 <b>${current.dd52.toFixed(2)}%</b></span><span>歷史回撤深度 <b>P${state.dd52Percentile}</b></span></div><p>只有約 ${100-state.dd52Percentile}% 的歷史交易日回撤比現在更深。</p></div><div class="radarHistoryP6Group"><h5>近一年歷史重建</h5><div class="radarHistoryP6Line"><span>目前級別出現</span><strong>${state.yearDays} 個交易日</strong></div><div class="radarHistoryP6Line"><span>進入此級別</span><strong>${state.yearEntries} 次</strong></div><p>最近 ${state.yearSize} 個歷史研究交易日；transition 為研究重建，不是正式發布事件。</p></div><p class="radarHistoryP6Foot">統計期間 ${date(state.sampleStart)} ～ ${date(state.sampleEnd)}｜樣本 ${state.size.toLocaleString("zh-TW")} 個交易日。${state.size<120?"樣本較短，歷史位置僅供參考。":""}</p><details class="radarHistoryP6Method"><summary>資料口徑</summary><small>歷史研究重建｜${esc(state.weeklyJVersion)}；目前分數、DD52、最近進入與持續日數仍取正式盤後紀錄。</small></details></section>`;
 }
 function detailAdvancedHtml(x){return`<details class="detailAdvanced"><summary>估值、歷史統計與其他詳細資料</summary>${radarHistoryPhase6Html(x)}${valuationDetailsHtml(x)}${legacyComparisonHtml(x)}<section class="detailSection"><h4>歷史相似訊號統計</h4>${similarStatsHtml(x.historyStats.sameEnvironment,`相同市場環境｜${x.environment}`)}${similarStatsHtml(x.historyStats.allEnvironments,"全部市場環境")}</section>${buyPlanHtml(x)}</details>`}
 function buildRadarV2Card({x,mode,decision,stage,score,longRank,longRankChange,longScoreChange,formal,detailScoreState,tradeState,dailyPair}){
@@ -4444,7 +4486,7 @@ $("#drawdownForm").addEventListener("submit",async event=>{
 async function load(){
   const m=$("#message"),b=$("#reload"),buttonLabel=b.querySelector("span");syncWatchlistState();renderWatchlist();m.className="message info";m.textContent="正在更新最新資料…";b.disabled=true;b.setAttribute("aria-busy","true");if(buttonLabel)buttonLabel.textContent="更新中…";
   try{
-    await loadFinalizedCoreScoreHistory();
+    await Promise.all([loadFinalizedCoreScoreHistory(),loadResearchC4History()]);
     await Promise.all([loadCorporateActionTables(),loadEtfValuation()]);
     const settled=await Promise.allSettled(ids.map(one));
     all=settled.filter(x=>x.status==="fulfilled").map(x=>x.value);
