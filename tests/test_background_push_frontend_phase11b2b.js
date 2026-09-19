@@ -5,7 +5,7 @@ const storage=value=>{const m=new Map(value?[[client.PREFERENCES_KEY,JSON.string
 const doc={baseURI:"https://example.test/app/",querySelector:s=>s.includes("hs-live-railway-url")?{content:"https://api.test/api/live-scores"}:null};
 const response=data=>Promise.resolve({ok:true,status:200,json:async()=>data});
 test("01 phase marker",()=>assert.match(html,/data-radar-push-phase="11b2c"/));
-test("02 runtime asset marker",()=>assert.match(html,/20260920-background-alert-cutover-phase11b2c/));
+test("02 runtime asset marker",()=>assert.match(html,/20260920-live-archive-resilience-v1/));
 test("03 client worker v2",()=>assert.equal(client.SW_VERSION,"HS_PUSH_SW_V2"));
 test("04 rules default unsynced",()=>assert.equal(client.defaults().rules_sync_status,"NOT_SYNCED"));
 test("05 rules sync posts only id and rules",async()=>{const s=storage({enabled:true,subscription_id:"opaque",status:"ON"}),calls=[],fetchFn=(...a)=>{calls.push(a);return response({status:"SYNCED",rule_version:"HS_RADAR_PUSH_RULES_V1"})};await client.syncRules({version:"HS_RADAR_ALERT_RULES_V1"},{windowObj:{localStorage:s,fetch:fetchFn},documentObj:doc,storage:s,fetchFn});assert.deepEqual(Object.keys(JSON.parse(calls[0][1].body)).sort(),["rules","subscription_id"])});

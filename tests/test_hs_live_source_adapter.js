@@ -36,6 +36,7 @@ result=adapter.railwayToCanonical(payload({tickers:{...payload().tickers,"00830"
 assert.equal(result.status,"UNAVAILABLE");
 assert.deepEqual(result.snapshots,[]);
 const html=fs.readFileSync(path.join(root,"index.html"),"utf8");
+const adapterSource=fs.readFileSync(path.join(root,"hs-live-source-adapter.js"),"utf8");
 assert.match(html,/<meta name="hs-live-source" content="railway"/);
 assert.match(html,/盤中預估 <i>LIVE PROJECTED<\/i> · Railway/);
 assert.match(html,/正式分數 <i>OFFICIAL<\/i>/);
@@ -43,6 +44,8 @@ assert.match(html,/function applyLiveCoreState\(sequence/);
 assert.match(html,/liveRequestCoordinator\?\.canApply\(sequence,liveSnapshots,state\?\.status\)/);
 assert.match(html,/fallback_used:"NO"/);
 assert.doesNotMatch(html,/loadRailway[\s\S]{0,500}(?:intraday-core-snapshots-v1|latestCanonicalCoreSnapshot)/);
+assert.doesNotMatch(adapterSource,/"Cache-Control"\s*:\s*"no-cache"/);
+assert.match(adapterSource,/fetchImpl\(endpoint,\{cache:"no-store",signal:controller\.signal,headers:\{Accept:"application\/json"\}\}\)/);
 console.log("D PASS: stale Railway data fails closed; atomic request sequencing prevents stale overwrite and legacy fallback");
 
 const protectedFiles=["finalized-core-score-snapshots-v1.json","forward-shadow-ledger-v1.json","intraday-core-snapshots-v1.json"].filter(name=>fs.existsSync(path.join(root,name)));

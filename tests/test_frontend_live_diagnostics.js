@@ -45,6 +45,8 @@ assert.match(html,/addEventListener\("online"[\s\S]*refreshLiveQuotes\(\{force:t
 console.log("TEST 8 PASS: network recovery immediately refreshes live API");
 
 assert.match(html,/fetch\(url,\{cache:"no-store"/);assert.doesNotMatch(html,/serviceWorker\.register|caches\.open|cache-first/i);
+assert.match(html,/hs-live-source-adapter\.js\?v=20260920-live-archive-resilience-v1/);
+assert.doesNotMatch(fs.readFileSync(path.join(root,"hs-live-source-adapter.js"),"utf8"),/"Cache-Control"\s*:\s*"no-cache"/);
 console.log("TEST 9 PASS: live requests bypass HTTP cache and no service worker intercept exists");
 
 assert.match(html,/hs-app-build-sha/);assert.match(html,/hs-frontend-bundle-version/);assert.match(html,/backend_build_sha:"NOT_EXPOSED"/);assert.match(html,/debugLive/);assert.match(html,/LIVE DIAGNOSTICS/);

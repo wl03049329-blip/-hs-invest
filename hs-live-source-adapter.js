@@ -57,7 +57,7 @@
     if(signal?.aborted)abort();else signal?.addEventListener?.("abort",abort,{once:true});
     const requestStart=Date.now(),requestStartTime=new Date(requestStart).toISOString();
     try{
-      const response=await fetchImpl(endpoint,{cache:"no-store",signal:controller.signal,headers:{Accept:"application/json","Cache-Control":"no-cache"}});
+      const response=await fetchImpl(endpoint,{cache:"no-store",signal:controller.signal,headers:{Accept:"application/json"}});
       if(!response?.ok){const error=new Error(`RAILWAY_HTTP_${response?.status||0}`);error.httpStatus=Number(response?.status||0);throw error}
       const result=railwayToCanonical(await response.json(),{targetDate,scoreVersion,symbols,now});
       return{...result,diagnostics:{...(result.diagnostics||{}),request_start_time:requestStartTime,request_end_time:new Date().toISOString(),api_fetch_status:Number(response.status||200),api_fetch_ms:Date.now()-requestStart}};
