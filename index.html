@@ -13,7 +13,7 @@
 <meta name="hs-live-source" content="railway" />
 <meta name="hs-live-railway-url" content="https://hs-invest-production.up.railway.app/api/live-scores" />
 <meta name="hs-app-build-sha" content="LOCAL" />
-<meta name="hs-frontend-bundle-version" content="20260919-radar-events-phase105" />
+<meta name="hs-frontend-bundle-version" content="20260919-radar-alerts-phase11a" />
 <link rel="icon" type="image/png" sizes="64x64" href="assets/favicon-v3.png?v=5" />
 <link rel="shortcut icon" href="assets/favicon-v3.ico?v=5" />
 <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon-v3.png?v=5" />
@@ -303,7 +303,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 </style>
 <link rel="stylesheet" href="portfolio-v6.css?v=20260818-rebalance2" />
 <link rel="stylesheet" href="v62-tech.css?v=20260809b" />
-<link rel="stylesheet" href="formal-black-gold.css?v=20260919-radar-events-phase105" />
+<link rel="stylesheet" href="formal-black-gold.css?v=20260919-radar-alerts-phase11a" />
 <style id="radarPhase32CriticalLayout">
 /* Phase 3.2 structural fallback: the renderer is mobile-first even if external CSS is stale. */
 .radarFactorStackV32{display:flex;flex-direction:column;width:100%;min-width:0}
@@ -710,7 +710,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       <p id="radarModeDescription">經過資料、策略與長期追蹤後，HS 持續關注的 ETF。</p>
     </header>
     <section id="radarOverview" class="radarOverview" aria-labelledby="radarOverviewTitle" data-radar-overview-phase="8a" data-radar-consistency-phase="9.5">
-      <div class="sectionHead radarOverviewHead"><div><p class="eyebrow">ETF 雷達總覽</p><h2 id="radarOverviewTitle">ETF 加碼與波段總覽</h2></div><small>點擊標的查看完整評分與風險資料</small></div>
+      <div class="sectionHead radarOverviewHead"><div><p class="eyebrow">ETF 雷達總覽</p><h2 id="radarOverviewTitle">ETF 加碼與波段總覽</h2></div><div class="radarOverviewActions"><small>點擊標的查看完整評分與風險資料</small><button id="openRadarAlertSettings" type="button" aria-haspopup="dialog">提醒設定</button></div></div>
       <div class="radarUpdateStrip"><span id="radarOverviewCurrent">本次更新時段：—</span><span id="radarOverviewNext">下一次更新：—</span></div>
       <div class="radarViewTabs" role="tablist" aria-label="ETF 雷達檢視方式">
         <button class="active" type="button" role="tab" aria-selected="true" data-radar-view="overview">總覽</button>
@@ -892,6 +892,14 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
   </article>
 </div>
 
+<div id="radarAlertSettingsModal" class="modal coreScoreModal radarAlertSettingsModal" role="dialog" aria-modal="true" aria-labelledby="radarAlertSettingsTitle" aria-hidden="true" data-radar-alerts-phase="11a">
+  <article class="sheet coreScoreSheet radarAlertSettingsSheet">
+    <div class="sheetHead"><div><p class="eyebrow">LOCAL ALERT RULES</p><h3 id="radarAlertSettingsTitle">雷達提醒設定</h3><small>僅根據正式盤後資料，儲存於這個瀏覽器</small></div><button id="closeRadarAlertSettings" class="close" type="button">關閉</button></div>
+    <div id="radarAlertSettingsContent" class="radarAlertSettingsContent"></div>
+    <footer class="radarAlertSettingsFooter"><span id="radarAlertSettingsStatus" role="status" aria-live="polite"></span><button id="resetRadarAlertSettings" type="button">恢復預設</button><button id="saveRadarAlertSettings" class="primary" type="button">儲存設定</button></footer>
+  </article>
+</div>
+
 <div id="modal" class="modal">
   <div class="sheet">
     <div class="sheetHead">
@@ -1043,6 +1051,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 <script src="hs-live-source-adapter.js?v=20260917-live-diagnostics-v2"></script>
 <script src="frontend-live-diagnostics.js?v=20260917-live-diagnostics-v2"></script>
 <script src="hs-decision-layer-v1.js?v=20260919-c4-levels-v2"></script>
+<script src="radar-alert-rules-v1.js?v=20260919-radar-alerts-phase11a"></script>
 <script src="swing-strategy-core.js?v=20260809a"></script>
 <script src="leverage-v1-core.js?v=20260822-l1"></script>
 <script src="generic-etf-diagnostics.js?v=20260815-phase2e"></script>
@@ -3534,6 +3543,25 @@ function radarEventCenterHtml(state,filter=radarEventFilter,etfFilter=radarEvent
 function radarEventStateFor(items){const events=buildRadarEvents({items}),tradingDates=[...new Set((items||[]).flatMap(item=>officialArtifactCoreScoreHistory(finalizedCoreScoreHistoryArtifact,item.id,RADAR_EVENT_WINDOW)).map(row=>row.tradingDate).filter(Boolean))].sort().reverse(),latestDate=tradingDates[0]||"";return{events,latestDate,tradingDates}}
 function renderRadarEventEtfOptions(){const select=$("#radarEventEtfFilter");if(!select)return;const present=new Set((radarEventState?.events||[]).map(event=>event.etf)),symbols=["0050","00662","00757","00830","00935",...(present.has("009815")?["009815"]:[])];select.innerHTML=`<option value="ALL">全部</option>`+symbols.map(symbol=>`<option value="${symbol}">${symbol}</option>`).join("");select.value=symbols.includes(radarEventEtfFilter)?radarEventEtfFilter:"ALL";radarEventEtfFilter=select.value}
 function renderRadarEventCenter(){const target=$("#radarEventList");if(!target)return;renderRadarEventEtfOptions();const view=radarEventDisplayState(radarEventState),summary=$("#radarEventSummary");if(summary)summary.textContent=`${view.mode==="RECENT"?"最近7個正式交易日":"全部事件"}｜${view.total} 筆重要事件 · ${view.etfCount} 檔 ETF`;target.innerHTML=radarEventCenterHtml(radarEventState);target.querySelectorAll("[data-open-radar-detail]").forEach(button=>button.addEventListener("click",()=>showRadarDetail(button.dataset.openRadarDetail)))}
+const RADAR_ALERT_SYMBOLS=["0050","00662","00757","00830","00935","009815"];
+let radarAlertDraft=null,radarAlertReturnFocus=null;
+function radarAlertToggle(id,label,checked,disabled=false,note=""){return`<label class="radarAlertToggle" for="${id}"><span><b>${esc(label)}</b>${note?`<small>${esc(note)}</small>`:""}</span><input id="${id}" type="checkbox" role="switch" ${checked?"checked":""} ${disabled?"disabled":""}></label>`}
+function radarAlertRuleFields(scope,rules,{percentileAvailable=true}={}){const p=String(scope).replace(/[^a-z0-9]/gi,"-").toLowerCase();return`<div class="radarAlertRuleGrid" data-alert-rules="${esc(scope)}">
+  ${radarAlertToggle(`${p}-cross`,"正式分級變化",rules.cross_level,false,"依 HS_C4_LEVELS_V2 判定")}
+  ${radarAlertToggle(`${p}-down`,"向下跨級也提醒",rules.downward_cross,!rules.cross_level)}
+  <label class="radarAlertField"><span><b>指定分數門檻</b><small>由下往上跨過時提醒</small></span><span class="radarAlertInline"><input id="${p}-score-enabled" type="checkbox" role="switch" aria-label="啟用指定分數提醒" ${rules.score_enabled?"checked":""}><input id="${p}-score" type="number" min="0" max="100" step="1" inputmode="numeric" aria-label="Core Score 提醒門檻" value="${rules.score_threshold}"></span></label>
+  <label class="radarAlertField" for="${p}-distance"><span><b>接近下一級</b><small>進入指定距離時提醒一次</small></span><select id="${p}-distance" aria-label="距下一級提醒距離"><option value="0" ${rules.distance===0?"selected":""}>關閉</option><option value="1" ${rules.distance===1?"selected":""}>差 1 分</option><option value="2" ${rules.distance===2?"selected":""}>差 2 分</option></select></label>
+  <label class="radarAlertField"><span><b>歷史位置</b><small>${percentileAvailable?"使用有效 RESEARCH_HISTORICAL":"歷史資料尚不足"}</small></span><span class="radarAlertInline"><input id="${p}-percentile-enabled" type="checkbox" role="switch" aria-label="啟用歷史位置提醒" ${rules.percentile_enabled?"checked":""} ${percentileAvailable?"":"disabled"}><select id="${p}-percentile" aria-label="歷史位置門檻" ${percentileAvailable?"":"disabled"}>${[85,90,95].map(value=>`<option value="${value}" ${rules.percentiles.includes(value)?"selected":""}>P${value}</option>`).join("")}</select></span></label>
+  ${radarAlertToggle(`${p}-data-status`,"資料狀態異常",rules.data_status,false,"僅使用現有診斷狀態")}
+  ${radarAlertToggle(`${p}-data-recovery`,"資料恢復時提醒",rules.data_recovery,!rules.data_status)}
+</div>`}
+function radarAlertReadRuleFields(scope,fallback){const p=String(scope).replace(/[^a-z0-9]/gi,"-").toLowerCase(),get=id=>document.getElementById(`${p}-${id}`);return window.HSRadarAlertRulesV1.normalizeRuleSet({cross_level:get("cross")?.checked,downward_cross:get("down")?.checked,score_enabled:get("score-enabled")?.checked,score_threshold:get("score")?.value,distance:get("distance")?.value,percentile_enabled:get("percentile-enabled")?.checked,percentiles:[Number(get("percentile")?.value)],data_status:get("data-status")?.checked,data_recovery:get("data-recovery")?.checked},fallback)}
+function radarAlertPreviewHtml(preferences){const engine=window.HSRadarAlertRulesV1,contract=window.HSDecisionLayerV1,bundles=[];for(const symbol of RADAR_ALERT_SYMBOLS){const rows=officialArtifactCoreScoreHistory(finalizedCoreScoreHistoryArtifact,symbol,60),artifact=researchC4HistoryStatus.get(symbol)==="READY"?researchC4HistoryArtifacts.get(symbol):null,result=engine.rebuildRadarAlertPreview({symbol,finalizedRows:rows,percentileForScore:score=>artifact?radarEventPercentile(score,artifact):null,resolvedRules:engine.resolveRules(preferences,symbol),contract});bundles.push(...result.bundles)}bundles.sort((a,b)=>b.trigger_date.localeCompare(a.trigger_date)||a.etf.localeCompare(b.etf));if(!bundles.length)return`<p class="radarAlertEmpty">依目前設定，近期正式資料沒有符合的提醒。</p>`;return bundles.slice(0,8).map(bundle=>`<article class="radarAlertPreviewItem"><header><b>${esc(bundle.etf)}</b><time>${esc(bundle.trigger_date.slice(5).replace("-","/"))}</time></header><strong>${esc(bundle.title)}</strong>${bundle.alerts.map(alert=>`<small>${esc(alert.title)}${alert.description?` · ${esc(alert.description)}`:""}</small>`).join("")}</article>`).join("")}
+function renderRadarAlertSettings(){const engine=window.HSRadarAlertRulesV1,target=$("#radarAlertSettingsContent");if(!engine||!target)return;radarAlertDraft=engine.normalizePreferences(radarAlertDraft||engine.loadPreferences(localStorage));target.innerHTML=`<section class="radarAlertSettingsSection"><header><h4>全域設定</h4><small>所有 ETF 預設沿用</small></header>${radarAlertRuleFields("global",radarAlertDraft.global)}</section><section class="radarAlertSettingsSection"><header><h4>ETF 個別設定</h4><small>可繼承全域或獨立調整</small></header><div class="radarAlertEtfList">${RADAR_ALERT_SYMBOLS.map(symbol=>{const entry=radarAlertDraft.etfs[symbol]||{mode:"inherit",rules:engine.resolveRules(radarAlertDraft,symbol)},available=symbol!=="009815"&&researchC4HistoryStatus.get(symbol)==="READY";return`<details class="radarAlertEtf"><summary><b>${symbol}</b><span>${entry.mode==="custom"?"個別設定":"繼承全域"}</span><i aria-hidden="true">⌄</i></summary><label class="radarAlertOverride" for="alert-${symbol}-mode">設定方式<select id="alert-${symbol}-mode" data-alert-mode="${symbol}"><option value="inherit" ${entry.mode!=="custom"?"selected":""}>繼承全域</option><option value="custom" ${entry.mode==="custom"?"selected":""}>個別設定</option></select></label><div ${entry.mode==="custom"?"":"hidden"}>${radarAlertRuleFields(`etf-${symbol}`,entry.rules,{percentileAvailable:available})}</div></details>`}).join("")}</div></section><section class="radarAlertSettingsSection"><header><h4>最近提醒預覽</h4><small>由現有正式歷史重建，不回頭補發</small></header><div class="radarAlertPreview">${radarAlertPreviewHtml(radarAlertDraft)}</div></section>`;target.querySelectorAll("[data-alert-mode]").forEach(select=>select.addEventListener("change",()=>{radarAlertDraft.global=radarAlertReadRuleFields("global",radarAlertDraft.global);for(const symbol of RADAR_ALERT_SYMBOLS){const current=radarAlertDraft.etfs[symbol]||{mode:"inherit",rules:engine.resolveRules(radarAlertDraft,symbol)};if(current.mode==="custom")current.rules=radarAlertReadRuleFields(`etf-${symbol}`,current.rules);radarAlertDraft.etfs[symbol]=current}radarAlertDraft.etfs[select.dataset.alertMode].mode=select.value;const details=select.closest(".radarAlertEtf");details?.querySelector("summary span")?.replaceChildren(document.createTextNode(select.value==="custom"?"個別設定":"繼承全域"));const fields=select.closest("label")?.nextElementSibling;if(fields)fields.hidden=select.value!=="custom"}))}
+function collectRadarAlertSettings(){const engine=window.HSRadarAlertRulesV1,prefs=engine.normalizePreferences(radarAlertDraft||engine.defaultPreferences());prefs.global=radarAlertReadRuleFields("global",prefs.global);for(const symbol of RADAR_ALERT_SYMBOLS){const select=document.querySelector(`[data-alert-mode="${symbol}"]`),entry=prefs.etfs[symbol]||{mode:"inherit",rules:engine.resolveRules(prefs,symbol)};entry.mode=select?.value==="custom"?"custom":"inherit";if(entry.mode==="custom")entry.rules=radarAlertReadRuleFields(`etf-${symbol}`,entry.rules);prefs.etfs[symbol]=entry}return engine.normalizePreferences(prefs)}
+function openRadarAlertSettings(){radarAlertReturnFocus=document.activeElement;radarAlertDraft=window.HSRadarAlertRulesV1?.loadPreferences(localStorage);renderRadarAlertSettings();const modal=$("#radarAlertSettingsModal");modal?.classList.add("show");modal?.setAttribute("aria-hidden","false");$("#closeRadarAlertSettings")?.focus()}
+function closeRadarAlertSettings(){const modal=$("#radarAlertSettingsModal");modal?.classList.remove("show");modal?.setAttribute("aria-hidden","true");radarAlertReturnFocus?.focus?.()}
+function evaluateAndPersistRadarAlerts(){const engine=window.HSRadarAlertRulesV1;if(!engine)return;const preferences=engine.loadPreferences(localStorage),contract=window.HSDecisionLayerV1;let state=engine.loadState(localStorage);for(const symbol of RADAR_ALERT_SYMBOLS){const rows=officialArtifactCoreScoreHistory(finalizedCoreScoreHistoryArtifact,symbol,2),current=rows[0],previous=rows[1]||rows[0];if(!current)continue;const artifact=researchC4HistoryStatus.get(symbol)==="READY"?researchC4HistoryArtifacts.get(symbol):null,result=engine.evaluateRadarAlerts({symbol,current,previous,percentileCurrent:artifact?radarEventPercentile(current.displayScore,artifact):null,percentilePrevious:artifact?radarEventPercentile(previous.displayScore,artifact):null,resolvedRules:engine.resolveRules(preferences,symbol),existingAlertState:state,contract});state=result.next_alert_state}engine.saveState(localStorage,state)}
 function radarRangeBar(score){const value=Number.isFinite(score)?Math.max(0,Math.min(100,score)):0,contract=window.HSDecisionLayerV1,stage=contract?.STAGES?.find(row=>value>=row.min),next=(contract?.NEXT_THRESHOLDS||[]).find(threshold=>threshold>value),nextStage=contract?.STAGES?.find(row=>row.min===next);return`<div class="radarRange" data-score-level-version="${esc(contract?.SCORE_LEVEL_VERSION||"")}"><div class="radarRangeTrack"><i style="left:${value}%"></i></div><div class="radarRangeLabels"><span>${esc(stage?.label||"資料不足")}</span><span>${esc(nextStage?.label||"最高級別")}</span></div></div>`}
 function dailyFactorValue(decision,key){const row=(decision?.breakdown||[]).find(item=>item.key===key);return Number.isFinite(row?.value)?row.value:null}
 function createDailyLongRankSnapshot(items,finalizedAt=new Date().toISOString()){
@@ -4104,7 +4132,7 @@ function renderCards(){
   }).join(""):'<div class="watchEmpty">我的自選尚未加入 ETF。</div>';
   const longOverview=radar.filter(item=>strategyModeFor(item)==="long_term_core").sort(longRankComparator);
   $("#radarTodayFocusCards").innerHTML=radarTodayFocusHtml(radarTodayFocusState(longOverview));
-  radarEventState=radarEventStateFor(longOverview);renderRadarEventCenter();
+  radarEventState=radarEventStateFor(longOverview);renderRadarEventCenter();evaluateAndPersistRadarAlerts();
   $("#radarOverviewLong").innerHTML=longOverview.map((item,index)=>longOverviewCardHtml(item,index,dailyLongRankMovement(dailyPair,item.id))).join("")||'<div class="newsEmpty">長期 ETF 資料載入中</div>';
   const swingRoles={"00631L":"HS LEVERAGE","00733":"強勢趨勢拉回型","006201":"低檔止跌轉折型"};
   const swingOverviewItems=["00631L","00733","006201"].map(id=>radar.find(item=>item.id===id)).filter(Boolean);
@@ -4601,6 +4629,12 @@ $("#closeModal").addEventListener("click",()=>$("#modal").classList.remove("show
 $("#modal").addEventListener("click",e=>{if(e.target===$("#modal"))$("#modal").classList.remove("show")});
 $("#closeCoreScoreModal").addEventListener("click",closeCoreScoreModal);
 $("#coreScoreModal").addEventListener("click",event=>{if(event.target===$("#coreScoreModal"))closeCoreScoreModal()});
+$("#openRadarAlertSettings")?.addEventListener("click",openRadarAlertSettings);
+$("#closeRadarAlertSettings")?.addEventListener("click",closeRadarAlertSettings);
+$("#radarAlertSettingsModal")?.addEventListener("click",event=>{if(event.target===$("#radarAlertSettingsModal"))closeRadarAlertSettings()});
+document.addEventListener("keydown",event=>{if(event.key==="Escape"&&$("#radarAlertSettingsModal")?.classList.contains("show"))closeRadarAlertSettings()});
+$("#saveRadarAlertSettings")?.addEventListener("click",()=>{radarAlertDraft=window.HSRadarAlertRulesV1.savePreferences(localStorage,collectRadarAlertSettings());renderRadarAlertSettings();const status=$("#radarAlertSettingsStatus");if(status)status.textContent="已儲存於這個瀏覽器"});
+$("#resetRadarAlertSettings")?.addEventListener("click",()=>{radarAlertDraft=window.HSRadarAlertRulesV1.resetPreferences(localStorage);renderRadarAlertSettings();const status=$("#radarAlertSettingsStatus");if(status)status.textContent="已恢復預設設定"});
 document.addEventListener("click",event=>{const button=event.target.closest("[data-read-core-score]");if(!button)return;event.preventDefault();event.stopPropagation();openCoreScoreModal(button.dataset.readCoreScore,button)});
 $("#closeCoreScoreHistoryModal").addEventListener("click",closeCoreScoreHistoryModal);
 $("#coreScoreHistoryModal").addEventListener("click",event=>{if(event.target===$("#coreScoreHistoryModal"))closeCoreScoreHistoryModal()});
