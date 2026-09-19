@@ -37,7 +37,7 @@ assert.match(radarBlock, /資料尚未齊備[\s\S]*暫不提供決策摘要/);
 assert.doesNotMatch(html.slice(html.indexOf('if(mode==="leveraged")'), html.indexOf('const s=x.swingDecision', html.indexOf('if(mode==="leveraged")'))), /radarDecisionSummaryHtml/);
 assert.match(html, /leverageRadarDashboardHtml\(x\)/);
 assert.match(html, /radarScoreTrendHtml\(x\)/);
-assert.match(html, /僅使用正式盤後資料，不含盤中試算/);
+assert.match(html, /僅使用正式盤後資料｜D = 正式交易日/);
 assert.match(html, /"10D":10,"20D":20,"60D":60,"120D":120/);
 
 // 17: Homepage and Radar resolve exactly the same interpreter output for one canonical input.

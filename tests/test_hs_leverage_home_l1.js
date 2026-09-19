@@ -6,18 +6,16 @@ const css = fs.readFileSync("formal-black-gold.css", "utf8");
 const core = fs.readFileSync("leverage-v1-core.js", "utf8");
 
 assert.match(html, /id="homeLeverageBrief"[\s\S]*?HS LEVERAGE[\s\S]*?00631L 槓桿戰術雷達/);
-assert.ok(html.indexOf('id="homeLeverageBrief"') < html.indexOf('id="homeSwingBrief"'));
+assert.doesNotMatch(html, /id="homeSwingBrief"/);
 assert.match(html, /<script src="leverage-v1-core\.js\?v=20260822-l1"><\/script>/);
 assert.match(html, /function leverageV1State\(item\)/);
-assert.match(html, /function leverageHomeCard\(item\)/);
-assert.match(html, /正式 V1/);
-assert.match(html, /5D Crash Velocity/);
+assert.match(html, /function leverageHomeCompactCard\(item\)/);
+assert.match(html, /獨立策略｜不納入 C4 排名/);
+assert.match(html, /5D 急跌速度/);
 assert.match(html, /戰術觀察/);
-assert.match(html, /FORWARD SHADOW/);
-assert.match(html, /Frozen threshold \$\{threshold\}/);
-assert.match(html, /String\(v1\.threshold\)/);
-assert.match(html, /Crash Velocity 資料不足，正式訊號維持 FAIL CLOSED/);
-assert.match(html, /\$\("#homeLeverageCard"\)\.innerHTML=leverageHomeCard\(all\.find\(x=>x\.id==="00631L"\)\)/);
+assert.match(html, /5D 急跌速度相對觸發門檻/);
+assert.match(html, /等待極端急跌訊號/);
+assert.match(html, /\$\("#homeLeverageCard"\)\.innerHTML=leverageHomeCompactCard\(all\.find\(x=>x\.id==="00631L"\)\)/);
 
 const renderTop = html.slice(html.lastIndexOf("function renderTop(){"));
 const leverageRenderer = html.slice(html.indexOf("function leverageV1State"), html.indexOf("function renderTop(){", html.indexOf("function leverageV1State")));

@@ -14,14 +14,14 @@ for(const [score,threshold,label,distance] of [[45,50,"正式加碼訊號",5],[1
 assert.equal(context.radarOverviewNextLevel(90).isMaxLevel,true);assert.equal(context.radarOverviewNextLevel(100).isMaxLevel,true);
 assert.equal(context.radarOverviewNextLevel(null).available,false);assert.equal(context.radarOverviewNextLevel(undefined).available,false);
 assert.match(context.radarRangeBar(44),/HS_C4_LEVELS_V2[\s\S]*加碼條件浮現[\s\S]*試探加碼/);
-assert.deepEqual({...context.radarOverviewScoreDelta(2)},{label:"▲2 今日",tone:"is-up"});
-assert.deepEqual({...context.radarOverviewScoreDelta(-2.4)},{label:"▼2.4 今日",tone:"is-down"});
-assert.deepEqual({...context.radarOverviewScoreDelta(0)},{label:"±0 今日",tone:"is-flat"});
+assert.deepEqual({...context.radarOverviewScoreDelta(2)},{label:"▲2 正式變化",tone:"is-up"});
+assert.deepEqual({...context.radarOverviewScoreDelta(-2.4)},{label:"▼2.4 正式變化",tone:"is-down"});
+assert.deepEqual({...context.radarOverviewScoreDelta(0)},{label:"±0 正式變化",tone:"is-flat"});
 
 const overview=html.slice(cardStart,cardEnd);
 assert.match(overview,/data-open-radar-detail=/,"whole-card detail navigation remains intact");
 assert.match(overview,/radarLongIdentityRow/);assert.match(overview,/radarLongScoreRow/);assert.match(overview,/radarOverviewFactors/);
-assert.ok(overview.indexOf("DD52")<overview.indexOf("Weekly J")&&overview.indexOf("Weekly J")<overview.indexOf("Crash 20D"),"factor order follows 55/30/15 importance");
+assert.ok(overview.indexOf("52週回檔")<overview.indexOf("週 J 值")&&overview.indexOf("週 J 值")<overview.indexOf("20日急跌因子"),"factor order follows 55/30/15 importance");
 assert.match(overview,/Number\.isFinite\(crash\)\?fmt\(crash\)\+"%":"—"/,"missing Crash renders an em dash without recomputation");
 assert.doesNotMatch(overview,/歷史觸發約|historicalTriggerText|正式日排名|decision\?\.cta\?\.detail|stage\?\.recommendation/);
 assert.doesNotMatch(overview,/<small>正式訊號<\/small>|<small>當日漲跌<\/small>/);

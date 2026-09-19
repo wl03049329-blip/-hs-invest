@@ -60,7 +60,7 @@ assert.equal(gateContext.homepageFinalDecision(finalItem).coreScore,48);
 assert.equal(gateContext.homepageFinalDecision({...finalItem,intraday:{canonical:{...finalRecord,score_version:"OLD"}}}),null);
 console.log("PASS 7B local formal and invalid-version objects cannot cross the FINAL authority gate");
 
-assert.match(html,/C4 LIVE TRACKING/);
+assert.match(html,/C4 今日盤中追蹤/);
 assert.match(html,/正式分數 <i>OFFICIAL<\/i>/);
 assert.match(html,/不使用舊盤中快照/);
 assert.match(html,/正式來源｜盤後收盤定稿/);
@@ -73,7 +73,7 @@ assert.match(html,/00631L · HS LEVERAGE/);
 console.log("PASS 9 WAIT_NATIVE and 00631L isolation remain intact");
 
 assert.match(html,/function officialCoreScoreHistory/);
-assert.match(html,/盤中 Core 不納入此趨勢/);
+assert.match(html,/不含盤中分數、週末或未保存日期/);
 assert.match(html,/Forward Shadow 驗證中/);
 console.log("PASS 10 history and Forward Shadow remain separate from homepage selection");
 

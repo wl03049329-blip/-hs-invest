@@ -23,7 +23,7 @@ assert.match(html,/snapshot\?\.finalized!==true/);
 assert.match(html,/factor\.contribution-before\.contribution/);
 assert.match(html,/目前分數主要來自/);
 assert.match(html,/原始總分/);
-assert.match(html,/今日分數變化/);
+assert.match(html,/最新正式分數變化/);
 assert.match(core,/weeklyJ[\s\S]{0,120}weight:30/);
 assert.match(core,/dd52[\s\S]{0,120}weight:55/);
 assert.match(core,/crash[\s\S]{0,120}weight:15/);

@@ -18,15 +18,15 @@ assert.match(output,/目前分數主要來自[\s\S]*52週回檔/);assert.match(o
 assert.ok(output.indexOf("52週回檔")<output.indexOf("週 J 值")&&output.indexOf("週 J 值")<output.indexOf("20日急跌因子"),"factor order must stay fixed");
 assert.match(output,/原始總分[\s\S]*45\.35/);assert.match(output,/顯示分數[\s\S]*>45</);assert.match(output,/>49<[\s\S]*→[\s\S]*>45<[\s\S]*▼4/);
 assert.match(output,/52週回檔<\/span><b class="is-negative">-2\.80/);assert.match(output,/週 J 值<\/span><b class="is-negative">-1\.20/);assert.match(output,/20日急跌因子<\/span><b class="is-neutral">0\.00/);assert.match(output,/合計<\/span><b class="is-negative">-4\.00/);
-assert.match(output,/今日分數下降主要來自52週回檔與週 J 值轉弱。/);
+assert.match(output,/最新正式分數下降主要來自52週回檔與週 J 值轉弱。/);
 
 output=render(row(50,{dd52:43.05,weekly:6.5,crash:.45}),row(45.8,{dd52:39.05,weekly:6.3,crash:.45}));
-assert.match(output,/class="is-positive">\+4\.00/);assert.match(output,/class="is-positive">\+0\.20/);assert.match(output,/今日分數上升主要由52週回檔帶動。/);
+assert.match(output,/class="is-positive">\+4\.00/);assert.match(output,/class="is-positive">\+0\.20/);assert.match(output,/最新正式分數上升主要由52週回檔帶動。/);
 
 output=render(row(45.35,{dd52:39.08,weekly:6.27,crash:0}),row(45.35,{dd52:39.05,weekly:6.3,crash:0}));
-assert.match(output,/今日分數變化不大，三因子整體維持穩定。/);
+assert.match(output,/最新正式分數變化不大，三因子整體維持穩定。/);
 
-output=render(row(45.35),null);assert.match(output,/因子變化資料暫缺/);assert.match(output,/今日變化[\s\S]*—/);
+output=render(row(45.35),null);assert.match(output,/因子變化資料暫缺/);assert.match(output,/最新正式分數變化[\s\S]*—/);
 output=render(row(45.35,{missing:"dd52"}),row(49.35,{dd52:41.85,weekly:7.5,crash:0}));assert.match(output,/分數拆解資料不完整/);assert.doesNotMatch(output,/約占目前總分/);assert.match(output,/52週回檔[\s\S]*>—</);
 output=render(row(0,{dd52:0,weekly:0,crash:0}),row(0,{dd52:0,weekly:0,crash:0}));assert.doesNotMatch(output,/約占目前總分/);
 
@@ -46,7 +46,7 @@ assert.match(css,/\.radarFactorTitleV32\{[^}]*word-break:keep-all;overflow-wrap:
 assert.match(css,/\.radarFactorMetricV32\{display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%/);
 assert.doesNotMatch(css,/\.radarFactorStackV32\{[^}]*repeat\(/,"V32 base layout must never use a multi-column grid");
 assert.match(css,/@media\(max-width:430px\)\{[\s\S]*?\.radarFactorModelV32\{display:none\}/);
-const stylesheetAt=html.indexOf('formal-black-gold.css?v=20260919-radar-focus-phase9'),criticalAt=html.indexOf('id="radarPhase32CriticalLayout"');
+const stylesheetAt=html.indexOf('formal-black-gold.css?v=20260919-radar-consistency-phase95'),criticalAt=html.indexOf('id="radarPhase32CriticalLayout"');
 assert.ok(stylesheetAt>=0&&criticalAt>stylesheetAt,"fresh HTML must load the versioned CSS before the critical cache safeguard");
 const critical=html.slice(criticalAt,html.indexOf("</style>",criticalAt));
 assert.doesNotMatch(critical,/@media/);assert.match(critical,/\.radarFactorStackV32\{display:flex;flex-direction:column/);assert.match(critical,/\.radarFactorMetricV32\{display:flex;justify-content:space-between/);assert.match(critical,/word-break:keep-all;overflow-wrap:normal/);

@@ -11,7 +11,7 @@ let output=render(45,{display_score:45},{display_score:49});
 assert.match(output,/45[\s\S]*CORE SCORE/);assert.match(output,/試探加碼/);assert.match(output,/49 → 45/);assert.match(output,/▼4/);assert.match(output,/下一級[\s\S]*50 正式加碼訊號/);assert.match(output,/距離[\s\S]*5 分/);
 for(const [score,threshold,label,distance] of [[19,30,"回檔訊號出現",11],[29,30,"回檔訊號出現",1],[39,40,"加碼條件浮現",1],[44,45,"試探加碼",1],[49,50,"正式加碼訊號",1],[64,65,"積極加碼訊號",1],[69,70,"強力加碼訊號",1],[79,80,"重大加碼機會",1],[89,90,"歷史極端機會",1]]){output=render(score,{display_score:score},{display_score:score});assert.match(output,new RegExp(`${threshold} ${label}`));assert.match(output,new RegExp(`>${distance} 分<`))}
 assert.match(render(90,{display_score:90},{display_score:89},"HISTORICAL_EXTREME_OPPORTUNITY"),/已進入最高級別/);
-assert.match(render(45,{display_score:45},null),/今日變化[\s\S]*>—</);
+assert.match(render(45,{display_score:45},null),/最新正式變化[\s\S]*>—</);
 output=render(null,null,{display_score:49},null);assert.match(output,/資料暫缺/);assert.doesNotMatch(output,/試探加碼|正式加碼訊號|強力加碼訊號/);
 const longCard=html.slice(cardStart,cardEnd);assert.match(longCard,/radarDetailCoreStatusHtml/);assert.doesNotMatch(longCard,/signalDetailHero|radarTodayHtml\(x,decision,score,dailyPair\)|detailGrandTotal/);assert.ok(longCard.indexOf("radarDetailCoreStatusHtml")<longCard.indexOf("radarDecisionSummaryHtml")&&longCard.indexOf("radarDecisionSummaryHtml")<longCard.indexOf("radarWhyScoreHtml"));
 assert.match(html.slice(detailStart,detailEnd),/radarOverviewNextLevel\(hasScore\?score:null\)/,"Phase 2 must reuse the Phase 1 next-level helper");

@@ -16,8 +16,8 @@ function row(symbol,score,tier="一般持有",version="FINAL_CORE_WEIGHT_V1",mod
 function snapshot(date,item,type="FINALIZED_CLOSE",finalized=true){return{date,snapshot_type:type,finalized,rows:[{...item,data_as_of:`${date}T13:30:00+08:00`}]};}
 function artifact(snapshots){return{schema_version:1,core_score_version:"FINAL_CORE_WEIGHT_V1",snapshots};}
 const official=artifact([
-  snapshot("2025-08-01",row("00830",10)),snapshot("2026-05-01",row("00830",20)),snapshot("2026-08-01",row("00830",30)),snapshot("2026-08-20",row("00830",39)),snapshot("2026-08-21",row("00830",40,"回檔觀察")),snapshot("2026-08-25",row("00830",52,"小額加碼")),snapshot("2026-09-01",row("00830",66,"正式分批")),snapshot("2026-09-04",row("00830",50,"小額加碼")),
-  snapshot("2026-09-03",row("00830",99,"極端機會"),"INTRADAY",true),snapshot("2026-09-04",row("00878",88,"罕見機會","FINAL_CORE_WEIGHT_V1","AD_HOC"))
+  snapshot("2025-08-01",row("00830",10)),snapshot("2026-05-01",row("00830",20)),snapshot("2026-08-01",row("00830",30)),snapshot("2026-08-20",row("00830",39)),snapshot("2026-08-21",row("00830",40,"加碼條件浮現")),snapshot("2026-08-25",row("00830",52,"正式加碼訊號")),snapshot("2026-09-01",row("00830",66,"積極加碼訊號")),snapshot("2026-09-04",row("00830",50,"正式加碼訊號")),
+  snapshot("2026-09-03",row("00830",99,"歷史極端機會"),"INTRADAY",true),snapshot("2026-09-04",row("00878",88,"重大加碼機會","FINAL_CORE_WEIGHT_V1","AD_HOC"))
 ]);
 
 let series=sandbox.officialC4ComparableSeries("00830",official);
@@ -42,7 +42,7 @@ console.log("I PASS: latest upward threshold crossings are detected");
 assert.notEqual(state.crossings[65],"2026-09-04");
 console.log("J PASS: downward passage is not mislabeled as an upward crossing");
 
-const mixed=artifact([...official.snapshots,snapshot("2026-07-31",row("00830",70,"深跌加碼","OLD_VERSION")),snapshot("2026-07-30",row("00830",80,"罕見機會","OLD_VERSION"))]);series=sandbox.officialC4ComparableSeries("00830",mixed);assert.equal(series.versionBoundary,true);assert.equal(series.rows.some(item=>item.version==="OLD_VERSION"),false);
+const mixed=artifact([...official.snapshots,snapshot("2026-07-31",row("00830",70,"強力加碼訊號","OLD_VERSION")),snapshot("2026-07-30",row("00830",80,"重大加碼機會","OLD_VERSION"))]);series=sandbox.officialC4ComparableSeries("00830",mixed);assert.equal(series.versionBoundary,true);assert.equal(series.rows.some(item=>item.version==="OLD_VERSION"),false);
 console.log("K PASS: a version boundary truncates the comparable series with warning state");
 assert.equal(state.rows.some(item=>item.score===0),false);assert.equal(state.rows.length,5);
 console.log("L PASS: missing dates are neither generated nor filled with zero");
@@ -59,7 +59,7 @@ assert.equal(sandbox.officialC4ComparableSeries("009815",production).status,"UNA
 console.log("P/Q PASS: 009815 WAIT_NATIVE remains outside the trend and 00631L is untouched");
 
 const thresholds=sandbox.officialC4ThresholdContract();assert.deepEqual(Array.from(thresholds,row=>row.value),Array.from(decision.NEXT_THRESHOLDS));assert.equal(sandbox.officialC4TrendRanges.get("00830"),undefined);
-for(const text of ["C4 正式趨勢","目前正式 C4","期間變化","最近跨過 50","最近跨過 65","只連接合法 FINALIZED_CLOSE"])assert.ok(html.includes(text));
+for(const text of ["C4 正式趨勢","目前正式 C4","期間變化","最近跨過 50","最近跨過 65","只連接合法正式盤後紀錄"])assert.ok(html.includes(text));
 assert.match(html,/data-official-c4-range/);assert.match(css,/\.hsC4TrendChart\{/);assert.match(css,/\.hsC4TrendTooltip\{/);assert.match(css,/@media\(max-width:430px\)[\s\S]*?\.hsC4TrendChart svg/);
 console.log("UI PASS: default 90D, 30D/90D/1Y controls, fixed-scale SVG, tooltip and mobile guards exist");
 

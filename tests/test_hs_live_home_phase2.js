@@ -3,7 +3,7 @@ const fs = require("fs");
 const html = fs.readFileSync("index.html", "utf8");
 const css = fs.readFileSync("formal-black-gold.css", "utf8");
 
-assert.match(html, /C4 LIVE TRACKING/);
+assert.match(html, /盤中分數追蹤/);
 assert.match(html, /長期加碼決策/);
 assert.match(html, /id="hsLiveReadScore"[^>]+data-read-core-score/);
 assert.doesNotMatch(html, /function hsLiveNextTier\(score\)/);

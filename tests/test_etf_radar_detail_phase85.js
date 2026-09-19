@@ -8,7 +8,7 @@ const market=html.slice(html.indexOf("function radarMarketPositionHtml"),html.in
 const trend=html.slice(html.indexOf("function radarScoreTrendHtml"),html.indexOf("function featuredDiagnosticFor"));
 
 assert.match(html,/data-radar-ux-phase="8\.5"/);
-assert.match(html,/20260919-radar-focus-phase9/);
+assert.match(html,/20260919-radar-consistency-phase95/);
 assert.ok(longCard.indexOf("radarDetailCoreStatusHtml")<longCard.indexOf("radarDecisionSummaryHtml"));
 assert.ok(longCard.indexOf("radarDecisionSummaryHtml")<longCard.indexOf("radarDetailTrendSummaryHtml"));
 assert.ok(longCard.indexOf("radarDetailTrendSummaryHtml")<longCard.indexOf("radarWhyScoreHtml"));
@@ -18,7 +18,7 @@ assert.ok(longCard.indexOf("radarMarketPositionHtml")<longCard.indexOf("detailAd
 assert.doesNotMatch(longCard,/detailCoreMetrics|scoreReason/);
 
 assert.match(research,/<details class="radarResearchHub" data-radar-research-hub><summary aria-expanded="false">/);
-assert.match(research,/歷史位置 \$\{esc\(position\)\} · 20D \$\{esc\(outcome\)\} · \$\{esc\(sample\)\}/);
+assert.match(research,/歷史位置 \$\{esc\(position\)\} · 20日後 \$\{esc\(outcome\)\} · \$\{esc\(sample\)\}/);
 assert.ok(research.indexOf("radarHistoryPhase6Html(x)")<research.indexOf("radarOutcomePhase7BHtml(x)"));
 assert.match(research,/radarHistoryPhase6Html\(x\)/);assert.match(research,/radarOutcomePhase7BHtml\(x\)/);
 

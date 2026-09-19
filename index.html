@@ -13,7 +13,7 @@
 <meta name="hs-live-source" content="railway" />
 <meta name="hs-live-railway-url" content="https://hs-invest-production.up.railway.app/api/live-scores" />
 <meta name="hs-app-build-sha" content="LOCAL" />
-<meta name="hs-frontend-bundle-version" content="20260919-radar-focus-phase9" />
+<meta name="hs-frontend-bundle-version" content="20260919-radar-consistency-phase95" />
 <link rel="icon" type="image/png" sizes="64x64" href="assets/favicon-v3.png?v=5" />
 <link rel="shortcut icon" href="assets/favicon-v3.ico?v=5" />
 <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon-v3.png?v=5" />
@@ -303,7 +303,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 </style>
 <link rel="stylesheet" href="portfolio-v6.css?v=20260818-rebalance2" />
 <link rel="stylesheet" href="v62-tech.css?v=20260809b" />
-<link rel="stylesheet" href="formal-black-gold.css?v=20260919-radar-focus-phase9" />
+<link rel="stylesheet" href="formal-black-gold.css?v=20260919-radar-consistency-phase95" />
 <style id="radarPhase32CriticalLayout">
 /* Phase 3.2 structural fallback: the renderer is mobile-first even if external CSS is stale. */
 .radarFactorStackV32{display:flex;flex-direction:column;width:100%;min-width:0}
@@ -401,7 +401,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 
   <section id="homeEtfBrief" class="panel homeEtfBrief hsLivePanel" data-tab-section="today" aria-labelledby="homeEtfBriefTitle">
     <div class="panelTitle compactTitle">
-      <div><p class="eyebrow">C4 LIVE TRACKING</p><h2 id="homeEtfBriefTitle"><svg aria-hidden="true"><use href="#i-radar"/></svg>C4 今日盤中追蹤</h2></div>
+      <div><p class="eyebrow">盤中分數追蹤</p><h2 id="homeEtfBriefTitle"><svg aria-hidden="true"><use href="#i-radar"/></svg>C4 今日盤中追蹤</h2></div>
       <button id="hsLiveReadScore" class="hsLiveReadScore" type="button" data-read-core-score="0050">讀懂你的分數</button>
       <small id="updatedTop">載入最新排名</small>
     </div>
@@ -411,7 +411,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
     <details class="hsDashboardDetails">
       <summary>查看完整長期加碼決策</summary>
       <section id="hsTodaySummary" class="hsTodaySummary" aria-live="polite"><div class="hsTodayLoading">今日決策摘要載入中…</div></section>
-      <div class="radarSchedule" aria-label="正式分數與盤中預估資料狀態"><span id="radarCurrentSlot">正式來源｜盤後收盤定稿</span><span id="radarNextSlot">盤中預估｜僅供當日參考</span><span>正式依據｜<b>最新合法 FINALIZED_CLOSE</b></span></div>
+      <div class="radarSchedule" aria-label="正式分數與盤中預估資料狀態"><span id="radarCurrentSlot">正式來源｜盤後收盤定稿</span><span id="radarNextSlot">盤中預估｜僅供當日參考</span><span>正式依據｜<b>最新合法盤後定稿</b></span></div>
       <div id="rankList" class="rankList"><div class="skeleton">載入排名中…</div></div>
     </details>
   </section>
@@ -638,7 +638,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 
   <section id="drawdownTool" class="panel drawdownTool tabHidden" data-tab-section="more" aria-labelledby="drawdownToolTitle">
     <div class="panelTitle compactTitle">
-      <div><p class="eyebrow">DRAWDOWN LEVELS</p><h2 id="drawdownToolTitle">高點回檔價位</h2></div>
+      <div><p class="eyebrow">高點回檔區間</p><h2 id="drawdownToolTitle">高點回檔價位</h2></div>
       <small>官方／現有歷史行情</small>
     </div>
     <form id="drawdownForm" class="drawdownForm" novalidate>
@@ -709,8 +709,8 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       <h2 id="radarModeHeading">弘昇精選</h2>
       <p id="radarModeDescription">經過資料、策略與長期追蹤後，HS 持續關注的 ETF。</p>
     </header>
-    <section id="radarOverview" class="radarOverview" aria-labelledby="radarOverviewTitle" data-radar-overview-phase="8a">
-      <div class="sectionHead radarOverviewHead"><div><p class="eyebrow">ETF RADAR OVERVIEW</p><h2 id="radarOverviewTitle">ETF 加碼與波段總覽</h2></div><small>點擊標的查看完整評分與風險資料</small></div>
+    <section id="radarOverview" class="radarOverview" aria-labelledby="radarOverviewTitle" data-radar-overview-phase="8a" data-radar-consistency-phase="9.5">
+      <div class="sectionHead radarOverviewHead"><div><p class="eyebrow">ETF 雷達總覽</p><h2 id="radarOverviewTitle">ETF 加碼與波段總覽</h2></div><small>點擊標的查看完整評分與風險資料</small></div>
       <div class="radarUpdateStrip"><span id="radarOverviewCurrent">本次更新時段：—</span><span id="radarOverviewNext">下一次更新：—</span></div>
       <div class="radarViewTabs" role="tablist" aria-label="ETF 雷達檢視方式">
         <button class="active" type="button" role="tab" aria-selected="true" data-radar-view="overview">總覽</button>
@@ -721,8 +721,8 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
           <header><div><span>正式狀態摘要</span><h3 id="radarTodayFocusTitle">今日重點</h3></div><small>依最新正式盤後資料</small></header>
           <div id="radarTodayFocusCards" class="radarTodayFocusCards"><p class="radarTodayFocusEmpty">正在整理最新正式狀態…</p></div>
         </section>
-        <article class="panel radarOverviewPanel"><div class="radarOverviewTitle"><span>LONG TERM</span><h3>長期 ETF 買點判讀中心</h3></div><div id="radarOverviewLong" class="radarOverviewLong"><div class="skeleton">載入排名中…</div></div></article>
-        <article class="panel radarOverviewPanel"><div class="radarOverviewTitle"><span>SWING</span><h3>波段 ETF 判讀</h3></div><div id="radarOverviewSwingTabs" class="radarOverviewSwingTabs" role="tablist" aria-label="波段 ETF 切換"></div><div id="radarOverviewSwing" class="radarOverviewSwing"><div class="skeleton">載入波段訊號中…</div></div></article>
+        <article class="panel radarOverviewPanel"><div class="radarOverviewTitle"><span>長期核心</span><h3>長期 ETF 買點判讀中心</h3></div><div id="radarOverviewLong" class="radarOverviewLong"><div class="skeleton">載入排名中…</div></div></article>
+        <article class="panel radarOverviewPanel"><div class="radarOverviewTitle"><span>波段策略</span><h3>波段 ETF 判讀</h3></div><div id="radarOverviewSwingTabs" class="radarOverviewSwingTabs" role="tablist" aria-label="波段 ETF 切換"></div><div id="radarOverviewSwing" class="radarOverviewSwing"><div class="skeleton">載入波段訊號中…</div></div></article>
         <button id="radarSentimentShortcut" class="radarSentimentShortcut" type="button"><span><small>MARKET SENTIMENT</small><b id="radarSentimentText">市場情緒資料彙整中…</b></span><strong>查看完整市場情緒</strong></button>
       </div>
       <section id="radarScoreExplainPane" class="panel radarScoreExplainPane" data-radar-view-panel="explain" hidden>
@@ -2052,7 +2052,7 @@ function todayBuyDecisionText(){
   const longReady=longs.filter(row=>row.d.score>=60).slice(0,2),swingReady=swings.filter(row=>["first","confirmed"].includes(row.d.stage?.key));
   const fear=cnnFearGreed?.score<=44||marketFearMetric()>=60;
   const opening=fear?"市場情緒偏恐懼":"市場情緒未進入極端恐慌";
-  const longText=longReady.length?`${longReady.map(row=>row.x.id).join("、")}進入長期${longReady[0].d.stage?.label||"分批觀察區"}`:"長期核心 ETF 尚未進入明顯加碼區";
+  const longText=longReady.length?`${longReady.map(row=>row.x.id).join("、")}進入長期${longReady[0].d.stage?.label||"正式訊號區"}`:"長期核心 ETF 尚未進入明顯加碼區";
   const swingText=swingReady.length?`${swingReady.map(row=>row.x.id).join("、")}出現波段初步確認`:`波段 ETF 仍等待站回短期均線與動能轉強`;
   return `${opening}，${longText}；${swingText}。資料為延遲行情與最近盤後估值的客觀試算。`;
 }
@@ -2680,7 +2680,7 @@ function renderTop(){
   $("#homeEtfBriefSummary").textContent=homeItems.length?`${sourceLabel}：${strong}／${homeItems.length} 檔進入買點區，${bounce} 檔出現止跌回升。`:`我的自選尚未加入 ETF，點此進入 ETF雷達。`;
   $("#rankList").innerHTML=ranked.length?ranked.slice(0,3).map((x,i)=>`<div class="rankItem buyRankItem"><div class="rankNo">${medals[i]}</div><div class="buyRankBody"><div class="buyRankHead"><b>${x.id}</b><span>${esc(x.name)}</span><em class="${scoreTone(x.score)}">${esc(activeScoreLabel(x))} ${metricScore(x.score)}</em></div><div>技術低檔 ${metricScore(x.technicalLow?.score)}｜止跌確認 ${metricScore(x.stopConfirmation?.score)}｜估值 ${esc(valuationScoreLabel(x))}</div><div>${esc(x.buyStage.label)}｜${esc(x.buyStage.conclusion)}${x.scoreMode==="intraday"?`｜${esc(intradayDeltaText(x))}`:""}</div></div></div>`).join(""):'<div class="newsEmpty">尚無自選 ETF。</div>';
   const radar=activeRadarItems(),sorted=[...radar].sort(scoreSort),low=[...radar].sort((a,b)=>a.j-b.j)[0],best=sorted.find(x=>Number.isFinite(x.score)),radarStrong=radar.filter(x=>x.j<20).length,radarBounce=radar.filter(x=>x.direction==="回升").length,deep=radar.filter(x=>x.j<0).length;
-  $("#snapshotGrid").innerHTML=(best||low)?`<div class="snapshot"><span>最佳同模型買點</span><b>${best?`${best.id} · ${scoreText(best)}`:"模型資料不足"}</b></div><div class="snapshot"><span>最低 J 值</span><b>${low?`${low.id} · ${fmt(low.j)}`:"—"}</b></div><div class="snapshot"><span>進入觀察區</span><b>${radarStrong} / ${radar.length}</b></div><div class="snapshot"><span>J 值回升</span><b>${radarBounce} 檔</b></div><div class="snapshot"><span>J 值低於 0</span><b>${deep} 檔</b></div><div class="snapshot"><span>融資 FOMO</span><b>${marketChip.margin?marketChip.margin.score+" 分":"尚未更新"}</b></div>`:'<div class="newsEmpty">此清單尚無可分析 ETF。</div>';
+  $("#snapshotGrid").innerHTML=(best||low)?`<div class="snapshot"><span>最佳同模型買點</span><b>${best?`${best.id} · ${scoreText(best)}`:"模型資料不足"}</b></div><div class="snapshot"><span>最低週 J 值</span><b>${low?`${low.id} · ${fmt(low.j)}`:"—"}</b></div><div class="snapshot"><span>進入加碼條件</span><b>${radarStrong} / ${radar.length}</b></div><div class="snapshot"><span>週 J 值回升</span><b>${radarBounce} 檔</b></div><div class="snapshot"><span>週 J 值低於 0</span><b>${deep} 檔</b></div><div class="snapshot"><span>融資 FOMO</span><b>${marketChip.margin?marketChip.margin.score+" 分":"尚未更新"}</b></div>`:'<div class="newsEmpty">此清單尚無可分析 ETF。</div>';
   $("#updatedTop").textContent="週 KD 依最近完成資料或目前週線試算";
   renderMarketOverview();
 }
@@ -3050,7 +3050,7 @@ function officialC4TrendHtml(symbol,targetDate=null){
   const range=officialC4TrendRanges.get(symbol)||"90D",state=officialC4TrendState(symbol,range,finalizedCoreScoreHistoryArtifact,targetDate);
   if(state.status!=="READY")return`<details class="hsC4Trend" data-official-c4-trend="${esc(symbol)}"><summary>C4 正式趨勢</summary><div class="hsC4TrendEmpty">正式歷史紀錄尚不足；不以盤中或本機資料補值。</div></details>`;
   const rangeLabel={"30D":"30 日","90D":"90 日","1Y":"1 年"}[state.range],crossing=value=>state.crossings[value]||"NONE",controls=Object.keys(OFFICIAL_C4_TREND_DAYS).map(key=>`<button type="button" class="${key===state.range?"active":""}" data-official-c4-range="${key}" data-official-c4-symbol="${esc(symbol)}">${key}</button>`).join("");
-  return`<details class="hsC4Trend" data-official-c4-trend="${esc(symbol)}"><summary>C4 正式趨勢</summary><div class="hsC4TrendBody"><header><div><small>目前正式 C4</small><b>${state.current.score.toFixed(1)}</b><span>${esc(state.current.tier)}</span></div><nav aria-label="C4 正式趨勢期間">${controls}</nav></header><div class="hsC4TrendSummary"><span>${rangeLabel}最高<b>${state.high.score.toFixed(1)}</b><small>${esc(state.high.date)}</small></span><span>${rangeLabel}最低<b>${state.low.score.toFixed(1)}</b><small>${esc(state.low.date)}</small></span><span>期間變化<b class="${state.change>0?"is-up":state.change<0?"is-down":""}">${esc(officialC4Signed(state.change))}</b><small>${state.start.score.toFixed(1)} → ${state.current.score.toFixed(1)}</small></span></div><div class="hsC4TrendChart">${officialC4TrendChartHtml(state)}</div><div class="hsC4TrendCrossings"><span>最近跨過 50<b>${esc(crossing(50))}</b></span><span>最近跨過 65<b>${esc(crossing(65))}</b></span></div><p>${state.limited?"此期間正式紀錄較少｜":""}${state.versionBoundary?"僅顯示目前模型版本的可比較紀錄｜":""}只連接合法 FINALIZED_CLOSE，不補週末、休市或缺失日期。</p></div></details>`;
+  return`<details class="hsC4Trend" data-official-c4-trend="${esc(symbol)}"><summary>C4 正式趨勢</summary><div class="hsC4TrendBody"><header><div><small>目前正式 C4</small><b>${state.current.score.toFixed(1)}</b><span>${esc(state.current.tier)}</span></div><nav aria-label="C4 正式趨勢期間">${controls}</nav></header><div class="hsC4TrendSummary"><span>${rangeLabel}最高<b>${state.high.score.toFixed(1)}</b><small>${esc(state.high.date)}</small></span><span>${rangeLabel}最低<b>${state.low.score.toFixed(1)}</b><small>${esc(state.low.date)}</small></span><span>期間變化<b class="${state.change>0?"is-up":state.change<0?"is-down":""}">${esc(officialC4Signed(state.change))}</b><small>${state.start.score.toFixed(1)} → ${state.current.score.toFixed(1)}</small></span></div><div class="hsC4TrendChart">${officialC4TrendChartHtml(state)}</div><div class="hsC4TrendCrossings"><span>最近跨過 50<b>${esc(crossing(50))}</b></span><span>最近跨過 65<b>${esc(crossing(65))}</b></span></div><p>${state.limited?"此期間正式紀錄較少｜":""}${state.versionBoundary?"僅顯示目前模型版本的可比較紀錄｜":""}只連接合法正式盤後紀錄，不補週末、休市或缺失日期。</p></div></details>`;
 }
 function longRankRow(x,index,previous,rank=index+1,dualTrackItem=null){
   const decision=homepageFinalDecision(x),presentation=decision?.finalPresentation,score=decision?.score,canonical=decision?x.intraday?.canonical:null,ranked=Number.isFinite(rank)&&Boolean(decision),stageLabel=finalDecisionBadgeLabel(presentation),statusTier=finalDecisionStatusTier(presentation);
@@ -3071,7 +3071,7 @@ function renderTodayHighlights(longs,swings){
   }else{
     $("#todayHighlightsContent").innerHTML='<div class="newsEmpty">正式 C4 資料暫不可用，不以舊盤中資料替代。</div>';
     $("#todayHighlightsDate").textContent="資料暫缺";
-    $("#todayHighlightsConclusion").textContent="UNAVAILABLE｜等待下一筆合法 FINALIZED_CLOSE。";
+    $("#todayHighlightsConclusion").textContent="資料暫不可用｜等待下一筆合法盤後定稿。";
   }
   const profile=$("#myProfileStatus");
   if(profile){
@@ -3289,7 +3289,7 @@ function decisionCenterSystemHealth({dualTrack,officialRows,historyBySymbol,leve
   const items=[],marketState=decisionCenterEffectiveMarketState(dualTrack,now),officialSnapshot=dualTrack?.official_snapshot,officialDate=String(officialSnapshot?.trading_date||officialRows?.[0]?.date||""),officialComplete=officialSnapshot?.source_status==="FINALIZED_EOD"&&officialSnapshot?.snapshot_type==="FINALIZED_CLOSE"&&officialSnapshot?.status==="SUCCESS"&&(officialRows||[]).length===LONG_RADAR_SCORED_CODES.size&&[...LONG_RADAR_SCORED_CODES].every(symbol=>dualTrack?.items?.[symbol]?.official?.status==="FINALIZED"&&dualTrack?.items?.[symbol]?.score_version===LONG_TERM_CORE_SCORE_VERSION);
   const officialAge=window.HSDataFreshnessCore?.tradingDayAge?.(officialDate,targetDate),officialCurrent=officialComplete&&officialDate<=targetDate&&officialAge!==null;
   const officialDelayed=officialAge>3&&marketState!=="HOLIDAY";
-  items.push(officialCurrent?decisionCenterHealthItem("official","正式 C4",officialDelayed?"WARNING":"HEALTHY",officialDelayed?"更新時間需注意":"正常",`最新正式資料：${officialDate}`,officialDelayed?"正式分數時效":"",""):decisionCenterHealthItem("official","正式 C4","ERROR","無法作為正式依據","FINALIZED_CLOSE 資料不完整或版本不符","正式 C4、排名與決策摘要",""));
+  items.push(officialCurrent?decisionCenterHealthItem("official","正式 C4",officialDelayed?"WARNING":"HEALTHY",officialDelayed?"更新時間需注意":"正常",`最新正式資料：${officialDate}`,officialDelayed?"正式分數時效":"",""):decisionCenterHealthItem("official","正式 C4","ERROR","無法作為正式依據","正式盤後資料不完整或版本不符","正式 C4、排名與決策摘要",""));
   const offSession={PREMARKET:"尚未開盤",CLOSED:"目前非交易時段",HOLIDAY:"今日休市"}[marketState];
   if(offSession)items.push(decisionCenterHealthItem("live","盤中預估","HEALTHY",offSession,"非交易時段不要求盤中快照"));
   else{
@@ -3384,9 +3384,9 @@ function radarOverviewNextLevel(displayScoreValue,contract=window.HSDecisionLaye
   return{available:true,isMaxLevel:false,nextThreshold,nextLabel:String(nextStage?.label||"下一級"),distance:nextThreshold-score};
 }
 function radarOverviewScoreDelta(change){
-  if(!Number.isFinite(change))return{label:"— 今日",tone:"is-flat"};
+  if(!Number.isFinite(change))return{label:"— 正式變化",tone:"is-flat"};
   const value=Math.round(change*10)/10,absolute=Number.isInteger(Math.abs(value))?String(Math.abs(value)):Math.abs(value).toFixed(1);
-  return value>0?{label:`▲${absolute} 今日`,tone:"is-up"}:value<0?{label:`▼${absolute} 今日`,tone:"is-down"}:{label:"±0 今日",tone:"is-flat"};
+  return value>0?{label:`▲${absolute} 正式變化`,tone:"is-up"}:value<0?{label:`▼${absolute} 正式變化`,tone:"is-down"}:{label:"±0 正式變化",tone:"is-flat"};
 }
 function radarOverviewFactorRaw(decision,key){const value=Number(decision?.coreFactors?.[key]?.raw);return Number.isFinite(value)?value:null}
 function radarOverviewResearchSummary(x,phase6State=radarHistoryPhase6State(x),outcomeArtifacts=researchC4OutcomeArtifacts,outcomeStatuses=researchC4OutcomeStatus){
@@ -3418,13 +3418,13 @@ function radarTodayFocusCard({symbol,name,rows,percentile},contract=window.HSDec
   const currentScore=Math.floor(Number(current.displayScore)),previousScore=previous?Math.floor(Number(previous.displayScore)):null,currentStage=radarFocusStageFor(currentScore,contract),previousStage=radarFocusStageFor(previousScore,contract),events=[];
   if(currentStage&&previousStage&&currentStage.stage!==previousStage.stage){
     const stages=contract?.STAGES||[],currentIndex=stages.findIndex(stage=>stage.stage===currentStage.stage),previousIndex=stages.findIndex(stage=>stage.stage===previousStage.stage),up=currentScore>previousScore,multi=Math.abs(currentIndex-previousIndex)>1;
-    events.push({type:"CROSS_LEVEL",priority:1,label:"今日跨級",text:up?(multi?`由「${previousStage.label}」進入「${currentStage.label}」`:`今日進入「${currentStage.label}」`):`今日由「${previousStage.label}」回到「${currentStage.label}」`,note:multi?"本次跨越多個分級":"",tone:up?"is-up":"is-down"});
+    events.push({type:"CROSS_LEVEL",priority:1,label:"最新正式跨級",text:up?(multi?`由「${previousStage.label}」進入「${currentStage.label}」`:`最新正式進入「${currentStage.label}」`):`最新正式由「${previousStage.label}」回到「${currentStage.label}」`,note:multi?"本次跨越多個分級":"",tone:up?"is-up":"is-down"});
   }
   const next=radarOverviewNextLevel(currentScore,contract);
   if(next.available&&!next.isMaxLevel&&next.distance<=2)events.push({type:"NEXT_LEVEL",priority:2,label:"距下一級",text:`距「${next.nextLabel}」還差 ${next.distance} 分`,note:"",tone:"is-near"});
   if(Number.isFinite(percentile)&&percentile>=85)events.push({type:"HISTORICAL_PERCENTILE",priority:3,label:"歷史位置",text:`P${percentile}`,note:"屬於較少見的高分區間",tone:"is-history"});
   const delta5=fiveDaysAgo?currentScore-Math.floor(Number(fiveDaysAgo.displayScore)):null;
-  if(Number.isFinite(delta5)&&Math.abs(delta5)>=10)events.push({type:"FIVE_DAY_CHANGE",priority:4,label:"近5日",text:`分數${delta5>0?"上升":"下降"} ${Math.abs(delta5)} 分`,note:`${Math.floor(Number(fiveDaysAgo.displayScore))} → ${currentScore}`,tone:delta5>0?"is-up":"is-down"});
+  if(Number.isFinite(delta5)&&Math.abs(delta5)>=10)events.push({type:"FIVE_DAY_CHANGE",priority:4,label:"近5個正式交易日",text:`分數${delta5>0?"上升":"下降"} ${Math.abs(delta5)} 分`,note:`${Math.floor(Number(fiveDaysAgo.displayScore))} → ${currentScore}`,tone:delta5>0?"is-up":"is-down"});
   if(!events.length)return null;
   return{symbol:String(symbol||current.symbol||""),name:String(name||""),date:String(current.tradingDate||""),score:currentScore,stageLabel:currentStage?.label||"資料不足",priority:Math.min(...events.map(event=>event.priority)),events:events.sort((a,b)=>a.priority-b.priority).slice(0,3)};
 }
@@ -3630,7 +3630,7 @@ async function loadResearchC4Outcomes(){
 function longOverviewCardHtml(x,index,dailyMovement){
   const rank=index+1,decision=homepageFinalDecision(x)||strategyDecisionFor(x,"long_term_core"),presentation=decision?.finalPresentation,score=displayScore(x,"long_term_core"),scoreChange=dailyMovement?.scoreDelta,badgeLabel=finalDecisionBadgeLabel(presentation),scoreDelta=radarOverviewScoreDelta(scoreChange),next=radarOverviewNextLevel(score);
   const weeklyJ=radarOverviewFactorRaw(decision,"weeklyJ")??(Number.isFinite(x.j)?x.j:null),dd52=radarOverviewFactorRaw(decision,"dd52")??(Number.isFinite(x.fromHigh)?x.fromHigh:null),crash=radarOverviewFactorRaw(decision,"crash"),changeTone=Number(x.changePct)>0?"up":Number(x.changePct)<0?"down":"is-flat";
-  return`<button class="radarLongCard" type="button" data-open-radar-detail="${esc(x.id)}"><div class="radarLongIdentityRow">${radarOverviewRankBadgeHtml(rank)}<span class="radarLongIdentity"><b>${esc(x.id)}</b><small>${esc(x.name)}</small></span><span class="radarLongPriceMove ${changeTone}">${signed(x.changePct)}</span></div><div class="radarLongScoreRow"><span class="radarLongScore"><b>${Number.isFinite(score)?score:"—"}</b><small>CORE SCORE</small></span><span class="radarLongState"><b>${esc(badgeLabel)}</b><em class="${scoreDelta.tone}">${esc(scoreDelta.label)}</em></span></div><div class="radarCoreMetrics radarOverviewFactors"><span><small>DD52</small><b>${Number.isFinite(dd52)?fmt(dd52)+"%":"—"}</b><em>${Number.isFinite(dd52)?uiMetricStatus("drawdown",dd52):"資料暫缺"}</em></span><span><small>Weekly J</small><b>${Number.isFinite(weeklyJ)?fmt(weeklyJ):"—"}</b><em>${Number.isFinite(weeklyJ)?uiMetricStatus("j",weeklyJ):"資料暫缺"}</em></span><span><small>Crash 20D</small><b>${Number.isFinite(crash)?fmt(crash)+"%":"—"}</b>${Number.isFinite(crash)?"":'<em>資料暫缺</em>'}</span></div>${radarOverviewResearchHtml(x,next)}${radarRangeBar(score)}</button>`;
+  return`<button class="radarLongCard" type="button" data-open-radar-detail="${esc(x.id)}"><div class="radarLongIdentityRow">${radarOverviewRankBadgeHtml(rank)}<span class="radarLongIdentity"><b>${esc(x.id)}</b><small>${esc(x.name)}</small></span><span class="radarLongPriceMove ${changeTone}">${signed(x.changePct)}</span></div><div class="radarLongScoreRow"><span class="radarLongScore"><b>${Number.isFinite(score)?score:"—"}</b><small>CORE SCORE</small></span><span class="radarLongState"><b>${esc(badgeLabel)}</b><em class="${scoreDelta.tone}">${esc(scoreDelta.label)}</em></span></div><div class="radarCoreMetrics radarOverviewFactors"><span><small>52週回檔</small><b>${Number.isFinite(dd52)?fmt(dd52)+"%":"—"}</b><em>${Number.isFinite(dd52)?uiMetricStatus("drawdown",dd52):"資料暫缺"}</em></span><span><small>週 J 值</small><b>${Number.isFinite(weeklyJ)?fmt(weeklyJ):"—"}</b><em>${Number.isFinite(weeklyJ)?uiMetricStatus("j",weeklyJ):"資料暫缺"}</em></span><span><small>20日急跌因子</small><b>${Number.isFinite(crash)?fmt(crash)+"%":"—"}</b>${Number.isFinite(crash)?"":'<em>資料暫缺</em>'}</span></div>${radarOverviewResearchHtml(x,next)}${radarRangeBar(score)}</button>`;
 }
 function scoreFactorValue(swing,...keys){for(const key of keys){const item=swing?.scoreFactors?.find(part=>part.key===key);if(Number.isFinite(item?.value))return item.value}return null}
 function scoreGaugeHtml(label,value){const safe=Number.isFinite(value)?Math.max(0,Math.min(100,value)):0;return`<div class="scoreGauge" style="--gauge:${safe}"><div><b>${Number.isFinite(value)?Math.round(value):"—"}</b><small>/100</small></div><span>${esc(label)}</span></div>`}
@@ -3680,14 +3680,14 @@ function radarTodayHtml(x,decision,score,dailyPair){
 }
 function radarDetailCoreStatusHtml(x,decision,score,dailyPair,presentation,rank){
   const latest=dailyPair?.latest?.items?.[x.id],previous=dailyPair?.previous?.items?.[x.id],latestScore=officialDisplayScore(latest),previousScore=officialDisplayScore(previous),hasScore=Number.isFinite(score);
-  const delta=Number.isFinite(latestScore)&&Number.isFinite(previousScore)?latestScore-previousScore:null,deltaUi=radarOverviewScoreDelta(delta),deltaLabel=Number.isFinite(delta)?deltaUi.label.replace(" 今日",""):"—";
+  const delta=Number.isFinite(latestScore)&&Number.isFinite(previousScore)?latestScore-previousScore:null,deltaUi=radarOverviewScoreDelta(delta),deltaLabel=Number.isFinite(delta)?deltaUi.label.replace(" 正式變化",""):"—";
   const comparison=Number.isFinite(latestScore)&&Number.isFinite(previousScore)?`${previousScore} → ${latestScore}`:"—",next=radarOverviewNextLevel(hasScore?score:null),badgeLabel=hasScore?finalDecisionBadgeLabel(presentation):"資料暫缺";
   const nextLabel=!next.available?"資料暫缺":next.isMaxLevel?"已進入最高級別":`${next.nextThreshold} ${next.nextLabel}`,distanceLabel=!next.available?"—":next.isMaxLevel?"—":`${next.distance} 分`;
   const asOf=decision?.marketAsOf||latest?.data_as_of||latest?.calculated_at||x.date||"資料時間待更新";
-  return`<section class="radarV2Section radarDetailCoreStatus" aria-label="${esc(x.id)} Core Score 摘要"><div class="radarDetailCoreIdentity">${radarOverviewRankBadgeHtml(rank)}<span><b>${esc(x.id)}</b><small>${esc(x.name)}</small></span></div><div class="radarDetailCoreLead"><span class="radarDetailCoreScore"><b>${hasScore?score:"—"}</b><small>${hasScore?"CORE SCORE":"資料暫缺"}</small></span><strong>${esc(badgeLabel)}</strong></div><div class="radarDetailCoreFacts"><div class="radarDetailCoreDelta"><small>今日變化</small><span><b>${esc(comparison)}</b><em class="${deltaUi.tone}">${esc(deltaLabel)}</em></span></div><div><small>下一級</small><b>${esc(nextLabel)}</b></div><div><small>距離</small><b>${esc(distanceLabel)}</b></div></div><div class="radarDetailCoreRange">${radarRangeBar(hasScore?score:null)}</div><small class="radarDetailCoreAsOf">正式資料截至 ${esc(asOf)}</small></section>`;
+  return`<section class="radarV2Section radarDetailCoreStatus" aria-label="${esc(x.id)} Core Score 摘要"><div class="radarDetailCoreIdentity">${radarOverviewRankBadgeHtml(rank)}<span><b>${esc(x.id)}</b><small>${esc(x.name)}</small></span></div><div class="radarDetailCoreLead"><span class="radarDetailCoreScore"><b>${hasScore?score:"—"}</b><small>${hasScore?"CORE SCORE":"資料暫缺"}</small></span><strong>${esc(badgeLabel)}</strong></div><div class="radarDetailCoreFacts"><div class="radarDetailCoreDelta"><small>最新正式變化</small><span><b>${esc(comparison)}</b><em class="${deltaUi.tone}">${esc(deltaLabel)}</em></span></div><div><small>下一級</small><b>${esc(nextLabel)}</b></div><div><small>距離</small><b>${esc(distanceLabel)}</b></div></div><div class="radarDetailCoreRange">${radarRangeBar(hasScore?score:null)}</div><small class="radarDetailCoreAsOf">正式資料截至 ${esc(asOf)}</small></section>`;
 }
 function radarPrimaryDriver(decision){
-  const factors=decision?.coreFactors||{},labels={weeklyJ:"Weekly J 低檔",dd52:"DD52 回撤深度",crash:"Crash 壓力"};
+  const factors=decision?.coreFactors||{},labels={weeklyJ:"週 J 值低檔",dd52:"52週回檔深度",crash:"20日急跌因子"};
   const winner=Object.entries(factors).map(([key,value])=>({key,ratio:Number(value?.contribution)/Number(value?.weight)})).filter(item=>Number.isFinite(item.ratio)).sort((a,b)=>b.ratio-a.ratio)[0];
   return winner?`目前主要由 ${labels[winner.key]||winner.key} 推升 Core Score。`:"";
 }
@@ -3725,20 +3725,20 @@ function radarFactorAttribution(pair){
 function radarExplainSummary(attribution){
   if(!attribution)return"因子變化資料暫缺";
   const meaningful=attribution.deltas.filter(item=>Math.abs(item.value)>.1),total=attribution.total;
-  if(!meaningful.length)return"今日分數變化不大，三因子整體維持穩定。";
+  if(!meaningful.length)return"最新正式分數變化不大，三因子整體維持穩定。";
   const direction=total<-.1?-1:total>.1?1:0;
-  if(!direction)return"今日分數變化不大，三因子互有消長。";
+  if(!direction)return"最新正式分數變化不大，三因子互有消長。";
   const candidates=meaningful.filter(item=>Math.sign(item.value)===direction).sort((a,b)=>Math.abs(b.value)-Math.abs(a.value));
-  if(!candidates.length)return"今日分數變化不大，三因子互有消長。";
+  if(!candidates.length)return"最新正式分數變化不大，三因子互有消長。";
   const leaders=[candidates[0]],second=candidates[1];if(second&&Math.abs(second.value)>=Math.max(.1,Math.abs(candidates[0].value)*.35))leaders.push(second);
-  const names=leaders.map(item=>item.label).join("與");return direction<0?`今日分數下降主要來自${names}轉弱。`:`今日分數上升主要由${names}帶動。`;
+  const names=leaders.map(item=>item.label).join("與");return direction<0?`最新正式分數下降主要來自${names}轉弱。`:`最新正式分數上升主要由${names}帶動。`;
 }
 function radarWhyScoreHtml(x,decision){
   const pair=radarOfficialFactorPair(x.id),current=pair.current,attribution=radarFactorAttribution(pair),main=current?.complete?[...current.factors].sort((a,b)=>b.contribution-a.contribution)[0]:null,percentage=main&&current.rawTotal>0?Math.round(main.contribution/current.rawTotal*100):null;
   const factorCards=RADAR_EXPLAIN_FACTOR_DEFINITIONS.map(definition=>{const factor=current?.factors?.find(item=>item.key===definition.key),available=factor?.available===true,raw=available?`${radarExplainNumber(factor.raw,2)}${definition.rawSuffix}`:"—";return`<section class="radarFactorCardV32${main?.key===definition.key?" is-main":""}"><header class="radarFactorHeaderV32"><span class="radarFactorTitleV32">${esc(definition.label)}<small class="radarFactorModelV32">${esc(definition.model)}</small></span><strong class="radarFactorValueV32">${raw}</strong></header><div class="radarFactorMetricsV32"><div class="radarFactorMetricV32"><span>因子分數</span><strong>${available?radarExplainNumber(factor.score,2):"—"}</strong></div><div class="radarFactorMetricV32"><span>權重</span><strong>${available?`${radarExplainNumber(factor.weight,0)}%`:"—"}</strong></div><div class="radarFactorMetricV32 is-contribution"><span>分數貢獻</span><strong>${available?radarExplainSigned(factor.contribution,2):"—"}</strong></div></div></section>`}).join("");
   const attributionRows=attribution?attribution.deltas.map(item=>`<div><span>${esc(item.label)}</span><b class="${radarExplainDeltaTone(item.value)}">${radarExplainSigned(item.value,2)}</b></div>`).join(""):"";
   const displayChange=current&&pair.previous?`<div class="radarExplainDisplayChange"><span><b>${pair.previous.displayScore}</b><i>→</i><b>${current.displayScore}</b></span><strong class="${radarExplainDeltaTone(attribution?.displayDelta)}">${Number.isFinite(attribution?.displayDelta)?`${attribution.displayDelta>0?"▲":attribution.displayDelta<0?"▼":""}${Math.abs(attribution.displayDelta)}`:"—"}</strong></div>`:`<div class="radarExplainDisplayChange is-unavailable"><span>今日變化</span><strong>—</strong></div>`;
-  return`<section class="radarV2Section radarWhyScore"><header class="radarExplainTitle"><h3>分數拆解</h3><small>Core Score 正式三因子｜資料來自最新正式盤後</small></header><div class="radarExplainLead"><div class="radarExplainScore"><small>Core Score</small><b>${current?current.displayScore:"—"}</b></div><div class="radarExplainPrimary"><small>目前分數主要來自</small><b>${main?esc(main.label):"資料暫缺"}</b>${Number.isFinite(percentage)?`<em>約占目前總分 ${percentage}%</em>`:""}</div></div><div class="radarFactorStackV32" data-radar-factor-layout="mobile-stack-v32">${factorCards}</div>${current?.complete?`<div class="radarExplainTotals"><span><small>原始總分</small><b>${radarExplainNumber(current.rawTotal,2)}</b></span><span><small>顯示分數</small><b>${current.displayScore}</b></span></div>`:`<p class="radarExplainUnavailable">分數拆解資料不完整</p>`}<section class="radarExplainToday"><header><h4>今日分數變化</h4><small>前一正式盤後 → 目前正式盤後</small></header>${displayChange}${attribution?`<div class="radarExplainAttribution">${attributionRows}<div class="is-total"><span>合計</span><b class="${radarExplainDeltaTone(attribution.total)}">${radarExplainSigned(attribution.total,2)}</b></div></div>`:`<p class="radarExplainUnavailable">因子變化資料暫缺</p>`}<div class="radarExplainReading"><small>今日判讀</small><p>${esc(radarExplainSummary(attribution))}</p></div></section></section>`;
+  return`<section class="radarV2Section radarWhyScore"><header class="radarExplainTitle"><h3>分數拆解</h3><small>Core Score 正式三因子｜資料來自最新正式盤後</small></header><div class="radarExplainLead"><div class="radarExplainScore"><small>Core Score</small><b>${current?current.displayScore:"—"}</b></div><div class="radarExplainPrimary"><small>目前分數主要來自</small><b>${main?esc(main.label):"資料暫缺"}</b>${Number.isFinite(percentage)?`<em>約占目前總分 ${percentage}%</em>`:""}</div></div><div class="radarFactorStackV32" data-radar-factor-layout="mobile-stack-v32">${factorCards}</div>${current?.complete?`<div class="radarExplainTotals"><span><small>原始總分</small><b>${radarExplainNumber(current.rawTotal,2)}</b></span><span><small>顯示分數</small><b>${current.displayScore}</b></span></div>`:`<p class="radarExplainUnavailable">分數拆解資料不完整</p>`}<section class="radarExplainToday"><header><h4>最新正式分數變化</h4><small>前一正式盤後 → 最新正式盤後</small></header>${displayChange}${attribution?`<div class="radarExplainAttribution">${attributionRows}<div class="is-total"><span>合計</span><b class="${radarExplainDeltaTone(attribution.total)}">${radarExplainSigned(attribution.total,2)}</b></div></div>`:`<p class="radarExplainUnavailable">因子變化資料暫缺</p>`}<div class="radarExplainReading"><small>最新判讀</small><p>${esc(radarExplainSummary(attribution))}</p></div></section></section>`;
 }
 const RADAR_TREND_PHASE4_PERIODS={"10D":10,"20D":20,"60D":60,"120D":120};
 function radarTrendPhase4Thresholds(){
@@ -3747,7 +3747,7 @@ function radarTrendPhase4Thresholds(){
 }
 function radarTrendPhase4Level(score,thresholds){
   const contract=window.HSDecisionLayerV1,threshold=[...thresholds].reverse().find(item=>score>=item.value);
-  const label=threshold?.label||contract?.STAGES?.find(stage=>stage.min===0)?.label||"一般";
+  const label=threshold?.label||contract?.STAGES?.find(stage=>stage.min===0)?.label||"一般持有";
   return label;
 }
 function radarTrendPhase4Events(rows,thresholds){
@@ -3800,7 +3800,7 @@ function radarTrendPhase4Summary(state){
 }
 function radarScoreTrendHtml(x){
   const ticker=x.id,period=coreScoreTrendRanges.get(ticker)||"10D",state=radarTrendPhase4State(x,period),controls=Object.keys(RADAR_TREND_PHASE4_PERIODS).map(key=>`<button type="button" class="${state.period===key?"active":""}" aria-pressed="${state.period===key}" data-core-trend-range="${key}" data-core-trend-ticker="${esc(ticker)}">${key}</button>`).join("");
-  const heading=`<header><h3>近期趨勢與訊號</h3><small>僅使用正式盤後資料，不含盤中試算</small></header><nav class="radarTrendP4Ranges" aria-label="近期趨勢期間">${controls}</nav>`;
+  const heading=`<header><h3>近期趨勢與訊號</h3><small>僅使用正式盤後資料｜D = 正式交易日</small></header><nav class="radarTrendP4Ranges" aria-label="近期趨勢期間">${controls}</nav>`;
   if(state.kind!=="READY")return`<section class="radarV2Section radarScoreTrend radarTrendPhase4" data-radar-trend-phase="4" data-etf-id="${esc(ticker)}">${heading}<div class="radarTrendEmpty">${state.kind==="WAIT_NATIVE"?"等待原生資料；不產生趨勢、價格表現或訊號。":"正式盤後資料暫缺；不以盤中或本機資料補值。"}</div></section>`;
   const metric=(label,value,tone="")=>`<div><small>${label}</small><b class="${tone}">${value}</b></div>`;
   const priceHtml=[1,5,20,60].map(days=>{const value=state.priceReturns[days];return metric(`${days}日`,Number.isFinite(value)?`${value>0?"+":""}${value.toFixed(2)}%`:"—",value>0?"is-up":value<0?"is-down":"")}).join("");
@@ -3813,7 +3813,7 @@ function radarDetailTrendSummaryHtml(x){
   const state=radarTrendPhase4State(x,"20D"),metric=(label,value,tone="")=>`<div><small>${label}</small><b class="${tone}">${value}</b></div>`;
   if(state.kind!=="READY")return`<section class="radarDetailTrendSummary"><header><h3>近期趨勢摘要</h3></header><p>${state.kind==="WAIT_NATIVE"?"等待原生資料":"正式盤後資料暫缺"}</p></section>`;
   const score=`${state.delta>0?"+":""}${state.delta}`,price=state.priceReturns[20],dd52=state.dd52;
-  return`<section class="radarDetailTrendSummary"><header><h3>近期趨勢摘要</h3><small>20 個正式交易日</small></header><div>${metric("20D Score",score,state.delta>0?"is-up":state.delta<0?"is-down":"")}${metric("20D Price",Number.isFinite(price)?`${price>0?"+":""}${price.toFixed(2)}%`:"—",price>0?"is-up":price<0?"is-down":"")}${metric("距52週高點",Number.isFinite(dd52)?`${dd52.toFixed(2)}%`:"—",dd52<0?"is-down":"")}</div></section>`;
+  return`<section class="radarDetailTrendSummary"><header><h3>近期趨勢摘要</h3><small>20 個正式交易日</small></header><div>${metric("20日分數變化",score,state.delta>0?"is-up":state.delta<0?"is-down":"")}${metric("20日價格變化",Number.isFinite(price)?`${price>0?"+":""}${price.toFixed(2)}%`:"—",price>0?"is-up":price<0?"is-down":"")}${metric("距52週高點",Number.isFinite(dd52)?`${dd52.toFixed(2)}%`:"—",dd52<0?"is-down":"")}</div></section>`;
 }
 function featuredDiagnosticFor(x,rows=x.officialRows||[],asOfDate=null){
   const evaluator=window.HSGenericEtfDiagnostics;if(!evaluator?.evaluate)return null;
@@ -3903,7 +3903,7 @@ function radarHistoryPhase6Html(x){
   const empty={WAIT_NATIVE:"歷史研究資料暫缺；等待原生資料，不使用替代值。",VERSION_INCOMPATIBLE:"歷史研究資料版本不相容。",RESEARCH_UNAVAILABLE:"歷史研究資料暫不可用。",CURRENT_UNAVAILABLE:"最新正式分數或 52 週回檔資料暫缺。"}[state.kind]||"歷史研究資料暫不可用。";
   if(state.kind!=="READY")return`<section class="detailSection radarHistoryPhase6" data-radar-history-phase="6" data-radar-history-source="research-historical-v1" data-radar-recent-source="finalized-close">${heading}<p class="radarHistoryP6Empty">${empty}</p></section>`;
   const date=value=>value.replaceAll("-","/"),p=value=>`${value.toFixed(1)}%`,current=state.current,next=state.next;
-  return`<section class="detailSection radarHistoryPhase6" data-radar-history-phase="6.6" data-radar-history-source="research-historical-v1" data-radar-recent-source="finalized-close">${heading}<div class="radarHistoryP6Source"><span><b>長期統計</b>歷史研究重建</span><span><b>近期狀態</b>正式盤後紀錄</span></div><div class="radarHistoryP6Group"><h5>Core Score 歷史位置</h5><div class="radarHistoryP6Lead"><span>目前正式分數 <b>${current.displayScore}</b></span><span>歷史百分位 <b>P${state.percentile}</b></span></div><p>高於 ${state.percentile}% 的歷史交易日（含同分）。</p></div><div class="radarHistoryP6Group"><h5>目前級別</h5><div class="radarHistoryP6Line"><span>${esc(current.stageLabel)}</span><strong>歷史出現率 ${p(state.levelRate)}</strong></div><p>${state.levelDays} / ${state.size} 個歷史研究交易日</p><div class="radarHistoryP6Line"><span>最近一次正式進入</span><strong>${state.lastEntry?date(state.lastEntry):"正式樣本起點前不可判定"}</strong></div><div class="radarHistoryP6Line"><span>目前正式持續</span><strong>${state.streakCensored?"至少 ":""}${state.streak} 日</strong></div></div><div class="radarHistoryP6Group"><h5>下一級門檻</h5>${next.isMaxLevel?"<p>已進入最高級別；無下一級門檻。</p>":`<div class="radarHistoryP6Line"><span>${esc(next.nextLabel)}（${next.nextThreshold}+）</span><strong>歷史達到率 ${p(state.nextRate)}</strong></div><p>歷史研究分數 ≥ ${next.nextThreshold}：${state.nextDays} / ${state.size} 日</p>`}</div><div class="radarHistoryP6Group"><h5>52週回檔歷史位置</h5><div class="radarHistoryP6Lead"><span>目前正式 DD52 <b>${current.dd52.toFixed(2)}%</b></span><span>歷史回撤深度 <b>P${state.dd52Percentile}</b></span></div><p>只有約 ${100-state.dd52Percentile}% 的歷史交易日回撤比現在更深。</p></div><div class="radarHistoryP6Group"><h5>近一年歷史重建</h5><div class="radarHistoryP6Line"><span>目前級別出現</span><strong>${state.yearDays} 個交易日</strong></div><div class="radarHistoryP6Line"><span>進入此級別</span><strong>${state.yearEntries} 次</strong></div><p>最近 ${state.yearSize} 個歷史研究交易日；transition 為研究重建，不是正式發布事件。</p></div><p class="radarHistoryP6Foot">統計期間 ${date(state.sampleStart)} ～ ${date(state.sampleEnd)}｜樣本 ${state.size.toLocaleString("zh-TW")} 個交易日。${state.size<120?"樣本較短，歷史位置僅供參考。":""}</p><details class="radarHistoryP6Method"><summary>資料口徑</summary><small>歷史研究重建｜${esc(state.weeklyJVersion)}；目前分數、DD52、最近進入與持續日數仍取正式盤後紀錄。</small></details></section>`;
+  return`<section class="detailSection radarHistoryPhase6" data-radar-history-phase="6.6" data-radar-history-source="research-historical-v1" data-radar-recent-source="finalized-close">${heading}<div class="radarHistoryP6Source"><span><b>長期統計</b>歷史研究重建</span><span><b>近期狀態</b>正式盤後紀錄</span></div><div class="radarHistoryP6Group"><h5>Core Score 歷史位置</h5><div class="radarHistoryP6Lead"><span>目前正式分數 <b>${current.displayScore}</b></span><span>歷史百分位 <b>P${state.percentile}</b></span></div><p>高於 ${state.percentile}% 的歷史交易日（含同分）。</p></div><div class="radarHistoryP6Group"><h5>目前級別</h5><div class="radarHistoryP6Line"><span>${esc(current.stageLabel)}</span><strong>歷史出現率 ${p(state.levelRate)}</strong></div><p>${state.levelDays} / ${state.size} 個歷史研究交易日</p><div class="radarHistoryP6Line"><span>最近一次正式進入</span><strong>${state.lastEntry?date(state.lastEntry):"正式樣本起點前不可判定"}</strong></div><div class="radarHistoryP6Line"><span>目前正式持續</span><strong>${state.streakCensored?"至少 ":""}${state.streak} 日</strong></div></div><div class="radarHistoryP6Group"><h5>下一級門檻</h5>${next.isMaxLevel?"<p>已進入最高級別；無下一級門檻。</p>":`<div class="radarHistoryP6Line"><span>${esc(next.nextLabel)}（${next.nextThreshold}+）</span><strong>歷史達到率 ${p(state.nextRate)}</strong></div><p>歷史研究分數 ≥ ${next.nextThreshold}：${state.nextDays} / ${state.size} 日</p>`}</div><div class="radarHistoryP6Group"><h5>52週回檔歷史位置</h5><div class="radarHistoryP6Lead"><span>目前52週回檔 <b>${current.dd52.toFixed(2)}%</b></span><span>歷史回撤深度 <b>P${state.dd52Percentile}</b></span></div><p>只有約 ${100-state.dd52Percentile}% 的歷史交易日回撤比現在更深。</p></div><div class="radarHistoryP6Group"><h5>近一年歷史重建</h5><div class="radarHistoryP6Line"><span>目前級別出現</span><strong>${state.yearDays} 個交易日</strong></div><div class="radarHistoryP6Line"><span>進入此級別</span><strong>${state.yearEntries} 次</strong></div><p>最近 ${state.yearSize} 個歷史研究交易日；級別轉換為研究重建，不是正式發布事件。</p></div><p class="radarHistoryP6Foot">統計期間 ${date(state.sampleStart)} ～ ${date(state.sampleEnd)}｜樣本 ${state.size.toLocaleString("zh-TW")} 個交易日。${state.size<120?"樣本較短，歷史位置僅供參考。":""}</p><details class="radarHistoryP6Method"><summary>資料口徑</summary><small>歷史研究重建｜${esc(state.weeklyJVersion)}；目前分數、52週回檔、最近進入與持續日數仍取正式盤後紀錄。</small></details></section>`;
 }
 function radarOutcomeDd52Band(value){
   if(!Number.isFinite(value)||value>0)return null;
@@ -3942,10 +3942,11 @@ function radarOutcomeSummaryText(state){
   if(negative.length)return`歷史樣本中，${negative.join("、")}的中位數報酬為負。`;
   return"歷史樣本的中位數報酬接近持平。";
 }
-function radarOutcomeHorizonHtml(day,row){
+function radarOutcomeHorizonHtml(day,row,sampleMode="DAILY_THRESHOLD"){
   const count=Number(row?.sample_count)||0;if(!count)return`<article class="radarOutcomeCard"><header><h5>${day}日後</h5><small>正式交易日</small></header><p class="radarOutcomeImmature">樣本尚未成熟</p></article>`;
   const warning=radarOutcomeSampleWarning(count);
-  return`<article class="radarOutcomeCard"><header><h5>${day}日後</h5><small>正式交易日</small></header><dl><div><dt>中位數</dt><dd class="${radarOutcomeTone(row.median_return)}">${radarOutcomePercent(row.median_return)}</dd></div><div><dt>平均報酬</dt><dd class="${radarOutcomeTone(row.mean_return)}">${radarOutcomePercent(row.mean_return)}</dd></div><div><dt>正報酬比例</dt><dd>${radarOutcomePercent(row.positive_rate,false)}</dd></div><div><dt>樣本</dt><dd>${count}${warning?`<small>${warning}</small>`:""}</dd></div></dl><details class="radarOutcomeDistribution"><summary>查看分布</summary><div><span>P25 <b class="${radarOutcomeTone(row.p25)}">${radarOutcomePercent(row.p25)}</b></span><span>P75 <b class="${radarOutcomeTone(row.p75)}">${radarOutcomePercent(row.p75)}</b></span><span>最佳 <b class="${radarOutcomeTone(row.best_return)}">${radarOutcomePercent(row.best_return)}</b></span><span>最差 <b class="${radarOutcomeTone(row.worst_return)}">${radarOutcomePercent(row.worst_return)}</b></span></div></details></article>`;
+  const sampleLabel=sampleMode==="ENTRY"?"事件樣本":"交易日樣本";
+  return`<article class="radarOutcomeCard"><header><h5>${day}日後</h5><small>正式交易日</small></header><dl><div><dt>中位數</dt><dd class="${radarOutcomeTone(row.median_return)}">${radarOutcomePercent(row.median_return)}</dd></div><div><dt>平均報酬</dt><dd class="${radarOutcomeTone(row.mean_return)}">${radarOutcomePercent(row.mean_return)}</dd></div><div><dt>正報酬比例</dt><dd>${radarOutcomePercent(row.positive_rate,false)}</dd></div><div><dt>${sampleLabel}</dt><dd>${count}${warning?`<small>${warning}</small>`:""}</dd></div></dl><details class="radarOutcomeDistribution"><summary>查看分布</summary><div><span>P25 <b class="${radarOutcomeTone(row.p25)}">${radarOutcomePercent(row.p25)}</b></span><span>P75 <b class="${radarOutcomeTone(row.p75)}">${radarOutcomePercent(row.p75)}</b></span><span>最佳 <b class="${radarOutcomeTone(row.best_return)}">${radarOutcomePercent(row.best_return)}</b></span><span>最差 <b class="${radarOutcomeTone(row.worst_return)}">${radarOutcomePercent(row.worst_return)}</b></span></div></details></article>`;
 }
 function radarOutcomePhase7BHtml(x){
   if(!LONG_RADAR_CODES.has(x?.id))return"";
@@ -3954,13 +3955,13 @@ function radarOutcomePhase7BHtml(x){
   if(unavailable)return`<section class="detailSection radarOutcomesPhase7B" data-radar-outcomes-phase="7b" data-radar-outcomes-source="research-c4-outcomes">${heading}${tabs}<p class="radarOutcomeEmpty">${unavailable}</p></section>`;
   if(state.kind==="GENERAL_NO_ENTRY")return`<section class="detailSection radarOutcomesPhase7B" data-radar-outcomes-phase="7b" data-radar-outcomes-source="research-c4-outcomes">${heading}${tabs}<div class="radarOutcomeCondition"><small>條件</small><b>一般持有（0–29）</b><span>主要口徑：首次向上進入該級別</span></div><p class="radarOutcomeEmpty">目前為一般持有區，此級別不使用「向上進入事件」統計。<button type="button" data-radar-outcome-switch="next">查看下一級以上</button></p></section>`;
   if(state.kind==="MAX_LEVEL")return`<section class="detailSection radarOutcomesPhase7B" data-radar-outcomes-phase="7b" data-radar-outcomes-source="research-c4-outcomes">${heading}${tabs}<div class="radarOutcomeCondition"><small>條件</small><b>${esc(state.current.stageLabel)}</b></div><p class="radarOutcomeEmpty">已為最高級別，沒有更高的正式門檻。</p></section>`;
-  const modeCopy=state.sampleMode==="ENTRY"?`主要口徑：首次向上進入該級別｜歷史進入事件 N=${state.sample.total_records}`:state.sampleMode==="DAILY_THRESHOLD"?"研究口徑：符合門檻的歷史交易日":"研究口徑：相似 52 週回檔的歷史交易日",dailyNote=state.sampleMode==="ENTRY"?"事件樣本以首次向上進入該級別為準。":"交易日樣本可能包含連續區間重疊。",cards=[5,20,40,60].map(day=>radarOutcomeHorizonHtml(day,state.sample.horizons?.[`${day}d`])).join(""),sampleEnd=String(state.artifact.metadata.sample_end||"").replaceAll("-","/");
+  const modeCopy=state.sampleMode==="ENTRY"?`主要口徑：首次向上進入該級別｜歷史進入事件 N=${state.sample.total_records}`:state.sampleMode==="DAILY_THRESHOLD"?"研究口徑：符合門檻的歷史交易日":"研究口徑：相似 52 週回檔的歷史交易日",dailyNote=state.sampleMode==="ENTRY"?"事件樣本以首次向上進入該級別為準。":"交易日樣本可能包含連續區間重疊。",cards=[5,20,40,60].map(day=>radarOutcomeHorizonHtml(day,state.sample.horizons?.[`${day}d`],state.sampleMode)).join(""),sampleEnd=String(state.artifact.metadata.sample_end||"").replaceAll("-","/");
   const method=state.sampleMode==="ENTRY"?`<p>全部進入事件 N=${state.sample.total_records}<br>60日不重疊事件 N=${state.nonOverlap?.total_records??0}</p>`:`<p>${dailyNote}</p>`;
   return`<section class="detailSection radarOutcomesPhase7B" data-radar-outcomes-phase="7b" data-radar-outcomes-source="research-c4-outcomes">${heading}${tabs}<div class="radarOutcomeCondition"><small>條件</small><b>${esc(state.condition)}</b><span>${modeCopy}</span></div><p class="radarOutcomeSummary">${esc(radarOutcomeSummaryText(state))}</p><div class="radarOutcomeGrid">${cards}</div><p class="radarOutcomeAsOf">研究資料截至 ${esc(sampleEnd)}</p><details class="radarOutcomeMethod"><summary>研究口徑</summary>${method}<small>${esc(state.artifact.metadata.weekly_j_version)}｜${esc(state.artifact.metadata.forward_definition)}</small></details><p class="radarOutcomeDisclaimer">歷史統計不代表未來結果。不同市場環境、ETF 成分與制度變化，都可能使未來表現不同。<br>${dailyNote}</p></section>`;
 }
 function radarHistoricalResearchHtml(x){
   const state=radarOverviewResearchSummary(x),position=Number.isFinite(state.percentile)?`P${state.percentile}`:"—",outcome=state.available?radarOutcomePercent(state.median20):"—",sample=state.available?`N=${state.sampleCount}`:state.kind==="WAIT_NATIVE"?"等待原生資料":"樣本不足";
-  return`<details class="radarResearchHub" data-radar-research-hub><summary aria-expanded="false"><span><b>歷史研究</b><small>歷史位置 ${esc(position)} · 20D ${esc(outcome)} · ${esc(sample)}</small></span><i aria-hidden="true">⌄</i></summary><div class="radarResearchHubBody">${radarHistoryPhase6Html(x)}${radarOutcomePhase7BHtml(x)}</div></details>`;
+  return`<details class="radarResearchHub" data-radar-research-hub><summary aria-expanded="false"><span><b>歷史研究</b><small>歷史位置 ${esc(position)} · 20日後 ${esc(outcome)} · ${esc(sample)}</small></span><i aria-hidden="true">⌄</i></summary><div class="radarResearchHubBody">${radarHistoryPhase6Html(x)}${radarOutcomePhase7BHtml(x)}</div></details>`;
 }
 function detailAdvancedHtml(x){return`${radarHistoricalResearchHtml(x)}<details class="detailAdvanced"><summary aria-expanded="false">其他詳細資料</summary>${valuationDetailsHtml(x)}${legacyComparisonHtml(x)}<section class="detailSection"><h4>歷史相似訊號統計</h4>${similarStatsHtml(x.historyStats.sameEnvironment,`相同市場環境｜${x.environment}`)}${similarStatsHtml(x.historyStats.allEnvironments,"全部市場環境")}</section>${buyPlanHtml(x)}</details>`}
 function buildRadarV2Card({x,mode,decision,stage,score,longRank,longRankChange,longScoreChange,formal,detailScoreState,tradeState,dailyPair}){
