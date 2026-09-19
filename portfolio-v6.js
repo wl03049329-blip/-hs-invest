@@ -139,6 +139,17 @@
     return `${sign}${number(value, 2)}%`;
   }
 
+  function plainPercent(value) {
+    if (!Number.isFinite(value)) return "—";
+    return `${number(value, 1)}%`;
+  }
+
+  function point(value) {
+    if (!Number.isFinite(value)) return "—";
+    const sign = value > 0 ? "+" : "";
+    return `${sign}${number(value, 1)}pt`;
+  }
+
   function valueClass(value) {
     if (!Number.isFinite(value) || value === 0) return "twFlat";
     return value > 0 ? "twUp" : "twDown";
@@ -178,26 +189,38 @@
 
   function renderSummary() {
     const element = $v6("#portfolioSummary");
+    const heroValue = $v6("#portfolioHeroMarketValue");
+    const holdingCount = $v6("#portfolioHoldingCount");
+    const currentRows = computed.rows.filter(row => row.quoteStatus === "current" && Number.isFinite(row.marketValue));
+    const marketReady = holdings.length > 0 && currentRows.length === holdings.length;
+    const marketValue = marketReady ? currentRows.reduce((sum, row) => sum + row.marketValue, 0) : null;
+    const pnlReady = marketReady && currentRows.every(row => Number.isFinite(row.totalPnl));
+    const totalPnl = pnlReady ? currentRows.reduce((sum, row) => sum + row.totalPnl, 0) : null;
+    const totalCost = pnlReady ? currentRows.reduce((sum, row) => sum + row.totalCost, 0) : null;
+    const returnRate = pnlReady && totalCost > 0 ? totalPnl / totalCost * 100 : null;
+    let cashConfigured = false;
+    try {
+      const stored = JSON.parse(localStorage.getItem(REBALANCE_SETTINGS_KEY) || "null");
+      cashConfigured = Boolean(stored && Object.prototype.hasOwnProperty.call(stored, "cash"));
+    } catch {}
+    holdingCount.textContent = holdings.length ? `持有 ${holdings.length} 檔` : "尚未建立持股";
+    heroValue.textContent = Number.isFinite(marketValue) ? money(marketValue) : holdings.length ? "行情資料暫缺" : "—";
     if (!holdings.length) {
       element.innerHTML = [
-        ["今日損益", "資料更新中", "今日報酬率 —"],
-        ["累積損益", "資料更新中", "總報酬率 —"],
-        ["股票市值", "資料更新中", "總投入成本 —"]
+        ["今日損益", "—", "尚無持股"],
+        ["未實現損益", "—", "尚無持股"],
+        ["可投入現金", cashConfigured ? money(rebalanceSettings.cash) : "尚未設定", "可於智慧再平衡設定"]
       ].map(([label, value, note]) => `<article class="summaryCard"><span>${label}</span><b class="dataPending">${value}</b><small>${note}</small></article>`).join("");
       return;
     }
-    if (!computed.complete) {
-      element.innerHTML = [
-        ["今日損益", "資料更新中", "等待全部持股行情"],
-        ["累積損益", "資料更新中", "缺少價格不會誤算為 0"],
-        ["股票市值", "資料更新中", computed.fallbackCount ? `${computed.fallbackCount} 檔僅供最後有效價格參考` : "已保留最後成功價格"]
-      ].map(([label, value, note]) => `<article class="summaryCard"><span>${label}</span><b class="dataPending">${value}</b><small>${note}</small></article>`).join("");
-      return;
-    }
+    const todayValue = computed.complete ? money(computed.todayPnl) : "—";
+    const todayNote = computed.complete ? `今日報酬率 ${percent(computed.todayRate)}` : "尚無可靠盤中損益資料";
+    const totalValue = Number.isFinite(totalPnl) ? money(totalPnl) : "—";
+    const totalNote = Number.isFinite(returnRate) ? `總報酬率 ${percent(returnRate)}` : "缺少價格不會誤算為 0";
     element.innerHTML = `
-      <article class="summaryCard"><span>今日損益</span><b class="${valueClass(computed.todayPnl)}">${money(computed.todayPnl)}</b><small class="${valueClass(computed.todayRate)}">今日報酬率 ${percent(computed.todayRate)}</small></article>
-      <article class="summaryCard"><span>累積損益</span><b class="${valueClass(computed.totalPnl)}">${money(computed.totalPnl)}</b><small class="${valueClass(computed.returnRate)}">總報酬率 ${percent(computed.returnRate)}</small></article>
-      <article class="summaryCard"><span>股票市值</span><b>${money(computed.totalMarketValue)}</b><small>總投入成本 ${money(computed.totalCost)}</small></article>`;
+      <article class="summaryCard"><span>今日損益</span><b class="${valueClass(computed.todayPnl)}">${todayValue}</b><small class="${valueClass(computed.todayRate)}">${todayNote}</small></article>
+      <article class="summaryCard"><span>未實現損益</span><b class="${valueClass(totalPnl)}">${totalValue}</b><small class="${valueClass(returnRate)}">${totalNote}</small></article>
+      <article class="summaryCard"><span>可投入現金</span><b>${cashConfigured ? money(rebalanceSettings.cash) : "尚未設定"}</b><small>可於智慧再平衡設定</small></article>`;
   }
 
   function holdingName(row) {
@@ -208,7 +231,9 @@
     try {
       const item = Array.isArray(all) ? all.find(entry => entry.id === code) : null;
       if (!item) return null;
-      return {score: Number.isFinite(item.score) ? item.score : null, trend: item.trend?.label || "趨勢資料暫缺", action: item.action || "買點資料暫缺", strategyType: item.activeStrategyMode || "", swing: item.swingDecision || null};
+      const score = Number(item.formalScore ?? item.strategyDecisions?.long_term_core?.score ?? item.score);
+      const classification = Number.isFinite(score) ? window.HSFinalCoreProduction?.labelFor?.(score) : null;
+      return {score: Number.isFinite(score) ? score : null, coreLabel: classification?.label || item.strategyDecisions?.long_term_core?.label || "正式訊號暫缺", trend: item.trend?.label || "趨勢資料暫缺", action: item.action || "買點資料暫缺", strategyType: item.activeStrategyMode || "", swing: item.swingDecision || null};
     } catch {
       return null;
     }
@@ -221,19 +246,43 @@
 
   function sortedRows() {
     const mode = $v6("#portfolioSort").value;
-    const rows = [...computed.rows];
-    if (mode === "code") return rows.sort((a, b) => a.code.localeCompare(b.code));
-    return rows.sort((a, b) => {
-      const left = Number.isFinite(a[mode]) ? a[mode] : -Infinity;
-      const right = Number.isFinite(b[mode]) ? b[mode] : -Infinity;
-      return right - left || a.code.localeCompare(b.code);
+    const rows = computed.rows.map(row => ({...row, coreScore: radarFor(row.code)?.score ?? null}));
+    return core.sortPortfolioRows(rows, mode);
+  }
+
+  function renderPortfolioDecisionSupport() {
+    const targetState = core.validateTargetAllocations(holdings);
+    const health = targetState.complete ? core.allocationHealthScore(computed.rows) : null;
+    const healthElement = $v6("#portfolioAllocationHealth");
+    const healthLabel = $v6("#portfolioAllocationHealthLabel");
+    healthElement.textContent = Number.isFinite(health) ? String(health) : "—";
+    healthLabel.textContent = Number.isFinite(health) ? health >= 90 ? "接近目標" : health >= 75 ? "輕度偏離" : "需要檢視" : "等待完整目標配置";
+    const attentionRows = computed.rows.map(row => {
+      const radar = radarFor(row.code);
+      return {...row, name: holdingName(row), coreScore: radar?.score ?? null, coreLabel: radar?.coreLabel || ""};
     });
+    const attention = core.buildPortfolioAttention(attentionRows);
+    const output = $v6("#portfolioAttentionList");
+    if (!holdings.length) {
+      output.innerHTML = '<div class="portfolioAttentionEmpty"><b>尚未建立個人持股</b><span>新增持股後，系統會整理配置與正式 HS 訊號。</span></div>';
+      return;
+    }
+    if (!attention.length) {
+      output.innerHTML = '<div class="portfolioAttentionEmpty is-clear"><b>✓ 目前沒有需要特別注意的持股</b><span>配置與 HS 訊號目前沒有明顯異常。</span></div>';
+      return;
+    }
+    output.innerHTML = attention.map(item => {
+      const allocationText = item.allocationState === "under" ? `配置低於目標 ${number(Math.abs(item.gap), 1)}pt` : item.allocationState === "over" ? `配置高於目標 ${number(item.gap, 1)}pt` : "";
+      const scoreText = Number.isFinite(item.coreScore) ? `HS ${number(item.coreScore, 0)}｜${escapeHtml(item.coreLabel)}` : "";
+      return `<article class="portfolioAttentionItem priority-${item.priority}"><div><b>${escapeHtml(item.code)}</b><span>${escapeHtml(item.name || item.code)}</span></div><p>${[allocationText, scoreText].filter(Boolean).join("<br>")}</p></article>`;
+    }).join("");
   }
 
   function renderList() {
     const list = $v6("#portfolioList");
     if (!holdings.length) {
-      list.innerHTML = '<div class="portfolioEmpty">尚未新增持股。資料只會儲存在你的裝置。</div>';
+      list.innerHTML = '<div class="portfolioEmpty"><b>尚未建立個人持股</b><span>新增持股後，HS 將自動整理總市值、損益、配置、目標比例與 Core Score 狀態。</span><button class="btn" type="button" data-portfolio-empty-add>＋ 新增第一筆持股</button></div>';
+      list.querySelector("[data-portfolio-empty-add]")?.addEventListener("click", () => openPortfolioModal());
       return;
     }
     list.innerHTML = sortedRows().map(row => {
@@ -243,21 +292,21 @@
       const quoteState = quoteMissing ? "行情暫缺" : quoteStale ? "最後有效資料" : "最新行情";
       const name = holdingName(row);
       const radarHtml = radar
-        ? `<span class="radarPill">買點 ${radar.score === null ? "—" : radar.score} 分</span><b>${escapeHtml(radar.trend)}</b><span>${escapeHtml(radar.action)}</span>`
-        : '<span class="radarPill">買點 —</span><span>尚未加入「ETF雷達」，無買點資料</span>';
+        ? `<span class="radarPill">HS ${radar.score === null ? "—" : number(radar.score, 0)}</span><b>${escapeHtml(radar.coreLabel)}</b><span>正式 Core Score</span>`
+        : '<span class="radarPill">HS —</span><span>正式 Core Score 暫缺</span>';
       const tradeLabel = radar?.strategyType === "swing00733" ? "00733 強勢趨勢拉回" : radar?.strategyType === "swing006201" ? "006201 上櫃低檔轉折" : "";
       const trendProtected = radar?.swing?.strategyType === "swing00733" && radar.swing.stage?.number >= 3;
       const rebalance = core.rebalanceDecision({actualWeight: row.weight, targetAllocation: row.targetAllocation, trendProtected});
       const trade = tradeLabel ? window.HSPersistenceCore?.loadTradeState?.(row.code) : null;
       const peakProfit = trade?.entryPrice > 0 && trade?.peakPrice > 0 ? (trade.peakPrice / trade.entryPrice - 1) * 100 : null;
+      const allocationGap = Number.isFinite(row.weight) && Number.isFinite(row.targetAllocation) ? row.weight - row.targetAllocation : null;
+      const allocationState = !Number.isFinite(allocationGap) ? "尚未設定目標" : Math.abs(allocationGap) <= 1 ? "接近目標" : allocationGap > 0 ? `高於目標 ${number(allocationGap, 1)}pt` : `低於目標 ${number(Math.abs(allocationGap), 1)}pt`;
       return `<article class="holdingCard${quoteStale ? " holdingQuoteStale" : ""}" data-holding-code="${escapeHtml(row.code)}">
-        <div class="holdingMain">
-          <div class="holdingIdentity"><b>${escapeHtml(row.code)}</b><span>${escapeHtml(name)}</span></div>
-          <div class="holdingMetric"><span>今日損益</span><b class="${valueClass(row.todayPnl)}">${quoteMissing || quoteStale ? quoteState : money(row.todayPnl)}</b></div>
-          <div class="holdingMetric"><span>漲跌幅</span><b class="${valueClass(row.changeRate)}">${quoteMissing || quoteStale ? "—" : percent(row.changeRate)}</b></div>
-          <div class="holdingMetric"><span>累積損益</span><b class="${valueClass(row.totalPnl)}">${quoteMissing || quoteStale ? quoteState : money(row.totalPnl)}</b></div>
-          <div class="holdingActions"><button type="button" data-edit-holding="${escapeHtml(row.code)}" aria-label="修改 ${escapeHtml(row.code)} 持股">修改</button><button type="button" data-delete-holding="${escapeHtml(row.code)}" aria-label="刪除 ${escapeHtml(row.code)} 持股">刪除</button></div>
-        </div>
+        <header class="holdingCardHead"><div class="holdingIdentity"><b>${escapeHtml(row.code)}</b><span>${escapeHtml(name)}</span></div><div class="holdingDayMove"><span>今日漲跌</span><b class="${valueClass(row.changeRate)}">${quoteMissing || quoteStale ? "—" : percent(row.changeRate)}</b></div></header>
+        <div class="holdingMarketValue"><span>市值</span><b>${Number.isFinite(row.marketValue) ? money(row.marketValue) : "行情暫缺"}</b><small>${quoteStale ? "最後有效資料" : quoteMissing ? "尚無價格" : "目前部位價值"}</small></div>
+        <div class="holdingAllocationRow"><span>配置 <b>${plainPercent(row.weight)}</b></span><span>目標 <b>${Number.isFinite(row.targetAllocation) ? plainPercent(row.targetAllocation) : "未設定"}</b></span><span class="holdingAllocationGap">偏差 <b>${point(allocationGap)}</b><small>${allocationState}</small></span></div>
+        <div class="holdingPositionRow"><span>均價 <b>${money(row.averageCost)}</b></span><span>現價 <b>${quoteMissing ? "行情暫缺" : money(row.quote.price)}</b></span><span>未實現損益 <b class="${valueClass(row.returnRate)}">${percent(row.returnRate)}</b></span></div>
+        <footer class="holdingCardFooter"><div class="holdingRadar">${radarHtml}</div><div class="holdingActions"><button type="button" data-edit-holding="${escapeHtml(row.code)}" aria-label="修改 ${escapeHtml(row.code)} 持股">修改</button><button type="button" data-delete-holding="${escapeHtml(row.code)}" aria-label="刪除 ${escapeHtml(row.code)} 持股">刪除</button></div></footer>
         <details class="holdingDetails">
           <summary>展開股數、成本、市值與占比</summary>
           <div class="holdingRadar">${radarHtml}</div>
@@ -267,7 +316,7 @@
             <div><span>總成本</span><b>${money(row.totalCost)}</b></div>
             <div><span>目前股價</span><b>${quoteMissing ? "行情暫缺" : `${money(row.quote.price)}${quoteStale ? "（最後有效）" : ""}`}</b></div>
             <div><span>目前市值</span><b>${quoteMissing ? `${money(row.allocationValue)}（成本暫估）` : `${money(row.marketValue)}${quoteStale ? "（最後有效）" : ""}`}</b></div>
-            <div><span>市值占比</span><b>${percent(row.weight)}</b></div>
+            <div><span>市值占比</span><b>${plainPercent(row.weight)}</b></div>
             <div><span>累積報酬率</span><b class="${valueClass(row.returnRate)}">${percent(row.returnRate)}</b></div>
             <div><span>行情狀態</span><b>${escapeHtml(quoteState)}</b></div>
             <div><span>行情時間</span><b>${escapeHtml(row.quote?.asOf || row.quote?.date || "行情暫缺")}</b></div>
@@ -392,6 +441,7 @@
     const simulation = $v6("#rebalanceSimulation");
     if (simulation) simulation.hidden = true;
     renderSummary();
+    renderPortfolioDecisionSupport();
     renderList();
     drawAllocation();
     renderRebalance(focusTarget);

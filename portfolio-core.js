@@ -315,6 +315,72 @@
     };
   }
 
+  // Presentation-only health indicator: 100 means current weights match targets.
+  // Total absolute deviation is halved because an overweight and an underweight
+  // describe the same allocation shift from opposite sides of the portfolio.
+  function allocationHealthScore(rows = []) {
+    const pairs = (Array.isArray(rows) ? rows : []).map(row => {
+      const currentRaw = row?.weight ?? row?.actualWeight;
+      const targetRaw = row?.targetAllocation ?? row?.targetWeight;
+      if (currentRaw === null || currentRaw === undefined || targetRaw === null || targetRaw === undefined || targetRaw === "") return null;
+      const current = Number(currentRaw);
+      const target = Number(targetRaw);
+      return Number.isFinite(current) && Number.isFinite(target) ? {current, target} : null;
+    }).filter(Boolean);
+    if (!pairs.length) return null;
+    const deviation = pairs.reduce((sum, row) => sum + Math.abs(row.current - row.target), 0) / 2;
+    return Number(clamp(100 - deviation, 0, 100).toFixed(0));
+  }
+
+  function buildPortfolioAttention(rows = [], {deviationThreshold = 3, highScoreThreshold = 40} = {}) {
+    const threshold = Number.isFinite(Number(deviationThreshold)) ? Math.max(0, Number(deviationThreshold)) : 3;
+    const scoreThreshold = Number.isFinite(Number(highScoreThreshold)) ? Number(highScoreThreshold) : 40;
+    return (Array.isArray(rows) ? rows : []).map(raw => {
+      const code = normalizeCode(raw?.code);
+      const current = raw?.weight === null || raw?.weight === undefined || raw?.weight === "" ? NaN : Number(raw.weight);
+      const target = raw?.targetAllocation === null || raw?.targetAllocation === undefined || raw?.targetAllocation === "" ? NaN : Number(raw.targetAllocation);
+      const score = Number(raw?.coreScore);
+      const gap = Number.isFinite(current) && Number.isFinite(target) ? Number((current - target).toFixed(2)) : null;
+      const under = Number.isFinite(gap) && gap <= -threshold;
+      const over = Number.isFinite(gap) && gap >= threshold;
+      const highScore = Number.isFinite(score) && score >= scoreThreshold;
+      if (!CODE_PATTERN.test(code) || (!under && !over && !highScore)) return null;
+      const priority = highScore && under ? 1 : under ? 2 : highScore ? 3 : 4;
+      return {
+        code,
+        name: sanitizeName(raw?.name),
+        priority,
+        gap,
+        allocationState: under ? "under" : over ? "over" : "near",
+        coreScore: Number.isFinite(score) ? score : null,
+        coreLabel: sanitizeName(raw?.coreLabel)
+      };
+    }).filter(Boolean).sort((a, b) => {
+      if (a.priority !== b.priority) return a.priority - b.priority;
+      if (a.priority === 1 || a.priority === 3) {
+        const byScore = (b.coreScore ?? -Infinity) - (a.coreScore ?? -Infinity);
+        if (byScore) return byScore;
+      }
+      const byGap = Math.abs(b.gap ?? 0) - Math.abs(a.gap ?? 0);
+      return byGap || a.code.localeCompare(b.code);
+    });
+  }
+
+  function sortPortfolioRows(rows = [], mode = "marketValue") {
+    const allowed = new Set(["marketValue", "weight", "totalPnl", "coreScore", "code"]);
+    const selected = allowed.has(mode) ? mode : "marketValue";
+    const output = [...(Array.isArray(rows) ? rows : [])];
+    if (selected === "code") return output.sort((a, b) => normalizeCode(a?.code).localeCompare(normalizeCode(b?.code)));
+    return output.sort((a, b) => {
+      const leftRaw = a?.[selected], rightRaw = b?.[selected];
+      const left = leftRaw === null || leftRaw === undefined || leftRaw === "" ? NaN : Number(leftRaw);
+      const right = rightRaw === null || rightRaw === undefined || rightRaw === "" ? NaN : Number(rightRaw);
+      const leftValue = Number.isFinite(left) ? left : -Infinity;
+      const rightValue = Number.isFinite(right) ? right : -Infinity;
+      return rightValue - leftValue || normalizeCode(a?.code).localeCompare(normalizeCode(b?.code));
+    });
+  }
+
   function quoteAsOf(quote) {
     const date = String(quote?.date ?? "");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return "";
@@ -619,6 +685,9 @@
     calculateRebalanceAdvice,
     rebalanceDecision,
     buildRebalanceReadout,
+    allocationHealthScore,
+    buildPortfolioAttention,
+    sortPortfolioRows,
     calculatePortfolio,
     quoteFreshness,
     quoteAsOf,
