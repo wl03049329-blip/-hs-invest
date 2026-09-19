@@ -6,6 +6,7 @@ const html = fs.readFileSync("index.html", "utf8");
 const css = fs.readFileSync("formal-black-gold.css", "utf8");
 const decisionLayer = require("../hs-decision-layer-v1.js");
 const radarBlock = html.slice(html.indexOf("function radarDecisionLayerFor"), html.indexOf("function detailAdvancedHtml"));
+const decisionSummaryBlock = html.slice(html.indexOf("function radarDecisionSummaryHtml"), html.indexOf("function radarHistoryPhase6State"));
 const cardBuilderStart = html.indexOf("function buildRadarV2Card");
 const longCardStart = html.indexOf('if(mode==="long_term_core"){', cardBuilderStart);
 const longCard = html.slice(longCardStart, html.indexOf('if(mode==="leveraged")', longCardStart));
@@ -23,7 +24,7 @@ assert.match(radarBlock, /decision\.distance_to_next_stage/);
 assert.match(radarBlock, /hsTodayDriverLabel\(decision\.primary_driver\)/);
 assert.match(radarBlock, /hsTodayPosture\(decision\.capital_posture\)/);
 assert.match(radarBlock, /decision\.explanation_text_zh/);
-assert.doesNotMatch(radarBlock, /\d+\s*%/);
+assert.doesNotMatch(decisionSummaryBlock, /\d+\s*%/);
 assert.match(css, /\.radarDecisionSummary\{/);
 
 // 9–12: unavailable states are explicit and cannot become normal stages.

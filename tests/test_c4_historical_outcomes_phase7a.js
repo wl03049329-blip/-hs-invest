@@ -120,8 +120,8 @@ for(const symbol of engine.SYMBOLS){
 }
 
 assert.deepEqual(Object.fromEntries(protectedFiles.map(file=>[file,hashFile(file)])),protectedBefore);
-assert.doesNotMatch(fs.readFileSync(path.join(ROOT,"index.html"),"utf8"),/c4_outcomes|RESEARCH_HISTORICAL_OUTCOME_V1/);
-assert.doesNotMatch(fs.readFileSync(path.join(ROOT,"formal-black-gold.css"),"utf8"),/c4_outcomes|Historical Outcome/);
+// Phase 7B may consume these immutable research outputs in the frontend. Phase 7A
+// continues to guard the generated artifacts and protected production files above.
 
 // Generated artifacts are self-verifying and keep raw/summary separate.
 for(const file of ["index.json",...engine.SYMBOLS.flatMap(symbol=>[`raw/${symbol}.json`,`summary/${symbol}.json`])]){
