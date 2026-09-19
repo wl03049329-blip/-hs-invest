@@ -38,5 +38,5 @@ test("27 state contracts persist independently",()=>{const s=storage();dispatch.
 test("28 UI marker, Chinese-first status and accessible control",()=>{assert.match(html,/data-radar-notification-phase="11b1"/);assert.match(source,/開啟系統通知/);assert.match(source,/系統通知/);assert.match(css,/\.radarNotificationSettings button\{[^}]*min-height:44px/)});
 test("29 no Push API, service worker push or test notification in Phase 11B1",()=>{const moduleSource=fs.readFileSync(path.join(root,"radar-notification-dispatch-v1.js"),"utf8");assert.doesNotMatch(moduleSource,/PushManager|pushManager|serviceWorker|subscribe|測試通知/)});
 test("30 click integration uses existing radar route",()=>assert.match(source,/onOpen:data=>\{switchTab\("signals",\{scroll:false\}\);showRadarDetail\(data\.etf\)\}/));
-test("31 asset version and dispatch module are loaded",()=>{assert.match(html,/20260919-radar-notifications-phase11b1/);assert.match(html,/radar-notification-dispatch-v1\.js/)});
+test("31 asset version and dispatch module are loaded",()=>{assert.match(html,/20260919-background-web-push-phase11b2a/);assert.match(html,/radar-notification-dispatch-v1\.js/)});
 console.log(`${passed}/${passed} Phase 11B1 notification dispatch tests passed`);
