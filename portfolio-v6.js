@@ -4,7 +4,8 @@
   const core = window.HSPortfolioCore;
   const performanceCore = window.HSPortfolioPerformanceCore;
   const ledgerCore = window.HSPortfolioLedgerCore;
-  if (!core || !performanceCore || !ledgerCore) return;
+  const analyticsCore = window.HSPortfolioAnalyticsCore;
+  if (!core || !performanceCore || !ledgerCore || !analyticsCore) return;
 
   const storageKeys = window.HSPersistenceCore?.keys || {};
   const HOLDINGS_KEY = storageKeys.holdings || "hsRadar.portfolio.holdings";
@@ -44,11 +45,14 @@
   let portfolioHistoryInvalidCount = 0;
   let portfolioHistory = loadPortfolioHistory();
   let benchmarkRows = [];
-  let performancePeriod = "1M";
+  let portfolioAnalysisPeriod = "1M";
   let ledger = loadLedger();
   let ledgerState = ledger ? ledgerCore.derivePortfolioStateFromLedger(ledger.events) : null;
   let ledgerFilter = "ALL";
   let editingLedgerEventId = null;
+  let analyticsTab = "OVERVIEW";
+  let analyticsDividendYear = "";
+  let analyticsMonth = "";
 
   function loadPortfolioHistory() {
     try {
@@ -280,7 +284,6 @@
     element.innerHTML = `
       <article class="summaryCard"><span>今日損益</span><b class="${valueClass(computed.todayPnl)}">${todayValue}</b><small class="${valueClass(computed.todayRate)}">${todayNote}</small></article>
       <article class="summaryCard"><span>未實現損益</span><b class="${valueClass(totalPnl)}">${totalValue}</b><small class="${valueClass(returnRate)}">${totalNote}</small></article>
-      ${ledgerState?.valid ? `<article class="summaryCard"><span>已實現損益</span><b class="${valueClass(ledgerState.realizedPnL)}">${money(ledgerState.realizedPnL)}</b><small>股息收入 ${money(ledgerState.dividendIncome)}</small></article>` : ""}
       <article class="summaryCard"><span>可投入現金</span><b>${cashConfigured ? money(rebalanceSettings.cash) : "尚未設定"}</b><small>可於智慧再平衡設定</small></article>`;
   }
 
@@ -551,9 +554,9 @@
   }
 
   function renderPerformance() {
-    const rows = performanceCore.selectPeriod(portfolioHistory, performancePeriod), change = performanceCore.assetChange(rows), continuity = performanceCore.analyzePortfolioContinuity(rows, {tradingDates: benchmarkRows.map(row => row.date), invalidCount: portfolioHistoryInvalidCount}), rawComparison = performanceCore.alignBenchmark(rows, benchmarkRows), comparison = performanceCore.guardBenchmark(rawComparison, continuity), benchmarkVisible = $v6("#portfolioBenchmarkToggle").checked;
+    const rows = performanceCore.selectPeriod(portfolioHistory, portfolioAnalysisPeriod), change = performanceCore.assetChange(rows), continuity = performanceCore.analyzePortfolioContinuity(rows, {tradingDates: benchmarkRows.map(row => row.date), invalidCount: portfolioHistoryInvalidCount}), rawComparison = performanceCore.alignBenchmark(rows, benchmarkRows), comparison = performanceCore.guardBenchmark(rawComparison, continuity), benchmarkVisible = $v6("#portfolioBenchmarkToggle").checked;
     const empty = $v6("#portfolioPerformanceEmpty"), metrics = $v6("#portfolioPerformanceMetrics"), coverage = $v6("#portfolioPerformanceCoverage"), integrity = $v6("#portfolioPerformanceIntegrity");
-    $v6("#portfolioPerformancePeriods").querySelectorAll("[data-performance-period]").forEach(button => button.classList.toggle("active", button.dataset.performancePeriod === performancePeriod));
+    $v6("#portfolioPerformancePeriods").querySelectorAll("[data-performance-period]").forEach(button => button.classList.toggle("active", button.dataset.performancePeriod === portfolioAnalysisPeriod));
     if (rows.length < 2) {
       const firstDate = portfolioHistory[0]?.date;
       empty.innerHTML = `<b>績效紀錄將從現在開始累積</b><span>目前歷史資料尚不足，HS 不會以目前持股反推過去績效。${firstDate ? `已開始記錄：${displayDate(firstDate)}` : "建立完整持股與有效行情後開始記錄。"}</span>`;
@@ -562,7 +565,7 @@
       integrity.hidden = true; integrity.textContent = ""; drawPerformanceChart([], false); return;
     }
     empty.innerHTML = "";
-    const twr=ledger?ledgerCore.calculateTwr({snapshots:portfolioHistory,events:ledger.events,startDate:ledger.performanceStartDate,period:performancePeriod}):{available:false},terminal=rows.at(-1),xirr=ledger&&terminal?ledgerCore.calculateXirr(ledgerCore.buildXirrCashFlows(ledger,{date:terminal.date,value:terminal.totalAssets})):{available:false};
+    const twr=ledger?ledgerCore.calculateTwr({snapshots:portfolioHistory,events:ledger.events,startDate:ledger.performanceStartDate,period:portfolioAnalysisPeriod}):{available:false},terminal=rows.at(-1),xirr=ledger&&terminal?ledgerCore.calculateXirr(ledgerCore.buildXirrCashFlows(ledger,{date:terminal.date,value:terminal.totalAssets})):{available:false};
     const benchmarkGap=twr.available&&rawComparison.available?twr.value-rawComparison.benchmarkChange:null;
     const metricRows = [
       ["時間加權報酬", twr.available?percent(twr.value):"—", ledger?"TWR｜外部資金流採收盤後 EOD 方法":"建立交易帳本後開始"],
@@ -581,6 +584,86 @@
     drawPerformanceChart(points, benchmarkVisible && rawComparison.available);
   }
 
+  function analyticsMoney(value) {
+    if (!Number.isFinite(value)) return "—";
+    const absolute = Math.abs(Math.round(value)).toLocaleString("en-US");
+    return `${value > 0 ? "+" : value < 0 ? "-" : ""}NT$ ${absolute}`;
+  }
+
+  function analyticsMarketRows() {
+    return computed.rows.filter(row => row.quoteStatus === "current" && Number.isFinite(row.marketValue)).map(row => ({code: row.code, marketValue: row.marketValue}));
+  }
+
+  function analyticsMetric(label, value, note = "", toneValue = null) {
+    return `<article class="portfolioAnalyticsMetric"><span>${escapeHtml(label)}</span><b class="${valueClass(toneValue)}">${escapeHtml(value)}</b><small>${escapeHtml(note)}</small></article>`;
+  }
+
+  function analyticsCard(label, value, note = "", toneValue = null) {
+    return `<article class="portfolioAnalyticsCard"><span>${escapeHtml(label)}</span><b class="${valueClass(toneValue)}">${escapeHtml(value)}</b><small>${escapeHtml(note)}</small></article>`;
+  }
+
+  function renderContribution(contribution) {
+    const output = $v6("#portfolioContributionRows");
+    if (!contribution.available) { output.innerHTML = '<div class="portfolioAnalyticsEmpty">此期間尚無足夠歷史資料。</div>'; return; }
+    const rows = contribution.rows.slice(0, 3), scale = Math.max(1, ...rows.map(row => Math.abs(row.amount)));
+    output.innerHTML = rows.length ? rows.map(row => `<article class="portfolioContributionRow ${row.amount < 0 ? "is-negative" : ""}"><b>${escapeHtml(row.symbol)}</b><span class="portfolioContributionBar" aria-hidden="true"><i style="width:${Math.max(3, Math.abs(row.amount) / scale * 100).toFixed(1)}%"></i></span><strong class="${valueClass(row.amount)}">${escapeHtml(analyticsMoney(row.amount))}</strong></article>`).join("") : '<div class="portfolioAnalyticsEmpty">此期間沒有可歸屬的 ETF 損益貢獻。</div>';
+  }
+
+  function renderMonthlyPreview(report) {
+    const period = $v6("#portfolioMonthlyPreviewPeriod"), output = $v6("#portfolioMonthlyPreview");
+    if (!report.available) { period.textContent = "等待正式 snapshots"; output.innerHTML = '<div class="portfolioAnalyticsEmpty">月報資料尚未開始累積。</div>'; return; }
+    period.textContent = `資料期間 ${displayDate(report.startDate)}–${displayDate(report.endDate)}${report.partialMonth ? "｜部分月份" : ""}`;
+    output.innerHTML = [["月內 TWR", report.twr === null ? "資料不完整" : percent(report.twr), report.twr],["淨入金",analyticsMoney(report.netDeposits),report.netDeposits],["股息",analyticsMoney(report.dividends),report.dividends],["已實現損益",analyticsMoney(report.realizedPnL),report.realizedPnL]].map(([label,value,tone])=>`<article><span>${escapeHtml(label)}</span><b class="${valueClass(tone)}">${escapeHtml(value)}</b></article>`).join("");
+  }
+
+  function renderProfitAnalytics(profit, holdingsBreakdown) {
+    if (!ledger) return '<div class="portfolioAnalyticsEmpty">建立交易帳本後才會提供可信的損益分析。</div>';
+    const costs = (profit.standaloneFees || 0) + (profit.standaloneTaxes || 0);
+    const cards = [["未實現損益",analyticsMoney(profit.unrealizedPnL),"依目前市值減剩餘成本",profit.unrealizedPnL],["已實現損益",analyticsMoney(profit.realizedPnL),"SELL 已扣該筆 fee／tax",profit.realizedPnL],["股息收入",analyticsMoney(profit.dividendIncome),"僅計 DIVIDEND events",profit.dividendIncome],["其他費用與稅",analyticsMoney(-costs),"僅獨立 FEE／TAX events",-costs]].map(row=>analyticsCard(...row)).join("");
+    const ranked = holdingsBreakdown.length ? `<div class="portfolioAnalyticsRanked">${holdingsBreakdown.map(row=>`<article><b>${escapeHtml(row.symbol)}</b><div><span>未實現</span><b class="${valueClass(row.unrealizedPnL)}">${escapeHtml(analyticsMoney(row.unrealizedPnL))}</b></div><div><span>已實現</span><b class="${valueClass(row.realizedPnL)}">${escapeHtml(analyticsMoney(row.realizedPnL))}</b></div><div><span>股息</span><b class="${valueClass(row.dividendIncome)}">${escapeHtml(analyticsMoney(row.dividendIncome))}</b></div><div><span>合計貢獻</span><b class="${valueClass(row.totalContribution)}">${escapeHtml(analyticsMoney(row.totalContribution))}</b></div></article>`).join("")}</div>` : '<div class="portfolioAnalyticsEmpty">尚無可歸屬的標的損益。</div>';
+    return `<div class="portfolioAnalyticsDetailHead"><h3>損益組成與按標的拆分</h3></div><div class="portfolioAnalyticsGrid">${cards}</div>${ranked}<p class="portfolioAnalyticsNote">期初部位可提供成本基礎與未實現損益，但不代表 Ledger 啟用前的完整投資報酬。</p>`;
+  }
+
+  function monthBars(rows, key, className = "") {
+    const max = Math.max(1, ...rows.map(row => Math.abs(Number(row[key]) || 0)));
+    return `<div class="portfolioMonthBars">${rows.map((row,index)=>`<div class="portfolioMonthBar ${className}"><i style="height:${Math.max(2, Math.abs(Number(row[key])||0)/max*78).toFixed(1)}px"></i><small>${String(index+1).padStart(2,"0")}</small></div>`).join("")}</div>`;
+  }
+
+  function renderDividendAnalytics(dividend) {
+    if (!ledger) return '<div class="portfolioAnalyticsEmpty">建立交易帳本後才會提供股息中心。</div>';
+    const yearOptions = (dividend.years.length ? dividend.years : [dividend.year]).map(year=>`<option value="${year}" ${year===dividend.year?"selected":""}>${year}</option>`).join("");
+    if (dividend.status === "EMPTY") return `<div class="portfolioAnalyticsDetailHead"><h3>股息收入</h3><label>年度<select data-dividend-year>${yearOptions}</select></label></div><div class="portfolioAnalyticsEmpty">尚無股息紀錄。</div>`;
+    const cards = [["今年股息",analyticsMoney(dividend.yearTotal),dividend.year],["累計股息",analyticsMoney(dividend.cumulative),"Ledger 啟用後"],["最近一次股息",dividend.latest?analyticsMoney(dividend.latest.grossAmount):"—",dividend.latest?`${displayDate(dividend.latest.tradeDate)}｜${dividend.latest.symbol}`:"尚無紀錄"],["股息來源數",`${dividend.sourceCount} 檔`,"本年度"],["累計股息／投入成本",Number.isFinite(dividend.cumulativeDividendToCost)?plainPercent(dividend.cumulativeDividendToCost):"—","不代表目前市場殖利率"]].map(row=>analyticsCard(...row)).join("");
+    const bySymbol = dividend.bySymbol.length ? `<div class="portfolioAnalyticsRanked">${dividend.bySymbol.map(row=>`<article><b>${escapeHtml(row.symbol)}</b><div><span>${escapeHtml(dividend.year)} 股息</span><b>${escapeHtml(analyticsMoney(row.amount))}</b></div></article>`).join("")}</div>` : "";
+    return `<div class="portfolioAnalyticsDetailHead"><h3>股息收入</h3><label>年度<select data-dividend-year>${yearOptions}</select></label></div><div class="portfolioAnalyticsGrid">${cards}</div>${monthBars(dividend.monthly,"amount")}${bySymbol}<p class="portfolioAnalyticsNote">所有數值只來自 DIVIDEND events；不預測未來股息。</p>`;
+  }
+
+  function renderTradingAnalytics(trading) {
+    if (!ledger) return '<div class="portfolioAnalyticsEmpty">建立交易帳本後才會提供交易統計。</div>';
+    if (trading.status === "EMPTY") return '<div class="portfolioAnalyticsEmpty">尚無交易統計。</div>';
+    const cards = [["買入次數",`${trading.buyCount} 筆`,"BUY events"],["賣出次數",`${trading.sellCount} 筆`,"SELL events"],["累計買入金額",analyticsMoney(-trading.cumulativeBuy),"含 BUY fee",-trading.cumulativeBuy],["累計賣出金額",analyticsMoney(trading.cumulativeSell),"已扣 SELL fee／tax",trading.cumulativeSell],["平均單筆買入",trading.averageBuy===null?"—":analyticsMoney(trading.averageBuy),"不含入金"],["已實現交易損益",analyticsMoney(trading.realizedPnL),"加權平均成本",trading.realizedPnL],["累計入金",analyticsMoney(trading.deposits),"不含期初現金"],["累計出金",analyticsMoney(-trading.withdrawals),"External flow",-trading.withdrawals],["淨外部投入",analyticsMoney(trading.netExternalContributions),"入金減出金",trading.netExternalContributions],["獲利／虧損賣出",`${trading.profitableSellCount}／${trading.lossSellCount} 筆`,trading.profitableSellRatio===null?"賣出樣本未滿 5 筆，不強調比例":`獲利賣出占比 ${plainPercent(trading.profitableSellRatio)}`]].map(row=>analyticsCard(...row)).join("");
+    const monthly = trading.monthly.length ? `${monthBars(trading.monthly,"buyAmount")}${monthBars(trading.monthly,"sellAmount","sell")}` : "";
+    return `<div class="portfolioAnalyticsDetailHead"><h3>交易統計</h3></div><div class="portfolioAnalyticsGrid">${cards}</div>${monthly}<p class="portfolioAnalyticsNote">金色為每月買入、綠色為每月賣出；DEPOSIT／WITHDRAWAL 不會混入交易金額。</p>`;
+  }
+
+  function renderMonthlyAnalytics(report, months, annual) {
+    const options=months.map(month=>`<option value="${month}" ${month===analyticsMonth?"selected":""}>${month.replace("-"," 年 ")} 月</option>`).join("");
+    if(!report.available)return `<div class="portfolioAnalyticsDetailHead"><h3>月度報告</h3>${options?`<label>月份<select data-report-month>${options}</select></label>`:""}</div><div class="portfolioAnalyticsEmpty">尚無足夠 snapshot 建立月度報告。</div>`;
+    const metrics=[["月初總資產",analyticsMoney(report.startAssets),displayDate(report.startDate)],["月底／最新總資產",analyticsMoney(report.endAssets),displayDate(report.endDate)],["月內 TWR",report.twr===null?"資料不完整":percent(report.twr),`${report.observations} 個 snapshots`,report.twr],["0050 同期",report.benchmarkReturn===null?"資料不足":percent(report.benchmarkReturn),"相同起訖日期",report.benchmarkReturn],["相對差異",report.relativeDifference===null?"—":point(report.relativeDifference),"Portfolio TWR 減 0050",report.relativeDifference],["月內淨入金",analyticsMoney(report.netDeposits),"入金減出金",report.netDeposits],["月內股息",analyticsMoney(report.dividends),"DIVIDEND events",report.dividends],["月內已實現損益",analyticsMoney(report.realizedPnL),"SELL realized P/L",report.realizedPnL],["月末未實現損益",analyticsMoney(report.unrealizedPnL),"月末市值減成本",report.unrealizedPnL],["月內買入金額",analyticsMoney(-report.buyAmount),"含 BUY fee",-report.buyAmount],["月內賣出金額",analyticsMoney(report.sellAmount),"淨賣出收入",report.sellAmount],["最大單一部位",report.largestPosition===null?"—":plainPercent(report.largestPosition),"月末持股市值"],["月內最大回撤",report.maxDrawdown===null?"資料不完整":percent(report.maxDrawdown),report.missingDates.length?`缺少 ${report.missingDates.length} 個必要交易日`:"依正式 snapshots",report.maxDrawdown]].map(row=>analyticsCard(...row)).join("");
+    const annualCards=annual?.available?`<div class="portfolioAnalyticsDetailHead"><h3>${annual.year} 年度摘要</h3></div><div class="portfolioAnalyticsGrid">${[["YTD TWR",annual.twr===null?"資料不足":percent(annual.twr),annual.partialYear?`統計自 ${displayDate(annual.startDate)} 起`:"年度至今",annual.twr],["YTD XIRR",annual.xirr===null?"資料不足":percent(annual.xirr),"資金加權年化",annual.xirr],["YTD 股息",analyticsMoney(annual.dividends),"DIVIDEND events",annual.dividends],["YTD 已實現損益",analyticsMoney(annual.realizedPnL),"SELL realized P/L",annual.realizedPnL],["YTD 淨入金",analyticsMoney(annual.netDeposits),"不含期初現金",annual.netDeposits],["YTD 最大回撤",annual.maxDrawdown===null?"資料不足":percent(annual.maxDrawdown),"正式 snapshots",annual.maxDrawdown]].map(row=>analyticsCard(...row)).join("")}</div>`:"";
+    return `<div class="portfolioAnalyticsDetailHead"><h3>月度報告</h3><label>月份<select data-report-month>${options}</select></label></div><div class="portfolioAnalyticsGrid">${metrics}</div><p class="portfolioAnalyticsSummaryText">${report.summary.map(escapeHtml).join("<br>")}</p>${annualCards}`;
+  }
+
+  function renderAnalytics() {
+    const quality=$v6("#portfolioAnalyticsQuality"),summary=$v6("#portfolioAnalyticsSummary"),detail=$v6("#portfolioAnalyticsDetail");$v6("#portfolioAnalyticsCoverage").textContent=`與投資績效共用期間：${portfolioAnalysisPeriod}`;
+    $v6("#portfolioAnalyticsTabs").querySelectorAll("[data-analytics-tab]").forEach(button=>button.classList.toggle("active",button.dataset.analyticsTab===analyticsTab));
+    if(!ledger){quality.dataset.quality="PENDING";quality.textContent="等待交易帳本";summary.innerHTML=["已實現損益","未實現損益","股息收入","總投資損益"].map(label=>analyticsMetric(label,"—","建立 Ledger 後開始")).join("");renderContribution({available:false});renderMonthlyPreview({available:false});detail.innerHTML='<div class="portfolioAnalyticsEmpty">建立交易帳本後，投資分析將從正式績效起始日開始累積。</div>';return}
+    const marketRows=analyticsMarketRows(),profit=analyticsCore.calculateProfitBreakdown({ledger,marketRows}),holdingsBreakdown=analyticsCore.calculateHoldingProfitBreakdown({ledger,marketRows}),contribution=analyticsCore.calculatePortfolioContribution({ledger,snapshots:portfolioHistory,period:portfolioAnalysisPeriod}),months=[...new Set(portfolioHistory.filter(row=>row.date>=ledger.performanceStartDate).map(row=>row.date.slice(0,7)))].sort().reverse();if(!analyticsMonth||!months.includes(analyticsMonth))analyticsMonth=months[0]||"";const report=analyticsCore.buildMonthlyPortfolioReport({ledger,snapshots:portfolioHistory,benchmarkRows,month:analyticsMonth});
+    quality.dataset.quality=profit.available?"COMPLETE":"PARTIAL";quality.textContent=profit.available?"帳本與行情完整":"部分資料待補";
+    summary.innerHTML=[["已實現損益",analyticsMoney(profit.realizedPnL),"已扣 SELL fee／tax",profit.realizedPnL],["未實現損益",analyticsMoney(profit.unrealizedPnL),profit.available?"目前市值減剩餘成本":"等待完整行情",profit.unrealizedPnL],["股息收入",analyticsMoney(profit.dividendIncome),"僅計 DIVIDEND",profit.dividendIncome],["總投資損益",analyticsMoney(profit.totalInvestmentPnL),"不含入金、出金與期初現金",profit.totalInvestmentPnL]].map(row=>analyticsMetric(...row)).join("");renderContribution(contribution);renderMonthlyPreview(report);
+    if(analyticsTab==="PROFIT")detail.innerHTML=renderProfitAnalytics(profit,holdingsBreakdown);else if(analyticsTab==="DIVIDEND"){const dividend=analyticsCore.calculateDividendAnalytics({ledger,year:analyticsDividendYear});analyticsDividendYear=dividend.year;detail.innerHTML=renderDividendAnalytics(dividend)}else if(analyticsTab==="TRADING")detail.innerHTML=renderTradingAnalytics(analyticsCore.calculateTradingAnalytics({ledger,period:portfolioAnalysisPeriod,asOf:portfolioHistory.at(-1)?.date||taipeiToday()}));else if(analyticsTab==="MONTHLY"){const annual=analyticsCore.buildAnnualPortfolioSummary({ledger,snapshots:portfolioHistory,year:(analyticsMonth||taipeiToday()).slice(0,4)});detail.innerHTML=renderMonthlyAnalytics(report,months,annual)}else detail.innerHTML='<p class="portfolioAnalyticsNote">投資分析只讀取交易帳本與正式 snapshots；入出金不會被計入投資損益或 ETF contribution。</p>';
+  }
+
   function riskStatusText(status) {
     return ({COMPLETE:"資料完整",CAPITAL_EVENT:"有投資組合異動",INSUFFICIENT_HISTORY:"歷史累積中",INVALID_DATA:"資料無法驗證"})[status] || "歷史累積中";
   }
@@ -592,7 +675,7 @@
   }
 
   function renderRiskCenter() {
-    const rows = performanceCore.selectPeriod(portfolioHistory, performancePeriod);
+    const rows = performanceCore.selectPeriod(portfolioHistory, portfolioAnalysisPeriod);
     const continuity = performanceCore.analyzePortfolioContinuity(rows, {tradingDates: benchmarkRows.map(row => row.date), invalidCount: portfolioHistoryInvalidCount});
     const concentration = performanceCore.calculateConcentration(computed.rows.filter(row => row.quoteStatus === "current").map(row => ({code: row.code, marketValue: row.marketValue, weight: row.weight})));
     const allocation = performanceCore.calculateAllocationDeviation(computed.rows.map(row => ({code: row.code, weight: row.weight, targetAllocation: row.targetAllocation})));
@@ -601,7 +684,7 @@
     const quality = portfolioHistoryInvalidCount ? "INVALID_DATA" : continuity.hasCapitalEvent ? "CAPITAL_EVENT" : rows.length < 10 || continuity.hasDataGap ? "INSUFFICIENT_HISTORY" : "COMPLETE";
     const qualityNode = $v6("#portfolioRiskQuality");
     qualityNode.dataset.quality = quality; qualityNode.textContent = riskStatusText(quality);
-    $v6("#portfolioRiskPeriod").textContent = `目前區間：${performancePeriod}`;
+    $v6("#portfolioRiskPeriod").textContent = `目前區間：${portfolioAnalysisPeriod}`;
     const metricRows = [
       ["最大單一部位", concentration.available ? plainPercent(concentration.largest) : "—", concentration.available ? "依目前持股市值" : "等待完整市值"],
       ["前三大部位", concentration.available ? plainPercent(concentration.top3) : "—", concentration.available ? "依目前持股市值" : "等待完整市值"],
@@ -671,6 +754,7 @@
     renderRebalance(focusTarget);
     recordPortfolioSnapshot();
     renderPerformance();
+    renderAnalytics();
     renderRiskCenter();
     renderCapitalPlan();
     renderLedger();
@@ -1318,11 +1402,17 @@
     $v6("#portfolioPerformancePeriods").addEventListener("click", event => {
       const button = event.target.closest("[data-performance-period]");
       if (!button) return;
-      performancePeriod = button.dataset.performancePeriod;
+      portfolioAnalysisPeriod = button.dataset.performancePeriod;
       renderPerformance();
       renderRiskCenter();
+      renderAnalytics();
     });
     $v6("#portfolioBenchmarkToggle").addEventListener("change", renderPerformance);
+    $v6("#portfolioAnalyticsTabs").addEventListener("click", event => {
+      const button=event.target.closest("[data-analytics-tab]");if(!button)return;analyticsTab=button.dataset.analyticsTab;renderAnalytics();
+    });
+    $v6("#portfolioAnalyticsCenter").addEventListener("click",event=>{const button=event.target.closest("[data-analytics-open]");if(!button)return;analyticsTab=button.dataset.analyticsOpen;renderAnalytics()});
+    $v6("#portfolioAnalyticsDetail").addEventListener("change",event=>{if(event.target.matches("[data-dividend-year]")){analyticsDividendYear=event.target.value;renderAnalytics()}else if(event.target.matches("[data-report-month]")){analyticsMonth=event.target.value;renderAnalytics()}});
     $v6("#portfolioChart").addEventListener("click", chartHit);
     $v6("#portfolioChart").addEventListener("touchstart", chartHit, {passive: true});
     $v6("#portfolioChart").addEventListener("keydown", event => {
@@ -1362,8 +1452,8 @@
     return response.json();
   }).then(payload => {
     benchmarkRows = Array.isArray(payload?.items?.["0050"]?.rows) ? payload.items["0050"].rows : [];
-    renderPerformance(); renderRiskCenter();
-  }).catch(() => { benchmarkRows = []; renderPerformance(); renderRiskCenter(); });
+    renderPerformance(); renderRiskCenter(); renderAnalytics();
+  }).catch(() => { benchmarkRows = []; renderPerformance(); renderRiskCenter(); renderAnalytics(); });
   renderHomeSentiment();
   const initialShared=window.HSLiveMarket?.latestQuotes?.();
   if(initialShared instanceof Map&&initialShared.size)applySharedQuotes({detail:{quotes:initialShared,sourceUpdatedAt:"",source:"shared_cache"}});

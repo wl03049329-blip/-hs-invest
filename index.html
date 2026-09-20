@@ -484,6 +484,17 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       <p id="portfolioPerformanceIntegrity" class="portfolioPerformanceIntegrity" hidden></p>
     </section>
 
+    <section id="portfolioAnalyticsCenter" class="panel portfolioAnalyticsCenter" aria-labelledby="portfolioAnalyticsTitle">
+      <header class="portfolioAnalyticsHead"><div><p class="eyebrow">INVESTMENT ANALYTICS</p><h2 id="portfolioAnalyticsTitle">投資分析</h2><small id="portfolioAnalyticsCoverage">與投資績效共用期間：1M</small></div><span id="portfolioAnalyticsQuality" class="portfolioAnalyticsQuality">等待交易帳本</span></header>
+      <div id="portfolioAnalyticsSummary" class="portfolioAnalyticsSummary" aria-live="polite"></div>
+      <div class="portfolioAnalyticsOverview">
+        <article class="portfolioAnalyticsBlock"><header><div><h3>Portfolio Contribution</h3><small>本期損益貢獻金額，不代表個別 ETF 報酬率</small></div></header><div id="portfolioContributionRows" class="portfolioContributionRows"></div></article>
+        <article class="portfolioAnalyticsBlock portfolioMonthlyPreview"><header><div><h3>本月摘要</h3><small id="portfolioMonthlyPreviewPeriod">等待正式 snapshots</small></div><button class="miniBtn" type="button" data-analytics-open="MONTHLY">查看完整月報 ›</button></header><div id="portfolioMonthlyPreview" class="portfolioMonthlyPreviewGrid"></div></article>
+      </div>
+      <nav id="portfolioAnalyticsTabs" class="portfolioAnalyticsTabs" aria-label="投資分析分類"><button class="active" type="button" data-analytics-tab="OVERVIEW">總覽</button><button type="button" data-analytics-tab="PROFIT">損益</button><button type="button" data-analytics-tab="DIVIDEND">股息</button><button type="button" data-analytics-tab="TRADING">交易</button><button type="button" data-analytics-tab="MONTHLY">月報</button></nav>
+      <div id="portfolioAnalyticsDetail" class="portfolioAnalyticsDetail" aria-live="polite"></div>
+    </section>
+
     <section class="panel portfolioRiskCenter" aria-labelledby="portfolioRiskTitle">
       <header class="portfolioRiskHead"><div><p class="eyebrow">PORTFOLIO RISK</p><h2 id="portfolioRiskTitle">投資組合風險</h2><small id="portfolioRiskPeriod">目前區間：1M</small></div><span id="portfolioRiskQuality" class="portfolioRiskQuality" data-quality="INSUFFICIENT_HISTORY">歷史累積中</span></header>
       <div id="portfolioRiskMetrics" class="portfolioRiskMetrics" aria-live="polite"></div>
@@ -4945,7 +4956,8 @@ initLiveDebugPanel();liveDiagnosticRecord("initial_page_load",{render_state_befo
 <script src="portfolio-core.js?v=20260920-portfolio-decision-center-p1"></script>
 <script src="portfolio-performance-core.js?v=20260920-portfolio-risk-p3"></script>
 <script src="portfolio-ledger-core.js?v=20260920-portfolio-ledger-p4"></script>
-<script src="portfolio-v6.js?v=20260920-portfolio-ledger-p4"></script>
+<script src="portfolio-analytics-core.js?v=20260920-portfolio-analytics-p5"></script>
+<script src="portfolio-v6.js?v=20260920-portfolio-analytics-p5"></script>
 <script src="personal-capital-ui.js?v=20260824-phase4"></script>
 </body>
 </html>
