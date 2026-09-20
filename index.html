@@ -462,15 +462,19 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       <div><p class="eyebrow">MY PORTFOLIO</p><h2 id="portfolioTitle">我的投資組合</h2></div>
       <button id="portfolioAddBtn" class="btn" type="button" aria-label="新增持股">＋ 新增持股</button>
     </div>
-    <nav id="portfolioWorkflowNav" class="portfolioWorkflowNav" aria-label="個人持股功能導覽"><button class="active" type="button" data-portfolio-section="overview">總覽</button><button type="button" data-portfolio-section="analytics">分析</button><button type="button" data-portfolio-section="transactions">交易</button><button type="button" data-portfolio-section="report">報告</button><button type="button" data-portfolio-section="calendar">日曆</button><button type="button" data-portfolio-section="settings">設定</button></nav>
+    <div class="portfolioAdvancedHeading"><p class="eyebrow">ADVANCED TOOLS</p><h2>進階投資工具</h2></div>
+    <nav id="portfolioWorkflowNav" class="portfolioWorkflowNav" aria-label="進階投資工具"><button class="active" type="button" data-portfolio-section="performance">績效</button><button type="button" data-portfolio-section="analytics">分析</button><button type="button" data-portfolio-section="risk">風險</button><button type="button" data-portfolio-section="transactions">交易</button><button type="button" data-portfolio-section="report">報告</button><button type="button" data-portfolio-section="calendar">日曆</button><button type="button" data-portfolio-section="settings">設定</button></nav>
     <span id="portfolioOverviewAnchor" class="portfolioSectionAnchor" aria-hidden="true"></span>
     <article class="panel portfolioDecisionHero" aria-labelledby="portfolioHeroTitle">
       <header class="portfolioHeroHead">
-        <div><span id="portfolioHeroTitle">總市值</span><small id="portfolioHoldingCount">尚未建立持股</small></div>
+        <div><span id="portfolioHeroTitle">投資組合摘要</span><small id="portfolioHoldingCount">尚未建立持股</small></div>
         <span id="portfolioMarketMode" class="modeBadge">判斷交易時段中</span>
       </header>
-      <b id="portfolioHeroMarketValue" class="portfolioHeroValue">—</b>
-      <div id="portfolioSummary" class="portfolioSummary" aria-live="polite"></div>
+      <div id="portfolioSummary" class="portfolioSummary" aria-live="polite">
+        <article class="summaryCard"><span>今日損益</span><b id="portfolioHeroTodayPnl">—</b><small id="portfolioHeroTodayRate">行情資料準備中</small></article>
+        <article class="summaryCard"><span>累積損益</span><b id="portfolioHeroUnrealizedPnl">—</b><small id="portfolioHeroUnrealizedRate">不含已實現與股息</small></article>
+        <article class="summaryCard"><span>股票市值</span><b id="portfolioHeroMarketValue">—</b><small id="portfolioHeroCostBasis">成本 —</small></article>
+      </div>
       <div class="portfolioHeroStatus">
         <span id="portfolioQuoteStatus" role="status" aria-live="polite">尚未更新行情</span>
         <div class="portfolioHeroControls">
@@ -479,18 +483,18 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
         </div>
       </div>
     </article>
-    <div class="portfolioWorkflowOverview">
+    <div class="portfolioWorkflowOverview" data-portfolio-tool="performance">
       <article class="panel portfolioGoalCompact"><header><div><p class="eyebrow">PORTFOLIO GOAL</p><h2>投資目標</h2></div><button class="miniBtn" type="button" data-goal-edit>設定</button></header><div id="portfolioGoalCompact" aria-live="polite"></div></article>
       <article class="panel portfolioActivityCompact"><header><div><p class="eyebrow">MONTHLY ACTIVITY</p><h2>本月投資活動</h2></div><button class="miniBtn" type="button" data-portfolio-section="recurring">查看分析</button></header><div id="portfolioActivityCompact" aria-live="polite"></div></article>
     </div>
 
-    <section class="panel portfolioPerformancePanel" aria-labelledby="portfolioPerformanceTitle">
+    <section class="panel portfolioPerformancePanel" data-portfolio-tool="performance" aria-labelledby="portfolioPerformanceTitle">
       <header class="portfolioPerformanceHead"><div><p class="eyebrow">PERFORMANCE</p><h2 id="portfolioPerformanceTitle">投資績效</h2></div><div id="portfolioPerformancePeriods" class="portfolioPeriodTabs" role="tablist" aria-label="績效期間"><button class="active" data-performance-period="1M" type="button">1M</button><button data-performance-period="3M" type="button">3M</button><button data-performance-period="YTD" type="button">YTD</button><button data-performance-period="1Y" type="button">1Y</button><button data-performance-period="ALL" type="button">ALL</button></div></header>
       <div class="portfolioPerformanceBody"><div class="portfolioPerformanceChart"><canvas id="portfolioPerformanceChart" role="img" aria-label="我的投資組合與 0050 基準比較"></canvas><div id="portfolioPerformanceEmpty" class="portfolioPerformanceEmpty"></div></div><aside class="portfolioPerformanceSummary"><label><input id="portfolioBenchmarkToggle" type="checkbox" checked> 顯示 0050 Benchmark</label><div id="portfolioPerformanceMetrics"></div><small id="portfolioPerformanceCoverage"></small></aside></div>
       <p id="portfolioPerformanceIntegrity" class="portfolioPerformanceIntegrity" hidden></p>
     </section>
 
-    <section id="portfolioAnalyticsCenter" class="panel portfolioAnalyticsCenter" aria-labelledby="portfolioAnalyticsTitle">
+    <section id="portfolioAnalyticsCenter" class="panel portfolioAnalyticsCenter" data-portfolio-tool="analytics" aria-labelledby="portfolioAnalyticsTitle">
       <header class="portfolioAnalyticsHead"><div><p class="eyebrow">INVESTMENT ANALYTICS</p><h2 id="portfolioAnalyticsTitle">投資分析</h2><small id="portfolioAnalyticsCoverage">與投資績效共用期間：1M</small></div><span id="portfolioAnalyticsQuality" class="portfolioAnalyticsQuality">等待交易帳本</span></header>
       <div id="portfolioAnalyticsSummary" class="portfolioAnalyticsSummary" aria-live="polite"></div>
       <div class="portfolioAnalyticsOverview">
@@ -501,7 +505,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       <div id="portfolioAnalyticsDetail" class="portfolioAnalyticsDetail" aria-live="polite"></div>
     </section>
 
-    <section class="panel portfolioRiskCenter" aria-labelledby="portfolioRiskTitle">
+    <section class="panel portfolioRiskCenter" data-portfolio-tool="risk" aria-labelledby="portfolioRiskTitle">
       <header class="portfolioRiskHead"><div><p class="eyebrow">PORTFOLIO RISK</p><h2 id="portfolioRiskTitle">投資組合風險</h2><small id="portfolioRiskPeriod">目前區間：1M</small></div><span id="portfolioRiskQuality" class="portfolioRiskQuality" data-quality="INSUFFICIENT_HISTORY">歷史累積中</span></header>
       <div id="portfolioRiskMetrics" class="portfolioRiskMetrics" aria-live="polite"></div>
       <div class="portfolioRiskDetails">
@@ -513,7 +517,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
     <div class="portfolioDecisionGrid">
     <article class="panel allocationPanel portfolioPrimaryPanel">
       <div class="panelTitle compactTitle">
-        <div><p class="eyebrow">ALLOCATION</p><h2>配置概況</h2></div>
+        <div><p class="eyebrow">ALLOCATION</p><h2>持股佔比</h2></div>
         <div class="allocationHealthCompact"><span>配置健康度</span><b id="portfolioAllocationHealth">—</b><small id="portfolioAllocationHealthLabel">等待目標配置</small></div>
       </div>
       <div class="allocationLayout">
@@ -526,49 +530,70 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       <small id="portfolioAllocationMode" class="allocationHelper">依目前市值｜點擊色塊查看明細</small>
     </article>
 
-    <article class="panel portfolioAttentionPanel" aria-labelledby="portfolioAttentionTitle">
+    </div>
+
+    <article class="panel portfolioAttentionPanel" data-portfolio-tool="analytics" aria-labelledby="portfolioAttentionTitle">
       <div class="panelTitle compactTitle"><div><p class="eyebrow">DECISION FOCUS</p><h2 id="portfolioAttentionTitle">今日需要注意</h2></div><small>依配置與正式 HS 訊號整理</small></div>
       <div id="portfolioAttentionList" class="portfolioAttentionList" aria-live="polite"></div>
     </article>
-    </div>
 
     <section class="portfolioHoldingsSection" aria-labelledby="portfolioHoldingsTitle">
       <div class="portfolioHoldingsHead">
         <div><p class="eyebrow">HOLDINGS</p><h2 id="portfolioHoldingsTitle">我的持股</h2></div>
-        <label>排序<select id="portfolioSort" aria-label="持股排序方式"><option value="marketValue">市值</option><option value="weight">配置</option><option value="totalPnl">損益</option><option value="coreScore">HS 分數</option></select></label>
+        <label>排序<select id="portfolioSort" aria-label="持股排序方式"><option value="portfolioOrder">原持股順序</option><option value="todayPnl">今日損益</option><option value="changeRate">漲跌幅</option><option value="totalPnl">總損益</option><option value="weight">市值佔比</option><option value="fiveDay">5D</option><option value="twentyDay">20D</option><option value="ytd">YTD</option></select></label>
       </div>
-      <div id="portfolioList" class="portfolioList"></div>
+      <div class="portfolioHoldingsViews" role="tablist" aria-label="持股表格快捷檢視"><button class="active" type="button" data-holdings-view="pnl">損益</button><button type="button" data-holdings-view="position">持股</button><button type="button" data-holdings-view="trend">趨勢</button></div>
+      <div id="portfolioHoldingsEmpty" class="portfolioEmpty" hidden><b>尚未建立持股</b><span>新增持股或建立交易帳本後，會在此顯示完整持股明細。</span><button class="btn" type="button" data-portfolio-empty-add>＋ 新增持股</button></div>
+      <div id="portfolioHoldingsTableViewport" class="portfolioHoldingsTableViewport" tabindex="0" aria-label="持股明細表，可水平滑動">
+        <div class="portfolioHoldingsTable" role="table" aria-label="持股明細">
+          <div class="portfolioHoldingsTableHead" role="row">
+            <button type="button" class="holdingColSymbol" data-holdings-sort="portfolioOrder">股票</button>
+            <button type="button" data-holdings-sort="todayPnl" data-column-group="pnl">今日損益</button>
+            <button type="button" data-holdings-sort="changeRate">股票漲跌幅</button>
+            <button type="button" data-holdings-sort="totalPnl">總損益</button>
+            <span data-column-group="position">股數</span>
+            <span>均價／總成本</span>
+            <button type="button" data-holdings-sort="weight">市值佔比</button>
+            <button type="button" data-holdings-sort="fiveDay" data-column-group="trend">近 5 日漲幅</button>
+            <button type="button" data-holdings-sort="twentyDay">近 20 日漲幅</button>
+            <button type="button" data-holdings-sort="ytd">今年漲幅</button>
+          </div>
+          <div id="portfolioList" class="portfolioList" role="rowgroup"></div>
+        </div>
+      </div>
+      <small class="portfolioHoldingsMethod">← 表格可水平滑動｜趨勢報酬以最近有效收盤調整價計算 →</small>
     </section>
 
     <section class="panel portfolioCapitalPlan" aria-labelledby="portfolioCapitalPlanTitle">
-      <header class="portfolioCapitalHead"><div><p class="eyebrow">SMART CAPITAL</p><h2 id="portfolioCapitalPlanTitle">智慧投入方案</h2><small>依目標配置差異為主、正式 HS 分數為輔的決定性模擬</small></div><label>本次可投入<input id="capitalPlanCash" type="number" min="0" step="1000" inputmode="decimal" value="0" aria-label="本次可投入金額"></label></header>
+      <header class="portfolioCapitalHead"><div><p class="eyebrow">SMART REBALANCE</p><h2 id="portfolioCapitalPlanTitle">HS 智慧再平衡</h2><small>依目前配置與 HS Core Score 模擬新資金配置。</small></div><label>本次可投入現金<input id="capitalPlanCash" type="number" min="0" step="1000" inputmode="decimal" value="0" aria-label="本次可投入金額"></label></header>
+      <button id="capitalPlanCalculate" class="btn capitalPlanCalculate" type="button">計算配置方案</button>
       <div id="capitalPlanSummary" class="capitalPlanSummary"></div>
       <div id="capitalPlanRows" class="capitalPlanRows"></div>
       <p class="capitalPlanDisclaimer">僅為配置模擬，不會修改真實持股，也不會自動下單。</p>
     </section>
 
-    <section id="portfolioLedgerPanel" class="panel portfolioLedgerPanel" aria-labelledby="portfolioLedgerTitle">
+    <section id="portfolioLedgerPanel" class="panel portfolioLedgerPanel" data-portfolio-tool="transactions" aria-labelledby="portfolioLedgerTitle">
       <header class="portfolioLedgerHead"><div><p class="eyebrow">TRANSACTION LEDGER</p><h2 id="portfolioLedgerTitle">最近交易</h2><small id="portfolioLedgerStart">交易帳本尚未建立</small></div><div><button id="portfolioLedgerViewBtn" class="miniBtn" type="button">查看全部交易 ›</button><button id="portfolioTransactionAddBtn" class="btn" type="button">＋ 新增交易</button></div></header>
       <div id="portfolioLedgerReconciliation" class="portfolioLedgerReconciliation" hidden></div>
       <div id="portfolioLedgerContent" class="portfolioLedgerContent" aria-live="polite"></div>
     </section>
 
-    <section id="portfolioRecurring" class="panel portfolioWorkflowPanel" aria-labelledby="portfolioRecurringTitle">
+    <section id="portfolioRecurring" class="panel portfolioWorkflowPanel" data-portfolio-tool="analytics" aria-labelledby="portfolioRecurringTitle">
       <header class="portfolioWorkflowHead"><div><p class="eyebrow">RECURRING ANALYTICS</p><h2 id="portfolioRecurringTitle">定期投入分析</h2><small>分開檢視外部投入與實際買入，不推定自動扣款。</small></div><label>每月計畫投入<input id="portfolioMonthlyPlan" type="number" min="0" step="1000" inputmode="decimal" placeholder="例如 20000"></label></header>
       <div id="portfolioRecurringSummary" class="portfolioWorkflowMetrics"></div><div id="portfolioRecurringSymbols" class="portfolioRecurringSymbols"></div>
     </section>
 
-    <section id="portfolioAnnualReport" class="panel portfolioWorkflowPanel portfolioAnnualReport" aria-labelledby="portfolioAnnualTitle">
+    <section id="portfolioAnnualReport" class="panel portfolioWorkflowPanel portfolioAnnualReport" data-portfolio-tool="report" aria-labelledby="portfolioAnnualTitle">
       <header class="portfolioWorkflowHead"><div><p class="eyebrow">ANNUAL REPORT</p><h2 id="portfolioAnnualTitle">年度投資報告</h2><small id="portfolioAnnualPeriod">等待正式績效資料</small></div><div class="portfolioWorkflowActions"><select id="portfolioAnnualYear" aria-label="年度報告年份"></select><button id="portfolioAnnualCsvBtn" class="miniBtn" type="button">匯出 CSV</button><button id="portfolioAnnualPrintBtn" class="miniBtn" type="button">列印</button></div></header>
       <div id="portfolioAnnualReportBody" aria-live="polite"></div>
     </section>
 
-    <section id="portfolioCalendar" class="panel portfolioWorkflowPanel" aria-labelledby="portfolioCalendarTitle">
+    <section id="portfolioCalendar" class="panel portfolioWorkflowPanel" data-portfolio-tool="calendar" aria-labelledby="portfolioCalendarTitle">
       <header class="portfolioWorkflowHead"><div><p class="eyebrow">INVESTMENT CALENDAR</p><h2 id="portfolioCalendarTitle">投資日曆</h2><small>只顯示交易帳本活動，不混入 HS Score。</small></div><label>月份<input id="portfolioCalendarMonth" type="month"></label></header>
       <div id="portfolioCalendarGrid" class="portfolioCalendarGrid" aria-live="polite"></div><div id="portfolioCalendarTimeline" class="portfolioCalendarTimeline"></div>
     </section>
 
-    <details class="panel rebalancePanel" aria-labelledby="rebalanceTitle">
+    <details class="panel rebalancePanel" data-portfolio-tool="settings" aria-labelledby="rebalanceTitle">
       <summary class="rebalanceEntry">
         <span><small>ALLOCATION SETTINGS</small><b id="rebalanceTitle">目標配置與再平衡設定</b><em>編輯目標比例與進階容忍區間。</em></span>
         <strong>開啟</strong>
@@ -621,7 +646,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       </div>
     </details>
 
-    <details id="portfolioSettingsPanel" class="panel portfolioSettings">
+    <details id="portfolioSettingsPanel" class="panel portfolioSettings" data-portfolio-tool="settings">
       <summary><span><b>持股設定</b><small>備份、匯入與資料管理</small></span><strong>⋯</strong></summary>
       <div class="portfolioSettingsBody">
         <div class="portfolioSettingsActions">
@@ -5004,7 +5029,8 @@ initLiveDebugPanel();liveDiagnosticRecord("initial_page_load",{render_state_befo
 <script src="portfolio-analytics-core.js?v=20260920-portfolio-analytics-p5"></script>
 <script src="portfolio-workflow-core.js?v=20260920-portfolio-workflow-p6"></script>
 <script src="portfolio-resilience-core.js?v=20260920-portfolio-resilience-p7"></script>
-<script src="portfolio-v6.js?v=20260920-portfolio-resilience-p7"></script>
+<script src="portfolio-dashboard-core.js?v=20260920-portfolio-dashboard-v1"></script>
+<script src="portfolio-v6.js?v=20260920-portfolio-dashboard-v1"></script>
 <script src="personal-capital-ui.js?v=20260824-phase4"></script>
 </body>
 </html>

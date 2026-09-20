@@ -7,7 +7,8 @@
   const analyticsCore = window.HSPortfolioAnalyticsCore;
   const workflowCore = window.HSPortfolioWorkflowCore;
   const resilienceCore = window.HSPortfolioResilienceCore;
-  if (!core || !performanceCore || !ledgerCore || !analyticsCore || !workflowCore || !resilienceCore) return;
+  const dashboardCore = window.HSPortfolioDashboardCore;
+  if (!core || !performanceCore || !ledgerCore || !analyticsCore || !workflowCore || !resilienceCore || !dashboardCore) return;
 
   const storageKeys = window.HSPersistenceCore?.keys || {};
   const HOLDINGS_KEY = storageKeys.holdings || "hsRadar.portfolio.holdings";
@@ -47,6 +48,10 @@
   let portfolioHistoryInvalidCount = 0;
   let portfolioHistory = loadPortfolioHistory();
   let benchmarkRows = [];
+  let historicalRowsBySymbol = new Map();
+  let holdingsSortDirection = "desc";
+  let capitalPlanCashScenario = 0;
+  let activePortfolioTool = "performance";
   let portfolioAnalysisPeriod = "1M";
   let ledger = loadLedger();
   let ledgerState = ledger ? ledgerCore.derivePortfolioStateFromLedger(ledger.events) : null;
@@ -142,7 +147,7 @@
   function applyLedgerUiMode() {
     const active=Boolean(ledger),add=$v6("#portfolioAddBtn"),cash=$v6("#rebalanceCash"),planCash=$v6("#capitalPlanCash");
     if(add){add.textContent=active?"＋ 新增交易":"＋ 新增持股";add.setAttribute("aria-label",active?"新增交易":"新增持股")}
-    if(cash)cash.disabled=active;if(planCash)planCash.disabled=active;
+    if(cash)cash.disabled=active;if(planCash)planCash.disabled=false;
   }
 
   function persistLedger(nextLedger) {
@@ -268,39 +273,17 @@
   }
 
   function renderSummary() {
-    const element = $v6("#portfolioSummary");
     const heroValue = $v6("#portfolioHeroMarketValue");
     const holdingCount = $v6("#portfolioHoldingCount");
-    const currentRows = computed.rows.filter(row => row.quoteStatus === "current" && Number.isFinite(row.marketValue));
-    const marketReady = holdings.length > 0 && currentRows.length === holdings.length;
-    const marketValue = marketReady ? currentRows.reduce((sum, row) => sum + row.marketValue, 0) : null;
-    const pnlReady = marketReady && currentRows.every(row => Number.isFinite(row.totalPnl));
-    const totalPnl = pnlReady ? currentRows.reduce((sum, row) => sum + row.totalPnl, 0) : null;
-    const totalCost = pnlReady ? currentRows.reduce((sum, row) => sum + row.totalCost, 0) : null;
-    const returnRate = pnlReady && totalCost > 0 ? totalPnl / totalCost * 100 : null;
-    let cashConfigured = false;
-    try {
-      const stored = JSON.parse(localStorage.getItem(REBALANCE_SETTINGS_KEY) || "null");
-      cashConfigured = Boolean(stored && Object.prototype.hasOwnProperty.call(stored, "cash"));
-    } catch {}
+    const summary=dashboardCore.hero(computed.rows);
     holdingCount.textContent = holdings.length ? `持有 ${holdings.length} 檔` : "尚未建立持股";
-    heroValue.textContent = Number.isFinite(marketValue) ? money(marketValue) : holdings.length ? "行情資料暫缺" : "—";
-    if (!holdings.length) {
-      element.innerHTML = [
-        ["今日損益", "—", "尚無持股"],
-        ["未實現損益", "—", "尚無持股"],
-        ["可投入現金", cashConfigured ? money(rebalanceSettings.cash) : "尚未設定", "可於智慧再平衡設定"]
-      ].map(([label, value, note]) => `<article class="summaryCard"><span>${label}</span><b class="dataPending">${value}</b><small>${note}</small></article>`).join("");
-      return;
-    }
-    const todayValue = computed.complete ? money(computed.todayPnl) : "—";
-    const todayNote = computed.complete ? `今日報酬率 ${percent(computed.todayRate)}` : "尚無可靠盤中損益資料";
-    const totalValue = Number.isFinite(totalPnl) ? money(totalPnl) : "—";
-    const totalNote = Number.isFinite(returnRate) ? `總報酬率 ${percent(returnRate)}` : "缺少價格不會誤算為 0";
-    element.innerHTML = `
-      <article class="summaryCard"><span>今日損益</span><b class="${valueClass(computed.todayPnl)}">${todayValue}</b><small class="${valueClass(computed.todayRate)}">${todayNote}</small></article>
-      <article class="summaryCard"><span>未實現損益</span><b class="${valueClass(totalPnl)}">${totalValue}</b><small class="${valueClass(returnRate)}">${totalNote}</small></article>
-      <article class="summaryCard"><span>可投入現金</span><b>${cashConfigured ? money(rebalanceSettings.cash) : "尚未設定"}</b><small>可於智慧再平衡設定</small></article>`;
+    const fields=[
+      ["#portfolioHeroTodayPnl",summary.todayPnl,"#portfolioHeroTodayRate",Number.isFinite(summary.todayRate)?percent(summary.todayRate):holdings.length?"行情資料不完整":"尚無持股"],
+      ["#portfolioHeroUnrealizedPnl",summary.unrealizedPnl,"#portfolioHeroUnrealizedRate",Number.isFinite(summary.unrealizedRate)?percent(summary.unrealizedRate):holdings.length?"行情資料不完整":"尚無持股"]
+    ];
+    fields.forEach(([valueSelector,value,noteSelector,note])=>{const valueNode=$v6(valueSelector),noteNode=$v6(noteSelector);valueNode.textContent=Number.isFinite(value)?money(value):"—";valueNode.className=valueClass(value);noteNode.textContent=note;noteNode.className=valueClass(Number.isFinite(value)?value:null)});
+    heroValue.textContent=Number.isFinite(summary.stockMarketValue)?money(summary.stockMarketValue):"—";
+    $v6("#portfolioHeroCostBasis").textContent=Number.isFinite(summary.remainingCostBasis)?`成本 ${money(summary.remainingCostBasis)}`:holdings.length?"成本資料不完整":"成本 —";
   }
 
   function holdingName(row) {
@@ -326,8 +309,8 @@
 
   function sortedRows() {
     const mode = $v6("#portfolioSort").value;
-    const rows = computed.rows.map(row => ({...row, coreScore: radarFor(row.code)?.score ?? null}));
-    return core.sortPortfolioRows(rows, mode);
+    const rows = computed.rows.map(row => ({...row, coreScore: radarFor(row.code)?.score ?? null,...dashboardCore.trends(historicalRowsBySymbol.get(row.code)||[])}));
+    return dashboardCore.sortRows(rows,mode,holdingsSortDirection);
   }
 
   function renderPortfolioDecisionSupport() {
@@ -359,63 +342,30 @@
   }
 
   function renderList() {
-    const list = $v6("#portfolioList");
+    const list=$v6("#portfolioList"),viewport=$v6("#portfolioHoldingsTableViewport"),empty=$v6("#portfolioHoldingsEmpty");
     if (!holdings.length) {
-      list.innerHTML = '<div class="portfolioEmpty"><b>尚未建立個人持股</b><span>新增持股後，HS 將自動整理總市值、損益、配置、目標比例與 Core Score 狀態。</span><button class="btn" type="button" data-portfolio-empty-add>＋ 新增第一筆持股</button></div>';
-      list.querySelector("[data-portfolio-empty-add]")?.addEventListener("click", () => openPortfolioModal());
+      list.innerHTML="";viewport.hidden=true;empty.hidden=false;empty.querySelector("[data-portfolio-empty-add]")?.addEventListener("click",()=>ledger?openTransaction():openPortfolioModal());
       return;
     }
+    viewport.hidden=false;empty.hidden=true;
     list.innerHTML = sortedRows().map(row => {
       const radar = radarFor(row.code);
-      const quoteMissing = !row.quote;
-      const quoteStale = row.quoteStatus === "stale";
-      const quoteState = quoteMissing ? "行情暫缺" : quoteStale ? "最後有效資料" : "最新行情";
-      const name = holdingName(row);
-      const radarHtml = radar
-        ? `<span class="radarPill">HS ${radar.score === null ? "—" : number(radar.score, 0)}</span><b>${escapeHtml(radar.coreLabel)}</b><span>正式 Core Score</span>`
-        : '<span class="radarPill">HS —</span><span>正式 Core Score 暫缺</span>';
-      const tradeLabel = radar?.strategyType === "swing00733" ? "00733 強勢趨勢拉回" : radar?.strategyType === "swing006201" ? "006201 上櫃低檔轉折" : "";
-      const trendProtected = radar?.swing?.strategyType === "swing00733" && radar.swing.stage?.number >= 3;
-      const rebalance = core.rebalanceDecision({actualWeight: row.weight, targetAllocation: row.targetAllocation, trendProtected});
-      const trade = tradeLabel ? window.HSPersistenceCore?.loadTradeState?.(row.code) : null;
-      const peakProfit = trade?.entryPrice > 0 && trade?.peakPrice > 0 ? (trade.peakPrice / trade.entryPrice - 1) * 100 : null;
-      const allocationGap = Number.isFinite(row.weight) && Number.isFinite(row.targetAllocation) ? row.weight - row.targetAllocation : null;
-      const allocationState = !Number.isFinite(allocationGap) ? "尚未設定目標" : Math.abs(allocationGap) <= 1 ? "接近目標" : allocationGap > 0 ? `高於目標 ${number(allocationGap, 1)}pt` : `低於目標 ${number(Math.abs(allocationGap), 1)}pt`;
-      return `<article class="holdingCard${quoteStale ? " holdingQuoteStale" : ""}" data-holding-code="${escapeHtml(row.code)}">
-        <header class="holdingCardHead"><div class="holdingIdentity"><b>${escapeHtml(row.code)}</b><span>${escapeHtml(name)}</span></div><div class="holdingDayMove"><span>今日漲跌</span><b class="${valueClass(row.changeRate)}">${quoteMissing || quoteStale ? "—" : percent(row.changeRate)}</b></div></header>
-        <div class="holdingMarketValue"><span>市值</span><b>${Number.isFinite(row.marketValue) ? money(row.marketValue) : "行情暫缺"}</b><small>${quoteStale ? "最後有效資料" : quoteMissing ? "尚無價格" : "目前部位價值"}</small></div>
-        <div class="holdingAllocationRow"><span>配置 <b>${plainPercent(row.weight)}</b></span><span>目標 <b>${Number.isFinite(row.targetAllocation) ? plainPercent(row.targetAllocation) : "未設定"}</b></span><span class="holdingAllocationGap">偏差 <b>${point(allocationGap)}</b><small>${allocationState}</small></span></div>
-        <div class="holdingPositionRow"><span>均價 <b>${money(row.averageCost)}</b></span><span>現價 <b>${quoteMissing ? "行情暫缺" : money(row.quote.price)}</b></span><span>未實現損益 <b class="${valueClass(row.returnRate)}">${percent(row.returnRate)}</b></span></div>
-        <footer class="holdingCardFooter"><div class="holdingRadar">${radarHtml}</div><div class="holdingActions"><button type="button" data-edit-holding="${escapeHtml(row.code)}" aria-label="修改 ${escapeHtml(row.code)} 持股">修改</button><button type="button" data-delete-holding="${escapeHtml(row.code)}" aria-label="刪除 ${escapeHtml(row.code)} 持股">刪除</button></div></footer>
-        <details class="holdingDetails">
-          <summary>展開股數、成本、市值與占比</summary>
-          <div class="holdingRadar">${radarHtml}</div>
-          <div class="holdingDetailsGrid">
-            <div><span>股數</span><b>${number(row.shares, 4)}</b></div>
-            <div><span>平均成本</span><b>${money(row.averageCost)}</b></div>
-            <div><span>總成本</span><b>${money(row.totalCost)}</b></div>
-            <div><span>目前股價</span><b>${quoteMissing ? "行情暫缺" : `${money(row.quote.price)}${quoteStale ? "（最後有效）" : ""}`}</b></div>
-            <div><span>目前市值</span><b>${quoteMissing ? `${money(row.allocationValue)}（成本暫估）` : `${money(row.marketValue)}${quoteStale ? "（最後有效）" : ""}`}</b></div>
-            <div><span>市值占比</span><b>${plainPercent(row.weight)}</b></div>
-            <div><span>累積報酬率</span><b class="${valueClass(row.returnRate)}">${percent(row.returnRate)}</b></div>
-            <div><span>行情狀態</span><b>${escapeHtml(quoteState)}</b></div>
-            <div><span>行情時間</span><b>${escapeHtml(row.quote?.asOf || row.quote?.date || "行情暫缺")}</b></div>
-            <div><span>策略類型</span><b>${escapeHtml(tradeLabel || row.strategyType || "使用預設模型")}</b></div>
-            <div><span>目標配置</span><b>${Number.isFinite(row.targetAllocation) ? percent(row.targetAllocation) : "未設定"}</b></div>
-            ${tradeLabel ? `<div><span>Trade ID</span><b>${escapeHtml(trade?.tradeId || "尚未建立")}</b></div>
-            <div><span>Trade Mode／Stage</span><b>${escapeHtml(trade?.state || "CLOSED")}／${radar?.swing?.stage?.number ?? 0}</b></div>
-            <div><span>策略部位</span><b>${Number.isFinite(trade?.position) ? percent(trade.position) : "0%"}</b></div>
-            <div><span>買點／出場壓力</span><b>${Number.isFinite(radar?.swing?.buyScore) ? radar.swing.buyScore : "—"}／${Number.isFinite(radar?.swing?.exitPressure?.score) ? radar.swing.exitPressure.score : "—"}</b></div>
-            <div><span>最高浮盈／持有日</span><b>${Number.isFinite(peakProfit) ? percent(peakProfit) : "—"}／${Number(trade?.holdingDays)||0}</b></div>
-            <div><span>冷卻狀態</span><b>${Number(trade?.cooldownRemaining)>0 ? `${trade.cooldownRemaining} 交易日` : "無"}</b></div>` : ""}
-          </div>
-          <p class="holdingNote">${escapeHtml(rebalance.label)}</p>
-          ${lossNote(row) ? `<p class="holdingNote">${escapeHtml(lossNote(row))}</p>` : ""}
-        </details>
+      const current=row.quoteStatus==="current",name=holdingName(row),score=radar?.score;
+      const totalPnlRate=Number.isFinite(row.returnRate)?row.returnRate:null;
+      return `<article class="portfolioHoldingRow" role="row" data-holding-code="${escapeHtml(row.code)}">
+        <button type="button" class="holdingColSymbol" role="cell" data-edit-holding="${escapeHtml(row.code)}" aria-label="開啟 ${escapeHtml(row.code)} 持股編輯"><b>${escapeHtml(name)}</b><span>${escapeHtml(row.code)}${Number.isFinite(score)?` <em>HS ${number(score,0)}</em>`:""}</span></button>
+        <div role="cell"><b class="${valueClass(current?row.todayPnl:null)}">${current&&Number.isFinite(row.todayPnl)?money(row.todayPnl):"—"}</b></div>
+        <div role="cell"><b class="${valueClass(current?row.changeRate:null)}">${current&&Number.isFinite(row.changeRate)?percent(row.changeRate):"—"}</b><small>${current&&Number.isFinite(row.quote?.price)?money(row.quote.price):"行情暫缺"}</small></div>
+        <div role="cell"><b class="${valueClass(current?row.totalPnl:null)}">${current&&Number.isFinite(row.totalPnl)?money(row.totalPnl):"—"}</b><small class="${valueClass(totalPnlRate)}">${current?percent(totalPnlRate):"—"}</small></div>
+        <div role="cell"><b>${number(row.shares,4)}</b></div>
+        <div role="cell"><b>${Number.isFinite(row.averageCost)?money(row.averageCost):"—"}</b><small>${Number.isFinite(row.totalCost)?money(row.totalCost):"—"}</small></div>
+        <div role="cell"><b>${current?plainPercent(row.weight):"—"}</b></div>
+        <div role="cell"><b class="${valueClass(row.fiveDay)}">${percent(row.fiveDay)}</b></div>
+        <div role="cell"><b class="${valueClass(row.twentyDay)}">${percent(row.twentyDay)}</b></div>
+        <div role="cell"><b class="${valueClass(row.ytd)}">${percent(row.ytd)}</b></div>
       </article>`;
     }).join("");
-    list.querySelectorAll("[data-edit-holding]").forEach(button => button.addEventListener("click", () => ledger ? openLedger() : openPortfolioModal(button.dataset.editHolding)));
-    list.querySelectorAll("[data-delete-holding]").forEach(button => button.addEventListener("click", () => ledger ? openLedger() : deleteHolding(button.dataset.deleteHolding)));
+    list.querySelectorAll("[data-edit-holding]").forEach(button=>button.addEventListener("click",()=>ledger?openLedger():openPortfolioModal(button.dataset.editHolding)));
   }
 
   function rebalanceTrend(row) {
@@ -725,7 +675,7 @@
   function renderCapitalPlan() {
     const plan = performanceCore.buildCapitalAllocationPlan({
       rows: computed.rows.map(row => ({code: row.code, marketValue: row.quoteStatus === "current" ? row.marketValue : null, weight: row.weight, targetAllocation: row.targetAllocation, price: row.quoteStatus === "current" ? row.quote?.price : null, coreScore: radarFor(row.code)?.score ?? null})),
-      availableCash: rebalanceSettings.cash,
+      availableCash: capitalPlanCashScenario,
       allocationHealthScore: core.allocationHealthScore
     });
     const summary = $v6("#capitalPlanSummary"), output = $v6("#capitalPlanRows");
@@ -733,7 +683,7 @@
     if (!holdings.length) { output.innerHTML = '<div class="capitalPlanEmpty">新增持股後才會建立投入模擬。</div>'; return; }
     if (plan.cash <= 0) { output.innerHTML = '<div class="capitalPlanEmpty">輸入本次可投入金額後，系統會依目標配置差異產生模擬。</div>'; return; }
     const visible = plan.rows.filter(row => row.allocationAmount > 0 || row.reasonCodes.includes("PRICE_UNAVAILABLE") || row.reasonCodes.includes("TARGET_MISSING"));
-    output.innerHTML = visible.length ? visible.map(row => `<article class="capitalPlanRow"><div class="capitalPlanIdentity"><b>${escapeHtml(row.symbol)}</b><small>目標 ${Number.isFinite(row.targetAllocation)?plainPercent(row.targetAllocation):"未設定"}</small></div><div class="capitalPlanReason"><b>${escapeHtml(capitalReasonText(row.reasonCodes))}</b><span>${Number.isFinite(row.coreScore)?`正式 HS ${number(row.coreScore,0)}`:"正式 HS 分數暫缺，不阻斷配置"}</span></div><div class="capitalPlanAmount"><b>${row.allocationAmount>0?money(row.allocationAmount):"不配置"}</b><small>${Number.isFinite(row.estimatedUnits)&&row.allocationAmount>0?`約 ${number(row.estimatedUnits,2)} 股｜模擬`:"等待必要資料"}</small></div></article>`).join("") : '<div class="capitalPlanEmpty">目前沒有符合投入條件的低配部位，資金維持保留。</div>';
+    output.innerHTML = visible.length ? visible.map(row => {const radar=radarFor(row.symbol);return `<article class="capitalPlanRow"><div class="capitalPlanIdentity"><b>${escapeHtml(row.symbol)}</b><small>${Number.isFinite(row.coreScore)?`HS ${number(row.coreScore,0)}｜${escapeHtml(radar?.coreLabel||"正式狀態暫缺")}`:"HS 分數暫缺"}</small></div><div class="capitalPlanAmount"><b>${row.allocationAmount>0?money(row.allocationAmount):"不配置"}</b><small>${Number.isFinite(row.estimatedUnits)&&row.allocationAmount>0?`約 ${number(row.estimatedUnits,2)} 股｜模擬`:"等待必要資料"}</small></div><div class="capitalPlanAllocation"><span>目前 <b>${plainPercent(row.beforeAllocation)}</b></span><i>→</i><span>投入後 <b>${plainPercent(row.afterAllocation)}</b></span><i>→</i><span>目標 <b>${plainPercent(row.targetAllocation)}</b></span></div><div class="capitalPlanReason"><b>為什麼</b><span>${escapeHtml(capitalReasonText(row.reasonCodes))}</span></div></article>`}).join("") : '<div class="capitalPlanEmpty">目前沒有符合投入條件的低配部位，資金維持保留。</div>';
   }
 
   const LEDGER_LABELS={OPENING_POSITION:"期初部位",OPENING_CASH:"期初現金",BUY:"買入",SELL:"賣出",DEPOSIT:"入金",WITHDRAWAL:"出金",DIVIDEND:"股息",FEE:"其他費用",TAX:"額外稅額",SPLIT:"股票分割",REVERSE_SPLIT:"反向分割",STOCK_DIVIDEND:"股票股利"};
@@ -801,7 +751,7 @@
     const marketRows = computed.rows
       .filter(row => Number.isFinite(row.marketValue) && row.marketValue > 0)
       .map(row => ({...row, allocationValue: row.marketValue, valueSource: "market"}));
-    const allocation = core.buildAllocation(marketRows);
+    const allocation = dashboardCore.allocation(marketRows.map(row=>({...row,name:holdingName(row)})),6);
     const marketTotal = allocation.reduce((sum, item) => sum + item.value, 0);
     $v6("#portfolioAllocationMode").textContent = "依目前市值";
     chartSegments = [];
@@ -1063,7 +1013,10 @@
   function renderResilience(){const audit=runIntegrityAudit(),status=$v6("#portfolioIntegrityStatus"),issues=$v6("#portfolioIntegrityIssues"),repair=$v6("#portfolioIntegrityRepairBtn");status.innerHTML=audit?`<b class="portfolioIntegrityBadge" data-status="${audit.status}">${audit.status}</b><small>${audit.summary.events} 筆 Ledger｜${audit.summary.snapshots} 筆 snapshots｜Ledger ${escapeHtml(ledger.version)}</small>`:'<b class="portfolioIntegrityBadge" data-status="WARNING">NOT_INITIALIZED</b><small>建立交易帳本後才會執行完整性稽核。</small>';issues.innerHTML=audit?.issues.length?audit.issues.slice(0,8).map(row=>`<article><b>${escapeHtml(row.code)}</b><span>${escapeHtml(row.message)}</span></article>`).join(""):'<small>未發現需要人工處理的資料問題。</small>';const preview=ledger?resilienceCore.previewRepair({ledger,snapshots:portfolioHistory,targets:rebalanceSettings.targets||{},metadata:{}}):null;repair.hidden=preview?.status!=="REPAIR_AVAILABLE";repair.dataset.repair=preview?.status||"";$v6("#portfolioRecoveryPoints").innerHTML=portfolioRecoveryPoints.length?[...portfolioRecoveryPoints].reverse().map(row=>`<article><b>${escapeHtml(row.reason)}</b><span>${new Date(row.createdAt).toLocaleString("zh-TW")}</span><button type="button" data-recovery-restore="${escapeHtml(row.id)}">預覽還原</button></article>`).join(""):'<small>尚無復原點。</small>';$v6("#portfolioImportHistory").innerHTML=portfolioImportHistory.length?[...portfolioImportHistory].reverse().map(row=>`<article><b>${escapeHtml(row.fileName||row.adapterId)}</b><span>${escapeHtml(row.imported)} 筆｜${new Date(row.importedAt).toLocaleString("zh-TW")}</span><button type="button" data-import-batch-rollback="${escapeHtml(row.importBatchId)}" ${row.rolledBackAt?"disabled":""}>${row.rolledBackAt?"已回滾":"回滾此批次"}</button></article>`).join(""):'<small>尚無具 provenance 的券商匯入批次。</small>'}
   function renderDataStatus(){const node=$v6("#portfolioDataStatus"),rollback=Boolean(portfolioImportState?.preImportLedger);node.className="portfolioDataStatusRows";node.innerHTML=[["Ledger events",ledger?.events.length??0],["Snapshots",portfolioHistory.length],["Performance start",ledger?.performanceStartDate?displayDate(ledger.performanceStartDate):"—"],["Last backup",portfolioImportState?.lastBackupAt?new Date(portfolioImportState.lastBackupAt).toLocaleString("zh-TW"):"—"],["Backup schema","V6"],["Migration",resilienceCore.MIGRATION_VERSION],["Goal",portfolioGoal?"已設定":"未設定"],["Import status",portfolioImportState?.lastImportAt?`${portfolioImportState.importedCount} 筆｜${portfolioImportState.fileName}`:"尚未匯入"]].map(([label,value])=>`<span>${escapeHtml(label)}<b>${escapeHtml(value)}</b></span>`).join("");$v6("#portfolioImportRollbackBtn").disabled=!rollback;renderResilience()}
   function renderWorkflow(){renderGoalAndActivity();renderRecurring();renderAnnualReport();renderCalendar();renderDataStatus()}
-  function workflowSectionTarget(name){return document.getElementById({overview:"portfolioOverviewAnchor",analytics:"portfolioAnalyticsCenter",transactions:"portfolioLedgerPanel",report:"portfolioAnnualReport",calendar:"portfolioCalendar",settings:"portfolioSettingsPanel",recurring:"portfolioRecurring"}[name]||name)}
+  function normalizePortfolioTool(name){return({overview:"performance",performance:"performance",analytics:"analytics",recurring:"analytics",risk:"risk",transactions:"transactions",report:"report",calendar:"calendar",settings:"settings"})[name]||"performance"}
+  function showPortfolioTool(name,{scroll=true}={}){activePortfolioTool=normalizePortfolioTool(name);document.querySelectorAll("[data-portfolio-tool]").forEach(node=>{node.hidden=node.dataset.portfolioTool!==activePortfolioTool});$v6("#portfolioWorkflowNav").querySelectorAll("[data-portfolio-section]").forEach(button=>{const active=normalizePortfolioTool(button.dataset.portfolioSection)===activePortfolioTool;button.classList.toggle("active",active);button.setAttribute("aria-selected",String(active))});if(scroll)$v6("#portfolioWorkflowNav").scrollIntoView({behavior:"smooth",block:"start"})}
+  function workflowSectionTarget(name){showPortfolioTool(name,{scroll:false});return document.querySelector(`[data-portfolio-tool="${normalizePortfolioTool(name)}"]`)}
+  function holdingsView(name){const viewport=$v6("#portfolioHoldingsTableViewport"),target=$v6(`[data-column-group="${name}"]`),sticky=$v6(".portfolioHoldingsTableHead .holdingColSymbol");if(!viewport||!target)return;viewport.scrollTo({left:Math.max(0,target.offsetLeft-(sticky?.offsetWidth||0)),behavior:"smooth"});document.querySelectorAll("[data-holdings-view]").forEach(button=>button.classList.toggle("active",button.dataset.holdingsView===name))}
   function openCsvPreview(preview,fileName){csvImportPreview=preview;csvImportFileName=fileName;$v6("#portfolioCsvPreviewSummary").innerHTML=[["總筆數",preview.total],["有效",preview.valid],["警告",preview.warning],["錯誤",preview.errors],["疑似重複",preview.duplicates]].map(row=>`<article><span>${row[0]}</span><b>${row[1]}</b></article>`).join("");const labels={VALID:"可匯入",WARNING:"需確認",ERROR:"無法匯入",DUPLICATE_CANDIDATE:"疑似重複"};$v6("#portfolioCsvPreviewRows").innerHTML=preview.rows.map((row,index)=>`<label class="portfolioCsvRow" data-status="${row.status}"><input type="checkbox" data-csv-select="${index}" ${row.selected?"checked":""} ${row.status==="ERROR"?"disabled":""}><span>#${row.rowNumber}</span><b class="portfolioCsvStatus">${labels[row.status]}</b><span data-csv-symbol>${escapeHtml(row.event?.symbol||row.event?.type||row.raw?.type||"—")}</span><small data-csv-detail>${escapeHtml(row.event?`${row.event.tradeDate}｜${row.event.type}｜${row.event.quantity??row.event.grossAmount}`:"欄位驗證失敗")}</small><small data-csv-message>${escapeHtml(row.messages.join("；")||"格式與欄位有效")}</small></label>`).join("");$v6("#portfolioCsvPreviewError").textContent="";const modal=$v6("#portfolioCsvPreviewModal");modal.classList.add("show");modal.setAttribute("aria-hidden","false")}
   function closeCsvPreview(){const modal=$v6("#portfolioCsvPreviewModal");modal.classList.remove("show");modal.setAttribute("aria-hidden","true");$v6("#portfolioCsvImportFile").value=""}
   async function selectCsv(file){if(!file)return;try{if(!ledger)throw new Error("請先建立交易帳本");if(file.size>1024*1024)throw new Error("CSV 不可超過 1 MB");openCsvPreview(workflowCore.buildImportPreview(await file.text(),ledger),file.name)}catch(error){alert(`CSV 讀取失敗：${error.message}`);$v6("#portfolioCsvImportFile").value=""}}
@@ -1388,7 +1341,9 @@
       searchCatalog(event.target.value);
     });
     $v6("#portfolioDuplicateActions").querySelectorAll("[data-duplicate-action]").forEach(button => button.addEventListener("click", () => duplicateAction(button.dataset.duplicateAction)));
-    $v6("#portfolioSort").addEventListener("change", renderList);
+    $v6("#portfolioSort").addEventListener("change",()=>{holdingsSortDirection="desc";renderList()});
+    $v6(".portfolioHoldingsTableHead").addEventListener("click",event=>{const button=event.target.closest("[data-holdings-sort]");if(!button)return;const select=$v6("#portfolioSort"),same=select.value===button.dataset.holdingsSort;holdingsSortDirection=same&&holdingsSortDirection==="desc"?"asc":"desc";select.value=button.dataset.holdingsSort;renderList()});
+    $v6(".portfolioHoldingsViews").addEventListener("click",event=>{const button=event.target.closest("[data-holdings-view]");if(button)holdingsView(button.dataset.holdingsView)});
     $v6("#portfolioExportBtn").addEventListener("click", exportHoldings);
     $v6("#portfolioImportBtn").addEventListener("click", () => $v6("#portfolioImportFile").click());
     $v6("#portfolioImportFile").addEventListener("change", event => importHoldings(event.target.files?.[0]));
@@ -1411,12 +1366,12 @@
     $v6("#portfolioMonthlyPlan").value=portfolioMonthlyPlan?.amount||"";$v6("#portfolioMonthlyPlan").addEventListener("change",event=>{portfolioMonthlyPlan=workflowCore.normalizeMonthlyPlan(event.target.value);saveWorkflowValue(workflowCore.PLAN_STORAGE_KEY,portfolioMonthlyPlan);renderWorkflow()});
     $v6("#portfolioAnnualYear").addEventListener("change",renderAnnualReport);$v6("#portfolioAnnualCsvBtn").addEventListener("click",()=>{if(!annualReport?.available)return;downloadText(`\uFEFF${workflowCore.exportAnnualCsv(annualReport)}`,`hs-portfolio-annual-${annualReport.year}.csv`,"text/csv;charset=utf-8")});$v6("#portfolioAnnualPrintBtn").addEventListener("click",()=>window.print());
     $v6("#portfolioCalendarMonth").addEventListener("change",renderCalendar);
-    $v6("#portfolioWorkflowNav").addEventListener("click",event=>{const button=event.target.closest("[data-portfolio-section]");if(!button)return;const target=workflowSectionTarget(button.dataset.portfolioSection);if(target)target.scrollIntoView({behavior:"smooth",block:"start"});$v6("#portfolioWorkflowNav").querySelectorAll("button").forEach(node=>node.classList.toggle("active",node===button))});
+    $v6("#portfolioWorkflowNav").addEventListener("click",event=>{const button=event.target.closest("[data-portfolio-section]");if(button)showPortfolioTool(button.dataset.portfolioSection)});
     document.querySelectorAll("[data-portfolio-section]").forEach(button=>{
       if(button.closest("#portfolioWorkflowNav"))return;
       button.addEventListener("click",()=>{
         const target=workflowSectionTarget(button.dataset.portfolioSection);
-        if(target)target.scrollIntoView({behavior:"smooth",block:"start"});
+        if(target){$v6("#portfolioWorkflowNav").scrollIntoView({behavior:"smooth",block:"start"})}
       });
     });
     $v6("#portfolioClearBtn").addEventListener("click", clearHoldings);
@@ -1442,9 +1397,9 @@
     });
     const rebalanceIds = ["rebalanceCash", "rebalanceProfile", "rebalanceCustomTolerance", "rebalanceReminder", "rebalanceCustomDays", "rebalanceCashFirst", "rebalanceTrendProtection"];
     $v6("#rebalanceCash").value = rebalanceSettings.cash;
-    $v6("#capitalPlanCash").value = rebalanceSettings.cash;
+    $v6("#capitalPlanCash").value = capitalPlanCashScenario;
     $v6("#rebalanceCash").disabled = Boolean(ledger);
-    $v6("#capitalPlanCash").disabled = Boolean(ledger);
+    $v6("#capitalPlanCash").disabled = false;
     applyLedgerUiMode();
     $v6("#rebalanceProfile").value = rebalanceSettings.profile;
     $v6("#rebalanceCustomTolerance").value = rebalanceSettings.customTolerance;
@@ -1463,14 +1418,10 @@
         customDays: Number($v6("#rebalanceCustomDays").value), cashFirst: $v6("#rebalanceCashFirst").checked,
         trendProtection: $v6("#rebalanceTrendProtection").checked
       };
-      $v6("#capitalPlanCash").value = rebalanceSettings.cash;
       saveRebalanceSettings(); syncRebalanceControls(); refreshPortfolio();
     };
     $v6("#rebalanceCash").addEventListener("input", updateRebalanceSettings);
-    $v6("#capitalPlanCash").addEventListener("input", event => {
-      $v6("#rebalanceCash").value = Math.max(0, Number(event.target.value) || 0);
-      updateRebalanceSettings();
-    });
+    $v6("#capitalPlanCalculate").addEventListener("click",()=>{capitalPlanCashScenario=Math.max(0,Number($v6("#capitalPlanCash").value)||0);renderCapitalPlan()});
     rebalanceIds.filter(id => id !== "rebalanceCash").forEach(id => $v6(`#${id}`).addEventListener("change", updateRebalanceSettings));
     $v6("#rebalanceUseCurrentBtn").addEventListener("click", useCurrentAllocationAsTargets);
     $v6("#rebalanceApplyBtn").addEventListener("click", showRebalanceSimulation);
@@ -1522,14 +1473,16 @@
   }
 
   bindEvents();
+  showPortfolioTool("performance",{scroll:false});
   refreshPortfolio();
   fetch(BENCHMARK_URL, {cache: "no-store", headers: {"Accept": "application/json"}}).then(response => {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return response.json();
   }).then(payload => {
     benchmarkRows = Array.isArray(payload?.items?.["0050"]?.rows) ? payload.items["0050"].rows : [];
-    renderPerformance(); renderRiskCenter(); renderAnalytics();
-  }).catch(() => { benchmarkRows = []; renderPerformance(); renderRiskCenter(); renderAnalytics(); });
+    historicalRowsBySymbol=new Map(Object.entries(payload?.items||{}).map(([symbol,item])=>[symbol,Array.isArray(item?.rows)?item.rows:[]]));
+    renderList();renderPerformance(); renderRiskCenter(); renderAnalytics();
+  }).catch(() => { benchmarkRows = [];historicalRowsBySymbol=new Map();renderList(); renderPerformance(); renderRiskCenter(); renderAnalytics(); });
   renderHomeSentiment();
   const initialShared=window.HSLiveMarket?.latestQuotes?.();
   if(initialShared instanceof Map&&initialShared.size)applySharedQuotes({detail:{quotes:initialShared,sourceUpdatedAt:"",source:"shared_cache"}});

@@ -50,22 +50,24 @@ assert.deepEqual(core.sortPortfolioRows([], "marketValue"), [], "empty portfolio
 const portfolioStart = html.indexOf('<section id="portfolio"');
 const portfolioEnd = html.indexOf('<section id="sentiment"', portfolioStart);
 const section = html.slice(portfolioStart, portfolioEnd);
-for (const id of ["portfolioHeroMarketValue", "portfolioSummary", "portfolioAllocationHealth", "portfolioAttentionList", "portfolioList", "rebalanceTitle", "portfolioExportBtn"]) {
+for (const id of ["portfolioHeroTodayPnl", "portfolioHeroUnrealizedPnl", "portfolioHeroMarketValue", "portfolioSummary", "portfolioAllocationHealth", "portfolioAttentionList", "portfolioList", "rebalanceTitle", "portfolioExportBtn"]) {
   assert.match(section, new RegExp(`id="${id}"`));
 }
 assert.ok(section.indexOf("portfolioDecisionHero") < section.indexOf("allocationPanel"));
 assert.ok(section.indexOf("allocationPanel") < section.indexOf("portfolioAttentionPanel"));
 assert.ok(section.indexOf("portfolioAttentionPanel") < section.indexOf("portfolioHoldingsSection"));
-assert.ok(section.indexOf("portfolioHoldingsSection") < section.indexOf("rebalancePanel"));
+assert.ok(section.indexOf("portfolioHoldingsSection") < section.indexOf("portfolioCapitalPlan"));
+assert.ok(section.indexOf("portfolioCapitalPlan") < section.indexOf("rebalancePanel"));
 assert.ok(section.indexOf("rebalancePanel") < section.indexOf("portfolioSettings"));
-assert.match(section, /<option value="marketValue">市值<\/option>/);
-assert.match(section, /<option value="coreScore">HS 分數<\/option>/);
+assert.match(section, /<option value="todayPnl">今日損益<\/option>/);
+assert.match(section, /<option value="twentyDay">20D<\/option>/);
+assert.match(section, /<option value="ytd">YTD<\/option>/);
 
 assert.match(ui, /window\.HSFinalCoreProduction\?\.labelFor/);
 assert.doesNotMatch(ui, /score\s*>=\s*(?:30|40|45|50|65|70)/, "portfolio UI must not create a second Core Score mapping");
 assert.match(ui, /尚未建立個人持股/);
-assert.match(ui, /尚無可靠盤中損益資料/);
-assert.match(ui, /point\(allocationGap\)/);
+assert.match(ui, /行情資料不完整/);
+assert.match(ui, /capitalReasonText\(row\.reasonCodes\)/);
 
 for (const width of [760, 430, 375]) assert.match(css, new RegExp(`@media\\(max-width:${width}px\\)`));
 assert.match(css, /\.portfolioDecisionGrid\{display:grid/);
