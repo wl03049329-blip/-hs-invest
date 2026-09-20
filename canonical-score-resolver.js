@@ -133,5 +133,20 @@
     return{schema_version:1,score_version:scoreVersion,target_date:targetDate,market_state:marketState,primary:"official",official_snapshot:official,live_snapshot:liveResult.display_eligible?liveResult.snapshot:null,live_reason:liveResult.reason,items};
   }
 
-  return Object.freeze({MARKET_STATES,LIVE_REASONS,snapshotMarketAsOf,normalizeFinalizedSnapshot,normalizeIntradaySnapshot,resolve,resolveFinalOnly,resolveMarketState,resolveLiveProjected,buildDualTrackView});
+  function selectFormalCoreScore(view,symbol){
+    const ticker=String(symbol||""),item=view?.items?.[ticker]||null,marketState=String(view?.market_state||MARKET_STATES.STALE),targetDate=String(view?.target_date||"");
+    const unavailable=reason=>({available:false,ticker,score:null,display_score:null,trading_date:null,market_as_of:null,source:null,status:"UNAVAILABLE",reason,market_state:marketState});
+    if(!item)return unavailable("UNSUPPORTED_SYMBOL");
+    if(marketState===MARKET_STATES.OPEN){
+      const live=item.live,score=finiteRaw(live?.score),displayScore=finiteRaw(live?.display_score);
+      if(live?.display_eligible!==true||live?.status!=="LIVE_PROJECTED"||live?.trading_date!==targetDate||score===null||displayScore===null)return unavailable(live?.reason||view?.live_reason||"LIVE_UNAVAILABLE");
+      return{available:true,ticker,score,display_score:displayScore,trading_date:String(live.trading_date),market_as_of:String(live.market_as_of||""),source:"LIVE",status:"LIVE_PROJECTED",reason:null,market_state:marketState};
+    }
+    if(![MARKET_STATES.PREMARKET,MARKET_STATES.CLOSED,MARKET_STATES.HOLIDAY].includes(marketState))return unavailable("SCORE_STATE_STALE");
+    const official=item.official,score=finiteRaw(official?.score),displayScore=finiteRaw(official?.display_score);
+    if(official?.status!=="FINALIZED"||official?.source_status!=="FINALIZED_EOD"||score===null||displayScore===null||!boundedDate(String(official?.trading_date||""),targetDate))return unavailable("FINALIZED_UNAVAILABLE");
+    return{available:true,ticker,score,display_score:displayScore,trading_date:String(official.trading_date),market_as_of:String(official.market_as_of||""),source:"FINALIZED",status:"FINALIZED",reason:null,market_state:marketState};
+  }
+
+  return Object.freeze({MARKET_STATES,LIVE_REASONS,snapshotMarketAsOf,normalizeFinalizedSnapshot,normalizeIntradaySnapshot,resolve,resolveFinalOnly,resolveMarketState,resolveLiveProjected,buildDualTrackView,selectFormalCoreScore});
 });

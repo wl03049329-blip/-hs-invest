@@ -296,11 +296,12 @@
 
   function radarFor(code) {
     try {
+      const formal = window.HSFormalCoreScoreAdapter?.scoreFor?.(code);
+      if (!formal?.available) return formal?.reason==="UNSUPPORTED_SYMBOL"?null:{score:null,rawScore:null,scoreSource:null,scoreDate:null,scoreStatus:formal?.reason||"UNAVAILABLE",coreLabel:formal?.reason==="WAIT_NATIVE"?"WAIT_NATIVE":"正式分數暫不可用",trend:"趨勢資料暫缺",action:"買點資料暫缺",strategyType:"",swing:null};
       const item = Array.isArray(all) ? all.find(entry => entry.id === code) : null;
-      if (!item) return null;
-      const score = Number(item.formalScore ?? item.strategyDecisions?.long_term_core?.score ?? item.score);
-      const classification = Number.isFinite(score) ? window.HSFinalCoreProduction?.labelFor?.(score) : null;
-      return {score: Number.isFinite(score) ? score : null, coreLabel: classification?.label || item.strategyDecisions?.long_term_core?.label || "正式訊號暫缺", trend: item.trend?.label || "趨勢資料暫缺", action: item.action || "買點資料暫缺", strategyType: item.activeStrategyMode || "", swing: item.swingDecision || null};
+      const score = Number(formal.display_score),rawScore=Number(formal.score);
+      const classification = Number.isFinite(rawScore) ? window.HSFinalCoreProduction?.labelFor?.(rawScore) : null;
+      return {score: Number.isFinite(score) ? score : null, rawScore: Number.isFinite(rawScore) ? rawScore : null, scoreSource: formal.source, scoreDate: formal.trading_date, coreLabel: classification?.label || "正式訊號暫缺", trend: item?.trend?.label || "趨勢資料暫缺", action: item?.action || "買點資料暫缺", strategyType: item?.activeStrategyMode || "", swing: item?.swingDecision || null};
     } catch {
       return null;
     }
@@ -357,7 +358,7 @@
       const current=row.quoteStatus==="current",name=holdingName(row),score=radar?.score;
       const totalPnlRate=Number.isFinite(row.returnRate)?row.returnRate:null;
       return `<article class="portfolioHoldingRow" role="row" data-holding-code="${escapeHtml(row.code)}">
-        <button type="button" class="holdingColSymbol" role="cell" data-edit-holding="${escapeHtml(row.code)}" aria-label="開啟 ${escapeHtml(row.code)} 持股編輯"><b>${escapeHtml(name)}</b><span>${escapeHtml(row.code)}${Number.isFinite(score)?` <em>HS ${number(score,0)}</em>`:""}</span></button>
+        <button type="button" class="holdingColSymbol" role="cell" data-edit-holding="${escapeHtml(row.code)}" aria-label="開啟 ${escapeHtml(row.code)} 持股編輯"><b>${escapeHtml(name)}</b><span>${escapeHtml(row.code)}${radar?` <em>HS ${Number.isFinite(score)?number(score,0):"—"}</em>`:""}</span></button>
         <div role="cell"><b class="${valueClass(current?row.todayPnl:null)}">${current&&Number.isFinite(row.todayPnl)?money(row.todayPnl):"—"}</b></div>
         <div role="cell"><b class="${valueClass(current?row.changeRate:null)}">${current&&Number.isFinite(row.changeRate)?percent(row.changeRate):"—"}</b><small>${current&&Number.isFinite(row.quote?.price)?money(row.quote.price):"行情暫缺"}</small></div>
         <div role="cell"><b class="${valueClass(current?row.totalPnl:null)}">${current&&Number.isFinite(row.totalPnl)?money(row.totalPnl):"—"}</b><small class="${valueClass(totalPnlRate)}">${current?percent(totalPnlRate):"—"}</small></div>
@@ -1532,6 +1533,7 @@
   }
 
   bindEvents();
+  window.addEventListener("hs:formal-core-score-updated",()=>{renderPortfolioDecisionSupport();renderList();renderRebalance();renderCapitalPlan()});
   showPortfolioTool("performance",{scroll:false});
   refreshPortfolio();
   fetch(BENCHMARK_URL, {cache: "no-store", headers: {"Accept": "application/json"}}).then(response => {

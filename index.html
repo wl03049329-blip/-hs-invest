@@ -2355,6 +2355,12 @@ function currentDualTrackCoreView(targetDate=taipeiToday(),now=new Date()){
   }
   return view;
 }
+function currentFormalCoreScoreForSymbol(symbol,targetDate=taipeiToday(),now=new Date()){
+  const ticker=String(symbol||"");
+  if(LONG_RADAR_CODES.has(ticker)&&!LONG_RADAR_SCORED_CODES.has(ticker))return{available:false,ticker,score:null,display_score:null,status:"UNAVAILABLE",reason:"WAIT_NATIVE"};
+  return window.HSCanonicalScoreResolver?.selectFormalCoreScore?.(currentDualTrackCoreView(targetDate,now),ticker)||{available:false,ticker,score:null,display_score:null,status:"UNAVAILABLE",reason:"RESOLVER_UNAVAILABLE"};
+}
+window.HSFormalCoreScoreAdapter=Object.freeze({scoreFor:currentFormalCoreScoreForSymbol});
 function currentFrontendLiveRenderState(dualTrack=currentDualTrackCoreView(taipeiToday(),new Date())){
   const marketState=decisionCenterEffectiveMarketState(dualTrack),selectedSnapshotTime=window.HSLiveDiagnostics?.latestSnapshotTime(liveCanonicalCoreSnapshots),diagnostics=liveCoreSourceState?.diagnostics||{};
   return window.HSLiveDiagnostics?.classifyRenderState({marketState,sourceStatus:liveCoreSourceState?.status,transportError:liveCoreSourceState?.transport_error===true,pending:Boolean(liveQuoteInFlight),liveSnapshotCount:liveCanonicalCoreSnapshots.length,selectedSnapshotTime,freshnessCheck:diagnostics.freshness_check})||"FRONTEND_STATE_PENDING";
@@ -3443,9 +3449,9 @@ function homeC4Sparkline(series,symbol="c4",emptyMessage="盤中資料尚未建�
 function decisionCenterC4Rows(officialRows,longs,dualTrack){
   const names=new Map((longs||[]).map(item=>[item.id,item.name])),officialMap=new Map((officialRows||[]).map(row=>[row.symbol,row])),history=officialC4HistoryViewModel(finalizedCoreScoreHistoryArtifact);
   return HS_DASHBOARD_C4_SYMBOLS.filter(symbol=>symbol!=="009815").map(symbol=>{
-    const official=officialMap.get(symbol),live=dualTrack?.items?.[symbol]?.live,item=(longs||[]).find(row=>row?.id===symbol),useLive=dualTrack?.market_state==="OPEN"&&live?.display_eligible===true&&live?.status==="LIVE_PROJECTED"&&live?.trading_date===dualTrack?.target_date,officialHistory=history.get(symbol)?.rows||[],latestOfficial=officialHistory.at(-1),previousOfficial=officialHistory.at(-2);
+    const official=officialMap.get(symbol),live=dualTrack?.items?.[symbol]?.live,item=(longs||[]).find(row=>row?.id===symbol),formalScore=window.HSCanonicalScoreResolver?.selectFormalCoreScore?.(dualTrack,symbol),useLive=formalScore?.available===true&&formalScore.source==="LIVE",officialHistory=history.get(symbol)?.rows||[],latestOfficial=officialHistory.at(-1),previousOfficial=officialHistory.at(-2);
     const targetDate=String(dualTrack?.target_date||taipeiToday()),officialDate=String(official?.date||""),liveDate=String(live?.trading_date||""),targetSeries=homeC4IntradaySeries(symbol,targetDate,useLive?live:null),trajectoryDate=targetSeries.length?targetDate:"";
-    const score=Number(useLive?(live.display_score??live.score):official?.displayScore),rawScore=Number(useLive?(live.score??live.display_score):official?.score),officialDelta=latestOfficial&&previousOfficial?latestOfficial.score-previousOfficial.score:null,delta=useLive&&Number.isFinite(Number(live?.delta_vs_official))?Number(live.delta_vs_official):Number.isFinite(officialDelta)?officialDelta:null,next=Number.isFinite(rawScore)?selectDecisionCenterOpportunity([{symbol,score:rawScore}]):null;
+    const score=formalScore?.available===true?Number(formalScore.display_score):null,rawScore=formalScore?.available===true?Number(formalScore.score):null,officialDelta=latestOfficial&&previousOfficial?latestOfficial.score-previousOfficial.score:null,delta=useLive&&Number.isFinite(Number(live?.delta_vs_official))?Number(live.delta_vs_official):Number.isFinite(officialDelta)?officialDelta:null,next=Number.isFinite(rawScore)?selectDecisionCenterOpportunity([{symbol,score:rawScore}]):null;
     return{symbol,name:names.get(symbol)||item?.name||"",official,live,useLive,score,rawScore,delta,tradingDate:useLive?liveDate:officialDate,officialDate,liveDate,trajectoryDate,series:targetSeries,next,previousSession:homeC4PreviousSessionSummary(symbol,targetDate),tier:useLive?String(live?.tier||official?.tier||"正式分數"):String(official?.tier||"正式分數")};
   });
 }
@@ -3542,6 +3548,7 @@ function renderDecisionCenter(longs,dualTrack,leverageState){
 function renderTop(){
   const longIds=new Set(["0050","00830","00662","00757","009815","00935"]),swingIds=new Set(["00733","006201"]);
   const dualTrack=currentDualTrackCoreView(taipeiToday(),new Date());
+  window.dispatchEvent(new CustomEvent("hs:formal-core-score-updated"));
   const longs=all.filter(x=>longIds.has(x.id)).sort(longRankComparator);
   const rankedLongs=longs.filter(item=>LONG_RADAR_SCORED_CODES.has(item.id)&&Boolean(homepageFinalDecision(item)));
   const waitingLongs=longs.filter(item=>!rankedLongs.includes(item));

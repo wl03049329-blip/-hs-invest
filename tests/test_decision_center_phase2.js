@@ -5,11 +5,12 @@ const fs=require("node:fs");
 const vm=require("node:vm");
 const decision=require("../hs-decision-layer-v1.js");
 const liveDiagnostics=require("../frontend-live-diagnostics.js");
+const canonicalResolver=require("../canonical-score-resolver.js");
 
 const html=fs.readFileSync("index.html","utf8"),css=fs.readFileSync("formal-black-gold.css","utf8"),symbols=["0050","00662","00757","00830","00935"];
 const start=html.indexOf("function decisionCenterMarketLabel"),end=html.indexOf("function renderDecisionCenter",start),source=html.slice(start,end);
 assert.ok(start>0&&end>start,"Decision Center selectors must be testable in isolation");
-const sandbox={window:{HSDecisionLayerV1:decision},LONG_RADAR_SCORED_CODES:new Set(symbols),homepageFinalDecision:item=>item?.decision||null,archivedIntradayCoreSnapshots:[],liveCanonicalCoreSnapshots:[],taipeiToday:()=>"2026-09-17",esc:value=>String(value)};
+const sandbox={window:{HSDecisionLayerV1:decision,HSCanonicalScoreResolver:canonicalResolver},LONG_RADAR_SCORED_CODES:new Set(symbols),homepageFinalDecision:item=>item?.decision||null,archivedIntradayCoreSnapshots:[],liveCanonicalCoreSnapshots:[],taipeiToday:()=>"2026-09-17",esc:value=>String(value)};
 vm.runInNewContext(source,sandbox);
 const rows=[{symbol:"0050",score:44.2,displayScore:44,tier:"加碼條件浮現"},{symbol:"00662",score:49.6,displayScore:49,tier:"試探加碼"},{symbol:"00757",score:41,displayScore:41,tier:"加碼條件浮現"},{symbol:"00830",score:53.8,displayScore:53,tier:"正式加碼訊號"},{symbol:"00935",score:39,displayScore:39,tier:"回檔訊號出現"}];
 
