@@ -301,7 +301,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 .homeOpportunityGroup{display:grid;gap:7px;background:#07130e;border:1px solid var(--line);border-radius:15px;padding:10px}.homeOpportunityGroup h3{font-size:13px;margin:0;color:#dffff0}.homeOpportunityRow{display:grid;grid-template-columns:1fr auto;gap:3px 8px;width:100%;text-align:left;color:inherit;background:#102219;border:1px solid #244332;border-radius:11px;padding:9px}.homeOpportunityRow span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.homeOpportunityRow strong{color:#dffff0}.homeOpportunityRow small{grid-column:1/-1;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.strategyBadge{font-size:11px;font-weight:900;color:#dffff0;background:#173126;border-radius:999px;padding:6px 9px}.watchStrategy label{display:grid;gap:3px;color:var(--muted);font-size:10px}.watchStrategy select,.drawdownReference select,.drawdownReference input{background:#07130e;border:1px solid var(--line);color:#fff;border-radius:9px;padding:7px;max-width:150px}.drawdownTool{margin:12px 0}.drawdownForm{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin:12px 0}.drawdownForm label{display:grid;gap:5px;color:var(--muted);font-size:12px}.drawdownForm input{width:100%;background:#07130e;border:1px solid var(--line);color:#fff;border-radius:12px;padding:11px}.drawdownSummary{margin-top:12px}.drawdownTitle,.drawdownReference,.drawdownHeadline{display:flex;gap:10px;align-items:center;justify-content:space-between}.drawdownTitle h3{margin:0}.drawdownTitle span{font-size:11px;color:#dffff0;background:#173126;border-radius:999px;padding:6px 9px}.drawdownReference{justify-content:flex-start;margin:12px 0;flex-wrap:wrap}.drawdownReference label{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:12px}.drawdownHeadline{display:grid;grid-template-columns:repeat(3,1fr)}.drawdownHeadline>div{background:#07130e;border:1px solid var(--line);border-radius:13px;padding:10px}.drawdownHeadline span,.drawdownHeadline small{display:block;color:var(--muted);font-size:10px}.drawdownHeadline b{display:block;font-size:20px;margin:4px 0}.drawdownTableWrap{overflow:auto;margin-top:12px;border:1px solid var(--line);border-radius:13px}.drawdownTable{min-width:0}.drawdownTable th,.drawdownTable td{padding:10px;text-align:left}.drawdownTable tr.current{background:#453c10;color:#ffe46f}.drawdownTable th:first-child,.drawdownTable td:first-child{position:static;background:transparent}.strategyBreakdown small{display:block;margin-top:8px;color:var(--muted)}
 @media(max-width:620px){.watchRow{grid-template-columns:minmax(0,1fr) auto}.watchStrategy{grid-column:1/-1}.watchStrategy select{max-width:none;width:100%}.homeOpportunityRow{font-size:12px}.drawdownHeadline{gap:6px}.drawdownHeadline>div{padding:8px}.drawdownHeadline b{font-size:16px}.drawdownForm{grid-template-columns:1fr}.drawdownForm .btn{width:100%}}
 </style>
-<link rel="stylesheet" href="portfolio-v6.css?v=20260920-portfolio-risk-p3" />
+<link rel="stylesheet" href="portfolio-v6.css?v=20260920-portfolio-resilience-p7" />
 <link rel="stylesheet" href="v62-tech.css?v=20260809b" />
 <link rel="stylesheet" href="formal-black-gold.css?v=20260920-radar-header-compact-v1" />
 <style id="radarPhase32CriticalLayout">
@@ -629,13 +629,18 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
         <button id="portfolioImportBtn" class="miniBtn" type="button">匯入 JSON</button>
         <button id="portfolioCsvTemplateBtn" class="miniBtn" type="button">下載 HS CSV 範本</button>
         <button id="portfolioCsvImportBtn" class="miniBtn" type="button">匯入交易 CSV</button>
+        <button id="portfolioBrokerImportBtn" class="miniBtn" type="button">券商 CSV 預覽</button>
         <button id="portfolioCsvExportBtn" class="miniBtn" type="button">匯出交易 CSV</button>
         <button id="portfolioImportRollbackBtn" class="miniBtn" type="button" disabled>恢復匯入前狀態</button>
         <button id="portfolioClearBtn" class="miniBtn dangerBtn" type="button">清除全部持股</button>
         <input id="portfolioImportFile" type="file" accept="application/json,.json" hidden aria-label="選擇持股 JSON 備份檔" />
         <input id="portfolioCsvImportFile" type="file" accept="text/csv,.csv" hidden aria-label="選擇交易 CSV 檔" />
+        <input id="portfolioBrokerImportFile" type="file" accept="text/csv,.csv" hidden aria-label="選擇券商 CSV 檔" />
         </div>
         <section class="portfolioDataStatus" aria-labelledby="portfolioDataStatusTitle"><h3 id="portfolioDataStatusTitle">資料狀態</h3><div id="portfolioDataStatus"></div></section>
+        <section class="portfolioDataStatus portfolioIntegrity" aria-labelledby="portfolioIntegrityTitle"><div class="portfolioIntegrityHead"><h3 id="portfolioIntegrityTitle">資料完整性</h3><button id="portfolioIntegrityAuditBtn" class="miniBtn" type="button">重新稽核</button></div><div id="portfolioIntegrityStatus"></div><div id="portfolioIntegrityIssues"></div><button id="portfolioIntegrityRepairBtn" class="miniBtn" type="button" hidden>預覽可安全修復項目</button></section>
+        <section class="portfolioDataStatus" aria-labelledby="portfolioRecoveryTitle"><h3 id="portfolioRecoveryTitle">復原點（最新 3 筆）</h3><div id="portfolioRecoveryPoints" class="portfolioRecoveryPoints"></div></section>
+        <section class="portfolioDataStatus" aria-labelledby="portfolioImportHistoryTitle"><h3 id="portfolioImportHistoryTitle">匯入批次</h3><div id="portfolioImportHistory" class="portfolioRecoveryPoints"></div></section>
         <div class="portfolioPrivacy" role="note"><b>持股資料只儲存在此裝置，不會上傳或公開。</b><span>換手機、清除瀏覽器資料或使用無痕模式時，持股資料可能消失，請定期匯出備份。</span></div>
       </div>
     </details>
@@ -1053,11 +1058,12 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
   <div class="sheet portfolioSheet portfolioTransactionSheet">
     <div class="sheetHead"><div><p class="eyebrow">TRANSACTION LEDGER</p><h3 id="portfolioTransactionTitle">新增交易</h3></div><button class="close" type="button" data-ledger-close>關閉</button></div>
     <form id="portfolioTransactionForm" novalidate>
-      <label class="portfolioField">類型<select id="portfolioTransactionType"><option value="BUY">買入</option><option value="SELL">賣出</option><option value="DEPOSIT">入金</option><option value="WITHDRAWAL">出金</option><option value="DIVIDEND">股息</option><option value="FEE">其他費用</option><option value="TAX">額外稅額</option></select></label>
+      <label class="portfolioField">類型<select id="portfolioTransactionType"><option value="BUY">買入</option><option value="SELL">賣出</option><option value="DEPOSIT">入金</option><option value="WITHDRAWAL">出金</option><option value="DIVIDEND">現金股息</option><option value="FEE">其他費用</option><option value="TAX">額外稅額</option><optgroup label="公司行動"><option value="SPLIT">股票分割</option><option value="REVERSE_SPLIT">反向分割</option><option value="STOCK_DIVIDEND">股票股利</option></optgroup></select></label>
       <label class="portfolioField">日期<input id="portfolioTransactionDate" type="date" required></label>
       <label class="portfolioField" data-transaction-symbol>ETF 代號<input id="portfolioTransactionSymbol" maxlength="10" placeholder="例如 0050"></label>
       <div class="portfolioFieldGrid" data-transaction-trade><label class="portfolioField">股數<input id="portfolioTransactionQuantity" type="number" inputmode="decimal" min="0" step="any"></label><label class="portfolioField">成交價<input id="portfolioTransactionPrice" type="number" inputmode="decimal" min="0" step="any"></label></div>
       <label class="portfolioField" data-transaction-amount>金額<input id="portfolioTransactionAmount" type="number" inputmode="decimal" min="0" step="any"></label>
+      <label class="portfolioField" data-transaction-corporate hidden><span id="portfolioTransactionRatioLabel">調整比率</span><input id="portfolioTransactionRatio" type="number" inputmode="decimal" min="0" step="any" placeholder="例如 2 代表 1 股變 2 股"><small>只調整股數；總成本與現金不變。</small></label>
       <div class="portfolioFieldGrid" data-transaction-costs><label class="portfolioField">手續費<input id="portfolioTransactionFee" type="number" inputmode="decimal" min="0" step="any" value="0"></label><label class="portfolioField" data-transaction-tax>交易稅<input id="portfolioTransactionTax" type="number" inputmode="decimal" min="0" step="any" value="0"></label></div>
       <label class="portfolioField">備註（選填）<input id="portfolioTransactionNote" maxlength="240"></label>
       <div id="portfolioTransactionWarning" class="portfolioTransactionWarning" hidden></div><div id="portfolioTransactionError" class="formError" role="alert"></div>
@@ -1069,7 +1075,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 <div id="portfolioLedgerModal" class="modal portfolioModal" role="dialog" aria-modal="true" aria-labelledby="portfolioLedgerAllTitle" aria-hidden="true">
   <div class="sheet portfolioSheet portfolioLedgerSheet">
     <div class="sheetHead"><div><p class="eyebrow">LOCAL LEDGER</p><h3 id="portfolioLedgerAllTitle">交易紀錄</h3></div><button class="close" type="button" data-ledger-close>關閉</button></div>
-    <div id="portfolioLedgerFilters" class="portfolioLedgerFilters"><button class="active" type="button" data-ledger-filter="ALL">全部</button><button type="button" data-ledger-filter="BUY">買入</button><button type="button" data-ledger-filter="SELL">賣出</button><button type="button" data-ledger-filter="CASH">入金／出金</button><button type="button" data-ledger-filter="DIVIDEND">股息</button><button type="button" data-ledger-filter="COST">費用</button></div>
+    <div id="portfolioLedgerFilters" class="portfolioLedgerFilters"><button class="active" type="button" data-ledger-filter="ALL">全部</button><button type="button" data-ledger-filter="BUY">買入</button><button type="button" data-ledger-filter="SELL">賣出</button><button type="button" data-ledger-filter="CASH">入金／出金</button><button type="button" data-ledger-filter="DIVIDEND">股息</button><button type="button" data-ledger-filter="CORPORATE">公司行動</button><button type="button" data-ledger-filter="COST">費用</button></div>
     <div id="portfolioLedgerAllList" class="portfolioLedgerAllList"></div>
   </div>
 </div>
@@ -4997,7 +5003,8 @@ initLiveDebugPanel();liveDiagnosticRecord("initial_page_load",{render_state_befo
 <script src="portfolio-ledger-core.js?v=20260920-portfolio-ledger-p4"></script>
 <script src="portfolio-analytics-core.js?v=20260920-portfolio-analytics-p5"></script>
 <script src="portfolio-workflow-core.js?v=20260920-portfolio-workflow-p6"></script>
-<script src="portfolio-v6.js?v=20260920-portfolio-workflow-p6"></script>
+<script src="portfolio-resilience-core.js?v=20260920-portfolio-resilience-p7"></script>
+<script src="portfolio-v6.js?v=20260920-portfolio-resilience-p7"></script>
 <script src="personal-capital-ui.js?v=20260824-phase4"></script>
 </body>
 </html>

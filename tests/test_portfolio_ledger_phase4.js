@@ -76,7 +76,7 @@ ok("61 100+ event ledger replays",()=>assert(core.derivePortfolioStateFromLedger
 ok("62 transaction UI exists",()=>["portfolioTransactionModal","portfolioLedgerModal","portfolioLedgerMigrationModal"].forEach(id=>assert.match(html,new RegExp(`id="${id}"`))));
 ok("63 recent transactions precede settings",()=>assert(html.indexOf("portfolioLedgerPanel")<html.indexOf('class="panel portfolioSettings"')));
 ok("64 mobile recent list is capped at three",()=>assert.match(css,/portfolioLedgerRows \.portfolioLedgerRow:nth-child\(n\+4\)/));
-ok("65 old backup stays supported",()=>{assert.match(ui,/\[4,5\]\.includes\(Number\(parsed\?\.version\)\)/);assert.match(ui,/workflowCore\.restoreBackup\(parsed\)/);assert.match(ui,/core\.validateImportPayload\(restored\?restored\.holdings:parsed\)/)});
+ok("65 old backup stays supported",()=>{assert.match(ui,/\[4,5,6\]\.includes\(Number\(parsed\?\.version\)\)/);assert.match(ui,/resilienceCore\.restoreBackup\(parsed\)/);assert.match(ui,/core\.validateImportPayload\(restored\?restored\.holdings:parsed\)/)});
 ok("66 new backup includes ledger and snapshots",()=>{assert.match(workflow,/ledgerVersion:ledger\?\.version/);assert.match(ui,/snapshots:portfolioHistory/)});
 ok("67 smart allocation uses derived cash",()=>assert.match(ui,/cash: ledgerState\?\.valid \? ledgerState\.cash/));
 ok("68 opening position edit has second confirmation",()=>assert.match(ui,/修改期初部位會改變正式績效基準/));
