@@ -542,10 +542,10 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
         <div><p class="eyebrow">HOLDINGS</p><h2 id="portfolioHoldingsTitle">我的持股</h2></div>
         <label>排序<select id="portfolioSort" aria-label="持股排序方式"><option value="portfolioOrder">原持股順序</option><option value="todayPnl">今日損益</option><option value="changeRate">漲跌幅</option><option value="totalPnl">總損益</option><option value="weight">市值佔比</option><option value="fiveDay">5D</option><option value="twentyDay">20D</option><option value="ytd">YTD</option></select></label>
       </div>
-      <div class="portfolioHoldingsViews" role="tablist" aria-label="持股表格快捷檢視"><button class="active" type="button" data-holdings-view="pnl">損益</button><button type="button" data-holdings-view="position">持股</button><button type="button" data-holdings-view="trend">趨勢</button></div>
+      <div class="portfolioHoldingsTools"><div class="portfolioHoldingsViews" role="tablist" aria-label="持股表格快捷檢視"><button class="active" type="button" data-holdings-view="pnl">損益</button><button type="button" data-holdings-view="position">持股</button><button type="button" data-holdings-view="trend">趨勢</button></div><button id="portfolioTargetEditorOpen" class="miniBtn portfolioTargetEditorOpen" type="button">設定目標</button></div>
       <div id="portfolioHoldingsEmpty" class="portfolioEmpty" hidden><b>尚未建立持股</b><span>新增持股或建立交易帳本後，會在此顯示完整持股明細。</span><button class="btn" type="button" data-portfolio-empty-add>＋ 新增持股</button></div>
       <div id="portfolioHoldingsTableViewport" class="portfolioHoldingsTableViewport" tabindex="0" aria-label="持股明細表，可水平滑動">
-        <div class="portfolioHoldingsTable" role="table" aria-label="持股明細">
+        <div class="portfolioHoldingsTable" role="table" aria-label="持股明細" data-view="pnl">
           <div class="portfolioHoldingsTableHead" role="row">
             <button type="button" class="holdingColSymbol" data-holdings-sort="portfolioOrder">股票</button>
             <button type="button" data-holdings-sort="todayPnl" data-column-group="pnl">今日損益</button>
@@ -554,6 +554,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
             <span data-column-group="position">股數</span>
             <span>均價／總成本</span>
             <button type="button" data-holdings-sort="weight">市值佔比</button>
+            <span data-column-group="position">目標佔比</span>
             <button type="button" data-holdings-sort="fiveDay" data-column-group="trend">近 5 日漲幅</button>
             <button type="button" data-holdings-sort="twentyDay">近 20 日漲幅</button>
             <button type="button" data-holdings-sort="ytd">今年漲幅</button>
@@ -1017,6 +1018,22 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
     <div class="chartBox"><canvas id="chart" width="720" height="300"></canvas></div>
     <div class="chartLegend"><span>白線：週收盤價</span><span>綠線：J 值</span><span>虛線：J=20 / 10 / 0 / -10</span></div>
     <div id="trendList" class="trendList"></div>
+  </div>
+</div>
+
+<div id="portfolioTargetModal" class="modal portfolioModal" role="dialog" aria-modal="true" aria-labelledby="portfolioTargetModalTitle" aria-hidden="true">
+  <div class="sheet portfolioSheet portfolioTargetSheet">
+    <div class="sheetHead">
+      <div><p class="eyebrow">TARGET ALLOCATION</p><h3 id="portfolioTargetModalTitle">設定目標配置</h3></div>
+      <button id="portfolioTargetModalClose" class="close" type="button" aria-label="關閉目標配置視窗">關閉</button>
+    </div>
+    <p class="portfolioTargetIntro">可先儲存未滿 100% 的草稿；智慧再平衡仍需所有持股完整合計 100%。</p>
+    <form id="portfolioTargetForm" novalidate>
+      <div id="portfolioTargetBatchRows" class="portfolioTargetBatchRows"></div>
+      <p id="portfolioTargetBatchTotal" class="portfolioTargetBatchTotal" role="status" aria-live="polite">目標配置合計 0%</p>
+      <div id="portfolioTargetBatchError" class="formError" role="alert"></div>
+      <button class="btn portfolioSaveBtn" type="submit">儲存目標配置</button>
+    </form>
   </div>
 </div>
 

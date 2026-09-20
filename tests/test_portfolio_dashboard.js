@@ -53,7 +53,7 @@ equal(dashboard.sortRows(sortable, "todayPnl", "desc")[0].code, "A", "Sort desce
 equal(dashboard.sortRows(sortable, "todayPnl", "asc")[0].code, "B", "Sort ascending works");
 equal(dashboard.sortRows(sortable, "portfolioOrder")[0].code, "A", "Default portfolio order is preserved");
 
-for (const label of ["股票", "今日損益", "股票漲跌幅", "總損益", "股數", "均價／總成本", "市值佔比", "近 5 日漲幅", "近 20 日漲幅", "今年漲幅"]) check(html.includes(label), `Holdings table includes ${label}`);
+for (const label of ["股票", "今日損益", "股票漲跌幅", "總損益", "股數", "均價／總成本", "市值佔比", "目標佔比", "近 5 日漲幅", "近 20 日漲幅", "今年漲幅"]) check(html.includes(label), `Holdings table includes ${label}`);
 check(/portfolioHoldingsTableViewport\{[^}]*overflow-x:auto/.test(css), "Only table viewport scrolls horizontally");
 check(/holdingColSymbol[^}]*position:sticky/.test(css), "Symbol column is sticky");
 check(/portfolioHoldingsTableHead\{position:sticky/.test(css), "Table header is sticky");
@@ -61,7 +61,7 @@ check(/data-holdings-view="pnl"/.test(html) && /data-holdings-view="position"/.t
 equal((html.match(/class="portfolioHoldingsTable"/g) || []).length, 1, "Shortcuts reuse one table");
 check(/viewport\.scrollTo/.test(ui), "Shortcut tabs only scroll the table viewport");
 check(/overflow-x:hidden/.test(css), "Page protects against body horizontal overflow");
-check(/grid-template-columns:170px 92px 102px 112px 72px 125px 85px 90px 90px 90px/.test(css), "Header and rows share the same column contract");
+check(/grid-template-columns:170px 92px 102px 112px 72px 125px 85px 90px 90px 90px 90px/.test(css), "Header and rows share the same column contract");
 check(/\.portfolioEmpty\[hidden\]\{display:none\}/.test(css), "Populated portfolios never show the empty state");
 
 const planInput = [

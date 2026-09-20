@@ -213,6 +213,10 @@
     return new Intl.NumberFormat("zh-TW", {style: "currency", currency: "TWD", maximumFractionDigits: 0}).format(value);
   }
 
+  function cost(value) {
+    return Number.isFinite(value) ? dashboardCore.fixedCost(value) : "—";
+  }
+
   function number(value, digits = 2) {
     if (!Number.isFinite(value)) return "—";
     return new Intl.NumberFormat("zh-TW", {maximumFractionDigits: digits}).format(value);
@@ -358,14 +362,64 @@
         <div role="cell"><b class="${valueClass(current?row.changeRate:null)}">${current&&Number.isFinite(row.changeRate)?percent(row.changeRate):"—"}</b><small>${current&&Number.isFinite(row.quote?.price)?money(row.quote.price):"行情暫缺"}</small></div>
         <div role="cell"><b class="${valueClass(current?row.totalPnl:null)}">${current&&Number.isFinite(row.totalPnl)?money(row.totalPnl):"—"}</b><small class="${valueClass(totalPnlRate)}">${current?percent(totalPnlRate):"—"}</small></div>
         <div role="cell"><b>${number(row.shares,4)}</b></div>
-        <div role="cell"><b>${Number.isFinite(row.averageCost)?money(row.averageCost):"—"}</b><small>${Number.isFinite(row.totalCost)?money(row.totalCost):"—"}</small></div>
+        <div role="cell"><b>${cost(row.averageCost)}</b><small>${cost(row.totalCost)}</small></div>
         <div role="cell"><b>${current?plainPercent(row.weight):"—"}</b></div>
+        <div role="cell" class="holdingTargetCell"><button type="button" class="holdingTargetButton ${Number.isFinite(row.targetAllocation)?"is-set":"is-unset"}" data-target-edit="${escapeHtml(row.code)}"><span>${dashboardCore.targetDisplay(row.targetAllocation)}</span><small>點擊編輯</small></button></div>
         <div role="cell"><b class="${valueClass(row.fiveDay)}">${percent(row.fiveDay)}</b></div>
         <div role="cell"><b class="${valueClass(row.twentyDay)}">${percent(row.twentyDay)}</b></div>
         <div role="cell"><b class="${valueClass(row.ytd)}">${percent(row.ytd)}</b></div>
       </article>`;
     }).join("");
     list.querySelectorAll("[data-edit-holding]").forEach(button=>button.addEventListener("click",()=>ledger?openLedger():openPortfolioModal(button.dataset.editHolding)));
+    list.querySelectorAll("[data-target-edit]").forEach(button=>button.addEventListener("click",()=>openInlineTargetEditor(button.dataset.targetEdit)));
+  }
+
+  function applyTargetUpdates(updates) {
+    const targetMap = new Map(updates.map(item => [core.normalizeCode(item.code), item.value]));
+    const next = holdings.map(item => targetMap.has(item.code) ? core.validateHolding({...item, targetAllocation: targetMap.get(item.code)}) : item);
+    const allocation = core.validateTargetAllocations(next);
+    if (!allocation.ok) throw new Error(`目標配置合計不可超過 100%（目前 ${number(allocation.total, 1)}%）。`);
+    holdings = next;
+    saveHoldings();
+    refreshPortfolio();
+  }
+
+  function openInlineTargetEditor(code) {
+    const cell=$v6(`[data-holding-code="${CSS.escape(code)}"] .holdingTargetCell`),holding=holdings.find(item=>item.code===code);
+    if(!cell||!holding)return;
+    cell.innerHTML=`<form class="holdingTargetInline" data-target-inline="${escapeHtml(code)}"><label><span>目標 %</span><input type="number" min="0" max="100" step="0.1" inputmode="decimal" value="${Number.isFinite(holding.targetAllocation)?holding.targetAllocation:""}" aria-label="${escapeHtml(code)} 目標佔比"></label><span><button type="submit">儲存</button><button type="button" data-target-inline-cancel>取消</button></span><small class="holdingTargetInlineError" role="alert"></small></form>`;
+    const form=cell.querySelector("form"),input=form.querySelector("input"),error=form.querySelector(".holdingTargetInlineError");
+    form.addEventListener("submit",event=>{event.preventDefault();const normalized=dashboardCore.normalizeTarget(input.value);if(!normalized.ok){error.textContent="請輸入 0–100，最多一位小數。";return}try{applyTargetUpdates([{code,value:normalized.value}])}catch(reason){error.textContent=reason.message}});
+    form.querySelector("[data-target-inline-cancel]").addEventListener("click",renderList);
+    input.focus();input.select();
+  }
+
+  function targetBatchSummary() {
+    const inputs=[...$v6("#portfolioTargetBatchRows").querySelectorAll("[data-target-batch]")];
+    const summary=dashboardCore.targetSummary(inputs.map(input=>input.value));
+    const output=$v6("#portfolioTargetBatchTotal");
+    output.className=`portfolioTargetBatchTotal is-${summary.status}`;
+    output.textContent=summary.status==="complete"?`目標配置合計 ${dashboardCore.fixedOne(summary.total)} ✓`:summary.status==="under"?`目標配置合計 ${dashboardCore.fixedOne(summary.total)}｜尚差 ${dashboardCore.fixedOne(summary.gap)}`:`目標配置合計 ${dashboardCore.fixedOne(summary.total)}｜超出 ${dashboardCore.fixedOne(Math.abs(summary.gap))}`;
+    return{inputs,summary};
+  }
+
+  function openTargetModal() {
+    const modal=$v6("#portfolioTargetModal"),rows=$v6("#portfolioTargetBatchRows");
+    rows.innerHTML=holdings.length?holdings.map(item=>`<label class="portfolioTargetBatchRow"><span><b>${escapeHtml(item.code)}</b><small>${escapeHtml(holdingName(item))}</small></span><span><input type="number" min="0" max="100" step="0.1" inputmode="decimal" value="${Number.isFinite(item.targetAllocation)?item.targetAllocation:""}" data-target-batch="${escapeHtml(item.code)}" aria-label="${escapeHtml(item.code)} 目標佔比"><em>%</em></span></label>`).join(""):'<p class="rebalancePending">新增持股後才能設定目標配置。</p>';
+    $v6("#portfolioTargetBatchError").textContent="";
+    rows.querySelectorAll("[data-target-batch]").forEach(input=>input.addEventListener("input",targetBatchSummary));
+    targetBatchSummary();modal.classList.add("show");modal.setAttribute("aria-hidden","false");
+    setTimeout(()=>rows.querySelector("input")?.focus(),40);
+  }
+
+  function closeTargetModal(){const modal=$v6("#portfolioTargetModal");modal.classList.remove("show");modal.setAttribute("aria-hidden","true")}
+
+  function saveTargetBatch(event) {
+    event.preventDefault();
+    const {inputs,summary}=targetBatchSummary(),error=$v6("#portfolioTargetBatchError");
+    if(!summary.valid){error.textContent="每檔目標配置需為 0–100，最多一位小數。";return}
+    if(summary.status==="over"){error.textContent=`目標配置超出 ${number(Math.abs(summary.gap),1)}%，請調整後再儲存。`;return}
+    try{applyTargetUpdates(inputs.map(input=>({code:input.dataset.targetBatch,value:dashboardCore.normalizeTarget(input.value).value})));closeTargetModal()}catch(reason){error.textContent=reason.message}
   }
 
   function rebalanceTrend(row) {
@@ -1016,7 +1070,7 @@
   function normalizePortfolioTool(name){return({overview:"performance",performance:"performance",analytics:"analytics",recurring:"analytics",risk:"risk",transactions:"transactions",report:"report",calendar:"calendar",settings:"settings"})[name]||"performance"}
   function showPortfolioTool(name,{scroll=true}={}){activePortfolioTool=normalizePortfolioTool(name);document.querySelectorAll("[data-portfolio-tool]").forEach(node=>{node.hidden=node.dataset.portfolioTool!==activePortfolioTool});$v6("#portfolioWorkflowNav").querySelectorAll("[data-portfolio-section]").forEach(button=>{const active=normalizePortfolioTool(button.dataset.portfolioSection)===activePortfolioTool;button.classList.toggle("active",active);button.setAttribute("aria-selected",String(active))});if(scroll)$v6("#portfolioWorkflowNav").scrollIntoView({behavior:"smooth",block:"start"})}
   function workflowSectionTarget(name){showPortfolioTool(name,{scroll:false});return document.querySelector(`[data-portfolio-tool="${normalizePortfolioTool(name)}"]`)}
-  function holdingsView(name){const viewport=$v6("#portfolioHoldingsTableViewport"),target=$v6(`[data-column-group="${name}"]`),sticky=$v6(".portfolioHoldingsTableHead .holdingColSymbol");if(!viewport||!target)return;viewport.scrollTo({left:Math.max(0,target.offsetLeft-(sticky?.offsetWidth||0)),behavior:"smooth"});document.querySelectorAll("[data-holdings-view]").forEach(button=>button.classList.toggle("active",button.dataset.holdingsView===name))}
+  function holdingsView(name){const viewport=$v6("#portfolioHoldingsTableViewport"),table=$v6(".portfolioHoldingsTable"),target=$v6(`[data-column-group="${name}"]`),sticky=$v6(".portfolioHoldingsTableHead .holdingColSymbol");if(!viewport||!target||!table)return;table.dataset.view=name;viewport.scrollTo({left:name==="position"?0:Math.max(0,target.offsetLeft-(sticky?.offsetWidth||0)),behavior:"smooth"});document.querySelectorAll("[data-holdings-view]").forEach(button=>button.classList.toggle("active",button.dataset.holdingsView===name))}
   function openCsvPreview(preview,fileName){csvImportPreview=preview;csvImportFileName=fileName;$v6("#portfolioCsvPreviewSummary").innerHTML=[["總筆數",preview.total],["有效",preview.valid],["警告",preview.warning],["錯誤",preview.errors],["疑似重複",preview.duplicates]].map(row=>`<article><span>${row[0]}</span><b>${row[1]}</b></article>`).join("");const labels={VALID:"可匯入",WARNING:"需確認",ERROR:"無法匯入",DUPLICATE_CANDIDATE:"疑似重複"};$v6("#portfolioCsvPreviewRows").innerHTML=preview.rows.map((row,index)=>`<label class="portfolioCsvRow" data-status="${row.status}"><input type="checkbox" data-csv-select="${index}" ${row.selected?"checked":""} ${row.status==="ERROR"?"disabled":""}><span>#${row.rowNumber}</span><b class="portfolioCsvStatus">${labels[row.status]}</b><span data-csv-symbol>${escapeHtml(row.event?.symbol||row.event?.type||row.raw?.type||"—")}</span><small data-csv-detail>${escapeHtml(row.event?`${row.event.tradeDate}｜${row.event.type}｜${row.event.quantity??row.event.grossAmount}`:"欄位驗證失敗")}</small><small data-csv-message>${escapeHtml(row.messages.join("；")||"格式與欄位有效")}</small></label>`).join("");$v6("#portfolioCsvPreviewError").textContent="";const modal=$v6("#portfolioCsvPreviewModal");modal.classList.add("show");modal.setAttribute("aria-hidden","false")}
   function closeCsvPreview(){const modal=$v6("#portfolioCsvPreviewModal");modal.classList.remove("show");modal.setAttribute("aria-hidden","true");$v6("#portfolioCsvImportFile").value=""}
   async function selectCsv(file){if(!file)return;try{if(!ledger)throw new Error("請先建立交易帳本");if(file.size>1024*1024)throw new Error("CSV 不可超過 1 MB");openCsvPreview(workflowCore.buildImportPreview(await file.text(),ledger),file.name)}catch(error){alert(`CSV 讀取失敗：${error.message}`);$v6("#portfolioCsvImportFile").value=""}}
@@ -1336,6 +1390,10 @@
     $v6("#portfolioModalClose").addEventListener("click", closePortfolioModal);
     $v6("#portfolioModal").addEventListener("click", event => { if (event.target === $v6("#portfolioModal")) closePortfolioModal(); });
     $v6("#portfolioForm").addEventListener("submit", submitPortfolio);
+    $v6("#portfolioTargetEditorOpen").addEventListener("click",openTargetModal);
+    $v6("#portfolioTargetModalClose").addEventListener("click",closeTargetModal);
+    $v6("#portfolioTargetModal").addEventListener("click",event=>{if(event.target===$v6("#portfolioTargetModal"))closeTargetModal()});
+    $v6("#portfolioTargetForm").addEventListener("submit",saveTargetBatch);
     $v6("#portfolioCode").addEventListener("input", event => {
       event.target.value = core.normalizeCode(event.target.value).replace(/[^0-9A-Z]/g, "").slice(0, 10);
       searchCatalog(event.target.value);
@@ -1465,6 +1523,7 @@
     }, {passive: true});
     document.addEventListener("keydown", event => {
       if (event.key === "Escape" && $v6("#portfolioModal").classList.contains("show")) closePortfolioModal();
+      if (event.key === "Escape" && $v6("#portfolioTargetModal").classList.contains("show")) closeTargetModal();
       if (event.key === "Escape") closeLedgerModals();
     });
     const sentimentObserver = new MutationObserver(renderHomeSentiment);

@@ -51,6 +51,38 @@
 
   function trends(rows){return{fiveDay:trailingReturn(rows,5),twentyDay:trailingReturn(rows,20),ytd:ytdReturn(rows)};}
 
+  function fixedCost(value){
+    if(value===null||value===undefined||String(value).trim()==="")return"—";
+    const amount=finite(value);
+    return amount===null?"—":new Intl.NumberFormat("zh-TW",{minimumFractionDigits:2,maximumFractionDigits:2}).format(amount);
+  }
+
+  function fixedOne(value){
+    const amount=finite(value);
+    return amount===null?"—":`${amount.toFixed(1)}%`;
+  }
+
+  function targetDisplay(value){
+    const target=normalizeTarget(value);
+    return!target.ok||target.value===null?"未設定":`${target.value.toFixed(1)}%`;
+  }
+
+  function normalizeTarget(value){
+    if(value===null||value===undefined||String(value).trim()==="")return{ok:true,value:null};
+    const target=Number(value);
+    if(!Number.isFinite(target)||target<0||target>100||Math.abs(target*10-Math.round(target*10))>1e-8)return{ok:false,value:null};
+    return{ok:true,value:Number(target.toFixed(1))};
+  }
+
+  function targetSummary(values=[]){
+    const normalized=(Array.isArray(values)?values:[]).map(value=>normalizeTarget(value));
+    const valid=normalized.every(item=>item.ok);
+    const configured=normalized.filter(item=>item.ok&&item.value!==null).length;
+    const total=normalized.reduce((sum,item)=>sum+(item.ok&&item.value!==null?item.value:0),0);
+    const gap=Number((100-total).toFixed(1));
+    return{valid,configured,total:Number(total.toFixed(1)),gap,complete:valid&&normalized.length>0&&configured===normalized.length&&Math.abs(gap)<=.01,status:Math.abs(gap)<=.01?"complete":gap>0?"under":"over"};
+  }
+
   function sortRows(rows=[],mode="portfolioOrder",direction="desc"){
     const source=(Array.isArray(rows)?rows:[]).map((row,index)=>({...row,portfolioOrder:index}));
     if(mode==="portfolioOrder")return source;
@@ -60,5 +92,5 @@
     return source.sort((a,b)=>{const av=finite(a[key]),bv=finite(b[key]);if(av===null&&bv===null)return a.portfolioOrder-b.portfolioOrder;if(av===null)return 1;if(bv===null)return-1;return(av-bv)*sign||a.portfolioOrder-b.portfolioOrder;});
   }
 
-  return Object.freeze({VERSION:"HS_PORTFOLIO_DASHBOARD_V1",hero,allocation,adjustedRows,trailingReturn,ytdReturn,trends,sortRows});
+  return Object.freeze({VERSION:"HS_PORTFOLIO_DASHBOARD_V1",hero,allocation,adjustedRows,trailingReturn,ytdReturn,trends,fixedCost,fixedOne,targetDisplay,normalizeTarget,targetSummary,sortRows});
 });
