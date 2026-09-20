@@ -65,7 +65,7 @@ assert.match(html, /id="hsStoryEntry"/);
 assert.match(html, /關於 HS｜ETF股市雷達/);
 assert.match(html, /持股智慧再平衡/);
 assert.match(html, /資料來源與使用說明/);
-assert.match(html, /id="rebalanceTitle">智慧再平衡/);
+assert.match(html, /id="rebalanceTitle">目標配置與再平衡設定/);
 assert.match(html, /新資金優先補低配/);
 assert.doesNotMatch(html, />\s*(?:NaN|undefined|Infinity)\s*</);
 for (const width of [375, 390, 430]) assert.match(tech, new RegExp(width === 430 ? "max-width:430px" : "max-width:760px"));

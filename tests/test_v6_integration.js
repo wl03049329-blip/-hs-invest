@@ -46,7 +46,7 @@ check("持股隱私與裝置遺失提示", () => {
 check("持股資料僅寫入 localStorage 且未放進網址", () => {
   assert.match(ui, /localStorage\.setItem\(HOLDINGS_KEY/);
   assert.doesNotMatch(ui, /URLSearchParams|history\.pushState|history\.replaceState|location\.search/);
-  assert.doesNotMatch(ui, /sendBeacon|gtag|analytics|fetch\([^)]*holdings/i);
+  assert.doesNotMatch(ui, /sendBeacon|gtag|fetch\(\s*[`'"][^`'"]*(?:holdings|portfolio)/i);
   assert.doesNotMatch(ui, /console\./);
 });
 

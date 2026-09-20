@@ -37,7 +37,7 @@ for(const [low,high] of [[29,30],[39,40],[44,45],[49,50],[64,65],[69,70],[79,80]
 }
 
 assert.match(html,/data-radar-consistency-phase="9\.5"/);
-assert.match(html,/20260919-background-web-push-phase11b2a/);
+assert.match(html,/20260920-live-archive-resilience-v1/);
 assert.match(html,/function radarOverviewNextLevel[\s\S]*contract\?\.NEXT_THRESHOLDS/);
 assert.match(html,/function radarFocusStageFor[\s\S]*contract\?\.STAGES/);
 assert.match(html,/function radarHistoryPhase6State[\s\S]*contract\?\.STAGES/);

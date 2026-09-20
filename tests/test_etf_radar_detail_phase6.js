@@ -50,7 +50,7 @@ function officialFor(symbol,currentScore,currentDd52,previousScores=[35,41]){
     actual.push({symbol,sample:value.size,current:value.current.displayScore,percentile:value.percentile,levelRate:Number(value.levelRate.toFixed(1)),dd52Percentile:value.dd52Percentile});
   }
   assert.match(css,/\.radarHistoryP6Source\{/);assert.match(css,/@media\(max-width:390px\).*\.radarHistoryP6Source\{grid-template-columns:1fr\}/s);
-assert.match(html,/formal-black-gold\.css\?v=20260919-background-web-push-phase11b2a/);assert.match(html,/20260919-background-web-push-phase11b2a/);
+assert.match(html,/formal-black-gold\.css\?v=20260920-radar-header-compact-v1/);assert.match(html,/20260920-live-archive-resilience-v1/);
   console.log(`PASS ETF Radar Phase 6.6 research history, finalized current state, integrity/version guards and responsive source labels; fixture 00830 P${expectedPercentile}/DD52 P${expectedDepth}`);
   console.log(JSON.stringify(actual));
 })().catch(error=>{console.error(error);process.exitCode=1});

@@ -7,7 +7,7 @@ const html=read("index.html"),css=read("v62-tech.css"),portfolio=read("portfolio
 
 assert.doesNotMatch(html,/id="homeMarketOverview"|id="marketOverviewCards"/);
 assert.doesNotMatch(html,/scheduleLiveQuotePoll|liveQuoteTimer/);
-assert(html.indexOf('id="homeSentiment"')<html.indexOf('id="homeEtfBrief"')&&html.indexOf('id="homeEtfBrief"')<html.indexOf('class="panel marketPanel"')&&html.indexOf('class="panel marketPanel"')<html.indexOf('id="homeSwingBrief"'));
+assert(html.indexOf('id="hsDecisionRoom"')<html.indexOf('id="homeSentiment"')&&html.indexOf('id="homeSentiment"')<html.indexOf('id="homeEtfBrief"')&&html.indexOf('id="homeEtfBrief"')<html.indexOf('id="homeLeverageBrief"'));
 assert.match(html,/scheduleLongRankRefresh/);
 assert.match(html,/market-quotes-meta\.json\?ts=/);
 assert.doesNotMatch(html,/fetchNoStore\(`(?:market-overview|commodity-quotes|tx-futures-quote)\.json/);
@@ -19,7 +19,7 @@ assert.match(css,/homeSentimentWide\{grid-column:1\/-1\}/);
 for(const code of ["0050","00830","00662","009815","00935"])assert.match(html,new RegExp(`id:"${code}"[^\n]+strategyMode:"long_term_core"`));
 assert.match(html,/sort\(longRankComparator\)/);
 assert.match(html,/longRankComparator[\s\S]*coreScore[\s\S]*scoreB-scoreA\|\|a\.id\.localeCompare/);
-assert.match(html,/第\$\{index\+1\}名/);
+assert.match(html,/aria-label="第\$\{rank\}名"/);
 assert.match(html,/rankDelta>0\?`↑\$\{rankDelta\}`:rankDelta<0\?`↓/);
 assert.match(html,/LONG_RANK_STORAGE_KEY/);
 for(const field of ["current_score","current_rank","snapshotTime","marketAsOf"])assert.match(html,new RegExp(field));
@@ -36,8 +36,8 @@ assert.match(html,/mode==="long_term_core"\?null:x\.score/);
 assert.deepEqual(strategy.SWING_WEIGHTS,{stopConfirmation:30,trendStrength:25,technicalLow:15,momentum:10,historicalStats:10,valuationBackground:5,marketLiquidity:5});
 assert.deepEqual(strategy.LONG_TERM_WEIGHTS,{weeklyKdj:45,drawdown:20,weeklyBias:15,marketFear:15,valuation:5});
 
-assert.match(workflow,/cron: "27,30,35,40,45 1,2,3,4,5 \* \* 1-5"/);assert.match(workflow,/run_intraday_radar_session\.py --scheduled-once/);
-assert.match(html,/minute>=30&&minute<=49/);
+assert.match(workflow,/cron: "\*\/5 1 \* \* 1-5"/);assert.match(workflow,/cron: "\*\/5 2,3,4,5 \* \* 1-5"/);assert.match(workflow,/run_intraday_radar_session\.py --scheduled-once/);
+assert.match(html,/function longRankScheduleStatus/);
 assert.match(html,/setTimeout\(async\(\)=>/);
 assert.match(html,/60000/);
 assert.match(html,/visibilitychange[\s\S]*refreshLiveQuotes\(\{force:true\}\)[\s\S]*scheduleLongRankRefresh/);

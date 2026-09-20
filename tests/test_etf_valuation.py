@@ -43,7 +43,8 @@ valuation = json.loads((ROOT / "etf-valuation.json").read_text(encoding="utf-8")
 value = valuation["items"]["00830"]
 assert value["is_proxy"] is True
 assert value["source_name"] == "Invesco public fund characteristics JSON"
-assert value["history_sample_count"] < 30
+assert value["history_sample_count"] >= 1
+assert value["score_status"] in {"provisional_current_metrics", "historical_percentile"}
 for field in ("current_pe", "forward_pe", "pb", "earnings_growth", "peg", "valuation_score"):
     assert value[field] is None or math.isfinite(value[field])
 
@@ -56,4 +57,4 @@ assert proxy_map["items"]["00935"]["source_type"] == "reference_only"
 assert valuation["items"]["00935"]["valuation_score"] is None
 assert valuation["items"]["00935"]["score_status"] == "benchmark_background"
 
-print("PASS valuation updater validation, proxy benchmark separation and initial history")
+print("PASS valuation updater validation, proxy benchmark separation and accumulated history")

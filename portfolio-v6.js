@@ -5,7 +5,8 @@
   const performanceCore = window.HSPortfolioPerformanceCore;
   const ledgerCore = window.HSPortfolioLedgerCore;
   const analyticsCore = window.HSPortfolioAnalyticsCore;
-  if (!core || !performanceCore || !ledgerCore || !analyticsCore) return;
+  const workflowCore = window.HSPortfolioWorkflowCore;
+  if (!core || !performanceCore || !ledgerCore || !analyticsCore || !workflowCore) return;
 
   const storageKeys = window.HSPersistenceCore?.keys || {};
   const HOLDINGS_KEY = storageKeys.holdings || "hsRadar.portfolio.holdings";
@@ -53,6 +54,15 @@
   let analyticsTab = "OVERVIEW";
   let analyticsDividendYear = "";
   let analyticsMonth = "";
+  let portfolioGoal = loadWorkflowValue(workflowCore.GOAL_STORAGE_KEY, workflowCore.normalizeGoal);
+  let portfolioMonthlyPlan = loadWorkflowValue(workflowCore.PLAN_STORAGE_KEY, workflowCore.normalizeMonthlyPlan);
+  let portfolioImportState = loadWorkflowValue(workflowCore.IMPORT_STORAGE_KEY, value => value && typeof value === "object" ? value : null);
+  let csvImportPreview = null;
+  let csvImportFileName = "";
+  let annualReport = null;
+
+  function loadWorkflowValue(key, validator) { try { return validator(JSON.parse(localStorage.getItem(key) || "null")); } catch { return null; } }
+  function saveWorkflowValue(key, value) { if (value) localStorage.setItem(key, JSON.stringify(value)); else localStorage.removeItem(key); }
 
   function loadPortfolioHistory() {
     try {
@@ -758,6 +768,7 @@
     renderRiskCenter();
     renderCapitalPlan();
     renderLedger();
+    renderWorkflow();
     renderQuoteStatus();
     window.dispatchEvent(new CustomEvent("hs:portfolio-state"));
     if (animate) {
@@ -1029,8 +1040,33 @@
     scheduleNext();
   }
 
+  function downloadText(text, fileName, type="text/plain;charset=utf-8") { const blob=new Blob([text],{type}),url=URL.createObjectURL(blob),link=document.createElement("a");link.href=url;link.download=fileName;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000); }
+  function currentPortfolioAssets(){const latest=portfolioHistory.at(-1)?.totalAssets;if(Number.isFinite(Number(latest)))return Number(latest);const market=computed.rows.filter(row=>Number.isFinite(row.marketValue)).reduce((sum,row)=>sum+row.marketValue,0);return market+(ledgerState?.valid?ledgerState.cash:rebalanceSettings.cash||0)}
+  function workflowMetric(label,value,note=""){return`<article class="portfolioWorkflowMetric"><span>${escapeHtml(label)}</span><b>${escapeHtml(value)}</b><small>${escapeHtml(note)}</small></article>`}
+  function renderGoalAndActivity(){
+    const goal=workflowCore.goalProgress(portfolioGoal,currentPortfolioAssets(),taipeiToday()),goalNode=$v6("#portfolioGoalCompact");
+    goalNode.innerHTML=goal.available?`<div class="portfolioGoalBody"><div class="portfolioGoalValues"><div><span>目前資產</span><b>${money(goal.currentAssets)}</b></div><div><span>目標</span><b>${money(goal.goal.targetValue)}</b></div><div><span>完成度</span><b>${number(goal.progress,1)}%</b></div></div><div class="portfolioGoalProgress"><i style="width:${Math.min(100,Math.max(0,goal.progress))}%"></i></div><small>${goal.reached?"已達設定目標":`距離目標 ${money(goal.remaining)}`}｜目標日 ${displayDate(goal.goal.targetDate)}${goal.pastDue?"（日期已到）":""}</small></div>`:'<div class="portfolioGoalBody"><small>尚未設定主要投資目標；此功能只追蹤使用者自訂資產目標。</small></div>';
+    const recurring=ledger?workflowCore.recurringAnalytics(ledger,{asOf:taipeiToday(),monthlyPlan:portfolioMonthlyPlan}):null,activity=$v6("#portfolioActivityCompact");
+    activity.innerHTML=recurring?.available?`<div class="portfolioActivityBody"><div class="portfolioActivityValues"><div><span>本月入金</span><b>${money(recurring.months.at(-1)?.deposits||0)}</b></div><div><span>本月買入</span><b>${money(recurring.months.at(-1)?.buys||0)}</b></div><div><span>YTD 入金</span><b>${money(recurring.ytdDeposits)}</b></div></div><small>${recurring.planProgress?`本月計畫 ${money(recurring.planProgress.planned)}｜距離計畫 ${money(recurring.planProgress.remaining)}`:"尚未設定每月計畫投入"}</small></div>`:'<div class="portfolioActivityBody"><small>建立交易帳本後顯示本月入金與買入活動。</small></div>';
+  }
+  function renderRecurring(){const summary=$v6("#portfolioRecurringSummary"),symbols=$v6("#portfolioRecurringSymbols");if(!ledger){summary.innerHTML=workflowMetric("狀態","等待帳本","不建立推估");symbols.innerHTML="";return}const result=workflowCore.recurringAnalytics(ledger,{asOf:taipeiToday(),monthlyPlan:portfolioMonthlyPlan});summary.innerHTML=[workflowMetric("近 3 月平均入金",money(result.averageDeposit3M),"外部投入"),workflowMetric("近 6 月平均入金",money(result.averageDeposit6M),"外部投入"),workflowMetric("近 3 月平均買入",money(result.averageBuy3M),"實際 BUY"),workflowMetric("YTD 累計入金",money(result.ytdDeposits),result.maxDepositMonth.month?`最大月 ${result.maxDepositMonth.month}`:"尚無入金")].join("");symbols.innerHTML=result.bySymbol.length?result.bySymbol.map(row=>`<span class="portfolioRecurringSymbol"><b>${escapeHtml(row.symbol)}</b>｜近 6 月買入 ${row.months} 個月｜${money(row.totalBuy)}</span>`).join(""):'<span class="portfolioRecurringSymbol">近 6 月尚無 BUY 紀錄</span>'}
+  function annualRow(label,value){return`<div class="portfolioAnnualRow"><span>${escapeHtml(label)}</span><b>${escapeHtml(value)}</b></div>`}
+  function renderAnnualReport(){const select=$v6("#portfolioAnnualYear"),years=[...new Set(portfolioHistory.map(row=>row.date.slice(0,4)))].sort().reverse(),selected=select.value||years[0]||taipeiToday().slice(0,4);select.innerHTML=years.length?years.map(year=>`<option value="${year}"${year===selected?" selected":""}>${year}</option>`).join(""):`<option value="${selected}">${selected}</option>`;annualReport=ledger?workflowCore.buildAnnualReport({ledger,snapshots:portfolioHistory,benchmarkRows,marketRows:analyticsMarketRows(),year:selected}):null;const body=$v6("#portfolioAnnualReportBody");if(!annualReport?.available){$v6("#portfolioAnnualPeriod").textContent="等待正式績效資料";body.innerHTML='<div class="portfolioAnalyticsEmpty">需要交易帳本與正式 portfolio snapshots 才能建立年度報告。</div>';return}$v6("#portfolioAnnualPeriod").textContent=`資料期間 ${displayDate(annualReport.startDate)}–${displayDate(annualReport.endDate)}${annualReport.partialYear?"｜非完整年度":""}`;const percentOr=value=>value===null||value===undefined?"資料不足":percent(value),allocation=label=>annualReport[label].length?annualReport[label].map(row=>annualRow(row.symbol,`${number(row.weight,1)}%`)).join(""):annualRow("配置","資料不足"),contribution=annualReport.contribution.length?annualReport.contribution.slice(0,8).map(row=>annualRow(row.code||row.symbol,money(row.contribution??row.amount??0))).join(""):annualRow("Contribution","資料不足");body.innerHTML=`<div class="portfolioAnnualSummary">${[["起始資產",money(annualReport.startAssets)],["期末／目前資產",money(annualReport.endAssets)],["TWR",percentOr(annualReport.twr)],["XIRR",percentOr(annualReport.xirr)],["0050 同期",percentOr(annualReport.benchmarkReturn)],["相對差異",percentOr(annualReport.relativeReturn)],["淨外部投入",money(annualReport.netExternal)],["股息",money(annualReport.dividends)],["已實現損益",money(annualReport.realizedPnL)],["未實現損益",annualReport.unrealizedPnL===null?"資料不足":money(annualReport.unrealizedPnL)],["最大回撤",percentOr(annualReport.maxDrawdown)],["年化波動率",percentOr(annualReport.annualizedVolatility)]].map(row=>workflowMetric(...row)).join("")}</div><div class="portfolioAnnualRows"><article class="portfolioAnnualBlock"><h3>起始配置</h3>${allocation("startAllocation")}</article><article class="portfolioAnnualBlock"><h3>期末配置</h3>${allocation("endAllocation")}</article><article class="portfolioAnnualBlock"><h3>年度 Contribution</h3>${contribution}</article><article class="portfolioAnnualBlock"><h3>交易與風險</h3>${annualRow("買入筆數",annualReport.trading.buyCount)}${annualRow("賣出筆數",annualReport.trading.sellCount)}${annualRow("買入總額",money(annualReport.trading.cumulativeBuy))}${annualRow("賣出總額",money(annualReport.trading.cumulativeSell))}</article></div><p class="portfolioAnnualNarrative">${escapeHtml(annualReport.summary)}</p>`}
+  function renderCalendar(){const input=$v6("#portfolioCalendarMonth");if(!input.value)input.value=taipeiToday().slice(0,7);const result=ledger?workflowCore.calendarMonth(ledger,input.value):{available:false,days:[]},grid=$v6("#portfolioCalendarGrid"),timeline=$v6("#portfolioCalendarTimeline");if(!result.available){grid.innerHTML="";timeline.innerHTML='<div class="portfolioAnalyticsEmpty">建立交易帳本後顯示投資日曆。</div>';return}const map=new Map(result.days.map(day=>[Number(day.date.slice(8)),day])),first=new Date(`${input.value}-01T00:00:00Z`).getUTCDay(),count=new Date(Number(input.value.slice(0,4)),Number(input.value.slice(5,7)),0).getDate(),cells=[];for(let i=0;i<first;i+=1)cells.push('<span aria-hidden="true"></span>');for(let day=1;day<=count;day+=1){const item=map.get(day);cells.push(`<article class="portfolioCalendarDay"><time>${day}</time>${item?item.events.slice(0,3).map(event=>`<span class="portfolioCalendarEventDot">${escapeHtml(LEDGER_LABELS[event.type]||event.type)} ${event.symbol||money(event.grossAmount)}</span>`).join(""):""}</article>`)}grid.innerHTML=cells.join("");timeline.innerHTML=result.days.length?result.days.flatMap(day=>day.events.map(event=>`<article><time>${escapeHtml(day.date.slice(5).replace("-","/"))}</time><b>${escapeHtml(event.symbol?`${event.symbol} ${LEDGER_LABELS[event.type]||event.type}`:LEDGER_LABELS[event.type]||event.type)}</b><span>${money(Math.abs(event.cashImpact))}</span></article>`)).join(""):'<div class="portfolioAnalyticsEmpty">本月尚無交易活動。</div>'}
+  function renderDataStatus(){const node=$v6("#portfolioDataStatus"),rollback=Boolean(portfolioImportState?.preImportLedger);node.className="portfolioDataStatusRows";node.innerHTML=[["Ledger events",ledger?.events.length??0],["Snapshots",portfolioHistory.length],["Performance start",ledger?.performanceStartDate?displayDate(ledger.performanceStartDate):"—"],["Last backup",portfolioImportState?.lastBackupAt?new Date(portfolioImportState.lastBackupAt).toLocaleString("zh-TW"):"—"],["Goal",portfolioGoal?"已設定":"未設定"],["Import status",portfolioImportState?.lastImportAt?`${portfolioImportState.importedCount} 筆｜${portfolioImportState.fileName}`:"尚未匯入"]].map(([label,value])=>`<span>${escapeHtml(label)}<b>${escapeHtml(value)}</b></span>`).join("");$v6("#portfolioImportRollbackBtn").disabled=!rollback}
+  function renderWorkflow(){renderGoalAndActivity();renderRecurring();renderAnnualReport();renderCalendar();renderDataStatus()}
+  function workflowSectionTarget(name){return document.getElementById({overview:"portfolioOverviewAnchor",analytics:"portfolioAnalyticsCenter",transactions:"portfolioLedgerPanel",report:"portfolioAnnualReport",calendar:"portfolioCalendar",settings:"portfolioSettingsPanel",recurring:"portfolioRecurring"}[name]||name)}
+  function openCsvPreview(preview,fileName){csvImportPreview=preview;csvImportFileName=fileName;$v6("#portfolioCsvPreviewSummary").innerHTML=[["總筆數",preview.total],["有效",preview.valid],["警告",preview.warning],["錯誤",preview.errors],["疑似重複",preview.duplicates]].map(row=>`<article><span>${row[0]}</span><b>${row[1]}</b></article>`).join("");const labels={VALID:"可匯入",WARNING:"需確認",ERROR:"無法匯入",DUPLICATE_CANDIDATE:"疑似重複"};$v6("#portfolioCsvPreviewRows").innerHTML=preview.rows.map((row,index)=>`<label class="portfolioCsvRow" data-status="${row.status}"><input type="checkbox" data-csv-select="${index}" ${row.selected?"checked":""} ${row.status==="ERROR"?"disabled":""}><span>#${row.rowNumber}</span><b class="portfolioCsvStatus">${labels[row.status]}</b><span data-csv-symbol>${escapeHtml(row.event?.symbol||row.event?.type||row.raw?.type||"—")}</span><small data-csv-detail>${escapeHtml(row.event?`${row.event.tradeDate}｜${row.event.type}｜${row.event.quantity??row.event.grossAmount}`:"欄位驗證失敗")}</small><small data-csv-message>${escapeHtml(row.messages.join("；")||"格式與欄位有效")}</small></label>`).join("");$v6("#portfolioCsvPreviewError").textContent="";const modal=$v6("#portfolioCsvPreviewModal");modal.classList.add("show");modal.setAttribute("aria-hidden","false")}
+  function closeCsvPreview(){const modal=$v6("#portfolioCsvPreviewModal");modal.classList.remove("show");modal.setAttribute("aria-hidden","true");$v6("#portfolioCsvImportFile").value=""}
+  async function selectCsv(file){if(!file)return;try{if(!ledger)throw new Error("請先建立交易帳本");if(file.size>1024*1024)throw new Error("CSV 不可超過 1 MB");openCsvPreview(workflowCore.buildImportPreview(await file.text(),ledger),file.name)}catch(error){alert(`CSV 讀取失敗：${error.message}`);$v6("#portfolioCsvImportFile").value=""}}
+  function confirmCsvImport(){if(!ledger||!csvImportPreview)return;const selected=[...$v6("#portfolioCsvPreviewRows").querySelectorAll("[data-csv-select]:checked")].map(node=>Number(node.dataset.csvSelect)),result=workflowCore.atomicImport(ledger,csvImportPreview,selected);if(!result.ok){$v6("#portfolioCsvPreviewError").textContent=result.error||`整批驗證失敗：${result.status}`;return}const now=new Date().toISOString();portfolioImportState={lastImportAt:now,fileName:csvImportFileName,importedCount:result.imported,preImportLedger:ledger,lastBackupAt:now};saveWorkflowValue(workflowCore.IMPORT_STORAGE_KEY,portfolioImportState);persistLedger(result.ledger);closeCsvPreview();refreshPortfolio();alert(`已原子匯入 ${result.imported} 筆交易；若發現問題，可在設定恢復匯入前狀態。`)}
+  function rollbackCsvImport(){if(!portfolioImportState?.preImportLedger)return;if(!confirm("確定要恢復最近一次 CSV 匯入前的交易帳本？"))return;if(!confirm("再次確認：目前匯入後的交易變更將由匯入前狀態取代。"))return;const restored=ledgerCore.validateLedger(portfolioImportState.preImportLedger);if(!restored){alert("匯入前備份驗證失敗，未變更任何資料。");return}persistLedger(restored);portfolioImportState={...portfolioImportState,preImportLedger:null,rollbackAt:new Date().toISOString()};saveWorkflowValue(workflowCore.IMPORT_STORAGE_KEY,portfolioImportState);refreshPortfolio()}
+  function openGoal(){const modal=$v6("#portfolioGoalModal");$v6("#portfolioGoalValue").value=portfolioGoal?.targetValue||"";$v6("#portfolioGoalDate").value=portfolioGoal?.targetDate||"";$v6("#portfolioGoalError").textContent="";modal.classList.add("show");modal.setAttribute("aria-hidden","false")}
+  function closeGoal(){const modal=$v6("#portfolioGoalModal");modal.classList.remove("show");modal.setAttribute("aria-hidden","true")}
+
   function exportHoldings() {
-    const payload = {version: ledger ? 4 : 2, exportedAt: new Date().toISOString(), holdings: holdings.map(({code, shares, averageCost, customName, name, strategyType, targetAllocation}) => ({code, shares, averageCost, customName, name, strategyType, targetAllocation})),ledger:ledger||null,ledgerVersion:ledger?.version||null,performanceStartDate:ledger?.performanceStartDate||null,migrationMetadata:ledger?{ledgerInitializedAt:ledger.ledgerInitializedAt,legacyMigrationVersion:ledger.legacyMigrationVersion}:null,snapshots:portfolioHistory,rebalanceSettings};
+    const now=new Date().toISOString(),payload = ledger?workflowCore.createBackupV5({exportedAt:now,holdings:holdings.map(({code,shares,averageCost,customName,name,strategyType,targetAllocation})=>({code,shares,averageCost,customName,name,strategyType,targetAllocation})),ledger,snapshots:portfolioHistory,rebalanceSettings,goal:portfolioGoal,monthlyPlan:portfolioMonthlyPlan,importState:portfolioImportState}):{version:2,exportedAt:now,holdings};
+    portfolioImportState={...(portfolioImportState||{}),lastBackupAt:now};saveWorkflowValue(workflowCore.IMPORT_STORAGE_KEY,portfolioImportState);renderDataStatus();
     const blob = new Blob([JSON.stringify(payload, null, 2)], {type: "application/json"});
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -1047,14 +1083,16 @@
     try {
       if (file.size > 1024 * 1024) throw new Error("備份檔不可超過 1 MB。");
       const parsed = JSON.parse(await file.text());
-      const imported = core.validateImportPayload(parsed);
-      const importedLedger = parsed?.ledger ? ledgerCore.validateLedger(parsed.ledger) : null;
+      const restored=[4,5].includes(Number(parsed?.version))?workflowCore.restoreBackup(parsed):null;if(restored&&!restored.ok)throw new Error("完整備份格式無效。");
+      const imported = core.validateImportPayload(restored?restored.holdings:parsed);
+      const importedLedger = restored?.ledger||(parsed?.ledger ? ledgerCore.validateLedger(parsed.ledger) : null);
       if (parsed?.ledger && !importedLedger) throw new Error("交易帳本格式無效。");
       holdings = imported;
       if (importedLedger) { ledger=importedLedger; persistLedger(importedLedger); }
       else { ledger=null; ledgerState=null; localStorage.removeItem(ledgerCore.STORAGE_KEY); }
       if(Array.isArray(parsed?.snapshots)){const restored=parsed.snapshots.map(performanceCore.validateSnapshot).filter(Boolean);portfolioHistory=restored.sort((a,b)=>a.date.localeCompare(b.date));savePortfolioHistory()}
       if(parsed?.rebalanceSettings&&typeof parsed.rebalanceSettings==="object"){rebalanceSettings={...rebalanceSettings,...parsed.rebalanceSettings};if(ledgerState?.valid)rebalanceSettings.cash=ledgerState.cash;saveRebalanceSettings()}
+      if(restored){portfolioGoal=restored.goal;portfolioMonthlyPlan=restored.monthlyPlan;portfolioImportState=restored.importState;saveWorkflowValue(workflowCore.GOAL_STORAGE_KEY,portfolioGoal);saveWorkflowValue(workflowCore.PLAN_STORAGE_KEY,portfolioMonthlyPlan);saveWorkflowValue(workflowCore.IMPORT_STORAGE_KEY,portfolioImportState)}
       marketCacheVersion = "";
       quoteMap = new Map([...quoteMap].filter(([code]) => holdings.some(item => item.code === code)));
       saveHoldings();
@@ -1343,6 +1381,27 @@
     $v6("#portfolioExportBtn").addEventListener("click", exportHoldings);
     $v6("#portfolioImportBtn").addEventListener("click", () => $v6("#portfolioImportFile").click());
     $v6("#portfolioImportFile").addEventListener("change", event => importHoldings(event.target.files?.[0]));
+    $v6("#portfolioCsvTemplateBtn").addEventListener("click",()=>downloadText(workflowCore.csvTemplate(),"hs-portfolio-transactions-template.csv","text/csv;charset=utf-8"));
+    $v6("#portfolioCsvImportBtn").addEventListener("click",()=>{if(!ledger){openMigration();return}$v6("#portfolioCsvImportFile").click()});
+    $v6("#portfolioCsvImportFile").addEventListener("change",event=>selectCsv(event.target.files?.[0]));
+    $v6("#portfolioCsvExportBtn").addEventListener("click",()=>{if(!ledger){openMigration();return}downloadText(`\uFEFF${workflowCore.exportLedgerCsv(ledger)}`,`hs-portfolio-ledger-${taipeiToday()}.csv`,"text/csv;charset=utf-8")});
+    $v6("#portfolioCsvConfirmBtn").addEventListener("click",confirmCsvImport);
+    $v6("#portfolioCsvPreviewRows").addEventListener("change",event=>{const index=Number(event.target.dataset.csvSelect);if(Number.isInteger(index)&&csvImportPreview?.rows[index])csvImportPreview.rows[index].selected=event.target.checked});
+    document.querySelectorAll("[data-csv-preview-close]").forEach(button=>button.addEventListener("click",closeCsvPreview));
+    $v6("#portfolioImportRollbackBtn").addEventListener("click",rollbackCsvImport);
+    document.querySelectorAll("[data-goal-edit]").forEach(button=>button.addEventListener("click",openGoal));document.querySelectorAll("[data-goal-close]").forEach(button=>button.addEventListener("click",closeGoal));
+    $v6("#portfolioGoalForm").addEventListener("submit",event=>{event.preventDefault();const goal=workflowCore.normalizeGoal({targetValue:$v6("#portfolioGoalValue").value,targetDate:$v6("#portfolioGoalDate").value});if(!goal){$v6("#portfolioGoalError").textContent="請輸入大於 0 的目標資產與有效目標日期。";return}portfolioGoal=goal;saveWorkflowValue(workflowCore.GOAL_STORAGE_KEY,portfolioGoal);closeGoal();renderWorkflow()});
+    $v6("#portfolioMonthlyPlan").value=portfolioMonthlyPlan?.amount||"";$v6("#portfolioMonthlyPlan").addEventListener("change",event=>{portfolioMonthlyPlan=workflowCore.normalizeMonthlyPlan(event.target.value);saveWorkflowValue(workflowCore.PLAN_STORAGE_KEY,portfolioMonthlyPlan);renderWorkflow()});
+    $v6("#portfolioAnnualYear").addEventListener("change",renderAnnualReport);$v6("#portfolioAnnualCsvBtn").addEventListener("click",()=>{if(!annualReport?.available)return;downloadText(`\uFEFF${workflowCore.exportAnnualCsv(annualReport)}`,`hs-portfolio-annual-${annualReport.year}.csv`,"text/csv;charset=utf-8")});$v6("#portfolioAnnualPrintBtn").addEventListener("click",()=>window.print());
+    $v6("#portfolioCalendarMonth").addEventListener("change",renderCalendar);
+    $v6("#portfolioWorkflowNav").addEventListener("click",event=>{const button=event.target.closest("[data-portfolio-section]");if(!button)return;const target=workflowSectionTarget(button.dataset.portfolioSection);if(target)target.scrollIntoView({behavior:"smooth",block:"start"});$v6("#portfolioWorkflowNav").querySelectorAll("button").forEach(node=>node.classList.toggle("active",node===button))});
+    document.querySelectorAll("[data-portfolio-section]").forEach(button=>{
+      if(button.closest("#portfolioWorkflowNav"))return;
+      button.addEventListener("click",()=>{
+        const target=workflowSectionTarget(button.dataset.portfolioSection);
+        if(target)target.scrollIntoView({behavior:"smooth",block:"start"});
+      });
+    });
     $v6("#portfolioClearBtn").addEventListener("click", clearHoldings);
     $v6("#portfolioTransactionAddBtn").addEventListener("click", () => openTransaction());
     $v6("#portfolioLedgerViewBtn").addEventListener("click", openLedger);

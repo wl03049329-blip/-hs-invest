@@ -1,0 +1,84 @@
+const assert=require("assert"),ledgerCore=require("../portfolio-ledger-core.js"),workflow=require("../portfolio-workflow-core.js");let passed=0;
+const ok=(name,fn)=>{fn();passed+=1;console.log(`PASS ${passed}: ${name}`)},ts=(date,n=0)=>new Date(`${date}T${String(8+n).padStart(2,"0")}:00:00+08:00`).toISOString();
+const ev=(type,date,extra={},n=0)=>ledgerCore.normalizeEvent({type,tradeDate:date,timestamp:ts(date,n),createdAt:ts(date,n),source:"TEST",...extra});
+const baseEvents=[ev("OPENING_CASH","2026-01-01",{grossAmount:200000}),ev("OPENING_POSITION","2026-01-01",{symbol:"0050",quantity:100,unitPrice:50},1)];
+const ledger={version:ledgerCore.VERSION,events:baseEvents,ledgerInitializedAt:ts("2026-01-01"),performanceStartDate:"2026-01-01",legacyMigrationVersion:ledgerCore.MIGRATION_VERSION};
+const csv=rows=>`date,type,symbol,quantity,price,amount,fee,tax,note\n${rows.join("\n")}`;
+const preview=row=>workflow.buildImportPreview(csv([row]),ledger);
+
+ok("1 valid BUY",()=>assert.equal(preview("2026-02-01,BUY,0050,10,60,,1,0,買入").valid,1));
+ok("2 valid SELL",()=>assert.equal(preview("2026-02-01,SELL,0050,10,60,,1,1,賣出").valid,1));
+ok("3 valid DEPOSIT",()=>assert.equal(preview("2026-02-01,DEPOSIT,,,,1000,0,0,入金").valid,1));
+ok("4 valid DIVIDEND",()=>assert.equal(preview("2026-02-01,DIVIDEND,0050,,,100,0,0,股息").valid,1));
+ok("5 malformed date",()=>assert.equal(preview("02/01/26,DEPOSIT,,,,1000,0,0,").errors,1));
+ok("6 missing symbol",()=>assert.equal(preview("2026-02-01,BUY,,10,60,,0,0,").errors,1));
+ok("7 zero quantity",()=>assert.equal(preview("2026-02-01,BUY,0050,0,60,,0,0,").errors,1));
+ok("8 negative quantity",()=>assert.equal(preview("2026-02-01,BUY,0050,-1,60,,0,0,").errors,1));
+ok("9 invalid amount",()=>assert.equal(preview("2026-02-01,DEPOSIT,,,,abc,0,0,").errors,1));
+ok("10 duplicate candidate",()=>{const existing={...ledger,events:[...ledger.events,ev("DEPOSIT","2026-02-01",{grossAmount:1000},2)]};assert.equal(workflow.buildImportPreview(csv(["2026-02-01,DEPOSIT,,,,1000,0,0,"]),existing).duplicates,1)});
+ok("11 BUY then SELL valid",()=>{const p=workflow.buildImportPreview(csv(["2026-02-01,BUY,0050,10,60,,0,0,","2026-02-02,SELL,0050,10,61,,0,0,"]),ledger),r=workflow.atomicImport(ledger,p,[0,1]);assert(r.ok)});
+ok("12 SELL before BUY invalid",()=>{const empty={...ledger,events:[baseEvents[0]]},p=workflow.buildImportPreview(csv(["2026-02-01,SELL,0050,10,61,,0,0,","2026-02-02,BUY,0050,10,60,,0,0,"]),empty);assert(!workflow.atomicImport(empty,p,[0,1]).ok)});
+ok("13 DEPOSIT then BUY valid",()=>{const empty={...ledger,events:[]},p=workflow.buildImportPreview(csv(["2026-02-01,DEPOSIT,,,,1000,0,0,","2026-02-02,BUY,0050,10,60,,0,0,"]),empty);assert(workflow.atomicImport(empty,p,[0,1]).ok)});
+ok("14 BUY negative cash invalid",()=>{const empty={...ledger,events:[]},p=workflow.buildImportPreview(csv(["2026-02-01,BUY,0050,10,60,,0,0,"]),empty);assert.equal(workflow.atomicImport(empty,p,[0]).status,"NEGATIVE_CASH")});
+ok("15 withdrawal negative cash invalid",()=>{const empty={...ledger,events:[]},p=workflow.buildImportPreview(csv(["2026-02-01,WITHDRAWAL,,,,1000,0,0,"]),empty);assert.equal(workflow.atomicImport(empty,p,[0]).status,"NEGATIVE_CASH")});
+ok("16 selected rows only",()=>{const p=workflow.buildImportPreview(csv(["2026-02-01,DEPOSIT,,,,1000,0,0,","2026-02-02,FEE,,,,10,0,0,"]),ledger),r=workflow.atomicImport(ledger,p,[0]);assert.equal(r.imported,1)});
+ok("17 atomic rejection",()=>{const before=JSON.stringify(ledger),p=workflow.buildImportPreview(csv(["2026-02-01,WITHDRAWAL,,,,999999,0,0,","2026-02-02,DEPOSIT,,,,1,0,0,"]),ledger);assert(!workflow.atomicImport(ledger,p,[0,1]).ok);assert.equal(JSON.stringify(ledger),before)});
+ok("18 duplicate warning unselected",()=>{const existing={...ledger,events:[...ledger.events,ev("DEPOSIT","2026-02-01",{grossAmount:1000})]},p=workflow.buildImportPreview(csv(["2026-02-01,DEPOSIT,,,,1000,0,0,"]),existing);assert.equal(p.rows[0].selected,false)});
+ok("19 UTF-8",()=>assert.equal(preview("2026-02-01,DEPOSIT,,,,1000,0,0,測試").rows[0].event.note,"測試"));
+ok("20 UTF-8 BOM",()=>assert.equal(workflow.buildImportPreview(`\uFEFF${csv(["2026-02-01,DEPOSIT,,,,1000,0,0,BOM"])}`,ledger).valid,1));
+ok("21 Traditional Chinese notes",()=>assert.equal(preview('2026-02-01,DEPOSIT,,,,1000,0,0,"繁體中文，備註"').rows[0].event.note,"繁體中文，備註"));
+
+const exportLedger={...ledger,events:[...ledger.events,ev("DEPOSIT","2026-02-01",{grossAmount:1000,note:'含,逗號與"引號"\n換行'},2)]};
+ok("22 CSV export basic",()=>assert.match(workflow.exportLedgerCsv(exportLedger),/^ID,Date,Type/));
+ok("23 commas notes escaped",()=>assert.match(workflow.exportLedgerCsv(exportLedger),/"含,逗號與""引號""/));
+ok("24 newline escaped",()=>assert.match(workflow.exportLedgerCsv(exportLedger),/換行"/));
+ok("25 event ordering",()=>{const out=workflow.exportLedgerCsv({...ledger,events:[exportLedger.events[2],...baseEvents]});assert(out.indexOf("OPENING_CASH")<out.indexOf("DEPOSIT"))});
+ok("26 opening events export",()=>{const out=workflow.exportLedgerCsv(ledger);assert.match(out,/OPENING_POSITION/);assert.match(out,/OPENING_CASH/)});
+
+ok("27 no goal",()=>assert.equal(workflow.goalProgress(null,100).available,false));
+ok("28 valid goal",()=>assert(workflow.normalizeGoal({targetValue:3000000,targetDate:"2030-12-31"})));
+ok("29 current assets below target",()=>assert.equal(workflow.goalProgress({targetValue:300,targetDate:"2030-12-31"},100).remaining,200));
+ok("30 current assets above target",()=>assert.equal(workflow.goalProgress({targetValue:100,targetDate:"2030-12-31"},120).progress,120));
+ok("31 zero target invalid",()=>assert.equal(workflow.normalizeGoal({targetValue:0,targetDate:"2030-12-31"}),null));
+ok("32 past target date marked",()=>assert(workflow.goalProgress({targetValue:300,targetDate:"2025-01-01"},100,"2026-01-01").pastDue));
+
+const recurringEvents=[...baseEvents,ev("DEPOSIT","2026-01-05",{grossAmount:1000},2),ev("DEPOSIT","2026-03-05",{grossAmount:3000},3),ev("BUY","2026-03-06",{symbol:"0050",quantity:10,unitPrice:50},4),ev("BUY","2026-05-06",{symbol:"0050",quantity:10,unitPrice:60},5)],recurringLedger={...ledger,events:recurringEvents};
+const recurring=workflow.recurringAnalytics(recurringLedger,{asOf:"2026-06-20",monthlyPlan:{amount:2000}});
+ok("33 monthly deposits",()=>assert.equal(recurring.months.find(row=>row.month==="2026-03").deposits,3000));
+ok("34 monthly buys",()=>assert.equal(recurring.months.find(row=>row.month==="2026-05").buys,600));
+ok("35 months without activity",()=>assert.equal(recurring.months.find(row=>row.month==="2026-02").deposits,0));
+ok("36 average 3M",()=>assert.equal(recurring.averageDeposit3M,0));
+ok("37 average 6M",()=>assert.equal(recurring.averageDeposit6M,666.67));
+ok("38 YTD",()=>assert.equal(recurring.ytdDeposits,4000));
+ok("39 opening cash excluded",()=>assert.equal(recurring.ytdDeposits,4000));
+
+const calendar=workflow.calendarMonth(recurringLedger,"2026-03");
+ok("40 multiple events same day",()=>{const l={...recurringLedger,events:[...recurringLedger.events,ev("DIVIDEND","2026-03-05",{symbol:"0050",grossAmount:50},6)]};assert.equal(workflow.calendarMonth(l,"2026-03").days[0].events.length,2)});
+ok("41 month boundary",()=>assert.equal(calendar.days.every(day=>day.date.startsWith("2026-03")),true));
+ok("42 timezone Asia Taipei date stable",()=>assert.equal(calendar.days[0].date,"2026-03-05"));
+ok("43 empty month",()=>assert.equal(workflow.calendarMonth(recurringLedger,"2026-02").days.length,0));
+ok("44 event edit reflected",()=>{const id=recurringEvents.find(row=>row.type==="DEPOSIT"&&row.tradeDate==="2026-03-05").id,r=ledgerCore.mutateLedger(recurringLedger,{type:"EDIT",id,event:{...recurringEvents.find(row=>row.id===id),grossAmount:3500}});assert.equal(workflow.calendarMonth(r.ledger,"2026-03").days[0].events[0].grossAmount,3500)});
+ok("45 event delete reflected",()=>{const id=recurringEvents.find(row=>row.tradeDate==="2026-03-05").id,r=ledgerCore.mutateLedger(recurringLedger,{type:"DELETE",id});assert.equal(workflow.calendarMonth(r.ledger,"2026-03").days.length,1)});
+
+const snapshots=[{date:"2026-01-01",totalAssets:205000,cash:200000,holdings:{"0050":{quantity:100,marketValue:5000}}},{date:"2026-03-31",totalAssets:209000,cash:203000,holdings:{"0050":{quantity:110,marketValue:6000}}},{date:"2026-06-20",totalAssets:211000,cash:203000,holdings:{"0050":{quantity:120,marketValue:8000}}}],benchmark=[{date:"2026-01-01",close:50},{date:"2026-06-20",close:55}],market=[{code:"0050",marketValue:8000}];
+const annual=workflow.buildAnnualReport({ledger:recurringLedger,snapshots,benchmarkRows:benchmark,marketRows:market,year:"2026"});
+ok("46 partial year",()=>assert(annual.partialYear));
+ok("47 full available year",()=>assert(annual.available));
+ok("48 benchmark alignment",()=>assert.equal(annual.benchmarkReturn,10));
+ok("49 dividend totals",()=>{const l={...recurringLedger,events:[...recurringEvents,ev("DIVIDEND","2026-04-01",{symbol:"0050",grossAmount:100},7)]};assert.equal(workflow.buildAnnualReport({ledger:l,snapshots,benchmarkRows:benchmark,marketRows:market,year:"2026"}).dividends,100)});
+ok("50 realized P/L",()=>assert.equal(typeof annual.realizedPnL,"number"));
+ok("51 contribution totals",()=>assert(Array.isArray(annual.contribution)));
+ok("52 max drawdown",()=>assert.equal(annual.maxDrawdown,0));
+ok("53 volatility field",()=>assert("annualizedVolatility" in annual));
+ok("54 net external contribution",()=>assert.equal(annual.netExternal,4000));
+
+const goal={targetValue:3000000,targetDate:"2030-12-31"},plan={amount:20000},backup=workflow.createBackupV5({holdings:[{code:"0050"}],ledger:recurringLedger,snapshots,rebalanceSettings:{targets:{"0050":100}},goal,monthlyPlan:plan,importState:{lastImportAt:ts("2026-06-20"),fileName:"test.csv",importedCount:2}});
+ok("55 export V5",()=>assert.equal(backup.version,5));
+ok("56 restore V5",()=>assert(workflow.restoreBackup(backup).ok));
+ok("57 restore V4",()=>{const restored=workflow.restoreBackup({...backup,version:4,goal:undefined,monthlyPlan:undefined});assert(restored.ok);assert.equal(restored.goal,null)});
+ok("58 goal preserved",()=>assert.equal(workflow.restoreBackup(backup).goal.targetValue,3000000));
+ok("59 monthly plan preserved",()=>assert.equal(workflow.restoreBackup(backup).monthlyPlan.amount,20000));
+ok("60 Ledger preserved",()=>assert.equal(workflow.restoreBackup(backup).ledger.events.length,recurringLedger.events.length));
+ok("61 snapshots preserved",()=>assert.equal(workflow.restoreBackup(backup).snapshots.length,3));
+ok("62 targets preserved",()=>assert.equal(workflow.restoreBackup(backup).rebalanceSettings.targets["0050"],100));
+console.log(`Portfolio Workflow Phase 6: ${passed}/62 PASS`);

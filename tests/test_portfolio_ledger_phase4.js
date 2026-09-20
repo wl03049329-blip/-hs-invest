@@ -1,5 +1,5 @@
 const assert=require("assert"),core=require("../portfolio-ledger-core.js");let passed=0;
-const fs=require("fs"),path=require("path"),root=path.join(__dirname,".."),html=fs.readFileSync(path.join(root,"index.html"),"utf8"),ui=fs.readFileSync(path.join(root,"portfolio-v6.js"),"utf8"),css=fs.readFileSync(path.join(root,"portfolio-v6.css"),"utf8");
+const fs=require("fs"),path=require("path"),root=path.join(__dirname,".."),html=fs.readFileSync(path.join(root,"index.html"),"utf8"),ui=fs.readFileSync(path.join(root,"portfolio-v6.js"),"utf8"),css=fs.readFileSync(path.join(root,"portfolio-v6.css"),"utf8"),workflow=fs.readFileSync(path.join(root,"portfolio-workflow-core.js"),"utf8");
 const ok=(name,fn)=>{fn();passed++;console.log(`PASS ${passed}: ${name}`)},ts=(date,n=0)=>`${date}T${String(1+n).padStart(2,"0")}:00:00+08:00`;
 const ev=(type,date,extra={},n=0)=>core.normalizeEvent({type,tradeDate:date,timestamp:ts(date,n),createdAt:ts(date,n),source:"TEST",...extra});
 const ledger=(events,start="2026-01-01")=>({version:core.VERSION,events,ledgerInitializedAt:ts(start),performanceStartDate:start,legacyMigrationVersion:core.MIGRATION_VERSION});
@@ -76,8 +76,8 @@ ok("61 100+ event ledger replays",()=>assert(core.derivePortfolioStateFromLedger
 ok("62 transaction UI exists",()=>["portfolioTransactionModal","portfolioLedgerModal","portfolioLedgerMigrationModal"].forEach(id=>assert.match(html,new RegExp(`id="${id}"`))));
 ok("63 recent transactions precede settings",()=>assert(html.indexOf("portfolioLedgerPanel")<html.indexOf('class="panel portfolioSettings"')));
 ok("64 mobile recent list is capped at three",()=>assert.match(css,/portfolioLedgerRows \.portfolioLedgerRow:nth-child\(n\+4\)/));
-ok("65 old backup stays supported",()=>assert.match(ui,/const imported = core\.validateImportPayload\(parsed\)/));
-ok("66 new backup includes ledger and snapshots",()=>{assert.match(ui,/ledgerVersion:ledger\?\.version/);assert.match(ui,/snapshots:portfolioHistory/)});
+ok("65 old backup stays supported",()=>{assert.match(ui,/\[4,5\]\.includes\(Number\(parsed\?\.version\)\)/);assert.match(ui,/workflowCore\.restoreBackup\(parsed\)/);assert.match(ui,/core\.validateImportPayload\(restored\?restored\.holdings:parsed\)/)});
+ok("66 new backup includes ledger and snapshots",()=>{assert.match(workflow,/ledgerVersion:ledger\?\.version/);assert.match(ui,/snapshots:portfolioHistory/)});
 ok("67 smart allocation uses derived cash",()=>assert.match(ui,/cash: ledgerState\?\.valid \? ledgerState\.cash/));
 ok("68 opening position edit has second confirmation",()=>assert.match(ui,/修改期初部位會改變正式績效基準/));
 ok("69 delete requires confirmation",()=>assert.match(ui,/刪除這筆.*confirm/));

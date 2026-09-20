@@ -198,7 +198,7 @@ class CalendarAndSchedulerTests(unittest.TestCase):
         self.assertEqual(before, after)
         homepage = (ROOT / "index.html").read_text(encoding="utf-8")
         self.assertIn("hs-live-source-adapter.js", homepage)
-        self.assertIn('name="hs-live-source" content="legacy"', homepage)
+        self.assertIn('name="hs-live-source" content="railway"', homepage)
 
 
 class ApiSurfaceTests(unittest.TestCase):
@@ -210,7 +210,10 @@ class ApiSurfaceTests(unittest.TestCase):
                 store = StateStore(temporary)
                 instance = create_app(store, ShadowScheduler(store, calendar=AlwaysTrading(), quote_fetcher=batch_for, scorer=FakeScorer()))
             routes = {route.path: set(route.methods or ()) for route in instance.routes}
-            self.assertEqual(set(routes), {"/api/live-scores", "/healthz"})
+            self.assertEqual(set(routes), {
+                "/api/live-scores", "/healthz", "/api/push/config", "/api/push/subscribe",
+                "/api/push/unsubscribe", "/api/push/test", "/api/push/rules", "/api/push/test-alert",
+            })
             self.assertEqual(routes["/api/live-scores"], {"GET"})
             self.assertEqual(routes["/healthz"], {"GET"})
             live_endpoint = next(route.endpoint for route in instance.routes if route.path == "/api/live-scores")

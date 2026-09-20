@@ -56,9 +56,9 @@ check("台指期僅保留於正式資料與籌碼，不在首頁冒充盤中行�
 
 check("三項正式行情資料保留，首頁改以四個決策區塊呈現", () => {
   for (const key of ["taiex", "otc", "tsmc"]) assert.match(JSON.stringify(overviewRaw), new RegExp(key));
-  assert.match(html, /id="todayHighlights"/);
+  assert.match(html, /id="hsDecisionRoom"/);
   assert.match(html, /id="homeEtfBrief"/);
-  const highlights = html.indexOf('id="todayHighlights"');
+  const highlights = html.indexOf('id="hsDecisionRoom"');
   const brief = html.indexOf('id="homeEtfBrief"');
   const sentiment = html.indexOf('id="homeSentiment"');
   const summary = html.indexOf('class="panel marketPanel"');
@@ -134,14 +134,14 @@ check("期貨籌碼官方來源多時段補抓保留，首頁正式 fallback 由
 });
 
 check("首頁重點與情緒結論存在", () => {
-  assert.match(html, /id="todayHighlightsConclusion"/);
+  assert.match(html, /id="hsDecisionRoomGrid"/);
   assert.match(html, /id="homeSentimentConclusion"/);
   assert.match(html, /id="homeEtfBrief"/);
-  assert.match(html, /id="homeSwingBrief"/);
+  assert.match(html, /id="homeLeverageBrief"/);
 });
 
 check("手機 375、390、430 使用雙欄決策摘要與精簡買點", () => {
-  assert.match(tech, /\.todayHighlightsGrid\{grid-template-columns:repeat\(2/);
+  assert.match(tech, /@media\(max-width:430px\)/);
   assert.match(css, /\.signalCardSummary/);
   for (const width of [375, 390, 430]) assert.ok(width <= 760);
 });

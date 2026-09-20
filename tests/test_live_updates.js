@@ -23,15 +23,17 @@ check("台北盤中時段邊界", () => {
   assert.equal(core.isTaipeiMarketOpen(new Date("2026-08-01T02:00:00Z")), false);
 });
 
-check("首頁 ETF 盤中試算標示完整", () => {
-  assert.match(html, /盤中試算 \$\{actualSnapshotTime\}/);
+check("首頁 ETF 盤中狀態與正式分數邊界完整", () => {
+  assert.match(html, /資料更新｜\$\{actualSnapshotTime\}/);
   assert.match(html, /actualSnapshotTime=radarDisplay\.current/);
   assert.doesNotMatch(html, /actualSnapshotTime=snapshotAsOf\?snapshotSlot\.slice\(-5\):schedule\.current/);
-  assert.match(html, /週 KD 暫定/);
+  assert.match(html, /週 KD 依最近完成資料或目前週線試算/);
   assert.doesNotMatch(production, /即時行情/);
   assert.match(html, /validatedRadarRefresh\(detail\.radarRefresh,quotes\)/);
-  assert.match(html, /verifiedCacheQuote\|\|authorizedFresh/);
-  assert.match(html, /hasIntraday\?`盤中試算[\s\S]*:`盤後正式/);
+  assert.match(html, /const verifiedCacheQuote=verifiedRefresh&&LONG_RADAR_SCORED_CODES\.has\(x\.id\)/);
+  assert.match(html, /const authorizedFresh=detail\.source==="authorized_proxy"/);
+  assert.match(html, /displayStatus=!row\.useLive&&premarket\?"前日 FINAL":status/);
+  assert.match(html, /row\.useLive\?"LIVE":"FINAL"/);
 });
 
 check("五個盤中時點調度且只有單一排名計時器", () => {
