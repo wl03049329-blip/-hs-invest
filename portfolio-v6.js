@@ -8,7 +8,9 @@
   const workflowCore = window.HSPortfolioWorkflowCore;
   const resilienceCore = window.HSPortfolioResilienceCore;
   const dashboardCore = window.HSPortfolioDashboardCore;
-  if (!core || !performanceCore || !ledgerCore || !analyticsCore || !workflowCore || !resilienceCore || !dashboardCore) return;
+  const fullBackupCore = window.HSPortfolioFullBackupCore;
+  if (!core || !performanceCore || !ledgerCore || !analyticsCore || !workflowCore || !resilienceCore || !dashboardCore || !fullBackupCore) return;
+  if (!fullBackupCore.recoverPendingRestore(localStorage).ok) { console.error("Portfolio 備份還原中斷，請勿修改資料。 "); return; }
 
   const storageKeys = window.HSPersistenceCore?.keys || {};
   const HOLDINGS_KEY = storageKeys.holdings || "hsRadar.portfolio.holdings";
@@ -1120,8 +1122,9 @@
   function closeGoal(){const modal=$v6("#portfolioGoalModal");modal.classList.remove("show");modal.setAttribute("aria-hidden","true")}
 
   function exportHoldings() {
-    const now=new Date().toISOString(),payload = ledger?resilienceCore.createBackupV6({...resilienceState(),exportedAt:now}):{version:2,exportedAt:now,holdings};
-    portfolioImportState={...(portfolioImportState||{}),lastBackupAt:now};saveWorkflowValue(workflowCore.IMPORT_STORAGE_KEY,portfolioImportState);renderDataStatus();
+    let payload;
+    try { payload=fullBackupCore.createBackup(localStorage); }
+    catch { alert("完整備份驗證失敗；未匯出不完整檔案。"); return; }
     const blob = new Blob([JSON.stringify(payload, null, 2)], {type: "application/json"});
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -1136,8 +1139,17 @@
   async function importHoldings(file) {
     if (!file) return;
     try {
-      if (file.size > 1024 * 1024) throw new Error("備份檔不可超過 1 MB。");
+      if (file.size > 5 * 1024 * 1024) throw new Error("備份檔不可超過 5 MB。");
       const parsed = JSON.parse(await file.text());
+      if (parsed?.schema===fullBackupCore.SCHEMA || parsed?.schemaVersion!==undefined) {
+        const preview=fullBackupCore.validateBackup(parsed);
+        if(!preview.ok)throw new Error(`完整備份驗證失敗：${preview.status}`);
+        if(!confirm(`完整備份包含 ${preview.state.holdings.length} 檔實際持股、${preview.state.universe.length} 檔目標標的、現金與再平衡設定。還原將取代目前 Portfolio 使用者資料，確定繼續？`))return;
+        const result=fullBackupCore.restoreAtomic(localStorage,parsed);
+        if(!result.ok)throw new Error(`還原未完成：${result.status}`);
+        location.reload();return;
+      }
+      if(!confirm("這是舊版備份；可能只包含持股，不包含目標配置與現金。若繼續，將沿用舊版匯入方式。確定繼續？"))return;
       const preview=[4,5,6].includes(Number(parsed?.version))?resilienceCore.previewBackup(parsed):null;if(preview&&!preview.ok)throw new Error("完整備份格式無效。");if(preview&&!confirm(`備份預覽：${preview.counts.events} 筆 Ledger、${preview.counts.snapshots} 筆 snapshots、${preview.counts.holdings} 檔持股。確定原子還原？`))return;const restored=preview?resilienceCore.restoreBackup(parsed):null;if(restored&&!restored.ok)throw new Error("備份完整性驗證失敗。");if(restored)createRecovery("BEFORE_BACKUP_RESTORE");
       const imported = core.validateImportPayload(restored?restored.holdings:parsed);
       const importedLedger = restored?.ledger||(parsed?.ledger ? ledgerCore.validateLedger(parsed.ledger) : null);

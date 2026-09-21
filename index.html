@@ -651,15 +651,16 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       <summary><span><b>持股設定</b><small>備份、匯入與資料管理</small></span><strong>⋯</strong></summary>
       <div class="portfolioSettingsBody">
         <div class="portfolioSettingsActions">
-        <button id="portfolioExportBtn" class="miniBtn" type="button">匯出 JSON 備份</button>
-        <button id="portfolioImportBtn" class="miniBtn" type="button">匯入 JSON</button>
+        <button id="portfolioExportBtn" class="miniBtn" type="button">匯出完整備份</button>
+        <button id="portfolioImportBtn" class="miniBtn" type="button">還原備份</button>
+        <small class="portfolioBackupHelp">完整備份包含持股、成本、目標配置、可投入資金、再平衡設定及交易／績效紀錄；舊版持股備份不包含目標與現金。</small>
         <button id="portfolioCsvTemplateBtn" class="miniBtn" type="button">下載 HS CSV 範本</button>
         <button id="portfolioCsvImportBtn" class="miniBtn" type="button">匯入交易 CSV</button>
         <button id="portfolioBrokerImportBtn" class="miniBtn" type="button">券商 CSV 預覽</button>
         <button id="portfolioCsvExportBtn" class="miniBtn" type="button">匯出交易 CSV</button>
         <button id="portfolioImportRollbackBtn" class="miniBtn" type="button" disabled>恢復匯入前狀態</button>
         <button id="portfolioClearBtn" class="miniBtn dangerBtn" type="button">清除全部持股</button>
-        <input id="portfolioImportFile" type="file" accept="application/json,.json" hidden aria-label="選擇持股 JSON 備份檔" />
+        <input id="portfolioImportFile" type="file" accept="application/json,.json" hidden aria-label="選擇 Portfolio 備份檔" />
         <input id="portfolioCsvImportFile" type="file" accept="text/csv,.csv" hidden aria-label="選擇交易 CSV 檔" />
         <input id="portfolioBrokerImportFile" type="file" accept="text/csv,.csv" hidden aria-label="選擇券商 CSV 檔" />
         </div>
@@ -5062,6 +5063,7 @@ initLiveDebugPanel();liveDiagnosticRecord("initial_page_load",{render_state_befo
 <script src="portfolio-workflow-core.js?v=20260920-portfolio-workflow-p6"></script>
 <script src="portfolio-resilience-core.js?v=20260920-portfolio-resilience-p7"></script>
 <script src="portfolio-dashboard-core.js?v=20260920-portfolio-dashboard-v1"></script>
+<script src="portfolio-full-backup-core.js?v=20260921-full-backup-v1"></script>
 <script src="portfolio-v6.js?v=20260920-portfolio-dashboard-v1"></script>
 <script src="personal-capital-ui.js?v=20260824-phase4"></script>
 </body>
