@@ -3408,12 +3408,12 @@ function homeC4IntradaySeries(symbol,tradingDate,live){
   const snapshots=[...(Array.isArray(archivedIntradayCoreSnapshots)?archivedIntradayCoreSnapshots:[]),...(Array.isArray(liveCanonicalCoreSnapshots)?liveCanonicalCoreSnapshots:[])];
   for(const snapshot of snapshots){
     if(snapshot?.status!=="SUCCESS"||snapshot?.trading_date!==tradingDate)continue;
-    const item=snapshot?.items?.[symbol],score=Number(item?.display_score??item?.score),asOf=String(item?.market_as_of||snapshot?.market_as_of||snapshot?.generated_at||"");
+    const item=snapshot?.items?.[symbol],score=Number(item?.display_score??item?.score),rawScore=Number(item?.score),asOf=String(item?.market_as_of||snapshot?.market_as_of||snapshot?.generated_at||"");
     if(item?.status!=="SUCCESS"||!Number.isFinite(score)||!asOf)continue;
-    byTime.set(asOf,{score,asOf});
+    byTime.set(asOf,{score,rawScore:typeof item.score==="number"&&Number.isFinite(rawScore)?rawScore:score,asOf});
   }
   const liveScore=Number(live?.display_score??live?.score),liveAsOf=String(live?.market_as_of||"");
-  if(live?.display_eligible===true&&live?.trading_date===tradingDate&&Number.isFinite(liveScore)&&liveAsOf)byTime.set(liveAsOf,{score:liveScore,asOf:liveAsOf});
+  if(live?.display_eligible===true&&live?.trading_date===tradingDate&&Number.isFinite(liveScore)&&liveAsOf)byTime.set(liveAsOf,{score:liveScore,rawScore:typeof live.score==="number"&&Number.isFinite(live.score)?live.score:liveScore,asOf:liveAsOf});
   return [...byTime.values()].sort((a,b)=>Date.parse(a.asOf)-Date.parse(b.asOf));
 }
 function homeC4PreviousSessionSummary(symbol,targetDate){
@@ -3440,34 +3440,41 @@ function homeC4PreviousSessionPanel(summary){
 function homeC4Sparkline(series,symbol="c4",emptyMessage="盤中資料尚未建立",tradingDate=""){
   if(!Array.isArray(series)||series.length===0)return`<div class="hsC4Sparkline is-unavailable"><span>${esc(emptyMessage)}</span></div>`;
   const dateLabel=tradingDate?`${homeC4SummaryDate(tradingDate)} `:"";
-  if(series.length===1)return`<div class="hsC4Sparkline is-unavailable is-syncing" aria-label="${dateLabel}1 筆盤中分數"><span>${dateLabel}盤中更新中｜已取得 1 筆｜更新 ${formatHomeQuoteTime(series[0].asOf)||"最新"}</span></div>`;
+  if(series.length===1)return`<div class="hsC4Sparkline is-unavailable is-syncing" aria-label="${dateLabel}1 筆盤中分數"><span>盤中更新中｜已取得 1 筆</span><div class="hsC4SparklineMeta"><time datetime="${esc(series[0].asOf)}" title="${esc(series[0].asOf)}">更新 ${homeC4ClockText(series[0].asOf)}</time></div></div>`;
   const values=series.map(point=>point.score),min=Math.min(...values),max=Math.max(...values),range=Math.max(max-min,1),width=320,height=78,pad=5;
   const gradientId=`hsC4LineFill-${String(symbol).replace(/[^a-zA-Z0-9_-]/g,"")||"c4"}`;
   const points=values.map((value,index)=>`${pad+(width-pad*2)*(index/(values.length-1))},${pad+(height-pad*2)*(1-(value-min)/range)}`).join(" ");
-  return`<div class="hsC4Sparkline" aria-label="${dateLabel}${series.length} 筆盤中分數軌跡"><svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img"><defs><linearGradient id="${gradientId}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#efc85e" stop-opacity=".35"/><stop offset="1" stop-color="#efc85e" stop-opacity="0"/></linearGradient></defs><polyline class="area" style="fill:url(#${gradientId})" points="${pad},${height-pad} ${points} ${width-pad},${height-pad}"/><polyline class="line" points="${points}"/></svg><span>${dateLabel}${formatHomeQuoteTime(series[0].asOf)||"開盤"}</span><span>更新 ${formatHomeQuoteTime(series.at(-1).asOf)||"最新"}</span></div>`;
+  return`<div class="hsC4Sparkline" aria-label="${dateLabel}${series.length} 筆盤中分數軌跡"><div class="hsC4SparklineChart"><svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img"><defs><linearGradient id="${gradientId}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#efc85e" stop-opacity=".35"/><stop offset="1" stop-color="#efc85e" stop-opacity="0"/></linearGradient></defs><polyline class="area" style="fill:url(#${gradientId})" points="${pad},${height-pad} ${points} ${width-pad},${height-pad}"/><polyline class="line" points="${points}"/></svg></div><div class="hsC4SparklineMeta"><span>${homeC4ClockText(series[0].asOf)}</span><time datetime="${esc(series.at(-1).asOf)}" title="${esc(series.at(-1).asOf)}">更新 ${homeC4ClockText(series.at(-1).asOf)}</time></div></div>`;
 }
+function homeC4ClockText(value){
+  const match=String(value||"").match(/(?:T|\s)(\d{2}):(\d{2})(?::\d{2})?/);
+  return match?`${match[1]}:${match[2]}`:"—";
+}
+function homeC4DisplayNumber(value){return typeof value==="number"&&Number.isFinite(value)?value.toFixed(1):"—";}
 function decisionCenterC4Rows(officialRows,longs,dualTrack){
   const names=new Map((longs||[]).map(item=>[item.id,item.name])),officialMap=new Map((officialRows||[]).map(row=>[row.symbol,row])),history=officialC4HistoryViewModel(finalizedCoreScoreHistoryArtifact);
   return HS_DASHBOARD_C4_SYMBOLS.filter(symbol=>symbol!=="009815").map(symbol=>{
     const official=officialMap.get(symbol),live=dualTrack?.items?.[symbol]?.live,item=(longs||[]).find(row=>row?.id===symbol),formalScore=window.HSCanonicalScoreResolver?.selectFormalCoreScore?.(dualTrack,symbol),useLive=formalScore?.available===true&&formalScore.source==="LIVE",officialHistory=history.get(symbol)?.rows||[],latestOfficial=officialHistory.at(-1),previousOfficial=officialHistory.at(-2);
     const targetDate=String(dualTrack?.target_date||taipeiToday()),officialDate=String(official?.date||""),liveDate=String(live?.trading_date||""),targetSeries=homeC4IntradaySeries(symbol,targetDate,useLive?live:null),trajectoryDate=targetSeries.length?targetDate:"";
-    const score=formalScore?.available===true?Number(formalScore.display_score):null,rawScore=formalScore?.available===true?Number(formalScore.score):null,officialDelta=latestOfficial&&previousOfficial?latestOfficial.score-previousOfficial.score:null,delta=useLive&&Number.isFinite(Number(live?.delta_vs_official))?Number(live.delta_vs_official):Number.isFinite(officialDelta)?officialDelta:null,next=Number.isFinite(rawScore)?selectDecisionCenterOpportunity([{symbol,score:rawScore}]):null;
+    const score=formalScore?.available===true&&typeof formalScore.display_score==="number"&&Number.isFinite(formalScore.display_score)?formalScore.display_score:null,rawScore=formalScore?.available===true&&typeof formalScore.score==="number"&&Number.isFinite(formalScore.score)?formalScore.score:null,officialDelta=latestOfficial&&previousOfficial?latestOfficial.score-previousOfficial.score:null,delta=useLive&&Number.isFinite(Number(live?.delta_vs_official))?Number(live.delta_vs_official):Number.isFinite(officialDelta)?officialDelta:null,next=Number.isFinite(rawScore)?selectDecisionCenterOpportunity([{symbol,score:rawScore}]):null;
     return{symbol,name:names.get(symbol)||item?.name||"",official,live,useLive,score,rawScore,delta,tradingDate:useLive?liveDate:officialDate,officialDate,liveDate,trajectoryDate,series:targetSeries,next,previousSession:homeC4PreviousSessionSummary(symbol,targetDate),tier:useLive?String(live?.tier||official?.tier||"正式分數"):String(official?.tier||"正式分數")};
   });
 }
 function sortDecisionCenterC4Rows(rows,mode=homeC4SortMode){
   const copy=[...(rows||[])];
-  if(mode==="change")return copy.sort((a,b)=>(b.delta??-Infinity)-(a.delta??-Infinity)||b.score-a.score||a.symbol.localeCompare(b.symbol));
-  if(mode==="threshold")return copy.sort((a,b)=>(a.next?.distance??Infinity)-(b.next?.distance??Infinity)||b.score-a.score||a.symbol.localeCompare(b.symbol));
-  return copy.sort((a,b)=>(b.score??-Infinity)-(a.score??-Infinity)||a.symbol.localeCompare(b.symbol));
+  const raw=row=>typeof row.rawScore==="number"&&Number.isFinite(row.rawScore)?row.rawScore:-Infinity;
+  if(mode==="change")return copy.sort((a,b)=>(b.delta??-Infinity)-(a.delta??-Infinity)||raw(b)-raw(a)||a.symbol.localeCompare(b.symbol));
+  if(mode==="threshold")return copy.sort((a,b)=>(a.next?.distance??Infinity)-(b.next?.distance??Infinity)||raw(b)-raw(a)||a.symbol.localeCompare(b.symbol));
+  return copy.sort((a,b)=>raw(b)-raw(a)||a.symbol.localeCompare(b.symbol));
 }
 function decisionCenterC4Cards(officialRows,longs,dualTrack){
   const ranked=sortDecisionCenterC4Rows(decisionCenterC4Rows(officialRows,longs,dualTrack)),marketState=decisionCenterEffectiveMarketState(dualTrack),premarket=marketState==="PREMARKET",renderState=currentFrontendLiveRenderState(dualTrack),emptyMessage=window.HSLiveDiagnostics?.messageFor(renderState)||"盤中資料同步中";
   const cards=ranked.map((row,index)=>{
-    const high=row.series.length?Math.max(...row.series.map(point=>point.score)):null,low=row.series.length?Math.min(...row.series.map(point=>point.score)):null,distance=row.next?.highest?"已在最高區間":Number.isFinite(row.next?.distance)?`距下一級 ${decisionCenterDistanceText(row.next.distance)} 分`:"門檻資料暫缺",delta=Number.isFinite(row.delta)?`${row.delta>0?"+":""}${decisionCenterDistanceText(row.delta)}`:"—",deltaTone=Number.isFinite(row.delta)?row.delta>0?"up":row.delta<0?"down":"neutral":"neutral",status=row.useLive?"LIVE":"FINAL",displayStatus=!row.useLive&&premarket?"前日 FINAL":status,trackStarted=row.series.length>0&&row.trajectoryDate===dualTrack?.target_date;
-    const trackMetrics=trackStarted?`<div><dt>今日高</dt><dd>${Number.isFinite(high)?high:"—"}</dd></div><div><dt>今日低</dt><dd>${Number.isFinite(low)?low:"—"}</dd></div>`:`<div class="hsC4TrackPending"><dt>盤中狀態</dt><dd>${esc(emptyMessage)}</dd></div>`;
+    const high=row.series.length?Math.max(...row.series.map(point=>point.rawScore)):null,low=row.series.length?Math.min(...row.series.map(point=>point.rawScore)):null,distance=Number.isFinite(row.next?.distance)?homeC4DisplayNumber(row.next.distance):"—",delta=Number.isFinite(row.delta)?`${row.delta>0?"+":""}${homeC4DisplayNumber(row.delta)}`:"—",deltaTone=Number.isFinite(row.delta)?row.delta>0?"up":row.delta<0?"down":"neutral":"neutral",status=row.useLive?"LIVE":"FINAL",displayStatus=!row.useLive&&premarket?"前日 FINAL":status,trackStarted=row.series.length>0&&row.trajectoryDate===dualTrack?.target_date;
+    const trackMetrics=trackStarted?`<div><dt>今日高</dt><dd>${homeC4DisplayNumber(high)}</dd></div><div><dt>今日低</dt><dd>${homeC4DisplayNumber(low)}</dd></div>`:`<div class="hsC4TrackPending"><dt>盤中狀態</dt><dd>${esc(emptyMessage)}</dd></div>`;
     const trajectory=trackStarted?homeC4Sparkline(row.series,row.symbol,emptyMessage,row.trajectoryDate):premarket&&row.previousSession?homeC4PreviousSessionPanel(row.previousSession):homeC4Sparkline([],row.symbol,emptyMessage);
-    return`<article class="hsDashboardC4Card ${index===0?"is-leader":"is-compact"}" data-c4-symbol="${esc(row.symbol)}" data-c4-source="${status}"><div class="hsC4Rank">${index+1}</div><header><span class="hsC4Identity">${esc(row.symbol)}<small>${esc(row.name)}</small></span><i class="${row.useLive?"is-live":"is-final"}">${esc(displayStatus)}</i></header><div class="hsC4CardScore"><b>${Number.isFinite(row.score)?row.score:"—"}</b><strong>${esc(row.tier)}</strong></div><dl><div><dt>vs 昨日正式</dt><dd class="hsC4DeltaValue ${deltaTone}">${esc(delta)}</dd></div>${trackMetrics}<div class="hsC4ThresholdMetric"><dt>門檻</dt><dd>${esc(distance)}</dd></div></dl>${trajectory}</article>`;
+    const nextText=row.next?.highest?"已在最高區間":row.next?.nextThreshold!=null?`下一級 ${row.next.nextThreshold}`:"下一級暫缺",nextDetail=row.next?.highest?"":row.next?.nextThreshold!=null?`${esc(row.next.nextLabel)}｜還差 ${distance}`:"門檻資料暫缺";
+    return`<article class="hsDashboardC4Card ${index===0?"is-leader":"is-compact"}" data-c4-symbol="${esc(row.symbol)}" data-c4-source="${status}"><div class="hsC4Rank">${index+1}</div><header><span class="hsC4Identity">${esc(row.symbol)}<small>${esc(row.name)}</small></span><i class="${row.useLive?"is-live":"is-final"}">${esc(displayStatus)}</i></header><div class="hsC4CardScore"><b>${homeC4DisplayNumber(row.useLive?row.rawScore:row.score)}</b><strong>${esc(row.tier)}</strong></div><dl><div><dt>vs 昨日正式</dt><dd class="hsC4DeltaValue ${deltaTone}">${esc(delta)}</dd></div>${trackMetrics}<div class="hsC4ThresholdMetric"><dt>${esc(nextText)}</dt><dd>${nextDetail}</dd></div></dl>${trajectory}</article>`;
   });
   const waiting=(longs||[]).find(item=>item?.id==="009815");
   const waitingPreviousDate=premarket?homeC4LatestPreviousSessionDate(String(dualTrack?.target_date||taipeiToday())):"";
@@ -3557,7 +3564,7 @@ function renderTop(){
   const longCount=rankedLongs.filter(x=>(homepageFinalDecision(x)?.score??0)>=60).length;
   const swingCount=swings.filter(x=>(strategyDecisionFor(x,strategyModeFor(x))?.stage?.number??0)>0||["first","confirmed"].includes(strategyDecisionFor(x,strategyModeFor(x))?.stage?.key)).length;
   const snapshotAsOf=intradayLongRankAsOf(longs),snapshotSlot=intradayLongRankSlot(longs,snapshotAsOf),saved=previousLongRanks(),canonicalActive=rankedLongs.length===LONG_RADAR_SCORED_CODES.size&&rankedLongs.every(item=>Boolean(item.intraday?.canonical)),candidateSnapshot=canonicalActive?null:(snapshotAsOf?createLongRankSnapshot(rankedLongs,liveMarketCacheVersion||"",snapshotAsOf,snapshotSlot):null),verifiedSnapshot=canonicalActive?null:(isVerifiedLongRankSnapshot(liveRadarRefresh,candidateSnapshot)?candidateSnapshot:null),previous=canonicalActive?{}:comparisonLongRanks(saved,verifiedSnapshot),snapshotIdentity=longRankSnapshotIdentity(verifiedSnapshot);
-  $("#homeEtfBriefSummary").textContent=rankedLongs.length>=2?`最高決策優先：${rankedLongs[0].id}｜${displayScore(rankedLongs[0],"long_term_core")}分｜${homepageFinalDecision(rankedLongs[0])?.label||"資料更新中"}；次順位：${rankedLongs[1].id}｜${displayScore(rankedLongs[1],"long_term_core")}分。`:"等待最新盤後正式 Core Score。";
+  $("#homeEtfBriefSummary").textContent=rankedLongs.length>=2?`正式分數最高（${dualTrack?.items?.[rankedLongs[0].id]?.official?.trading_date||"資料日期待確認"}）：${rankedLongs[0].id}｜${homeC4DisplayNumber(dualTrack?.items?.[rankedLongs[0].id]?.official?.display_score)}分｜${homepageFinalDecision(rankedLongs[0])?.label||"資料更新中"}；次順位：${rankedLongs[1].id}｜${homeC4DisplayNumber(dualTrack?.items?.[rankedLongs[1].id]?.official?.display_score)}分。`:"等待最新盤後正式 Core Score。";
   renderDecisionCenter(displayedLongs,dualTrack,leverageV1State(all.find(x=>x.id==="00631L")));
   renderHSToday(rankedLongs);
   const rankList=$("#rankList");rankList.classList.add("hsLiveGrid");rankList.innerHTML=displayedLongs.map((x,index)=>longRankRow(x,index,previous,rankedLongs.indexOf(x)>=0?rankedLongs.indexOf(x)+1:null,dualTrack?.items?.[x.id]||null)).join("")||'<div class="newsEmpty">資料載入中</div>';
