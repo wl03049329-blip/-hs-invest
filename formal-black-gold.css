@@ -2258,6 +2258,7 @@ footer{color:#746f67}
 @media(max-width:600px){.radarPushActions{display:grid;grid-template-columns:1fr;width:100%}.radarPushSettings .radarPushActions button{width:100%;min-width:0}}
 
 /* Intraday card safety: presentation only. */
+#homeEtfBrief .hsC4LeaderBody{display:contents}
 #homeEtfBrief .hsDashboardC4Card{min-width:0;overflow:hidden;font-variant-numeric:tabular-nums}
 #homeEtfBrief .hsDashboardC4Card>header,#homeEtfBrief .hsC4CardScore,#homeEtfBrief .hsDashboardC4Card dl{min-width:0}
 #homeEtfBrief .hsC4CardScore>b{min-width:4.5ch;text-align:right;white-space:nowrap}
@@ -2282,9 +2283,15 @@ footer{color:#746f67}
   #homeEtfBrief .hsDashboardC4Card.is-compact .hsC4Sparkline{height:49px}
 }
 @media(max-width:480px){
-  #homeEtfBrief .hsDashboardC4Card.is-leader{grid-template-columns:40px minmax(0,1fr) minmax(4.5ch,auto)!important;min-height:204px!important;gap:5px 7px!important}
+  #homeEtfBrief .hsDashboardC4Card.is-leader{grid-template-columns:40px minmax(0,1fr) minmax(4.5ch,auto)!important;grid-template-rows:auto auto!important;min-height:0!important;gap:4px 7px!important;padding-block:8px!important}
   #homeEtfBrief .hsDashboardC4Card.is-leader .hsC4CardScore>b{font-size:38px}
-  #homeEtfBrief .hsDashboardC4Card.is-leader .hsC4Sparkline{height:68px}
+  #homeEtfBrief .hsDashboardC4Card.is-leader .hsC4LeaderBody{grid-column:1/-1;grid-row:2;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;min-width:0;align-items:start}
+  #homeEtfBrief .hsDashboardC4Card.is-leader .hsC4LeaderBody dl{grid-column:1!important;grid-row:1!important;grid-template-columns:minmax(0,1fr)!important;grid-template-rows:none;gap:3px!important;min-height:0}
+  #homeEtfBrief .hsDashboardC4Card.is-leader .hsC4LeaderBody dl>div:not(.hsC4ThresholdMetric){grid-column:1!important;grid-row:auto!important;display:flex;justify-content:space-between;gap:4px;min-height:0}
+  #homeEtfBrief .hsDashboardC4Card.is-leader .hsC4LeaderBody .hsC4ThresholdMetric{grid-column:1;grid-row:auto;display:grid!important;gap:3px}
+  #homeEtfBrief .hsDashboardC4Card.is-leader .hsC4LeaderBody .hsC4ThresholdMetric dt,#homeEtfBrief .hsDashboardC4Card.is-leader .hsC4LeaderBody .hsC4ThresholdMetric dd{grid-column:1;grid-row:auto;min-width:0}
+  #homeEtfBrief .hsDashboardC4Card.is-leader .hsC4LeaderBody .hsC4ThresholdMetric dd{padding:3px 5px}
+  #homeEtfBrief .hsDashboardC4Card.is-leader .hsC4LeaderBody .hsC4Sparkline{grid-column:2!important;grid-row:1!important;height:68px;width:100%;align-self:start}
   #homeEtfBrief .hsDashboardC4Card.is-compact{grid-template-columns:31px minmax(0,1fr)!important;grid-template-rows:auto auto auto auto!important;min-height:245px;padding:13px 10px!important}
   #homeEtfBrief .hsDashboardC4Card.is-compact .hsC4Rank{grid-column:1;grid-row:1!important}
   #homeEtfBrief .hsDashboardC4Card.is-compact .hsC4CardScore{grid-column:2;grid-row:1!important;justify-self:end}
@@ -2296,4 +2303,5 @@ footer{color:#746f67}
   #homeEtfBrief .hsDashboardC4Card dl{min-height:0;gap:5px 7px!important}
   #homeEtfBrief .hsC4ThresholdMetric dt{white-space:nowrap}
   #homeEtfBrief .hsC4ThresholdMetric dd{min-height:0;padding:5px 7px}
+  .app{padding-bottom:max(124px,calc(104px + env(safe-area-inset-bottom)))}
 }

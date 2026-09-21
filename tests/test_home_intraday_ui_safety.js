@@ -56,12 +56,15 @@ sandbox.decisionCenterC4Rows=()=>[{
 const card=sandbox.decisionCenterC4Cards([],[],{target_date:"2026-09-21"});
 assert.match(card,/data-c4-source="LIVE"/);
 assert.match(card,/<b>31\.4<\/b>/);
-assert.match(card,/今日高<\/dt><dd>31\.4/);
-assert.match(card,/今日低<\/dt><dd>30\.8/);
+assert.match(card,/盤中高<\/dt><dd>31\.4/);
+assert.match(card,/盤中低<\/dt><dd>30\.8/);
+assert.doesNotMatch(card,/今日高|今日低/);
 assert.match(card,/\-7\.7/);
 assert.match(card,/下一級 40/);
 assert.match(card,/加碼條件浮現｜還差 8\.7/);
 assert.doesNotMatch(card,/<dt>門檻<\/dt>/);
+assert.match(card,/<div class="hsC4LeaderBody"><dl>/);
+assert.match(card,/<\/dl><div class="hsC4Sparkline"[\s\S]*<\/div><\/article>/);
 assert.match(card,/WAIT_NATIVE/);
 console.log("PASS: LIVE card displays raw decimals, integer threshold and WAIT_NATIVE unchanged");
 
@@ -73,12 +76,21 @@ sandbox.decisionCenterC4Rows=()=>[{
 }];
 const closedCard=sandbox.decisionCenterC4Cards([],[],{target_date:"2026-09-21"});
 assert.match(closedCard,/data-c4-source="FINAL"[\s\S]*<b>31\.0<\/b>/);
-assert.match(closedCard,/今日高<\/dt><dd>31\.4/);
+assert.match(closedCard,/盤中高<\/dt><dd>31\.4/);
 console.log("PASS: FINAL display remains canonical 31 while archived raw high is formatted separately");
 
 for(const width of [375,390,393,430])assert.match(css,new RegExp(`@media\\(max-width:480px\\)[\\s\\S]*?min-width:4\\.5ch`),`${width}px safety styles present`);
 assert.match(css,/#homeEtfBrief \.hsC4SparklineMeta>time\{[^}]*overflow:hidden/);
 assert.match(css,/#homeEtfBrief \.hsDashboardC4Card\{[^}]*overflow:hidden/);
+const summary=html.match(/\$\("#homeEtfBriefSummary"\)\.textContent=rankedLongs\.length>=2\?`([^`]+)`/);
+assert.ok(summary);
+assert.match(summary[1],/正式最高：/);
+assert.match(summary[1],/次順位：/);
+assert.doesNotMatch(summary[1],/trading_date|homepageFinalDecision|分數最高/);
+assert.match(css,/#homeEtfBrief \.hsDashboardC4Card\.is-leader\{[^}]*grid-template-rows:auto auto!important;min-height:0!important;gap:4px 7px!important;padding-block:8px!important/);
+assert.match(css,/#homeEtfBrief \.hsDashboardC4Card\.is-leader \.hsC4LeaderBody\{[^}]*grid-template-columns:minmax\(0,1fr\) minmax\(0,1fr\);gap:18px/);
+assert.match(css,/#homeEtfBrief \.hsDashboardC4Card\.is-leader \.hsC4LeaderBody \.hsC4Sparkline\{[^}]*height:68px/);
+assert.match(css,/\.app\{padding-bottom:max\(124px,calc\(104px \+ env\(safe-area-inset-bottom\)\)\)\}/);
 console.log("PASS: responsive CSS safety selectors present");
 
 const archive=JSON.parse(fs.readFileSync("intraday-core-snapshots-v1.json","utf8"));
