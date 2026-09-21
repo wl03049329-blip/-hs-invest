@@ -1509,6 +1509,7 @@
     };
     const updateRebalanceSettings = () => {
       rebalanceSettings = {
+        ...rebalanceSettings,
         cash: ledgerState?.valid ? ledgerState.cash : Math.max(0, Number($v6("#rebalanceCash").value) || 0), profile: $v6("#rebalanceProfile").value,
         customTolerance: Number($v6("#rebalanceCustomTolerance").value), reminder: $v6("#rebalanceReminder").value,
         customDays: Number($v6("#rebalanceCustomDays").value), cashFirst: $v6("#rebalanceCashFirst").checked,
