@@ -55,7 +55,7 @@ check(/data-target-edit/.test(ui) && /openInlineTargetEditor/.test(ui), "inline 
 check(/data-target-batch/.test(ui) && /saveTargetBatch/.test(ui), "bulk target save is wired");
 check(/applyTargetUpdates[\s\S]*saveHoldings\(\)/.test(ui), "target update uses existing holdings persistence");
 check(/refreshPortfolio\(\)/.test(ui), "target update refreshes rebalance immediately");
-check(/validateTargetAllocations\(next\)/.test(ui), "formal aggregate target validation is reused");
+check(/dashboardCore\.targetSummary\(dashboardCore\.targetAllocationItems\(next,nextTargets\)/.test(ui), "aggregate target validation includes unheld symbols");
 check(/dashboardCore\.fixedCost/.test(ui), "centralized cost formatter is used");
 check(/portfolioTargetBatchTotal\.is-complete/.test(css), "complete total has restrained status styling");
 check(/@media\(max-width:430px\)[^{]*\{[^}]*portfolioHoldingsTools/.test(css), "mobile holdings tools are responsive");

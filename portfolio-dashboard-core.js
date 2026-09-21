@@ -5,19 +5,33 @@
 })(typeof globalThis!=="undefined"?globalThis:this,function(){
   "use strict";
 
-  const finite=value=>Number.isFinite(Number(value))?Number(value):null;
+  const finite=value=>value===null||value===undefined||String(value).trim()===""?null:Number.isFinite(Number(value))?Number(value):null;
   const validDate=value=>/^\d{4}-\d{2}-\d{2}$/.test(String(value||""))?String(value):"";
+  const validCode=value=>/^[0-9A-Z]{4,10}$/.test(String(value||"").trim().toUpperCase());
+
+  function effectiveHoldings(rows=[]){
+    return(Array.isArray(rows)?rows:[]).filter(row=>validCode(row?.code??row?.symbol??row?.ticker)&&finite(row?.shares??row?.quantity)>0&&row?.deleted!==true&&row?.placeholder!==true);
+  }
+
+  function targetAllocationItems(holdings=[],targets={}){
+    const actual=effectiveHoldings(holdings),seen=new Set(actual.map(row=>row.code));
+    const additional=Object.entries(targets&&typeof targets==="object"&&!Array.isArray(targets)?targets:{}).filter(([code])=>validCode(code)&&!seen.has(code)).map(([code,targetAllocation])=>({code,shares:0,targetAllocation:normalizeTarget(targetAllocation).value}));
+    return[...actual,...additional];
+  }
 
   function hero(rows=[]){
-    const source=Array.isArray(rows)?rows:[];
-    const complete=source.length>0&&source.every(row=>row?.quoteStatus==="current"&&finite(row.marketValue)!==null&&finite(row.totalCost)!==null&&finite(row.totalPnl)!==null&&finite(row.todayPnl)!==null&&finite(row.quote?.previousClose)>0);
-    if(!complete)return{complete:false,todayPnl:null,todayRate:null,unrealizedPnl:null,unrealizedRate:null,stockMarketValue:null,remainingCostBasis:null};
-    const stockMarketValue=source.reduce((sum,row)=>sum+finite(row.marketValue),0);
-    const remainingCostBasis=source.reduce((sum,row)=>sum+finite(row.totalCost),0);
-    const todayPnl=source.reduce((sum,row)=>sum+finite(row.todayPnl),0);
-    const previousMarketValue=source.reduce((sum,row)=>sum+finite(row.shares)*finite(row.quote.previousClose),0);
-    const unrealizedPnl=stockMarketValue-remainingCostBasis;
-    return{complete:true,todayPnl,todayRate:previousMarketValue>0?todayPnl/previousMarketValue*100:null,unrealizedPnl,unrealizedRate:remainingCostBasis>0?unrealizedPnl/remainingCostBasis*100:null,stockMarketValue,remainingCostBasis};
+    const source=effectiveHoldings(rows);
+    const valuableHoldings=source.filter(row=>row?.quoteStatus==="current"&&finite(row.marketValue)!==null);
+    const todayRows=valuableHoldings.filter(row=>finite(row.todayPnl)!==null&&finite(row.quote?.previousClose)>0);
+    const costRows=source.filter(row=>finite(row.totalCost)!==null);
+    const holdingsWithCost=valuableHoldings.filter(row=>finite(row.totalCost)!==null);
+    const status=items=>items.length===0?"unavailable":items.length===source.length?"complete":"partial";
+    const stockMarketValue=valuableHoldings.length?valuableHoldings.reduce((sum,row)=>sum+finite(row.marketValue),0):null;
+    const todayPnl=todayRows.length?todayRows.reduce((sum,row)=>sum+finite(row.todayPnl),0):null;
+    const previousMarketValue=todayRows.reduce((sum,row)=>sum+finite(row.shares)*finite(row.quote.previousClose),0);
+    const remainingCostBasis=holdingsWithCost.length?holdingsWithCost.reduce((sum,row)=>sum+finite(row.totalCost),0):null;
+    const unrealizedPnl=holdingsWithCost.length?holdingsWithCost.reduce((sum,row)=>sum+finite(row.marketValue)-finite(row.totalCost),0):null;
+    return{complete:source.length>0&&valuableHoldings.length===source.length&&todayRows.length===source.length&&holdingsWithCost.length===source.length,holdingCount:source.length,valuableCount:valuableHoldings.length,marketValueStatus:status(valuableHoldings),todayStatus:status(todayRows),costStatus:status(costRows),unrealizedStatus:status(holdingsWithCost),unrealizedReason:valuableHoldings.length<source.length?"部分行情缺失":"部分成本缺失",todayPnl,todayRate:previousMarketValue>0?todayPnl/previousMarketValue*100:null,unrealizedPnl,unrealizedRate:remainingCostBasis>0?unrealizedPnl/remainingCostBasis*100:null,stockMarketValue,remainingCostBasis};
   }
 
   function allocation(rows=[],visibleLimit=6){
@@ -92,5 +106,5 @@
     return source.sort((a,b)=>{const av=finite(a[key]),bv=finite(b[key]);if(av===null&&bv===null)return a.portfolioOrder-b.portfolioOrder;if(av===null)return 1;if(bv===null)return-1;return(av-bv)*sign||a.portfolioOrder-b.portfolioOrder;});
   }
 
-  return Object.freeze({VERSION:"HS_PORTFOLIO_DASHBOARD_V1",hero,allocation,adjustedRows,trailingReturn,ytdReturn,trends,fixedCost,fixedOne,targetDisplay,normalizeTarget,targetSummary,sortRows});
+  return Object.freeze({VERSION:"HS_PORTFOLIO_DASHBOARD_V1",effectiveHoldings,targetAllocationItems,hero,allocation,adjustedRows,trailingReturn,ytdReturn,trends,fixedCost,fixedOne,targetDisplay,normalizeTarget,targetSummary,sortRows});
 });

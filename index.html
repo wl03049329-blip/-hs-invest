@@ -1027,7 +1027,8 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       <div><p class="eyebrow">TARGET ALLOCATION</p><h3 id="portfolioTargetModalTitle">設定目標配置</h3></div>
       <button id="portfolioTargetModalClose" class="close" type="button" aria-label="關閉目標配置視窗">關閉</button>
     </div>
-    <p class="portfolioTargetIntro">可先儲存未滿 100% 的草稿；智慧再平衡仍需所有持股完整合計 100%。</p>
+    <p class="portfolioTargetIntro">可加入尚未持有的標的並設定目標；智慧再平衡需目標合計 100%。</p>
+    <div class="portfolioTargetBatchRow"><label for="portfolioTargetSymbol">加入目標標的</label><span><input id="portfolioTargetSymbol" type="text" maxlength="10" autocomplete="off" placeholder="例如 00662"><button id="portfolioTargetSymbolAdd" class="miniBtn" type="button">加入</button></span></div>
     <form id="portfolioTargetForm" novalidate>
       <div id="portfolioTargetBatchRows" class="portfolioTargetBatchRows"></div>
       <p id="portfolioTargetBatchTotal" class="portfolioTargetBatchTotal" role="status" aria-live="polite">目標配置合計 0%</p>

@@ -28,7 +28,7 @@
   let holdings = loadHoldings();
   let quoteMap = loadQuoteCache();
   let publicQuoteMap = new Map();
-  let computed = core.calculatePortfolio(holdings, quoteMap, {now: Date.now()});
+  let computed = core.calculatePortfolio(dashboardCore.effectiveHoldings(holdings), quoteMap, {now: Date.now()});
   let pendingDuplicate = null;
   let editingCode = null;
   let catalog = [];
@@ -90,7 +90,7 @@
   }
 
   function loadRebalanceSettings() {
-    const fallback = {cash: 0, profile: "trend", customTolerance: 3, reminder: "90", customDays: 60, cashFirst: true, trendProtection: true};
+    const fallback = {cash: 0, profile: "trend", customTolerance: 3, reminder: "90", customDays: 60, cashFirst: true, trendProtection: true, targets: {}};
     try {
       const raw = JSON.parse(localStorage.getItem(REBALANCE_SETTINGS_KEY) || "null");
       if (!raw || typeof raw !== "object") return fallback;
@@ -102,7 +102,8 @@
         reminder: ["30", "90", "custom"].includes(String(raw.reminder)) ? String(raw.reminder) : "90",
         customDays: Number.isFinite(customDays) && customDays >= 7 && customDays <= 365 ? Math.round(customDays) : 60,
         cashFirst: raw.cashFirst !== false,
-        trendProtection: raw.trendProtection !== false
+        trendProtection: raw.trendProtection !== false,
+        targets: Object.fromEntries(Object.entries(raw.targets && typeof raw.targets === "object" && !Array.isArray(raw.targets) ? raw.targets : {}).map(([code,value])=>[core.normalizeCode(code),dashboardCore.normalizeTarget(value)]).filter(([code,target])=>core.CODE_PATTERN.test(code)&&target.ok).map(([code,target])=>[code,target.value]))
       };
     } catch { return fallback; }
   }
@@ -130,15 +131,25 @@
   }
 
   function metadataForSymbol(code) { return holdings.find(item => item.code === code) || {}; }
+  function effectiveHoldings() { return dashboardCore.effectiveHoldings(holdings); }
+  function targetAllocationItems() {
+    return dashboardCore.targetAllocationItems(effectiveHoldings(),rebalanceSettings.targets).map(item=>item.shares>0?item:{...item,name:catalog.find(entry=>entry.code===item.code)?.name||item.code,marketValue:0,allocationValue:0,weight:0,quoteStatus:"not_held"});
+  }
+  function rebalanceRows() {
+    const actual=new Map(computed.rows.map(row=>[row.code,row]));
+    return targetAllocationItems().map(item=>actual.get(item.code)||item);
+  }
 
   function syncDerivedPortfolio() {
     if (!ledger) return;
     ledgerState = ledgerCore.derivePortfolioStateFromLedger(ledger.events);
     if (!ledgerState.valid) return;
     const previous = new Map(holdings.map(item => [item.code, item]));
+    const nextCodes=new Set(ledgerState.holdings.map(row=>row.symbol));
+    for(const item of holdings)if(!nextCodes.has(item.code)&&Number.isFinite(item.targetAllocation))rebalanceSettings.targets[item.code]=item.targetAllocation;
     holdings = ledgerState.holdings.map(row => {
       const meta = previous.get(row.symbol) || {};
-      return core.validateHolding({code: row.symbol, shares: row.quantity, averageCost: row.averageCost, customName: meta.customName || "", name: meta.name || "", strategyType: meta.strategyType || "", targetAllocation: meta.targetAllocation});
+      return core.validateHolding({code: row.symbol, shares: row.quantity, averageCost: row.averageCost, customName: meta.customName || "", name: meta.name || "", strategyType: meta.strategyType || "", targetAllocation: meta.targetAllocation ?? rebalanceSettings.targets[row.symbol]});
     });
     rebalanceSettings = {...rebalanceSettings, cash: ledgerState.cash};
     saveHoldings(); saveRebalanceSettings();
@@ -252,10 +263,11 @@
   }
 
   function portfolioFreshnessLabel() {
-    if (!holdings.length) return "尚未新增持股";
+    const count=effectiveHoldings().length;
+    if (!count) return "尚未新增持股";
     const current = computed.rows.filter(row => row.quoteStatus === "current").length;
     const stale = computed.rows.filter(row => row.quoteStatus === "stale").length;
-    const missing = holdings.length - current - stale;
+    const missing = count - current - stale;
     const parts = [];
     if (current) parts.push(`${current} 檔最新`);
     if (stale) parts.push(`${stale} 檔最後有效資料`);
@@ -280,14 +292,14 @@
     const heroValue = $v6("#portfolioHeroMarketValue");
     const holdingCount = $v6("#portfolioHoldingCount");
     const summary=dashboardCore.hero(computed.rows);
-    holdingCount.textContent = holdings.length ? `持有 ${holdings.length} 檔` : "尚未建立持股";
+    holdingCount.textContent = summary.holdingCount ? `持有 ${summary.holdingCount} 檔` : "尚未建立持股";
     const fields=[
-      ["#portfolioHeroTodayPnl",summary.todayPnl,"#portfolioHeroTodayRate",Number.isFinite(summary.todayRate)?percent(summary.todayRate):holdings.length?"行情資料不完整":"尚無持股"],
-      ["#portfolioHeroUnrealizedPnl",summary.unrealizedPnl,"#portfolioHeroUnrealizedRate",Number.isFinite(summary.unrealizedRate)?percent(summary.unrealizedRate):holdings.length?"行情資料不完整":"尚無持股"]
+      ["#portfolioHeroTodayPnl",summary.todayPnl,"#portfolioHeroTodayRate",summary.todayStatus==="partial"?"部分行情缺失":Number.isFinite(summary.todayRate)?percent(summary.todayRate):summary.holdingCount?"行情資料不完整":"尚無持股"],
+      ["#portfolioHeroUnrealizedPnl",summary.unrealizedPnl,"#portfolioHeroUnrealizedRate",summary.unrealizedStatus==="partial"?summary.unrealizedReason:Number.isFinite(summary.unrealizedRate)?percent(summary.unrealizedRate):summary.holdingCount?"成本或行情資料不完整":"尚無持股"]
     ];
     fields.forEach(([valueSelector,value,noteSelector,note])=>{const valueNode=$v6(valueSelector),noteNode=$v6(noteSelector);valueNode.textContent=Number.isFinite(value)?money(value):"—";valueNode.className=valueClass(value);noteNode.textContent=note;noteNode.className=valueClass(Number.isFinite(value)?value:null)});
     heroValue.textContent=Number.isFinite(summary.stockMarketValue)?money(summary.stockMarketValue):"—";
-    $v6("#portfolioHeroCostBasis").textContent=Number.isFinite(summary.remainingCostBasis)?`成本 ${money(summary.remainingCostBasis)}`:holdings.length?"成本資料不完整":"成本 —";
+    $v6("#portfolioHeroCostBasis").textContent=summary.marketValueStatus==="partial"?"部分行情缺失":Number.isFinite(summary.remainingCostBasis)?`成本 ${money(summary.remainingCostBasis)}`:summary.holdingCount?"成本資料不完整":"成本 —";
   }
 
   function holdingName(row) {
@@ -348,7 +360,7 @@
 
   function renderList() {
     const list=$v6("#portfolioList"),viewport=$v6("#portfolioHoldingsTableViewport"),empty=$v6("#portfolioHoldingsEmpty");
-    if (!holdings.length) {
+    if (!effectiveHoldings().length) {
       list.innerHTML="";viewport.hidden=true;empty.hidden=false;empty.querySelector("[data-portfolio-empty-add]")?.addEventListener("click",()=>ledger?openTransaction():openPortfolioModal());
       return;
     }
@@ -378,10 +390,19 @@
   function applyTargetUpdates(updates) {
     const targetMap = new Map(updates.map(item => [core.normalizeCode(item.code), item.value]));
     const next = holdings.map(item => targetMap.has(item.code) ? core.validateHolding({...item, targetAllocation: targetMap.get(item.code)}) : item);
-    const allocation = core.validateTargetAllocations(next);
-    if (!allocation.ok) throw new Error(`目標配置合計不可超過 100%（目前 ${number(allocation.total, 1)}%）。`);
+    const nextTargets = {...rebalanceSettings.targets};
+    for (const [code,value] of targetMap) {
+      if (!core.CODE_PATTERN.test(code)) throw new Error("股票代號格式不正確。");
+      const normalized = dashboardCore.normalizeTarget(value);
+      if (!normalized.ok) throw new Error("目標配置需為 0–100，最多一位小數。");
+      if (!next.some(item=>item.code===code)) nextTargets[code]=normalized.value;
+    }
+    const allocation = dashboardCore.targetSummary(dashboardCore.targetAllocationItems(next,nextTargets).map(item=>item.targetAllocation));
+    if (!allocation.valid || allocation.status==="over") throw new Error(`目標配置合計不可超過 100%（目前 ${number(allocation.total, 1)}%）。`);
     holdings = next;
+    rebalanceSettings.targets = nextTargets;
     saveHoldings();
+    saveRebalanceSettings();
     refreshPortfolio();
   }
 
@@ -406,7 +427,8 @@
 
   function openTargetModal() {
     const modal=$v6("#portfolioTargetModal"),rows=$v6("#portfolioTargetBatchRows");
-    rows.innerHTML=holdings.length?holdings.map(item=>`<label class="portfolioTargetBatchRow"><span><b>${escapeHtml(item.code)}</b><small>${escapeHtml(holdingName(item))}</small></span><span><input type="number" min="0" max="100" step="0.1" inputmode="decimal" value="${Number.isFinite(item.targetAllocation)?item.targetAllocation:""}" data-target-batch="${escapeHtml(item.code)}" aria-label="${escapeHtml(item.code)} 目標佔比"><em>%</em></span></label>`).join(""):'<p class="rebalancePending">新增持股後才能設定目標配置。</p>';
+    const items=targetAllocationItems();
+    rows.innerHTML=items.length?items.map(item=>`<label class="portfolioTargetBatchRow"><span><b>${escapeHtml(item.code)}</b><small>${escapeHtml(holdingName(item))}${item.shares===0?"｜尚未持有":""}</small></span><span><input type="number" min="0" max="100" step="0.1" inputmode="decimal" value="${Number.isFinite(item.targetAllocation)?item.targetAllocation:""}" data-target-batch="${escapeHtml(item.code)}" aria-label="${escapeHtml(item.code)} 目標佔比"><em>%</em></span></label>`).join(""):'<p class="rebalancePending">輸入標的代號即可設定目標配置。</p>';
     $v6("#portfolioTargetBatchError").textContent="";
     rows.querySelectorAll("[data-target-batch]").forEach(input=>input.addEventListener("input",targetBatchSummary));
     targetBatchSummary();modal.classList.add("show");modal.setAttribute("aria-hidden","false");
@@ -414,6 +436,19 @@
   }
 
   function closeTargetModal(){const modal=$v6("#portfolioTargetModal");modal.classList.remove("show");modal.setAttribute("aria-hidden","true")}
+
+  function addTargetSymbol() {
+    const input=$v6("#portfolioTargetSymbol"),code=core.normalizeCode(input.value),error=$v6("#portfolioTargetBatchError");
+    if(!core.CODE_PATTERN.test(code)){error.textContent="請輸入有效的 4–10 碼標的代號。";return}
+    if(targetAllocationItems().some(item=>item.code===code)){error.textContent="此標的已在目標配置清單。";return}
+    const pending=new Map([...$v6("#portfolioTargetBatchRows").querySelectorAll("[data-target-batch]")].map(row=>[row.dataset.targetBatch,row.value]));
+    rebalanceSettings.targets[code]=null;
+    saveRebalanceSettings();
+    openTargetModal();
+    for(const row of $v6("#portfolioTargetBatchRows").querySelectorAll("[data-target-batch]"))if(pending.has(row.dataset.targetBatch))row.value=pending.get(row.dataset.targetBatch);
+    targetBatchSummary();
+    input.value="";
+  }
 
   function saveTargetBatch(event) {
     event.preventDefault();
@@ -450,25 +485,26 @@
   function renderRebalance(focusTarget = "") {
     const status = $v6("#rebalanceStatus"), output = $v6("#rebalanceAdvice"), targetRows = $v6("#rebalanceTargetRows");
     if (!status || !output || !targetRows) return;
+    const rows = rebalanceRows();
     const advice = core.calculateRebalanceAdvice({
-      rows: computed.rows.map(row => ({code: row.code, marketValue: row.allocationValue, targetAllocation: row.targetAllocation, trend: rebalanceTrend(row)})),
+      rows: rows.map(row => ({code: row.code, marketValue: row.allocationValue, targetAllocation: row.targetAllocation, trend: rebalanceTrend(row)})),
       ...rebalanceSettings
     });
     latestRebalanceAdvice = advice;
-    const allocationState = core.validateTargetAllocations(holdings);
+    const allocationState = dashboardCore.targetSummary(rows.map(row=>row.targetAllocation));
     const total = allocationState.total;
     const totalMessage = targetTotalMessage(total, allocationState.complete);
     const cash = Number.isFinite(rebalanceSettings.cash) && rebalanceSettings.cash >= 0 ? rebalanceSettings.cash : 0;
     const allocationTotal = Number.isFinite(computed.allocationTotal) ? computed.allocationTotal : 0;
     const estimated = Boolean(computed.allocationEstimated);
     const totalAssets = allocationTotal + cash;
-    $v6("#rebalanceTotalAssets").textContent = holdings.length ? money(totalAssets) : "—";
-    $v6("#rebalanceValueMode").textContent = holdings.length ? (estimated ? "依成本暫估" : "依目前市值") : "等待持股資料";
+    $v6("#rebalanceTotalAssets").textContent = rows.length && totalAssets > 0 ? money(totalAssets) : "—";
+    $v6("#rebalanceValueMode").textContent = effectiveHoldings().length ? (estimated ? "依成本暫估" : "依目前市值") : "尚未持有標的";
     $v6("#rebalanceCashSummary").textContent = money(cash);
     $v6("#rebalanceEstimateNote").hidden = !estimated || !holdings.length;
     $v6("#rebalanceTargetTotal").textContent = totalMessage.text;
     $v6("#rebalanceTargetTotal").className = `rebalanceTargetTotal ${totalMessage.className}`.trim();
-    const currentDeviations = computed.rows.map(row => Number.isFinite(row.targetAllocation) && Number.isFinite(row.weight) ? Math.abs(row.weight - row.targetAllocation) : null).filter(Number.isFinite);
+    const currentDeviations = rows.map(row => Number.isFinite(row.targetAllocation) && Number.isFinite(row.weight) ? Math.abs(row.weight - row.targetAllocation) : null).filter(Number.isFinite);
     const meanDeviation = currentDeviations.length ? currentDeviations.reduce((sum, value) => sum + value, 0) / currentDeviations.length : null;
     if (advice.formal) {
       const healthLabel = advice.health >= 80 ? "良好" : advice.health >= 60 ? "普通" : "偏離較大";
@@ -484,22 +520,22 @@
       $v6("#rebalanceDeviation").textContent = "目前配置與目標配置平均偏離";
       if (advice.status === "target_over") status.textContent = `超額配置 ${number(Math.abs(advice.gap), 1)}%；表格保留，但暫不產生正式建議。`;
       else if (advice.status === "target_incomplete") status.textContent = Math.abs(advice.gap) <= .01 ? "尚有持股未設定目標；表格保留，但暫不產生正式建議。" : `尚有 ${number(Math.max(0, advice.gap), 1)}% 未配置；表格保留，但暫不產生正式建議。`;
-      else status.textContent = holdings.length ? "目前依可用持股價值暫估配置。" : "新增持股並設定每檔目標配置後，即可產生建議。";
+       else status.textContent = rows.length ? "目前依可用持股價值暫估配置。" : "加入目標標的並設定配置後，即可產生建議。";
     }
 
-    const readout = core.buildRebalanceReadout({rows: computed.rows, advice});
+    const readout = core.buildRebalanceReadout({rows, advice});
     const readoutByCode = new Map(readout.items.map(item => [item.code, item]));
     $v6("#rebalanceRecommendation").textContent = readout.recommendation;
     $v6("#rebalanceFundingMode").textContent = readout.fundingMode;
     $v6("#rebalanceFundingPriority").textContent = readout.fundingPriority.length ? readout.fundingPriority.slice(0, 5).map(item => item.code).join(" → ") : advice.formal ? "目前無明顯低配部位" : "完成目標配置後顯示";
-    targetRows.innerHTML = computed.rows.length ? computed.rows.map(row => {
+    targetRows.innerHTML = rows.length ? rows.map(row => {
       const item = readoutByCode.get(row.code);
       const stateClass = item ? `is-${item.state}` : "is-pending";
       const gapText = item ? `${item.allocationGap > 0 ? "+" : ""}${number(item.allocationGap, 1)}%` : "—";
       return `<label class="rebalanceTargetRow ${stateClass}"><span class="rebalanceTargetIdentity"><b>${escapeHtml(row.code)}</b><span>${escapeHtml(holdingName(row))}</span></span><span class="rebalanceTargetCompare"><small>目前 ${item ? `${number(item.currentWeight, 1)}%` : "—"}</small><span>→</span><span class="rebalanceTargetInput"><small>目標</small><input type="number" min="0" max="100" step="0.1" inputmode="decimal" value="${Number.isFinite(row.targetAllocation) ? row.targetAllocation : ""}" data-rebalance-target="${escapeHtml(row.code)}" aria-label="${escapeHtml(row.code)} 目標配置">%</span></span><span class="rebalanceGapBadge ${stateClass}">${item ? `${item.stateLabel} ${gapText}` : "尚未設定"}</span></label>`;
     }).join("") : '<p class="rebalancePending">新增持股後即可設定目標配置。</p>';
 
-    output.innerHTML = computed.rows.length ? computed.rows.map(row => {
+    output.innerHTML = rows.length ? rows.map(row => {
       const adviceRow = advice.formal ? advice.rows.find(item => item.code === row.code) : null;
       const currentWeight = Number.isFinite(row.weight) ? row.weight : null;
       const difference = Number.isFinite(currentWeight) && Number.isFinite(row.targetAllocation) ? currentWeight - row.targetAllocation : null;
@@ -765,7 +801,7 @@
   function openLedger(){if(!ledger){openMigration();return}renderAllLedger();const modal=$v6("#portfolioLedgerModal");modal.classList.add("show");modal.setAttribute("aria-hidden","false")}
 
   function refreshPortfolio(animate = false, {focusTarget = ""} = {}) {
-    computed = core.calculatePortfolio(holdings, quoteMap, {now: Date.now()});
+    computed = core.calculatePortfolio(effectiveHoldings(), quoteMap, {now: Date.now()});
     const simulation = $v6("#rebalanceSimulation");
     if (simulation) simulation.hidden = true;
     renderSummary();
@@ -804,7 +840,7 @@
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
     ctx.clearRect(0, 0, size, size);
     const marketRows = computed.rows
-      .filter(row => Number.isFinite(row.marketValue) && row.marketValue > 0)
+      .filter(row => row.quoteStatus === "current" && Number.isFinite(row.marketValue) && row.marketValue > 0)
       .map(row => ({...row, allocationValue: row.marketValue, valueSource: "market"}));
     const allocation = dashboardCore.allocation(marketRows.map(row=>({...row,name:holdingName(row)})),6);
     const marketTotal = allocation.reduce((sum, item) => sum + item.value, 0);
@@ -816,8 +852,8 @@
       ctx.beginPath();
       ctx.arc(size / 2, size / 2, size * .32, 0, Math.PI * 2);
       ctx.stroke();
-      $v6("#portfolioChartCenter").innerHTML = `<b>${holdings.length ? "資料暫缺" : "尚無持股"}</b><span>${holdings.length} 檔持股</span>`;
-      $v6("#portfolioChartDetail").innerHTML = `<p class="allocationLegendEmpty">${holdings.length ? "行情資料暫缺，無法以市值計算配置。" : "新增持股後會在此顯示目前市值配置。"}</p>`;
+      $v6("#portfolioChartCenter").innerHTML = `<b>${effectiveHoldings().length ? "資料暫缺" : "尚無持股"}</b><span>${effectiveHoldings().length} 檔持股</span>`;
+      $v6("#portfolioChartDetail").innerHTML = `<p class="allocationLegendEmpty">${effectiveHoldings().length ? "行情資料暫缺，無法以市值計算配置。" : "新增持股後會在此顯示目前市值配置。"}</p>`;
       return;
     }
     const center = size / 2;
@@ -849,7 +885,7 @@
       ctx.arc(center + Math.cos(mid) * (radius + lineWidth / 2 + 4), center + Math.sin(mid) * (radius + lineWidth / 2 + 4), 3, 0, Math.PI * 2);
       ctx.fill();
     }
-    $v6("#portfolioChartCenter").innerHTML = `<b>${money(marketTotal)}</b><span>${marketRows.length} 檔持股<em>｜總市值</em></span>`;
+    $v6("#portfolioChartCenter").innerHTML = `<b>${money(marketTotal)}</b><span>${effectiveHoldings().length} 檔持股<em>｜${marketRows.length} 檔可估值</em></span>`;
     renderAllocationLegend();
   }
 
@@ -1357,9 +1393,7 @@
       return;
     }
     input.setCustomValidity("");
-    holdings = holdings.map(item => item.code === code ? core.validateHolding({...item, targetAllocation}) : item);
-    saveHoldings();
-    refreshPortfolio(false, {focusTarget: code});
+    try{applyTargetUpdates([{code,value:targetAllocation}])}catch(reason){input.setCustomValidity(reason.message);input.reportValidity();return}
   }
 
   function useCurrentAllocationAsTargets() {
@@ -1367,7 +1401,9 @@
     if (!targets.length) return;
     const targetMap = new Map(targets.map(item => [item.code, item.targetAllocation]));
     holdings = holdings.map(item => core.validateHolding({...item, targetAllocation: targetMap.get(item.code) ?? item.targetAllocation}));
+    for(const code of Object.keys(rebalanceSettings.targets))if(!holdings.some(item=>item.code===code))rebalanceSettings.targets[code]=0;
     saveHoldings();
+    saveRebalanceSettings();
     refreshPortfolio();
   }
 
@@ -1395,6 +1431,7 @@
     $v6("#portfolioTargetModalClose").addEventListener("click",closeTargetModal);
     $v6("#portfolioTargetModal").addEventListener("click",event=>{if(event.target===$v6("#portfolioTargetModal"))closeTargetModal()});
     $v6("#portfolioTargetForm").addEventListener("submit",saveTargetBatch);
+    $v6("#portfolioTargetSymbolAdd").addEventListener("click",addTargetSymbol);
     $v6("#portfolioCode").addEventListener("input", event => {
       event.target.value = core.normalizeCode(event.target.value).replace(/[^0-9A-Z]/g, "").slice(0, 10);
       searchCatalog(event.target.value);
