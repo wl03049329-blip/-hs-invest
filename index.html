@@ -3476,11 +3476,11 @@ function decisionCenterC4Cards(officialRows,longs,dualTrack){
     const trackMetrics=trackStarted?`<div><dt>盤中高</dt><dd>${homeC4DisplayNumber(high)}</dd></div><div><dt>盤中低</dt><dd>${homeC4DisplayNumber(low)}</dd></div>`:`<div class="hsC4TrackPending"><dt>盤中狀態</dt><dd>${esc(emptyMessage)}</dd></div>`;
     const trajectory=trackStarted?homeC4Sparkline(row.series,row.symbol,emptyMessage,row.trajectoryDate):premarket&&row.previousSession?homeC4PreviousSessionPanel(row.previousSession):homeC4Sparkline([],row.symbol,emptyMessage);
     const nextText=row.next?.highest?"已在最高區間":row.next?.nextThreshold!=null?`下一級 ${row.next.nextThreshold}`:"下一級暫缺",nextDetail=row.next?.highest?"":row.next?.nextThreshold!=null?`${esc(row.next.nextLabel)}｜還差 ${distance}`:"門檻資料暫缺";
-    return`<article class="hsDashboardC4Card ${index===0?"is-leader":"is-compact"}" data-c4-symbol="${esc(row.symbol)}" data-c4-source="${status}"><div class="hsC4Rank">${index+1}</div><header><span class="hsC4Identity">${esc(row.symbol)}<small>${esc(row.name)}</small></span><i class="${row.useLive?"is-live":"is-final"}">${esc(displayStatus)}</i></header><div class="hsC4CardScore"><b>${homeC4DisplayNumber(row.useLive?row.rawScore:row.score)}</b><strong>${esc(row.tier)}</strong></div>${index===0?'<div class="hsC4LeaderBody">':''}<dl><div><dt>vs 昨日正式</dt><dd class="hsC4DeltaValue ${deltaTone}">${esc(delta)}</dd></div>${trackMetrics}<div class="hsC4ThresholdMetric"><dt>${esc(nextText)}</dt><dd>${nextDetail}</dd></div></dl>${trajectory}${index===0?'</div>':''}</article>`;
+    return`<article class="hsDashboardC4Card ${index===0?"is-leader":"is-compact"}" data-c4-symbol="${esc(row.symbol)}" data-c4-source="${status}" role="button" tabindex="0" aria-label="查看 ${esc(row.symbol)} ETF 詳情"><div class="hsC4Rank">${index+1}</div><header><span class="hsC4Identity">${esc(row.symbol)}<small>${esc(row.name)}</small></span><i class="${row.useLive?"is-live":"is-final"}">${esc(displayStatus)}</i></header><div class="hsC4CardScore"><b>${homeC4DisplayNumber(row.useLive?row.rawScore:row.score)}</b><strong>${esc(row.tier)}</strong></div>${index===0?'<div class="hsC4LeaderBody">':''}<dl><div><dt>vs 昨日正式</dt><dd class="hsC4DeltaValue ${deltaTone}">${esc(delta)}</dd></div>${trackMetrics}<div class="hsC4ThresholdMetric"><dt>${esc(nextText)}</dt><dd>${nextDetail}</dd></div></dl>${trajectory}${index===0?'</div>':''}</article>`;
   });
   const waiting=(longs||[]).find(item=>item?.id==="009815");
   const waitingPreviousDate=premarket?homeC4LatestPreviousSessionDate(String(dualTrack?.target_date||taipeiToday())):"";
-  cards.push(`<article class="hsDashboardC4Card is-unavailable" data-c4-symbol="009815" data-c4-source="WAIT_NATIVE"><div class="hsC4Rank">6</div><header><span class="hsC4Identity">009815<small>${esc(waiting?.name||"大華美國 MAG7+")}</small></span><i class="is-wait-native-label"><b>等待原生資料</b><small>WAIT_NATIVE</small></i></header><div class="hsC4Wait"><b>原生盤中資料尚未取得</b><small>系統不使用替代值估算</small></div>${waitingPreviousDate?`<div class="hsC4PreviousSessionWait"><span>${homeC4SummaryDate(waitingPreviousDate)}</span><b>等待原生資料</b><small>WAIT_NATIVE</small></div>`:""}</article>`);
+  cards.push(`<article class="hsDashboardC4Card is-unavailable" data-c4-symbol="009815" data-c4-source="WAIT_NATIVE" role="button" tabindex="0" aria-label="查看 009815 ETF 詳情"><div class="hsC4Rank">6</div><header><span class="hsC4Identity">009815<small>${esc(waiting?.name||"大華美國 MAG7+")}</small></span><i class="is-wait-native-label"><b>等待原生資料</b><small>WAIT_NATIVE</small></i></header><div class="hsC4Wait"><b>原生盤中資料尚未取得</b><small>系統不使用替代值估算</small></div>${waitingPreviousDate?`<div class="hsC4PreviousSessionWait"><span>${homeC4SummaryDate(waitingPreviousDate)}</span><b>等待原生資料</b><small>WAIT_NATIVE</small></div>`:""}</article>`);
   return cards.join("");
 }
 function selectDecisionCenterLiveMove(dualTrack){
@@ -4362,11 +4362,21 @@ function syncRadarDetailStickyNav(id,visible){
   if(symbol)symbol.textContent=item?.id||String(id||"—");
   if(scoreNode)scoreNode.textContent=item?.id==="009815"||decision?.scoreStatus==="wait_native"?"WAIT_NATIVE":Number.isFinite(score)?`${score} · ${statusLabel||"資料不足"}`:"資料暫缺";
 }
+let homeC4Return=null;
+function openHomeC4RadarDetail(symbol){
+  const deck=$("#cards"),target=[...(deck?.querySelectorAll(".signalCard")||[])].find(card=>card.dataset.etfId===symbol);
+  if(!target)return;
+  homeC4Return={scrollY:window.scrollY};
+  const back=$("#radarDetailStickyBack");if(back){back.setAttribute("aria-label","返回首頁");back.title="返回首頁"}
+  const backText=$("#radarDetailBack");if(backText)backText.textContent="← 返回首頁";
+  switchTab("signals",{scroll:false});
+  showRadarDetail(symbol);
+}
 function showRadarDetail(id,scroll=true){
   const deck=$("#cards"),target=deck?[...deck.querySelectorAll(".signalCard")].find(card=>card.dataset.etfId===String(id||"")):null;if(!deck||!target)return;
   deck.dataset.selectedId=String(id);deck.classList.add("is-open");deck.querySelectorAll(".signalCard").forEach(card=>card.classList.toggle("is-selected",card===target));target.open=true;$("#radarDetailBack")?.classList.add("is-visible");syncRadarDetailStickyNav(id,true);$("#radarOverview")?.classList.add("detail-active");if(scroll)target.scrollIntoView({behavior:"smooth",block:"start"});
 }
-function closeRadarDetail(){const deck=$("#cards");if(!deck)return;deck.classList.remove("is-open");delete deck.dataset.selectedId;deck.querySelectorAll(".signalCard").forEach(card=>{card.classList.remove("is-selected");card.open=false});$("#radarDetailBack")?.classList.remove("is-visible");syncRadarDetailStickyNav(null,false);$("#radarOverview")?.classList.remove("detail-active");$("#radarOverview")?.scrollIntoView({behavior:"smooth",block:"start"})}
+function closeRadarDetail(){const deck=$("#cards");if(!deck)return;deck.classList.remove("is-open");delete deck.dataset.selectedId;deck.querySelectorAll(".signalCard").forEach(card=>{card.classList.remove("is-selected");card.open=false});$("#radarDetailBack")?.classList.remove("is-visible");syncRadarDetailStickyNav(null,false);$("#radarOverview")?.classList.remove("detail-active");const previous=homeC4Return;homeC4Return=null;const back=$("#radarDetailStickyBack");if(back){back.setAttribute("aria-label","返回 ETF 雷達");back.title="返回 ETF 雷達"}const backText=$("#radarDetailBack");if(backText)backText.textContent="← 返回 ETF 雷達總覽";if(previous){switchTab("today",{scroll:false});requestAnimationFrame(()=>window.scrollTo(0,previous.scrollY))}else $("#radarOverview")?.scrollIntoView({behavior:"smooth",block:"start"})}
 function formatYi(n){return `${fmt(n/1e8)} 億`}
 function signedYi(n){
   if(!Number.isFinite(n))return"—";
@@ -4931,6 +4941,11 @@ async function openDrawdownTool(code){
   try{await lookupDrawdown(code)}catch(error){$("#drawdownStatus").textContent=error.message||"查詢失敗";$("#drawdownResult").innerHTML=""}
 }
 function switchTab(name,{scroll=true}={}){
+  if(name!=="signals"&&homeC4Return){
+    homeC4Return=null;
+    const back=$("#radarDetailStickyBack");if(back){back.setAttribute("aria-label","返回 ETF 雷達");back.title="返回 ETF 雷達"}
+    const backText=$("#radarDetailBack");if(backText)backText.textContent="← 返回 ETF 雷達總覽";
+  }
   document.querySelectorAll("[data-tab-section]").forEach(el=>el.classList.toggle("tabHidden",el.dataset.tabSection!==name));
   document.querySelectorAll(".appNavButton").forEach(btn=>{const active=btn.dataset.tab===name;btn.classList.toggle("active",active);btn.setAttribute("aria-current",active?"page":"false")});
   document.querySelectorAll("[data-tab-intro]").forEach(el=>el.classList.toggle("active",el.dataset.tabIntro===name));
@@ -4964,6 +4979,8 @@ document.querySelectorAll("[data-radar-mode]").forEach(button=>button.addEventLi
 document.querySelectorAll("[data-chip-tab]").forEach(button=>button.addEventListener("click",()=>switchChipTab(button.dataset.chipTab)));
 document.querySelectorAll("[data-radar-view]").forEach(button=>button.addEventListener("click",()=>switchRadarOverviewView(button.dataset.radarView)));
 document.addEventListener("click",event=>{const button=event.target.closest("[data-home-c4-sort]");if(!button)return;homeC4SortMode=["score","change","threshold"].includes(button.dataset.homeC4Sort)?button.dataset.homeC4Sort:"score";renderTop()});
+$("#hsDashboardC4Grid").addEventListener("click",event=>{const card=event.target.closest(".hsDashboardC4Card[data-c4-symbol]");if(card)openHomeC4RadarDetail(card.dataset.c4Symbol)});
+$("#hsDashboardC4Grid").addEventListener("keydown",event=>{if(event.key!=="Enter"&&event.key!==" ")return;const card=event.target.closest(".hsDashboardC4Card[data-c4-symbol]");if(!card)return;event.preventDefault();openHomeC4RadarDetail(card.dataset.c4Symbol)});
 $("#homeSwingBrief")?.addEventListener("click",event=>{if(event.target.closest("[data-open-etf-radar]"))switchTab("signals")});
 $("#radarDetailBack").addEventListener("click",closeRadarDetail);
 $("#radarDetailStickyBack").addEventListener("click",closeRadarDetail);

@@ -2305,3 +2305,8 @@ footer{color:#746f67}
   #homeEtfBrief .hsC4ThresholdMetric dd{min-height:0;padding:5px 7px}
   .app{padding-bottom:max(124px,calc(104px + env(safe-area-inset-bottom)))}
 }
+
+#homeEtfBrief .hsDashboardC4Card[role="button"]{cursor:pointer;transition:transform .12s ease,border-color .12s ease}
+#homeEtfBrief .hsDashboardC4Card[role="button"]:focus-visible{outline:2px solid #e4bf66;outline-offset:2px}
+#homeEtfBrief .hsDashboardC4Card[role="button"]:active{transform:scale(.99);border-color:#ddb85d!important}
+@media(prefers-reduced-motion:reduce){#homeEtfBrief .hsDashboardC4Card[role="button"]{transition:none}}
