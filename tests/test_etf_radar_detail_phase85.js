@@ -9,12 +9,12 @@ const trend=html.slice(html.indexOf("function radarScoreTrendHtml"),html.indexOf
 
 assert.match(html,/data-radar-ux-phase="8\.5"/);
 assert.match(html,/20260920-live-archive-resilience-v1/);
-assert.ok(longCard.indexOf("radarDetailCoreStatusHtml")<longCard.indexOf("radarDecisionSummaryHtml"));
-assert.ok(longCard.indexOf("radarDecisionSummaryHtml")<longCard.indexOf("radarDetailTrendSummaryHtml"));
-assert.ok(longCard.indexOf("radarDetailTrendSummaryHtml")<longCard.indexOf("radarWhyScoreHtml"));
-assert.ok(longCard.indexOf("radarWhyScoreHtml")<longCard.indexOf("radarScoreTrendHtml"));
+assert.ok(longCard.indexOf("radarDetailCoreStatusHtml")<longCard.indexOf("radarScoreTrendHtml"));
 assert.ok(longCard.indexOf("radarScoreTrendHtml")<longCard.indexOf("radarMarketPositionHtml"));
+assert.ok(longCard.indexOf("radarMarketPositionHtml")<longCard.indexOf("radarDecisionSummaryHtml"));
+assert.ok(longCard.indexOf("radarDecisionSummaryHtml")<longCard.indexOf("radarWhyScoreHtml"));
 assert.ok(longCard.indexOf("radarMarketPositionHtml")<longCard.indexOf("detailAdvancedHtml"));
+assert.doesNotMatch(longCard,/radarDetailTrendSummaryHtml\(x\)/);
 assert.doesNotMatch(longCard,/detailCoreMetrics|scoreReason/);
 
 assert.match(research,/<details class="radarResearchHub" data-radar-research-hub><summary aria-expanded="false">/);

@@ -15,6 +15,8 @@ const artifact={schema_version:1,core_score_version:"FINAL_CORE_WEIGHT_V1",snaps
 let state=context.api.state(item,artifact);assert.equal(state.kind,"READY");assert.deepEqual(Array.from(state.mas,row=>row.period),[20,60,120,240]);assert.equal(state.weeklyJ,31.7);assert.equal(state.weeklyLabel,"中性");
 for(const ma of state.mas){const expected=swing.simpleMovingAverage(rows.map(row=>row.close),ma.period);assert.ok(Math.abs(ma.value-expected)<1e-9);assert.ok(Math.abs(ma.distance-((rows.at(-1).close/expected-1)*100))<1e-9)}
 assert.match(context.api.render(item),/月線<small>MA20<\/small>/);assert.match(context.api.render(item),/季線<small>MA60<\/small>/);assert.match(context.api.render(item),/半年線<small>MA120<\/small>/);assert.match(context.api.render(item),/年線<small>MA240<\/small>/);
+for(const ma of state.mas)assert.match(context.api.render(item),new RegExp(`${ma.label}<small>MA${ma.period}</small></strong><b>${context.fmt(ma.value)}</b>`));
+assert.match(context.api.render(item),/4 條可用均線中，目前價格位於 4 條之上/);assert.match(context.api.render(item),/目前價格在月線上方 \+/);
 const positions=values=>values.map((distance,index)=>({label:["月線","季線","半年線","年線"][index],distance}));
 assert.match(context.api.summary(positions([-1,-1,1,1])),/短中期偏弱，半年線與年線之上/);assert.match(context.api.summary(positions([1,1,1,1])),/整體趨勢結構偏強/);assert.match(context.api.summary(positions([-1,-1,-1,-1])),/整體趨勢結構偏弱/);assert.match(context.api.summary(positions([1,1,-1,1])),/中期仍在修復/);
 const low={...item,officialRows:rows.slice(-25)};state=context.api.state(low,artifact);assert.ok(Number.isFinite(state.mas[0].value));assert.deepEqual(Array.from(state.mas.slice(1),ma=>ma.value),[null,null,null]);assert.match(context.api.render(low),/正式資料不足/);

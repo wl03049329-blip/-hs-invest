@@ -20,9 +20,11 @@ for(const period of ["10D","20D","60D","120D"]){
   assert.equal(extrema.highDate,selected.rows[extrema.highIndex].tradingDate.slice(5).replace("-","/"));
   assert.equal(extrema.lowDate,selected.rows[extrema.lowIndex].tradingDate.slice(5).replace("-","/"));
   assert.match(rendered,new RegExp(`aria-pressed="true" data-core-trend-range="${period}"`));
-  assert.match(rendered,new RegExp(`區間高點</small><b>${selected.high}<time>（${extrema.highDate}）`));
-  assert.match(rendered,new RegExp(`區間低點</small><b>${selected.low}<time>（${extrema.lowDate}）`));
-  assert.match(rendered,new RegExp(`區間振幅</small><b>${extrema.amplitude} 分`));
+  assert.match(rendered,new RegExp(`目前</small><b>${selected.current.displayScore}</b>`));
+  assert.match(rendered,new RegExp(`${period} 高點</small><b>${selected.high}<time>（${extrema.highDate}）`));
+  assert.match(rendered,new RegExp(`${period} 低點</small><b>${selected.low}<time>（${extrema.lowDate}）`));
+  assert.match(rendered,new RegExp(`${period} 振幅</small><b>${extrema.amplitude} 分`));
+  assert.ok(rendered.indexOf('radarTrendP4ExtremaSummary')<rendered.indexOf('radarTrendP4Chart'));
   assert.match(rendered,/class="radarTrendP4Line" d="M[^\"]+ H[^\"]+ V/);
   assert.doesNotMatch(rendered,/<polyline/);
   assert.match(rendered,new RegExp(`${selected.first.tradingDate} 至 ${selected.current.tradingDate}`));
