@@ -4993,7 +4993,12 @@ function switchTab(name,{scroll=true}={}){
   sessionStorage.setItem("hsRadar.activeTab",name);
   if(scroll)document.querySelector(".topTabs")?.scrollIntoView({behavior:"smooth",block:"start"});
 }
-document.querySelectorAll(".appNavButton").forEach(btn=>btn.addEventListener("click",()=>switchTab(btn.dataset.tab)));
+function switchBottomNavTab(button){
+  const samePage=button.classList.contains("active");
+  switchTab(button.dataset.tab,{scroll:false});
+  requestAnimationFrame(()=>window.scrollTo({top:0,behavior:samePage?"smooth":"auto"}));
+}
+document.querySelectorAll(".appNavButton").forEach(btn=>btn.addEventListener("click",()=>btn.classList.contains("bottomNavButton")?switchBottomNavTab(btn):switchTab(btn.dataset.tab)));
 function loadAlerts(){const a=JSON.parse(localStorage.getItem(ALERTS_STORAGE_KEY)||"[20,10,0,-10]");["#alert1","#alert2","#alert3","#alert4"].forEach((s,i)=>$(s).value=a[i])}
 function getAlerts(){return["#alert1","#alert2","#alert3","#alert4"].map(s=>+$(s).value)}
 function maybeNotify(){
