@@ -990,7 +990,10 @@ def write_market_cache(
     elif isinstance(existing.get("radar_refresh_attempt"), dict):
         payload["radar_refresh_attempt"] = existing["radar_refresh_attempt"]
     write_atomic(OUTPUT, payload, compact=True)
+    # The Railway publisher owns additional live/publication diagnostics in
+    # this same meta file.  An official-close-only refresh must not erase them.
     meta = {
+        **existing_payload(META_OUTPUT),
         "version": payload["version"],
         "updated_at": payload["updated_at"],
         "source_dates": payload["source_dates"],

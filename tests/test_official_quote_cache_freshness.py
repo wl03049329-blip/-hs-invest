@@ -29,6 +29,14 @@ with tempfile.TemporaryDirectory() as directory:
                              item("006208", "TWSE", "2026-09-22", 255.7),
                              item("009815", "TPEx", "2026-09-22", 11.99)]}
         quotes.OUTPUT.write_text(json.dumps(initial), encoding="utf-8")
+        quotes.META_OUTPUT.write_text(json.dumps({
+            "version": 2, "updated_at": initial["updated_at"],
+            "primary_trigger_source": "RAILWAY_PRIMARY",
+            "last_primary_tick_at": "2026-09-24T05:30:00Z",
+            "publication_status": "ARTIFACTS_WRITTEN",
+            "artifact_commit_sha": None,
+            "github_fallback_gap_detected": False,
+        }), encoding="utf-8")
         twse = [{"Code": "0050", "Name": "元大台灣50", "Date": "1150923", "ClosingPrice": "111", "Change": "1"},
                 {"Code": "006208", "Name": "富邦台50", "Date": "1150923", "ClosingPrice": "257", "Change": "1.3"}]
         tpex = [{"SecuritiesCompanyCode": "009815", "CompanyName": "大華美國MAG7+",
@@ -45,6 +53,10 @@ with tempfile.TemporaryDirectory() as directory:
         assert cache["official_source_dates"] == meta["official_source_dates"] == {"TWSE": "2026-09-23", "TPEx": "2026-09-24"}
         assert cache["official_last_checked_at"] == meta["official_last_checked_at"]
         assert cache["official_last_success_at"] == meta["official_last_success_at"]
+        assert meta["primary_trigger_source"] == "RAILWAY_PRIMARY"
+        assert meta["last_primary_tick_at"] == "2026-09-24T05:30:00Z"
+        assert meta["publication_status"] == "ARTIFACTS_WRITTEN"
+        assert meta["github_fallback_gap_detected"] is False
         assert cache["source_dates"]["TWSE"] == "2026-09-24"  # Legacy mixed-date field is not an official-date claim.
         first_update = cache["updated_at"]
         quotes.refresh_official_close_cache()
