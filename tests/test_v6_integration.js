@@ -91,12 +91,12 @@ check("市場摘要預設精簡且完整內容可展開", () => {
   assert.match(html, /下跌檔數/);
 });
 
-check("買點外框同時提供文字標籤與說明", () => {
+check("買點外框保留文字標籤，退役說明 accordion 已移除", () => {
   for (const text of ["等待", "加碼觀察", "更佳買點", "強力超賣", "極度超賣"]) {
     assert.match(html + marketUi, new RegExp(text));
   }
-  assert.match(html, /外框顏色代表什麼？/);
-  assert.match(html, /不等於直接買進訊號/);
+  assert.doesNotMatch(html, /<details class="panel signalLegend">/);
+  assert.doesNotMatch(html, /外框顏色代表什麼？/);
   assert.match(html, /data-signal-level/);
   assert.match(html, /aria-label="外框分類/);
 });

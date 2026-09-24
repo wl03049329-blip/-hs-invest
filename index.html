@@ -845,7 +845,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
           <div id="radarEventList" class="radarEventList"><p class="radarEventEmpty">正在重建近期正式事件…</p></div>
         </section>
         <article class="panel radarOverviewPanel"><div class="radarOverviewTitle"><span>長期核心</span><h3>長期 ETF 買點判讀中心</h3></div><div id="radarOverviewLong" class="radarOverviewLong"><div class="skeleton">載入排名中…</div></div></article>
-        <article class="panel radarOverviewPanel"><div class="radarOverviewTitle"><span>波段策略</span><h3>波段 ETF 判讀</h3></div><div id="radarOverviewSwingTabs" class="radarOverviewSwingTabs" role="tablist" aria-label="波段 ETF 切換"></div><div id="radarOverviewSwing" class="radarOverviewSwing"><div class="skeleton">載入波段訊號中…</div></div></article>
+        <article class="panel radarOverviewPanel"><div class="radarOverviewTitle"><span>波段策略</span><h3>波段 ETF 判讀</h3></div><div id="radarOverviewSwing" class="radarSingleStrategy"><div class="skeleton">載入波段訊號中…</div></div></article>
         <button id="radarSentimentShortcut" class="radarSentimentShortcut" type="button"><span><small>MARKET SENTIMENT</small><b id="radarSentimentText">市場情緒資料彙整中…</b></span><strong>查看完整市場情緒</strong></button>
       </div>
       <section id="radarScoreExplainPane" class="panel radarScoreExplainPane" data-radar-view-panel="explain" hidden>
@@ -879,19 +879,6 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
         <div class="watchDiagnosticLoading">正在準備自選 ETF 技術資料…</div>
       </section>
     </article>
-    <details class="panel signalLegend">
-      <summary>外框顏色代表什麼？</summary>
-      <div class="signalLegendBody">
-        <div class="signalLegendGrid" aria-label="買點卡片外框顏色說明">
-          <span><i class="neutral" aria-hidden="true"></i><b>灰色</b>：J 值 20 以上，等待</span>
-          <span><i class="yellow" aria-hidden="true"></i><b>黃色</b>：J 值 10～20，加碼觀察</span>
-          <span><i class="orange" aria-hidden="true"></i><b>橘色</b>：J 值 0～10，更佳買點區</span>
-          <span><i class="red" aria-hidden="true"></i><b>紅色</b>：J 值 -10～0，強力超賣</span>
-          <span><i class="purple" aria-hidden="true"></i><b>紫色</b>：J 值低於 -10，極度超賣</span>
-        </div>
-        <p>外框顏色代表週 KD 的 J 值超賣程度，不等於直接買進訊號。仍需搭配買點分數、J 值是否回升、長期趨勢、事件風險與建議投入比例。</p>
-      </div>
-    </details>
     <div class="sectionHead radarDetailHeading">
       <div><p class="eyebrow">STRATEGY RADAR</p><h2>ETF 策略雷達</h2></div>
       <small>長期加碼｜波段持有｜週 KD 依最近完成資料或目前週線試算</small>
@@ -3981,6 +3968,9 @@ function longOverviewCardHtml(x,index,dailyMovement){
   const weeklyJ=radarOverviewFactorRaw(decision,"weeklyJ")??(Number.isFinite(x.j)?x.j:null),dd52=radarOverviewFactorRaw(decision,"dd52")??(Number.isFinite(x.fromHigh)?x.fromHigh:null),crash=radarOverviewFactorRaw(decision,"crash"),changeTone=Number(x.changePct)>0?"up":Number(x.changePct)<0?"down":"is-flat";
   return`<button class="radarLongCard" type="button" data-open-radar-detail="${esc(x.id)}"><div class="radarLongIdentityRow">${radarOverviewRankBadgeHtml(rank)}<span class="radarLongIdentity"><b>${esc(x.id)}</b><small>${esc(x.name)}</small></span><span class="radarLongPriceMove ${changeTone}">${signed(x.changePct)}</span></div><div class="radarLongScoreRow"><span class="radarLongScore"><b>${Number.isFinite(score)?score:"—"}</b><small>CORE SCORE</small></span><span class="radarLongState"><b>${esc(badgeLabel)}</b><em class="${scoreDelta.tone}">${esc(scoreDelta.label)}</em></span></div><div class="radarCoreMetrics radarOverviewFactors"><span><small>52週回檔</small><b>${Number.isFinite(dd52)?fmt(dd52)+"%":"—"}</b><em>${Number.isFinite(dd52)?uiMetricStatus("drawdown",dd52):"資料暫缺"}</em></span><span><small>週 J 值</small><b>${Number.isFinite(weeklyJ)?fmt(weeklyJ):"—"}</b><em>${Number.isFinite(weeklyJ)?uiMetricStatus("j",weeklyJ):"資料暫缺"}</em></span><span><small>20日急跌因子</small><b>${Number.isFinite(crash)?fmt(crash)+"%":"—"}</b>${Number.isFinite(crash)?"":'<em>資料暫缺</em>'}</span></div>${radarOverviewResearchHtml(x,next)}${radarRangeBar(score)}</button>`;
 }
+function radarSingleStrategyHtml(item){
+  return item?`${leverageRadarDashboardHtml(item)}<button class="swingDetailEntry" type="button" data-open-radar-detail="00631L">查看 00631L 完整詳情</button>`:'<div class="newsEmpty">00631L 資料載入中</div>';
+}
 function scoreFactorValue(swing,...keys){for(const key of keys){const item=swing?.scoreFactors?.find(part=>part.key===key);if(Number.isFinite(item?.value))return item.value}return null}
 function scoreGaugeHtml(label,value){const safe=Number.isFinite(value)?Math.max(0,Math.min(100,value)):0;return`<div class="scoreGauge" style="--gauge:${safe}"><div><b>${Number.isFinite(value)?Math.round(value):"—"}</b><small>/100</small></div><span>${esc(label)}</span></div>`}
 function swingUiMeta(x){
@@ -4350,7 +4340,6 @@ function buildRadarV2Card({x,mode,decision,stage,score,longRank,longRankChange,l
   return`<details class="${cardClass}" data-etf-id="${esc(x.id)}"><summary class="radarDetailSummary swingSummary"><span class="strategyBadge">${esc(strategyModeLabel(mode))}</span><span><b>${esc(x.id)} ${esc(x.name)}</b><small>${esc(stage?.label||"資料不足")}｜Exit Pressure ${metricScore(exit)}</small></span><strong>${scoreText}<small>分</small></strong></summary><div class="signalCardDetails"><div class="detailTabs swingDetailTabs" role="tablist"><button class="active" type="button" data-detail-view="overview" aria-selected="true">總覽</button><button type="button" data-detail-view="breakdown" aria-selected="false">分數拆解</button><button type="button" data-detail-view="action" aria-selected="false">操作分層</button></div><div data-detail-panel="overview">${swingOverviewHtml(x)}</div><div data-detail-panel="breakdown" hidden>${strategyBreakdownHtml(x,mode)}<div class="detailGrandTotal"><span>綜合波段買點分</span><b>${scoreText}<small>／100</small></b></div></div><div data-detail-panel="action" hidden><section class="swingActionLayer"><div><small>目前位置</small><b>${esc(stage?.label||"資料不足")}</b></div><div><small>建議行動</small><b>${esc(s.recommendedAction||stage?.recommendation||"等待資料更新")}</b></div><div><small>下一個確認條件</small><b>${mode==="leveraged"?"等待恐慌與反轉條件同步改善":mode==="swing00733"?"依既有 Setup／Stage 等待拉回修復或重新加速":"依既有止跌與突破條件等待確認"}</b></div><div><small>主要風險</small><b>Exit Pressure ${metricScore(exit)}｜建議部位 ${Number.isFinite(stage?.targetPosition)?stage.targetPosition+"%":"—"}</b></div></section></div>${detailAdvancedHtml(x)}</div></details>`;
 }
 function switchRadarDetailView(button){const card=button.closest(".radarV2Card");if(!card)return;const name=button.dataset.detailView;card.querySelectorAll("[data-detail-view]").forEach(item=>{const active=item.dataset.detailView===name;item.classList.toggle("active",active);item.setAttribute("aria-selected",String(active))});card.querySelectorAll("[data-detail-panel]").forEach(panel=>{panel.hidden=panel.dataset.detailPanel!==name})}
-function switchSwingOverview(id){document.querySelectorAll("[data-swing-overview]").forEach(button=>{const active=button.dataset.swingOverview===id;button.classList.toggle("active",active);button.setAttribute("aria-selected",String(active))});document.querySelectorAll("[data-swing-overview-panel]").forEach(panel=>{panel.hidden=panel.dataset.swingOverviewPanel!==id})}
 function switchRadarOverviewView(name){const active=name==="explain"?"explain":"overview";document.querySelectorAll("[data-radar-view]").forEach(button=>{const selected=button.dataset.radarView===active;button.classList.toggle("active",selected);button.setAttribute("aria-selected",String(selected))});document.querySelectorAll("[data-radar-view-panel]").forEach(panel=>{panel.hidden=panel.dataset.radarViewPanel!==active})}
 function renderCards(){
   const modeOrder={long_term_core:0,leveraged:1,swing00733:2,swing006201:3,swing:4,user_selected:5};
@@ -4381,17 +4370,14 @@ function renderCards(){
   $("#radarTodayFocusCards").innerHTML=radarTodayFocusHtml(radarTodayFocusState(longOverview));
   radarEventState=radarEventStateFor(longOverview);renderRadarEventCenter();evaluateAndPersistRadarAlerts();
   $("#radarOverviewLong").innerHTML=longOverview.map((item,index)=>longOverviewCardHtml(item,index,dailyLongRankMovement(dailyPair,item.id))).join("")||'<div class="newsEmpty">長期 ETF 資料載入中</div>';
-  const swingRoles={"00631L":"HS LEVERAGE","00733":"強勢趨勢拉回型","006201":"低檔止跌轉折型"};
-  const swingOverviewItems=["00631L","00733","006201"].map(id=>radar.find(item=>item.id===id)).filter(Boolean);
-  $("#radarOverviewSwingTabs").innerHTML=swingOverviewItems.map((x,index)=>`<button class="${index===0?"active":""}" type="button" role="tab" aria-selected="${index===0}" data-swing-overview="${esc(x.id)}">${x.id} ${esc(swingRoles[x.id])}</button>`).join("");
-  $("#radarOverviewSwing").innerHTML=swingOverviewItems.map((x,index)=>`<div class="swingOverviewPane" data-swing-overview-panel="${esc(x.id)}" ${index===0?"":"hidden"}>${swingOverviewHtml(x)}<button class="swingDetailEntry" type="button" data-open-radar-detail="${esc(x.id)}">查看 ${esc(x.id)} 完整詳情</button></div>`).join("")||'<div class="newsEmpty">波段 ETF 資料載入中</div>';
+  const leverageOverview=radar.find(item=>item.id==="00631L");
+  $("#radarOverviewSwing").innerHTML=radarSingleStrategyHtml(leverageOverview);
   $("#radarSentimentText").textContent=combinedSentimentConclusion();
   document.querySelectorAll("[data-detail]").forEach(btn=>btn.addEventListener("click",()=>openDetail(btn.dataset.detail)));
   document.querySelectorAll("[data-compare]").forEach(btn=>btn.remove());
   document.querySelectorAll("[data-drawdown]").forEach(btn=>btn.addEventListener("click",()=>openDrawdownTool(btn.dataset.drawdown)));
   document.querySelectorAll("[data-open-radar-detail]").forEach(btn=>btn.addEventListener("click",()=>showRadarDetail(btn.dataset.openRadarDetail)));
   document.querySelectorAll("[data-detail-view]").forEach(btn=>btn.addEventListener("click",()=>switchRadarDetailView(btn)));
-  document.querySelectorAll("[data-swing-overview]").forEach(btn=>btn.addEventListener("click",()=>switchSwingOverview(btn.dataset.swingOverview)));
   const selectedId=$("#cards").dataset.selectedId;if(selectedId)showRadarDetail(selectedId,false);
 }
 function syncRadarDetailStickyNav(id,visible){
@@ -4684,7 +4670,6 @@ function renderWatchlist(){
   $("#radarDetailBack").hidden=true;
   $("#radarDetailStickyNav").hidden=isMy||!$("#cards").classList.contains("is-open");
   document.querySelector("#signals>.radarDetailHeading")?.toggleAttribute("hidden",isMy);
-  document.querySelector("#signals>.signalLegend")?.toggleAttribute("hidden",isMy);
   $("#watchManageDetails").open=isMy;
   document.querySelectorAll("[data-radar-mode]").forEach(button=>{const active=button.dataset.radarMode===radarMode;button.classList.toggle("active",active);button.setAttribute("aria-pressed",String(active))});
   $("#watchList").innerHTML=`<div class="watchCount">${isMy?"我的自選":"弘昇精選"} ${list.length}${isMy?" / 20":""} 檔</div>`+(list.length?list.map((x,i)=>`<div class="watchRow"><div class="watchIdentity"><b>${esc(x.id)}｜${esc(x.name)}</b><small>${esc(HSEtfModelCore.categoryLabel(x.category||"other"))}｜${esc(x.market||"台灣ETF")}</small></div>${isMy?`<div class="watchStrategy"><label>策略<select data-watch-strategy="${i}" aria-label="${esc(x.id)} 持有策略"><option value="user_selected" ${x.strategyMode==="user_selected"?"selected":""}>使用預設模型</option><option value="long_term_core" ${x.strategyMode==="long_term_core"?"selected":""}>長期核心</option><option value="swing" ${x.strategyMode==="swing"?"selected":""}>波段操作</option></select></label></div><div class="watchControls"><button class="watchIcon" type="button" data-watch-up="${i}" aria-label="上移 ${esc(x.id)}">↑</button><button class="watchIcon" type="button" data-watch-down="${i}" aria-label="下移 ${esc(x.id)}">↓</button><button class="watchIcon danger" type="button" data-watch-remove="${i}" aria-label="刪除 ${esc(x.id)}">×</button></div>`:`<span class="strategyBadge">${esc(strategyModeLabel(x.strategyMode))}</span>`}</div>`).join(""):'<div class="watchEmpty">尚未加入自選 ETF。</div>');

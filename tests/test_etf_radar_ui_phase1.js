@@ -26,7 +26,7 @@ assert.match(css,/\.hsSelectBadge/);
 assert.match(css,/\.radarModeCardFeatured\.active/);
 assert.match(css,/\.radarModeCardWatchlist\.active/);
 assert.match(css,/@media\(max-width:760px\)[\s\S]*\.radarModeLauncher\{grid-template-columns:1fr/);
-assert.match(css,/#signals>\.signalLegend\{order:7\}/);
+assert.doesNotMatch(signals,/class="panel signalLegend"/);
 assert.match(css,/@media\(max-width:430px\)[\s\S]*\.radarModeCardFeatured::after\{display:none\}/);
 
 console.log("PASS ETF Radar UI Phase 1 hierarchy and branding");

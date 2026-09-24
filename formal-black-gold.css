@@ -127,7 +127,6 @@ input,select,textarea,.searchBox,.eventResultInput,.drawdownForm input,.watchStr
 #signals>.sectionHead{order:0;margin:4px 1px 9px}
 #signals>#cards{order:1}
 #signals>.watchPanel{order:2;margin-top:12px}
-#signals>.signalLegend{order:3}
 #signals>.sectionHead .eyebrow{display:none}
 .cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
 .radarGroupHead{background:#0e0b07;border-left-color:var(--gold);border-bottom:1px solid #3b3020;padding:10px 12px}
@@ -358,7 +357,6 @@ footer{color:#746f67}
 #signals>#radarDetailStickyNav{order:2}
 #signals>#cards{order:3}
 #signals>.watchPanel{order:4}
-#signals>.signalLegend{order:5}
 .radarOverview{display:grid;gap:9px}
 .radarOverview.detail-active{display:none}
 .radarOverviewHead{margin:3px 1px 2px}
@@ -374,12 +372,7 @@ footer{color:#746f67}
 .radarOverviewScore{text-align:right}.radarOverviewScore b{color:#efd48d;font-size:24px;line-height:1}.radarOverviewScore small{color:#7f786e;font-size:8px}
 .radarOverviewChange{color:#8e877b;font-size:8px;line-height:1.45}
 .radarOverviewStage{justify-self:end;padding:5px 7px;border:1px solid #5a4726;border-radius:999px;color:#d9c08a;font-size:9px;font-weight:850;white-space:nowrap}
-.radarOverviewSwing{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
-.radarOverviewSwingCard{min-width:0;padding:10px;border:1px solid #332b20;border-radius:11px;background:#080807;color:inherit;text-align:left;cursor:pointer}
-.radarOverviewSwingCard:hover,.radarOverviewSwingCard:focus-visible{outline:none;border-color:#80612f}
-.radarOverviewSwingCard span b,.radarOverviewSwingCard span small,.radarOverviewSwingCard strong,.radarOverviewSwingCard em{display:block}
-.radarOverviewSwingCard span b{font-size:15px}.radarOverviewSwingCard span small{margin-top:2px;color:#968e80;font-size:8px}
-.radarOverviewSwingCard strong{margin-top:9px;color:#e3c77e;font-size:19px}.radarOverviewSwingCard em{margin-top:3px;color:#a39b8e;font-size:8px;font-style:normal;line-height:1.4}
+.radarSingleStrategy{min-width:0}
 .radarSentimentShortcut{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:11px 13px;border:1px solid #332b20;border-radius:12px;background:#090807;color:inherit;text-align:left;cursor:pointer}
 .radarSentimentShortcut span small,.radarSentimentShortcut span b{display:block}.radarSentimentShortcut span small{color:#a58444;font-size:7px;font-weight:900;letter-spacing:.15em}.radarSentimentShortcut span b{margin-top:3px;color:#d6cec0;font-size:11px;line-height:1.45}
 .radarSentimentShortcut>strong{color:#d9b969;font-size:9px;white-space:nowrap}
@@ -434,7 +427,7 @@ footer{color:#746f67}
   .homeStoryCard{grid-template-columns:auto minmax(0,1fr);padding:10px}.homeStoryCard>strong{grid-column:1/-1;justify-self:stretch;text-align:center}.homeStoryCard span b{font-size:13px}
   .hsStoryEntry .hsStoryCard{grid-template-columns:76px minmax(0,1fr);min-height:214px;padding:19px;gap:14px}.hsStoryEntry .hsStoryCard img{width:74px;height:74px}.hsStoryEntry .hsStoryCardCopy b{font-size:20px}.hsStoryEntry .hsStoryCardCopy em{font-size:12px}.hsStoryEntry .hsStoryCardAction{grid-column:1/-1}.hsStoryCardFlow{font-size:9px;line-height:1.5}
   .moreHub{grid-template-columns:1fr}.moreHubCard>summary{padding:12px 34px 12px 12px}
-  .radarOverviewHead small{display:block}.radarOverviewPanel{padding:10px}.radarOverviewRankRow{grid-template-columns:46px minmax(0,1fr) 42px 64px;padding:8px;gap:5px}.radarOverviewStage{grid-column:2/-1;justify-self:start}.radarOverviewRank{font-size:10px}.radarOverviewScore b{font-size:22px}.radarOverviewChange{font-size:7px}.radarOverviewSwing{grid-template-columns:1fr}.radarOverviewSwingCard{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center}.radarOverviewSwingCard strong{grid-column:2;grid-row:1;margin:0}.radarOverviewSwingCard em{grid-column:1/-1}
+  .radarOverviewHead small{display:block}.radarOverviewPanel{padding:10px}.radarOverviewRankRow{grid-template-columns:46px minmax(0,1fr) 42px 64px;padding:8px;gap:5px}.radarOverviewStage{grid-column:2/-1;justify-self:start}.radarOverviewRank{font-size:10px}.radarOverviewScore b{font-size:22px}.radarOverviewChange{font-size:7px}
   .radarSentimentShortcut{align-items:flex-end}.radarSentimentShortcut span b{font-size:10px}.radarSentimentShortcut>strong{font-size:8px}
   .watchPanel{margin-top:8px!important}.radarDetailDeck.is-open .signalCardSummary{grid-template-columns:minmax(0,1fr) auto}.signalDetailHero>b{font-size:42px}
   .allocationPanel{order:3}.portfolioSummary{order:4}.rebalancePanel{order:5}.portfolioToolbar{order:6}.portfolioList{order:7}.portfolioPrivacy{order:8}
@@ -468,17 +461,17 @@ footer{color:#746f67}
 .homeLongRankCard summary{grid-template-columns:50px minmax(0,1fr) 58px!important;gap:7px!important;min-height:78px!important}.homeLongRankCard .longRankNo{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-size:0!important;border:1px solid #6b5328;background:#171108;box-shadow:inset 0 0 12px #000}.homeLongRankCard .longRankNo:before{font-size:16px;font-weight:950;color:#d8bb68}.homeLongRankCard:nth-child(1) .longRankNo:before{content:"1"}.homeLongRankCard:nth-child(2) .longRankNo:before{content:"2"}.homeLongRankCard:nth-child(3) .longRankNo:before{content:"3"}.homeLongRankCard:nth-child(4) .longRankNo:before{content:"4"}.homeLongRankCard:nth-child(5) .longRankNo:before{content:"5"}.homeLongRankCard:nth-child(1) .longRankNo{background:radial-gradient(circle,#6b4e14,#211707);border-color:#f0cb66;box-shadow:0 0 14px #d9ab3440}.homeLongRankCard:nth-child(2) .longRankNo{background:radial-gradient(circle,#4b4b4b,#171717);border-color:#c5c5c5}.homeLongRankCard:nth-child(3) .longRankNo{background:radial-gradient(circle,#70431f,#201309);border-color:#c7884d}.longRankScore b{font-size:30px!important;color:#f0d179!important}.longRankChanges{grid-column:2/-1!important;display:flex!important;justify-content:flex-start!important;gap:8px!important;font-size:8px!important}.rankMovement,.scoreMovement{padding:3px 6px;border-radius:999px;background:#0d0d0d}.is-up,.rank-up{color:var(--ui-positive)!important}.is-down,.rank-down{color:var(--ui-risk)!important}.is-flat{color:#aaa397!important}
 
 /* ETF radar overview tabs and full cards. */
-.radarViewTabs,.detailTabs,.radarOverviewSwingTabs{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:5px;padding:4px;border:1px solid #3a2e1b;border-radius:13px;background:#070605;margin:9px 0}
+.radarViewTabs,.detailTabs{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:5px;padding:4px;border:1px solid #3a2e1b;border-radius:13px;background:#070605;margin:9px 0}
 .radarUpdateStrip{display:flex;justify-content:space-between;gap:8px;margin-top:-4px;color:#8e8679;font-size:9px}.radarUpdateStrip span:last-child{color:#c7ad6a;text-align:right}
-.radarViewTabs button,.detailTabs button,.radarOverviewSwingTabs button{border:0;border-radius:9px;background:transparent;color:#8f8678;padding:9px 8px;font-size:11px;font-weight:900;white-space:nowrap}.radarViewTabs button.active,.detailTabs button.active,.radarOverviewSwingTabs button.active{color:#f3deaa;background:linear-gradient(180deg,#39280e,#1e160a);box-shadow:inset 0 0 0 1px #8d6b31}
-[data-radar-view-panel][hidden],[data-swing-overview-panel][hidden],[data-detail-panel][hidden]{display:none!important}
+.radarViewTabs button,.detailTabs button{border:0;border-radius:9px;background:transparent;color:#8f8678;padding:9px 8px;font-size:11px;font-weight:900;white-space:nowrap}.radarViewTabs button.active,.detailTabs button.active{color:#f3deaa;background:linear-gradient(180deg,#39280e,#1e160a);box-shadow:inset 0 0 0 1px #8d6b31}
+[data-radar-view-panel][hidden],[data-detail-panel][hidden]{display:none!important}
 .radarScoreExplainPane{padding:16px}.radarScoreExplainPane h3{margin:3px 0 13px;font-size:23px}.radarExplainGrid{display:grid;gap:8px}.radarExplainGrid>div{padding:13px;border:1px solid #322817;border-radius:12px;background:#080706}.radarExplainGrid b,.radarExplainGrid span{display:block}.radarExplainGrid b{color:#e8c86e}.radarExplainGrid span{margin-top:4px;color:#aaa196;font-size:12px;line-height:1.55}
 .radarOverviewLong{display:grid;gap:9px!important}.radarLongCard{width:100%;padding:12px;border:1px solid #332919;border-radius:15px;background:linear-gradient(145deg,#0c0a07,#050505);color:inherit;text-align:left;box-shadow:0 10px 25px #0005}.radarLongCard:focus-visible{outline:2px solid #e8c86d;outline-offset:2px}
 .radarLongTop{display:grid;grid-template-columns:48px minmax(0,1fr) auto auto;gap:9px;align-items:center}.rankBadge{width:44px;height:48px;display:grid;place-items:center;border-radius:50% 50% 44% 44%;border:1px solid #6d5428;background:#171108}.rankBadge i,.rankBadge small{display:block;font-style:normal;line-height:1}.rankBadge i{font-size:17px;font-weight:950}.rankBadge small{font-size:6px;margin-top:-7px}.rankBadge.gold{color:#f4d875;border-color:#e9bd4a;background:radial-gradient(circle,#6a4b10,#1e1507);box-shadow:0 0 14px #d2a32f45}.rankBadge.silver{color:#e0e0df;border-color:#bfbfbf;background:radial-gradient(circle,#4d4d4c,#171717)}.rankBadge.bronze{color:#e1a267;border-color:#b8753c;background:radial-gradient(circle,#683d1c,#1b1009)}.rankBadge.regular{color:#d2b15b}
 .radarLongIdentity b,.radarLongIdentity small{display:block}.radarLongIdentity b{font-size:18px}.radarLongIdentity small{margin-top:2px;color:#aaa196;font-size:9px}.radarLongScore{text-align:right}.radarLongScore b,.radarLongScore small{display:block}.radarLongScore b{color:#f0d074;font-size:34px;line-height:1}.radarLongScore small{color:#8d826f;font-size:7px;margin-top:3px}.radarLongMoves{display:grid;gap:4px;text-align:right}.radarLongMoves em{font-size:8px;font-style:normal;white-space:nowrap}
 .radarCoreMetrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin-top:11px}.radarCoreMetrics>span{min-width:0;padding:8px 5px;border:1px solid #29231a;border-radius:10px;background:#070706;text-align:center}.radarCoreMetrics small,.radarCoreMetrics b,.radarCoreMetrics em{display:block}.radarCoreMetrics small{color:#8c8478;font-size:7px}.radarCoreMetrics b{margin:3px 0;color:#f0e9dc;font-size:14px;white-space:nowrap}.radarCoreMetrics em{color:#aaa196;font-size:7px;font-style:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.radarLongDecision{display:grid;grid-template-columns:minmax(0,1fr) 45%;gap:10px;align-items:center;margin-top:9px}.radarLongDecision>strong{color:#e5d4aa;font-size:10px;line-height:1.45}
 .radarRangeTrack{position:relative;height:5px;border-radius:99px;background:linear-gradient(90deg,#363636 0 30%,#866a23 45%,#cc8b24 65%,#cf5252 100%)}.radarRangeTrack i{position:absolute;top:50%;width:10px;height:10px;border:2px solid #fff0b5;border-radius:50%;background:#d7a83e;box-shadow:0 0 8px #e4bd56;transform:translate(-50%,-50%)}.radarRangeLabels{display:flex;justify-content:space-between;margin-top:3px;color:#6f695f;font-size:5px}.radarRange>b{display:block;margin-top:4px;color:#d8b95f;font-size:8px;text-align:right}
-.radarOverviewSwingTabs{grid-auto-flow:unset;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:10px}.radarOverviewSwingTabs button{white-space:normal;line-height:1.3;font-size:9px}.swingOverviewPane{display:block}.swingDetailEntry{width:100%;margin-top:10px;padding:11px;border:1px solid #785c2a;border-radius:11px;background:#1a1308;color:#e8cb80;font-weight:900}
+.swingDetailEntry{width:100%;margin-top:10px;padding:11px;border:1px solid #785c2a;border-radius:11px;background:#1a1308;color:#e8cb80;font-weight:900}
 
 /* ETF detail information architecture. */
 .radarV2Card{overflow:hidden}.radarDetailSummary{display:grid!important;grid-template-columns:auto minmax(0,1fr) auto!important;gap:10px!important;align-items:center!important;padding:12px!important}.radarDetailSummary>span b,.radarDetailSummary>span small{display:block}.radarDetailSummary>span b{font-size:18px}.radarDetailSummary>span small{margin-top:3px;color:#9f9688;font-size:9px}.radarDetailSummary>strong{color:#f0d073;font-size:31px}.radarDetailSummary>strong small{font-size:9px}.radarDetailSummary.swingSummary{grid-template-columns:auto minmax(0,1fr) auto!important}.radarDetailSummary.swingSummary>.strategyBadge{font-size:8px!important;writing-mode:vertical-rl;padding:8px 5px!important}
@@ -506,7 +499,7 @@ footer{color:#746f67}
 @media(max-width:430px){
   .homeSentimentCard{min-height:91px!important;padding:6px 2px!important}.homeSentimentCard b{font-size:12px!important}.homeSentimentCard span{font-size:6.5px!important}.homeSentimentCard em{font-size:6.5px!important}
   .radarLongTop{grid-template-columns:45px minmax(0,1fr) 48px}.radarLongMoves{grid-column:2/-1;grid-auto-flow:column;justify-content:start}.radarLongScore b{font-size:30px}.radarCoreMetrics{gap:4px}.radarCoreMetrics>span{padding:7px 3px}.radarCoreMetrics b{font-size:12px}.radarLongDecision{grid-template-columns:1fr}.radarRange>b{text-align:left}
-  .radarOverviewSwingTabs button{font-size:8px;padding:8px 3px}.scoreGauge>div{width:100px;height:100px}.scoreGauge b{font-size:29px}.swingDashboardHead h3{font-size:18px}
+  .scoreGauge>div{width:100px;height:100px}.scoreGauge b{font-size:29px}.swingDashboardHead h3{font-size:18px}
 }
 
 /* Home-only acceptance polish: market ribbon, compact long-term ranking and nav contrast. */
@@ -986,51 +979,6 @@ footer{color:#746f67}
 #sentiment{
   padding-top: 118px !important;
 }
-/* FIX: enlarge swing strategy selector */
-.radarOverviewSwingTabs{
-  gap:10px !important;
-  padding:7px !important;
-}
-
-.radarOverviewSwingTabs button{
-  min-height:64px !important;
-  padding:10px 8px !important;
-  border:1px solid #5b4827 !important;
-  border-radius:14px !important;
-  background:#0b0906 !important;
-  color:#c8bda8 !important;
-
-  font-size:14px !important;
-  font-weight:900 !important;
-  line-height:1.25 !important;
-
-  white-space:normal !important;
-  text-align:center !important;
-}
-
-.radarOverviewSwingTabs button.active{
-  color:#f3d985 !important;
-  background:linear-gradient(180deg,#35260e,#171006) !important;
-  border-color:#c49a43 !important;
-  box-shadow:
-    inset 0 0 0 1px #7a5a27,
-    0 0 12px #d0a33a33 !important;
-}
-
-@media(max-width:430px){
-.radarOverviewSwingTabs{
-  gap:9px !important;
-}
-
-.radarOverviewSwingTabs button{
-  min-height:76px !important;
-  padding:12px 8px !important;
-  font-size:15px !important;
-  font-weight:900 !important;
-  line-height:1.3 !important;
-}
-}
-
 /* Approved chip-page flow fix: keep the category tabs below the page heading. */
 #sentiment #chipPageTop.chipSegments{
   position:relative !important;
@@ -1260,7 +1208,6 @@ footer{color:#746f67}
 #signals>#radarDetailBack{order:5}
 #signals>#radarDetailStickyNav{order:5}
 #signals>#cards{order:6}
-#signals>.signalLegend{order:7}
 #signals>.watchPanel[hidden]{display:none!important}
 
 .radarPageHeader{display:grid;gap:1px;margin:0 1px 6px;padding:0 1px 1px}
@@ -1321,7 +1268,7 @@ footer{color:#746f67}
 
 /* Phase 2E Lite: transparent Generic ETF diagnostics for MY WATCHLIST only. */
 #watchPanel{opacity:1}
-#radarOverview[hidden],#signals>.radarDetailHeading[hidden],#signals>.signalLegend[hidden]{display:none!important}
+#radarOverview[hidden],#signals>.radarDetailHeading[hidden]{display:none!important}
 .watchDiagnostics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
 .watchAdHocPanel{display:grid;grid-template-columns:minmax(0,.85fr) minmax(280px,1.15fr);gap:14px;margin:12px 0;padding:16px;border:1px solid #514329;border-radius:18px;background:radial-gradient(circle at 85% 10%,#b9913820,transparent 38%),linear-gradient(145deg,#11100d,#090908);box-shadow:inset 0 1px #f1d58d12,0 14px 30px #0004}
 .watchAdHocPanel>div:first-child>span{color:#bda366;font-size:9px;font-weight:850;letter-spacing:.14em}.watchAdHocPanel h3{margin:4px 0 5px;color:#f2e8cf;font-size:18px}.watchAdHocPanel>div:first-child>p{margin:0;color:#a59c8d;font-size:11px;line-height:1.55}
