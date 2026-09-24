@@ -3,6 +3,7 @@
 import importlib.util
 import json
 import tempfile
+from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -18,7 +19,10 @@ def item(code, market, day, price, mode="close"):
 
 
 with tempfile.TemporaryDirectory() as directory:
-    old_output, old_meta, old_fetch, old_mis = quotes.OUTPUT, quotes.META_OUTPUT, quotes.fetch_json, quotes.fetch_mis_snapshot
+    old_output, old_meta, old_fetch, old_mis, old_daily = (
+        quotes.OUTPUT, quotes.META_OUTPUT, quotes.fetch_json,
+        quotes.fetch_mis_snapshot, quotes.latest_twse_daily_report,
+    )
     try:
         quotes.OUTPUT = Path(directory) / "market-quotes.json"
         quotes.META_OUTPUT = Path(directory) / "market-quotes-meta.json"
@@ -72,6 +76,28 @@ with tempfile.TemporaryDirectory() as directory:
         assert cache["official_source_dates"]["TWSE"] == "2026-09-23"
         assert next(row for row in cache["items"] if row["code"] == "006208")["price"] == 257
         assert cache["updated_at"] == first_update
-        print("PASS official close refresh, per-symbol advance, independent MIS, source-error LKG, metadata parity, no fake updated_at")
+        fields = ["證券代號", "證券名稱", "收盤價", "漲跌(+/-)", "漲跌價差"]
+        daily_rows = [["006208", "富邦台50", "256.85", "<p style= color:green>-</p>", "0.15"]]
+        daily_rows += [[str(1000 + index), "測試", "20", "<p> </p>", "0.00"] for index in range(100)]
+        daily_payload = {"stat": "OK", "date": "20260924", "tables": [{"fields": fields, "data": daily_rows}]}
+        quotes.fetch_json = lambda _url, **_kw: daily_payload
+        report = old_daily(datetime(2026, 9, 25, 1, tzinfo=quotes.TAIPEI), "2026-09-23", 101)
+        assert report is not None and report[1] == "2026-09-24"
+        report_item = next(row for row in report[0] if row["code"] == "006208")
+        assert (report_item["price"], report_item["previous_close"]) == (256.85, 257.0)
+        quotes.fetch_json = lambda url, **_kw: twse if url == quotes.TWSE_CLOSE_URL else tpex
+        quotes.latest_twse_daily_report = lambda *_args: ([report_item], "2026-09-24")
+        quotes.refresh_official_close_cache()
+        cache = json.loads(quotes.OUTPUT.read_text(encoding="utf-8"))
+        meta = json.loads(quotes.META_OUTPUT.read_text(encoding="utf-8"))
+        updated = next(row for row in cache["items"] if row["code"] == "006208")
+        assert (updated["date"], updated["price"], updated["previous_close"]) == ("2026-09-24", 256.85, 257.0)
+        assert cache["official_source_dates"]["TWSE"] == meta["official_source_dates"]["TWSE"] == "2026-09-24"
+        assert cache["source_status"]["TWSE"] == "official_closing_data_daily_report"
+        assert cache["sources"]["TWSE_close"] == quotes.TWSE_DAILY_REPORT_URL
+        assert cache["updated_at"] != first_update
+        print("PASS official close refresh, daily-report source advance, source-error LKG, metadata parity, no fake updated_at")
     finally:
-        quotes.OUTPUT, quotes.META_OUTPUT, quotes.fetch_json, quotes.fetch_mis_snapshot = old_output, old_meta, old_fetch, old_mis
+        quotes.OUTPUT, quotes.META_OUTPUT, quotes.fetch_json, quotes.fetch_mis_snapshot, quotes.latest_twse_daily_report = (
+            old_output, old_meta, old_fetch, old_mis, old_daily,
+        )

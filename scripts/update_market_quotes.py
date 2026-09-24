@@ -30,6 +30,7 @@ OVERVIEW_OUTPUT = OUTPUT_ROOT / "market-overview.json"
 FUTURES_OUTPUT = OUTPUT_ROOT / "tx-futures-quote.json"
 
 TWSE_CLOSE_URL = "https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL"
+TWSE_DAILY_REPORT_URL = "https://www.twse.com.tw/exchangeReport/MI_INDEX"
 TPEX_CLOSE_URL = "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_quotes"
 TWSE_MIS_URL = "https://mis.twse.com.tw/stock/api/getStockInfo.jsp"
 TAIFEX_DAILY_URL = "https://openapi.taifex.com.tw/v1/DailyMarketReportFut"
@@ -182,6 +183,61 @@ def normalize_close_rows(rows: list[dict[str, Any]], market: str) -> list[dict[s
     if not output:
         raise ValueError(f"{market} returned no valid closing rows")
     return output
+
+
+def latest_twse_daily_report(now: datetime, bulk_date: str, bulk_count: int) -> tuple[list[dict[str, Any]], str] | None:
+    """Use the complete official daily report when the bulk OpenAPI is behind.
+
+    This is only called by the independent after-close Portfolio cache job; it
+    does not participate in the intraday Radar/Core Score path.
+    """
+    first_day = now.date() if now.time() >= time(16, 0) else now.date() - timedelta(days=1)
+    for offset in range(7):
+        candidate = first_day - timedelta(days=offset)
+        if candidate.isoformat() < bulk_date:
+            break
+        url = f"{TWSE_DAILY_REPORT_URL}?" + urllib.parse.urlencode({
+            "response": "json", "date": candidate.strftime("%Y%m%d"), "type": "ALLBUT0999",
+        })
+        try:
+            report = fetch_json(url)
+            if not isinstance(report, dict) or report.get("stat") != "OK":
+                continue
+            if iso_date(report.get("date")) != candidate.isoformat():
+                continue
+            tables = report.get("tables")
+            if not isinstance(tables, list):
+                continue
+            fields = ("證券代號", "證券名稱", "收盤價", "漲跌(+/-)", "漲跌價差")
+            table = next((entry for entry in tables if isinstance(entry, dict)
+                          and isinstance(entry.get("fields"), list)
+                          and all(field in entry["fields"] for field in fields)
+                          and isinstance(entry.get("data"), list)), None)
+            if table is None:
+                continue
+            columns = {field: table["fields"].index(field) for field in fields}
+            normalized: list[dict[str, Any]] = []
+            for row in table["data"]:
+                if not isinstance(row, list) or len(row) <= max(columns.values()):
+                    continue
+                sign = re.sub(r"<[^>]*>", "", str(row[columns["漲跌(+/-)"]])).strip()
+                movement = finite_number(row[columns["漲跌價差"]])
+                change = (movement if sign == "+" else -movement if sign == "-" else
+                          0.0 if not sign and movement == 0 else None) if movement is not None else None
+                normalized.append({
+                    "Code": row[columns["證券代號"]], "Name": row[columns["證券名稱"]],
+                    "ClosingPrice": row[columns["收盤價"]], "Change": change,
+                    "Date": candidate.strftime("%Y%m%d"),
+                })
+            items = normalize_close_rows(normalized, "TWSE")
+            # A truncated report must never replace a complete bulk feed.
+            if len(items) < max(100, int(bulk_count * 0.9)):
+                continue
+            return items, candidate.isoformat()
+        except (OSError, ValueError, TypeError, KeyError, RuntimeError):
+            # The independently successful bulk feed remains available.
+            continue
+    return None
 
 
 def tracked_channels() -> list[str]:
@@ -985,6 +1041,8 @@ def write_market_cache(
         payload["official_last_checked_at"] = official_fetch["checked_at"]
         payload["official_source_dates"] = official_fetch["source_dates"]
         payload["official_last_success_at"] = official_fetch["last_success_at"]
+        if statuses.get("TWSE") == "official_closing_data_daily_report":
+            payload["sources"] = {**payload.get("sources", {}), "TWSE_close": TWSE_DAILY_REPORT_URL}
     if refresh_attempt:
         payload["radar_refresh_attempt"] = refresh_attempt
     elif isinstance(existing.get("radar_refresh_attempt"), dict):
@@ -1052,6 +1110,14 @@ def refresh_official_close_cache() -> None:
     now = datetime.now(TAIPEI)
     existing = existing_payload(OUTPUT)
     markets, statuses, official_fetch = fetch_official_rows(existing, now)
+    twse_rows = markets.get("TWSE", [])
+    twse_report = latest_twse_daily_report(
+        now, str(official_fetch["source_dates"].get("TWSE", "")), len(twse_rows),
+    )
+    if twse_report is not None:
+        markets["TWSE"], official_fetch["source_dates"]["TWSE"] = twse_report
+        statuses["TWSE"] = "official_closing_data_daily_report"
+        official_fetch["last_success_at"]["TWSE"] = official_fetch["checked_at"]
     rows = merge_official_close_with_lkg(markets, existing.get("items", []))
     # An official feed may lag today's already-published MIS trade.  Never
     # replace a newer observation with an older close; equal-day official
