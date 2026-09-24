@@ -20,9 +20,10 @@ assert.match(html,/watchlist\.splice\(index,1\)/);
 assert.doesNotMatch(html,/清單至少要保留 1 檔 ETF/);
 assert.match(html,/localStorage\.setItem\(WATCHLIST_STORAGE_KEY,JSON\.stringify\(watchlist\)\)/);
 
-const modeHandler=html.match(/document\.querySelectorAll\("\[data-radar-mode\]"\)[\s\S]*?\}\)\);/);
+const modeStart=html.indexOf('document.querySelectorAll("[data-radar-mode]").forEach(button=>button.addEventListener');
+const modeHandler=html.slice(modeStart,html.indexOf('document.querySelectorAll("[data-chip-tab]")',modeStart));
 assert.ok(modeHandler);
-assert.doesNotMatch(modeHandler[0],/\bload\s*\(/);
+assert.doesNotMatch(modeHandler,/\bload\s*\(/);
 const modalBody=html.slice(html.indexOf("function openWatchDiagnostic"),html.indexOf("function closeWatchDiagnostic"));
 assert.match(modalBody,/MA43/);assert.match(modalBody,/MA87/);assert.match(modalBody,/MA200/);assert.doesNotMatch(modalBody,/MA284/);
 assert.match(modalBody,/尚無經驗證的比較基準/);

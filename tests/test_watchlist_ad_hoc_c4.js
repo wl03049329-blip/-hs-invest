@@ -46,6 +46,13 @@ assert.equal(nonEligible.available,true);assert.equal(nonEligible.mode,"AD_HOC")
 const commodityInput=input("00635U");commodityInput.metadata=metadata("00635U","期元大S&P黃金","ETF（ISIN CFI）");
 const commodity=core.buildAdHocScore(commodityInput);
 assert.equal(commodity.available,true);assert.equal(commodity.mode,"AD_HOC");assert.equal(commodity.officialEligible,false);
+for(const instrument of ["股票","槓桿型ETF","反向ETF","債券ETF","商品ETF","期貨型ETF","ETN","指數投資證券"]){
+  const candidate=input("1234");candidate.metadata=metadata("1234",instrument,instrument);
+  assert.equal(core.buildAdHocScore(candidate).available,true,`${instrument} with complete native history must not be rejected by type`);
+}
+const stock=input("2330");stock.metadata={id:"2330",name:"台積電",officialType:"股票",source:"FINMIND_STOCK_INFO"};
+assert.equal(core.buildAdHocScore(stock).available,true,"provider-verified listed stock can use the same C4 formula");
+assert.equal(core.buildAdHocScore({...stock,metadata:{id:"2330",name:"unverified",officialType:"股票"}}).available,false,"unverified metadata cannot create a score");
 
 const waitNative=core.buildAdHocScore(input("009815"));
 assert.equal(waitNative.available,true);assert.equal(waitNative.mode,"AD_HOC");assert.equal(waitNative.officialEligible,false);assert.equal(core.buildFinal(input("009815")).coreScore,null,"009815 official WAIT_NATIVE behavior remains unavailable");
@@ -58,7 +65,7 @@ assert.equal(core.buildAdHocScore({...input("00878"),j:null}).available,false,"m
 
 assert.deepEqual(core.SUPPORTED_TICKERS,["0050","00662","00757","00830","00935"]);
 assert.match(html,/const LONG_RADAR_SCORED_CODES=new Set\(\["0050","00662","00757","00830","00935"\]\)/);
-assert.match(html,/id="watchAdHocForm"/);assert.match(html,/AD_HOC 自選試算/);assert.match(html,/資料來源：Provider EOD|<dd>Provider EOD<\/dd>/);
+assert.match(html,/id="watchAdHocForm"/);assert.match(html,/快速查詢 C4/);assert.doesNotMatch(html,/AD_HOC 自選試算/);
 assert.match(html,/const WATCHLIST_STORAGE_KEY=HSStorage\.keys\.watchlist/);
 assert.doesNotMatch(html,/adHoc[^\n]{0,80}appendForwardRecord|appendForwardRecord[^\n]{0,80}adHoc/i);
 

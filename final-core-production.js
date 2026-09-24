@@ -89,9 +89,11 @@
   }
   function buildAdHocScore(input={}){
     const ticker=String(input.ticker||"").trim().toUpperCase(),metadata=input.metadata||{};
-    const code=String(metadata.id||metadata.code||"").trim().toUpperCase(),exchange=String(metadata.exchange||"").trim().toUpperCase(),officialType=String(metadata.officialType||metadata.official_type||metadata.type||"");
+    const code=String(metadata.id||metadata.code||"").trim().toUpperCase(),exchange=String(metadata.exchange||"").trim().toUpperCase();
     if(!/^[0-9A-Z]{4,10}$/.test(ticker))return adHocUnavailable({...input,ticker},"INVALID_TICKER");
-    if(code!==ticker||!["TWSE","TPEX"].includes(exchange)||!/ETF|指數股票型基金|基金/.test(officialType)||/ETN|指數投資證券|權證/.test(officialType))return adHocUnavailable({...input,ticker},"UNSUPPORTED_INSTRUMENT");
+    // Computability is determined by verified listing metadata and complete adjusted history,
+    // not by ETF classification or formal eligibility. The canonical formula below is unchanged.
+    if(code!==ticker||!(["TWSE","TPEX"].includes(exchange)||metadata.source==="FINMIND_STOCK_INFO"))return adHocUnavailable({...input,ticker},"UNSUPPORTED_INSTRUMENT");
     if(input.rowsAdjusted!==true)return adHocUnavailable({...input,ticker},"CANONICAL_INPUT_UNAVAILABLE");
     const rows=normalizedDailyRows(input.rows),weeklyCount=weeklyObservationCount(rows),closeCount=rows.filter(row=>Number.isFinite(row.close)&&row.close>0).length;
     if(rows.length<252)return adHocUnavailable({...input,ticker},"INSUFFICIENT_DAILY_HISTORY",{maturity:{daily:rows.length,weekly:weeklyCount,crash:closeCount}});

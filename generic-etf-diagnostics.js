@@ -136,8 +136,9 @@
     return{state,benchmark,rs20:round(rs20),rs60:round(rs60),recovery20:round(recovery20),available:finite(rs20)&&finite(rs60),baseline:false,reason:finite(rs20)&&finite(rs60)?"":"基準對齊交易日不足。"};
   }
 
-  function assetSupport(symbol,metadata){
+  function assetSupport(symbol,metadata,options){
     if(WAIT_NATIVE.has(symbol)||metadata?.waitNative)return"WAIT_NATIVE";
+    if(options?.allowListedAsset===true)return"SUPPORTED";
     const category=String(metadata?.category||"").toLowerCase(),strategy=String(metadata?.strategyType||"").toLowerCase(),type=String(metadata?.type||metadata?.assetClass||"").toLowerCase();
     if([...UNSUPPORTED_CATEGORIES].some(value=>category.includes(value)||strategy.includes(value)||type.includes(value))||/債|bond|槓桿|反向|商品|期貨|reit/.test(type))return"UNSUPPORTED_ASSET_CLASS";
     return"SUPPORTED";
@@ -150,7 +151,7 @@
   }
 
   function evaluate(input={}){
-    const symbol=String(input.symbol||input.id||"").trim().toUpperCase(),metadata=input.metadata||{},rows=normalizeRows(input.rows),support=assetSupport(symbol,metadata),latest=rows.at(-1);
+    const symbol=String(input.symbol||input.id||"").trim().toUpperCase(),metadata=input.metadata||{},rows=normalizeRows(input.rows),support=assetSupport(symbol,metadata,input),latest=rows.at(-1);
     const base={symbol,name:metadata.name||symbol,price:latest?.close??null,changeValue:rows.length>1?round(latest.close-rows.at(-2).close):null,changePct:rows.length>1?round(change(latest.close,rows.at(-2).close)):null,dataAsOf:latest?.date||null,quoteTime:latest?.quoteTime||"",maturityState:support,requirements:REQUIREMENTS};
     if(support!=="SUPPORTED")return{...base,trend:null,pullback:null,weekly:null,rs:null,recovery:null,summary:null};
     if(rows.length<43||weeklyRows(rows).length<9)return{...base,maturityState:"INSUFFICIENT_HISTORY",trend:null,pullback:null,weekly:null,rs:null,recovery:null,summary:null};

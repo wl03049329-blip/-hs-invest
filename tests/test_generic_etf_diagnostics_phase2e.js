@@ -46,6 +46,11 @@ function run(){
 
   const bond=diagnostics.evaluate({symbol:"00679B",metadata:{id:"00679B",name:"元大美債20年",category:"bond_government_long",strategyType:"bond",type:"債券ETF"},rows:equity});
   assert.strictEqual(bond.maturityState,"UNSUPPORTED_ASSET_CLASS");
+  for(const [symbol,type] of [["00679B","債券ETF"],["00635U","商品ETF"],["00631L","槓桿ETF"]]){
+    const result=diagnostics.evaluate({symbol,metadata:{id:symbol,name:symbol,type},rows:equity,allowListedAsset:true});
+    assert.notStrictEqual(result.maturityState,"UNSUPPORTED_ASSET_CLASS",`${symbol} watchlist diagnostics should use available native rows`);
+    assert.ok(result.trend&&result.pullback&&result.weekly&&result.recovery);
+  }
   const young=diagnostics.evaluate({symbol:"00410A",metadata:meta("00410A","新掛牌主動ETF","active_equity"),rows:sessions(30)});
   assert.strictEqual(young.maturityState,"INSUFFICIENT_HISTORY");
   const partial=diagnostics.evaluate({symbol:"00999",metadata:meta("00999"),rows:sessions(120)});
@@ -53,6 +58,7 @@ function run(){
   assert.strictEqual(partial.summary,null);
   const waiting=diagnostics.evaluate({symbol:"009815",metadata:meta("009815"),rows:equity});
   assert.strictEqual(waiting.maturityState,"WAIT_NATIVE");
+  assert.strictEqual(diagnostics.evaluate({symbol:"009815",metadata:meta("009815"),rows:equity,allowListedAsset:true}).maturityState,"WAIT_NATIVE");
 
   assert.strictEqual(diagnostics.APPROVED_BENCHMARKS["00757"],undefined);
   assert.strictEqual(diagnostics.APPROVED_BENCHMARKS["00830"],undefined);
@@ -62,7 +68,7 @@ function run(){
   assert.match(html,/generic-etf-diagnostics\.js/);
   assert.match(html,/Promise\.allSettled\(ids\.map\(one\)\)/);
   assert.match(html,/watchDiagnosticModal/);
-  assert.match(html,/加入你想追蹤的 ETF，查看趨勢、拉回、動能與相對強弱狀態/);
+  assert.match(html,/追蹤你關注標的的趨勢與 HS C4 訊號/);
   assert.doesNotMatch(html,/Generic Swing Score/);
   const production=fs.readFileSync(path.join(__dirname,"..","backtest","long-term","final-core-score-v1.js"),"utf8");
   assert.match(production,/weeklyJ[^\n]{0,80}30|WEEKLY_J[^\n]{0,80}30/i);

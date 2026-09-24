@@ -15,17 +15,18 @@ assert.doesNotMatch(signals,/class="radarSegments"/);
 assert.doesNotMatch(signals,/id="radarModeContext"/);
 
 assert.match(signals,/資料更新｜—[\s\S]*ETF 雷達[\s\S]*精選標的與自選 ETF 的訊號總覽/);
-assert.match(signals,/hsSelectBadge">HS SELECT<[\s\S]*弘昇精選[\s\S]*長期追蹤・研究模型驗證的 ETF[\s\S]*aria-hidden="true">›/);
-assert.match(signals,/watchlistBadge">MY WATCHLIST<[\s\S]*我的自選[\s\S]*查看追蹤 ETF 的趨勢與訊號[\s\S]*aria-hidden="true">›/);
+assert.match(signals,/data-radar-mode="featured"[^>]*>[\s\S]*?<strong>弘昇精選<\/strong>/);
+assert.match(signals,/data-radar-mode="my"[^>]*>[\s\S]*?<strong>我的自選<\/strong>/);
 assert.match(html,/let radarMode="featured";/);
 assert.match(html,/\$\("#watchPanel"\)\.hidden=!isMy/);
-assert.match(html,/加入你想追蹤的 ETF，查看趨勢、拉回、動能與相對強弱狀態。最多可加入 20 檔。/);
+assert.match(html,/追蹤你關注標的的趨勢與 HS C4 訊號/);
 assert.doesNotMatch(html,/\$\("#radarModeContext"\)|\$\("#radarModeBadge"\)|\$\("#radarModeHeading"\)|\$\("#radarModeDescription"\)/);
 
 assert.match(css,/\.hsSelectBadge/);
 assert.match(css,/\.radarModeCardFeatured\.active/);
 assert.match(css,/\.radarModeCardWatchlist\.active/);
 assert.match(css,/@media\(max-width:760px\)[\s\S]*\.radarModeLauncher\{grid-template-columns:1fr/);
+assert.match(css,/#signals \.radarModeLauncher\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
 assert.doesNotMatch(signals,/class="panel signalLegend"/);
 assert.match(css,/@media\(max-width:430px\)[\s\S]*\.radarModeCardFeatured::after\{display:none\}/);
 
