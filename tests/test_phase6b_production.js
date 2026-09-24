@@ -36,7 +36,7 @@ test('ranking deterministic tie',()=>assert(core.compare({ticker:'A',coreScore:5
 test('legacy rollback',()=>assert.equal(core.buildDecision(fixture,{score:77},core.LEGACY_VERSION).score,77));
 test('default final',()=>assert.equal(core.buildDecision(fixture,{score:77},'INVALID').coreScoreVersion,'FINAL_CORE_WEIGHT_V1'));
 test('schema complete',()=>['coreScore','coreScoreDisplay','coreScoreVersion','coreFactors','label','historicalTriggerRate','auxiliary'].forEach(k=>assert(k in result)));
-test('UI version 2.0',()=>assert(/HS ETF 股市雷達 2\.0/.test(html)&&!/VERSION 6\.2/.test(html)));
+test('HS 3.0 UI version uses the single SemVer source',()=>assert(html.includes('app-version.js')&&JSON.parse(fs.readFileSync(path.join(__dirname,'..','version.json'),'utf8')).version==='3.0.0'&&!/HS ETF 股市雷達 2\.0/.test(html)));
 test('UI canonical scripts',()=>assert(html.includes('final-core-score-v1.js')&&html.includes('final-core-production.js')));
 test('UI score sheet',()=>assert(html.includes('讀懂你的分數')&&html.includes('coreScoreLadder')));
 test('P2/P3 stores preserved',()=>assert(html.includes('schema_version:3')&&html.includes('dailyLongRank.v1')));
