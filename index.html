@@ -813,7 +813,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       </button>
     </div>
     <section id="radarOverview" class="radarOverview" aria-labelledby="radarOverviewTitle" data-radar-overview-phase="8a" data-radar-consistency-phase="9.5">
-      <div class="sectionHead radarOverviewHead"><div><p class="eyebrow">ETF 雷達總覽</p><h2 id="radarOverviewTitle">ETF 加碼與波段總覽</h2></div><div class="radarOverviewActions"><small>點擊標的查看完整評分與風險資料</small><button id="openRadarAlertSettings" type="button" aria-haspopup="dialog">提醒設定</button></div></div>
+      <div class="sectionHead radarOverviewHead"><div><p class="eyebrow">ETF 雷達總覽</p><h2 id="radarOverviewTitle">ETF 加碼與波段總覽</h2><p class="radarOverviewSubtitle">依正式分數整理目前 ETF 訊號與近期變化</p></div><div class="radarOverviewActions"><small>點擊標的查看完整評分與風險資料</small><button id="openRadarAlertSettings" type="button" aria-haspopup="dialog">提醒設定</button></div></div>
       <div class="radarViewTabs" role="tablist" aria-label="ETF 雷達檢視方式">
         <button class="active" type="button" role="tab" aria-selected="true" data-radar-view="overview">總覽</button>
         <button type="button" role="tab" aria-selected="false" data-radar-view="explain">分數解釋</button>
@@ -3675,7 +3675,7 @@ function radarTodayFocusState(items,artifact=finalizedCoreScoreHistoryArtifact,a
 }
 function radarTodayFocusHtml(state){
   if(!state?.cards?.length)return`<div class="radarTodayFocusEmpty"><b>目前沒有新的重要狀態變化。</b><small>最近正式更新：${esc(state?.latestDate||"—")}</small></div>`;
-  return state.cards.map(card=>`<button class="radarTodayFocusCard" type="button" data-open-radar-detail="${esc(card.symbol)}"><header><span><b>${esc(card.symbol)}</b><small>${esc(card.name)}</small></span><strong>${esc(card.stageLabel)} · ${card.score}</strong></header><ul>${card.events.map(event=>`<li class="${event.tone}"><span>${esc(event.label)}</span><b>${esc(event.text)}</b>${event.note?`<small>${esc(event.note)}</small>`:""}</li>`).join("")}</ul><footer>查看詳情 <i aria-hidden="true">→</i></footer></button>`).join("");
+  return state.cards.map(card=>`<button class="radarTodayFocusCard" type="button" data-open-radar-detail="${esc(card.symbol)}"><header><span><b>${esc(card.symbol)}</b><small>${esc(card.name)}</small></span><strong><span>${esc(card.stageLabel)}</span><b>${card.score}</b></strong></header><ul>${card.events.map(event=>`<li class="${event.tone}" data-focus-type="${esc(event.type)}"><span>${esc(event.label)}</span><b>${event.type==="FIVE_DAY_CHANGE"?(event.tone==="is-down"?"↓ ":"↑ "):""}${esc(event.text)}</b>${event.note?`<small>${event.type==="FIVE_DAY_CHANGE"?"近5日 ":""}${esc(event.note)}</small>`:""}</li>`).join("")}</ul><footer>查看詳情 <i aria-hidden="true">→</i></footer></button>`).join("");
 }
 const RADAR_EVENT_WINDOW=60,RADAR_EVENT_LIMIT=20,RADAR_EVENT_PERCENTILES=[85,90,95];
 let radarEventFilter="ALL",radarEventEtfFilter="ALL",radarEventMode="RECENT",radarEventRecentExpanded=false,radarEventState={events:[],latestDate:"",tradingDates:[]};

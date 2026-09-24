@@ -2315,3 +2315,37 @@ footer{color:#746f67}
 #homeEtfBrief .hsDashboardC4Card[role="button"]:focus-visible{outline:2px solid #e4bf66;outline-offset:2px}
 #homeEtfBrief .hsDashboardC4Card[role="button"]:active{transform:scale(.99);border-color:#ddb85d!important}
 @media(prefers-reduced-motion:reduce){#homeEtfBrief .hsDashboardC4Card[role="button"]{transition:none}}
+
+/* ETF Radar overview: compact mobile reading hierarchy. */
+.radarOverviewSubtitle{margin:5px 0 0;color:#a99c83;font-size:12px;line-height:1.4}
+.radarTodayFocusCard>header strong{display:flex;align-items:baseline;gap:4px}
+.radarTodayFocusCard>header strong span,.radarTodayFocusCard>header strong b{font:inherit}
+@media(max-width:600px){
+  .sectionHead.radarOverviewHead{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:8px;margin:0 1px}
+  .radarOverviewHead>div:first-child{min-width:0}
+  .radarOverviewHead .eyebrow{display:none}
+  .radarOverviewHead h2{margin:0;font-size:clamp(21px,5.8vw,24px);line-height:1.18}
+  .radarOverviewSubtitle{margin-top:5px;font-size:12px;line-height:1.35}
+  .radarOverviewActions{display:block;align-self:start}
+  .radarOverviewActions button{min-height:36px;padding:6px 9px;font-size:11px}
+  .radarViewTabs{margin:3px 0 0}
+  .radarTodayFocus{gap:8px;padding:10px 11px}
+  .radarTodayFocus>header h3{margin-top:1px}
+  .radarTodayFocusCards{gap:8px}
+  .radarTodayFocusCard{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto 1fr;gap:7px 8px;min-height:136px;padding:11px 12px}
+  .radarTodayFocusCard>header{grid-column:1/-1;align-items:start}
+  .radarTodayFocusCard>header b{font-size:23px;line-height:1.05}
+  .radarTodayFocusCard>header small{margin-top:4px;font-size:14px;line-height:1.2}
+  .radarTodayFocusCard>header strong{display:grid;flex:none;gap:2px;max-width:48%;text-align:right;white-space:normal}
+  .radarTodayFocusCard>header strong span{font-size:17px;line-height:1.15}
+  .radarTodayFocusCard>header strong b{font-size:18px;line-height:1.1}
+  .radarTodayFocusCard ul{grid-column:1;grid-row:2;align-self:end;gap:4px}
+  .radarTodayFocusCard li{grid-template-columns:minmax(0,1fr);gap:1px;padding-top:0;border-top:0}
+  .radarTodayFocusCard li span{font-size:12px}
+  .radarTodayFocusCard li b{font-size:14px;line-height:1.25}
+  .radarTodayFocusCard li small{grid-column:1;font-size:13px;line-height:1.25}
+  .radarTodayFocusCard li[data-focus-type="FIVE_DAY_CHANGE"] span{display:none}
+  .radarTodayFocusCard li[data-focus-type="FIVE_DAY_CHANGE"] b{font-size:19px;line-height:1.2}
+  .radarTodayFocusCard li[data-focus-type="FIVE_DAY_CHANGE"] small{color:#aa9d87;font-size:14px}
+  .radarTodayFocusCard footer{grid-column:2;grid-row:2;align-self:end;min-height:0;font-size:13px;white-space:nowrap}
+}
