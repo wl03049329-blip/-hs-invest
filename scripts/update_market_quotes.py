@@ -12,6 +12,7 @@ import math
 import os
 import random
 import re
+import sys
 import tempfile
 import time as time_module
 import urllib.parse
@@ -892,6 +893,7 @@ def write_market_cache(
     radar_refresh: dict[str, Any] | None = None,
     refresh_attempt: dict[str, Any] | None = None,
     official_eod_snapshot: dict[str, Any] | None = None,
+    official_fetch: dict[str, Any] | None = None,
 ) -> None:
     items = sorted({item["code"]: item for item in items}.values(), key=lambda item: item["code"])
     validate_quote_items(items)
@@ -979,6 +981,10 @@ def write_market_cache(
         payload["intraday_snapshot_meta"] = existing["intraday_snapshot_meta"]
     if official_eod_snapshot:
         payload["official_eod_snapshot"] = official_eod_snapshot
+    if official_fetch:
+        payload["official_last_checked_at"] = official_fetch["checked_at"]
+        payload["official_source_dates"] = official_fetch["source_dates"]
+        payload["official_last_success_at"] = official_fetch["last_success_at"]
     if refresh_attempt:
         payload["radar_refresh_attempt"] = refresh_attempt
     elif isinstance(existing.get("radar_refresh_attempt"), dict):
@@ -989,6 +995,9 @@ def write_market_cache(
         "updated_at": payload["updated_at"],
         "source_dates": payload["source_dates"],
         "source_status": payload["source_status"],
+        "official_last_checked_at": payload.get("official_last_checked_at"),
+        "official_source_dates": payload.get("official_source_dates"),
+        "official_last_success_at": payload.get("official_last_success_at"),
         "item_count": len(payload["items"]),
         "radar_refresh": payload.get("radar_refresh"),
         "radar_refresh_attempt": payload.get("radar_refresh_attempt"),
@@ -1005,15 +1014,14 @@ def write_market_cache(
     write_atomic(META_OUTPUT, meta)
 
 
-def main() -> None:
-    now = datetime.now(TAIPEI)
-    requested_slot = str(os.environ.get("HS_RADAR_SLOT", "")).strip()
-    requested_date = str(os.environ.get("HS_RADAR_TRADING_DATE", now.date().isoformat())).strip()
-    existing_quotes = existing_payload(OUTPUT)
-    existing_overview = existing_payload(OVERVIEW_OUTPUT)
-    existing_futures = existing_payload(FUTURES_OUTPUT)
+def fetch_official_rows(existing_quotes: dict[str, Any], now: datetime) -> tuple[dict[str, list[dict[str, Any]]], dict[str, str], dict[str, Any]]:
     items_by_market: dict[str, list[dict[str, Any]]] = {}
     statuses: dict[str, str] = {}
+    previous_dates = existing_quotes.get("official_source_dates") or {}
+    previous_success = existing_quotes.get("official_last_success_at") or {}
+    source_dates = dict(previous_dates) if isinstance(previous_dates, dict) else {}
+    last_success = dict(previous_success) if isinstance(previous_success, dict) else {}
+    checked_at = now.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
     for market, url in (("TWSE", TWSE_CLOSE_URL), ("TPEx", TPEX_CLOSE_URL)):
         try:
             payload = fetch_json(url)
@@ -1021,6 +1029,8 @@ def main() -> None:
                 raise ValueError(f"{market} closing source is not an array")
             items_by_market[market] = normalize_close_rows(payload, market)
             statuses[market] = "official_closing_data"
+            source_dates[market] = max(item["date"] for item in items_by_market[market])
+            last_success[market] = checked_at
         except Exception as exc:  # noqa: BLE001
             previous = [
                 item for item in existing_quotes.get("items", []) if item.get("market") == market
@@ -1029,6 +1039,34 @@ def main() -> None:
                 raise RuntimeError(f"{market} closing source failed: {exc}") from exc
             items_by_market[market] = previous
             statuses[market] = "cached_after_error"
+    return items_by_market, statuses, {
+        "checked_at": checked_at, "source_dates": source_dates, "last_success_at": last_success,
+    }
+
+
+def refresh_official_close_cache() -> None:
+    """Refresh portfolio closing quotes independently of the intraday session."""
+    now = datetime.now(TAIPEI)
+    existing = existing_payload(OUTPUT)
+    markets, statuses, official_fetch = fetch_official_rows(existing, now)
+    rows = merge_official_close_with_lkg(markets, existing.get("items", []))
+    # An official feed may lag today's already-published MIS trade.  Never
+    # replace a newer observation with an older close; equal-day official
+    # closes do replace delayed observations after the feed catches up.
+    prior = {item["code"]: item for item in existing.get("items", []) if isinstance(item, dict) and item.get("code")}
+    rows = [prior[item["code"]] if item["code"] in prior and str(prior[item["code"]].get("date", "")) > str(item.get("date", "")) else item for item in rows]
+    write_market_cache(rows, statuses, now, existing, official_fetch=official_fetch)
+    print(f"OFFICIAL_CLOSE_CACHE_REFRESHED symbols={len(rows)} TWSE={statuses['TWSE']} TPEx={statuses['TPEx']}")
+
+
+def main() -> None:
+    now = datetime.now(TAIPEI)
+    requested_slot = str(os.environ.get("HS_RADAR_SLOT", "")).strip()
+    requested_date = str(os.environ.get("HS_RADAR_TRADING_DATE", now.date().isoformat())).strip()
+    existing_quotes = existing_payload(OUTPUT)
+    existing_overview = existing_payload(OVERVIEW_OUTPUT)
+    existing_futures = existing_payload(FUTURES_OUTPUT)
+    items_by_market, statuses, official_fetch = fetch_official_rows(existing_quotes, now)
 
     # Official closing data owns the production quote cache.  Preserve a
     # per-symbol last known close only for a source row that is individually
@@ -1142,7 +1180,7 @@ def main() -> None:
         else:
             items = [item for rows in items_by_market.values() for item in rows]
 
-    write_market_cache(items, statuses, now, existing_quotes, radar_refresh, refresh_attempt, official_eod_snapshot)
+    write_market_cache(items, statuses, now, existing_quotes, radar_refresh, refresh_attempt, official_eod_snapshot, official_fetch)
 
     try:
         if not mis_rows:
@@ -1177,4 +1215,7 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    if sys.argv[1:] == ["--official-close-only"]:
+        refresh_official_close_cache()
+    else:
+        main()

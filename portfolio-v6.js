@@ -41,6 +41,7 @@
   let refreshInFlight = null;
   let lastAttemptAt = 0;
   let lastSuccessAt = latestCachedFetchTime();
+  let officialCheckedAt = [...quoteMap.values()].map(quote => Date.parse(quote.officialCheckedAt)).filter(Number.isFinite).sort((a,b) => b-a)[0] || 0;
   let failureCount = 0;
   let pendingManualPortfolioApply = false;
   let marketCacheVersion = localStorage.getItem(MARKET_VERSION_KEY) || "";
@@ -193,6 +194,8 @@
           market: quote.market === "TPEx" ? "TPEx" : "TWSE",
           quoteMode: quote.quoteMode === "delayed" ? "delayed" : "close",
           quoteTime: String(quote.quoteTime || ""),
+          officialMarketDate: String(quote.officialMarketDate || ""),
+          officialCheckedAt: String(quote.officialCheckedAt || ""),
           stale: quote.stale === true,
           fallback: quote.fallback === true,
           staleReason: String(quote.staleReason || ""),
@@ -261,22 +264,37 @@
 
   function quoteTimeLabel() {
     if (!lastSuccessAt) return "尚未成功更新";
-    return `最後成功更新 ${new Intl.DateTimeFormat("zh-TW", {
+    const published = new Intl.DateTimeFormat("zh-TW", {
       timeZone: "Asia/Taipei", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false
-    }).format(new Date(lastSuccessAt))}`;
+    }).format(new Date(lastSuccessAt));
+    const checked = officialCheckedAt ? `｜官方抓取 ${new Intl.DateTimeFormat("zh-TW", {timeZone: "Asia/Taipei", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false}).format(new Date(officialCheckedAt))}` : "";
+    return `快取發佈 ${published}${checked}`;
   }
 
   function portfolioFreshnessLabel() {
     const count=effectiveHoldings().length;
     if (!count) return "尚未新增持股";
-    const current = computed.rows.filter(row => row.quoteStatus === "current").length;
+    const lagged = computed.rows.filter(row => quoteSessionLagged(row)).length;
+    const current = computed.rows.filter(row => row.quoteStatus === "current").length - lagged;
     const stale = computed.rows.filter(row => row.quoteStatus === "stale").length;
     const missing = count - current - stale;
     const parts = [];
     if (current) parts.push(`${current} 檔最新`);
+    if (lagged) parts.push(`${lagged} 檔沿用最後有效收盤`);
     if (stale) parts.push(`${stale} 檔最後有效資料`);
     if (missing) parts.push(`${missing} 檔行情暫缺`);
     return `持股行情：${parts.join("、") || "行情暫缺"}`;
+  }
+
+  function quoteSessionLagged(row) {
+    const quote = row?.quote;
+    return row?.quoteStatus === "current" && /^\d{4}-\d{2}-\d{2}$/.test(quote?.date || "")
+      && /^\d{4}-\d{2}-\d{2}$/.test(quote?.officialMarketDate || "")
+      && quote.date < quote.officialMarketDate;
+  }
+
+  function quoteSessionLabel(row) {
+    return quoteSessionLagged(row) ? `最後有效收盤｜${row.quote.date}` : "";
   }
 
   function taipeiToday() {
@@ -380,7 +398,7 @@
       return `<article class="portfolioHoldingRow" role="row" data-holding-code="${escapeHtml(row.code)}">
         <button type="button" class="holdingColSymbol" role="cell" data-edit-holding="${escapeHtml(row.code)}" aria-label="開啟 ${escapeHtml(row.code)} 持股編輯"><b>${escapeHtml(name)}</b><span>${escapeHtml(row.code)}${radar?` <em>HS ${Number.isFinite(score)?number(score,0):"—"}</em>`:""}</span></button>
         <div role="cell"><b class="${valueClass(current?row.todayPnl:null)}">${current&&Number.isFinite(row.todayPnl)?money(row.todayPnl):"—"}</b></div>
-        <div role="cell"><b class="${valueClass(current?row.changeRate:null)}">${current&&Number.isFinite(row.changeRate)?percent(row.changeRate):"—"}</b><small>${current&&Number.isFinite(row.quote?.price)?money(row.quote.price):"行情暫缺"}</small></div>
+        <div role="cell"><b class="${valueClass(current?row.changeRate:null)}">${current&&Number.isFinite(row.changeRate)?percent(row.changeRate):"—"}</b><small>${current&&Number.isFinite(row.quote?.price)?money(row.quote.price):"行情暫缺"}</small>${quoteSessionLagged(row)?`<small class="portfolioQuoteAge">${escapeHtml(quoteSessionLabel(row))}</small>`:""}</div>
         <div role="cell"><b class="${valueClass(current?row.totalPnl:null)}">${current&&Number.isFinite(row.totalPnl)?money(row.totalPnl):"—"}</b><small class="${valueClass(totalPnlRate)}">${current?percent(totalPnlRate):"—"}</small></div>
         <div role="cell"><b>${number(row.shares,4)}</b></div>
         <div role="cell"><b>${cost(row.averageCost)}</b><small>${cost(row.totalCost)}</small></div>
@@ -392,7 +410,7 @@
       </article>`;
     }).join("");
     const mobile=$v6("#portfolioMobileHoldings");
-    mobile.innerHTML=sortedRows().map(row=>{const current=row.quoteStatus==="current",name=holdingName(row),radar=radarFor(row.code);return `<article class="portfolioMobileHolding"><button type="button" data-mobile-holding="${escapeHtml(row.code)}" class="portfolioMobileHoldingHead"><span><b>${escapeHtml(name)}</b><small>${escapeHtml(row.code)}${radar?`｜HS ${Number.isFinite(radar.score)?number(radar.score,0):"—"}`:""}</small></span><span aria-hidden="true">›</span></button><div class="portfolioMobileHoldingValue"><span>持股市值</span><b>${current&&Number.isFinite(row.marketValue)?money(row.marketValue):"行情暫缺"}</b><small>目前資產占比 ${current&&Number.isFinite(row.weight)?plainPercent(row.weight):"—"}</small></div><div class="portfolioMobileHoldingMetrics"><span>今日損益 <b class="${valueClass(current?row.todayPnl:null)}">${current&&Number.isFinite(row.todayPnl)?money(row.todayPnl):"—"}</b></span><span>未實現損益 <b class="${valueClass(current?row.totalPnl:null)}">${current&&Number.isFinite(row.totalPnl)?money(row.totalPnl):"—"}</b></span><span>股數 <b>${number(row.shares,4)}</b></span><span>平均成本 <b>${cost(row.averageCost)}</b></span></div></article>`}).join("");
+    mobile.innerHTML=sortedRows().map(row=>{const current=row.quoteStatus==="current",name=holdingName(row),radar=radarFor(row.code);return `<article class="portfolioMobileHolding"><button type="button" data-mobile-holding="${escapeHtml(row.code)}" class="portfolioMobileHoldingHead"><span><b>${escapeHtml(name)}</b><small>${escapeHtml(row.code)}${radar?`｜HS ${Number.isFinite(radar.score)?number(radar.score,0):"—"}`:""}</small></span><span aria-hidden="true">›</span></button><div class="portfolioMobileHoldingValue"><span>持股市值</span><b>${current&&Number.isFinite(row.marketValue)?money(row.marketValue):"行情暫缺"}</b>${quoteSessionLagged(row)?`<small class="portfolioQuoteAge">${escapeHtml(quoteSessionLabel(row))}</small>`:""}<small>目前資產占比 ${current&&Number.isFinite(row.weight)?plainPercent(row.weight):"—"}</small></div><div class="portfolioMobileHoldingMetrics"><span>今日損益 <b class="${valueClass(current?row.todayPnl:null)}">${current&&Number.isFinite(row.todayPnl)?money(row.todayPnl):"—"}</b></span><span>未實現損益 <b class="${valueClass(current?row.totalPnl:null)}">${current&&Number.isFinite(row.totalPnl)?money(row.totalPnl):"—"}</b></span><span>股數 <b>${number(row.shares,4)}</b></span><span>平均成本 <b>${cost(row.averageCost)}</b></span></div></article>`}).join("");
     mobile.querySelectorAll("[data-mobile-holding]").forEach(button=>button.addEventListener("click",()=>ledger?openLedger():openPortfolioModal(button.dataset.mobileHolding)));
     list.querySelectorAll("[data-edit-holding]").forEach(button=>button.addEventListener("click",()=>ledger?openLedger():openPortfolioModal(button.dataset.editHolding)));
     list.querySelectorAll("[data-target-edit]").forEach(button=>button.addEventListener("click",openTargetModal));
@@ -1401,6 +1419,8 @@
     const incoming=event?.detail?.quotes;
     if(!(incoming instanceof Map))return;
     publicQuoteMap=new Map(incoming);
+    const officialTime = Date.parse([...incoming.values()].find(quote => quote.officialCheckedAt)?.officialCheckedAt || "");
+    if (Number.isFinite(officialTime)) officialCheckedAt = officialTime;
     const sourceTime=Date.parse(event.detail.sourceUpdatedAt||"");
     if(Number.isFinite(sourceTime))lastSuccessAt=sourceTime;
     const applyPortfolio=$v6("#portfolioAutoRefresh").checked||pendingManualPortfolioApply;
@@ -1569,6 +1589,11 @@
       if ($v6("#portfolioAutoRefresh").checked) updateQuotes();
     });
     window.addEventListener("hs:delayed-quotes",applySharedQuotes);
+    window.addEventListener("hs:quote-cache-checked",event=>{
+      const checked = Date.parse(event.detail?.officialCheckedAt || "");
+      if (Number.isFinite(checked)) officialCheckedAt = checked;
+      renderQuoteStatus();
+    });
     window.addEventListener("hs:delayed-quotes-error",()=>{
       reconcilePortfolioQuotes(new Map(), {applyPortfolio: true, sourceUpdatedAt: ""});
       renderQuoteStatus("行情更新失敗，已保留最後有效資料");

@@ -11,6 +11,10 @@ on:
     # 14:30 is an audit-only boundary tick: it may mark 13:30 MISSED but can
     # never fetch or backfill that now-closed slot.
     - cron: "0,5,10,15,20,30 6 * * 1-5"
+    # Independent official-close cache checks: before open and after the
+    # exchanges have had time to publish their closing bulk files.
+    - cron: "30 0 * * 1-5"
+    - cron: "30 8,10 * * 1-5"
   workflow_dispatch:
 
 permissions:
@@ -80,3 +84,32 @@ jobs:
           git diff --cached --quiet || git commit -m "Update official ETF radar score history"
           git pull --rebase
           git push
+
+  official_quote_cache:
+    name: Refresh official Portfolio quote cache independently
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.schedule == '30 0 * * 1-5' || github.event.schedule == '30 8,10 * * 1-5' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: hs-official-quote-cache
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Refresh official TWSE and TPEx closing quotes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --ff-only origin main
+          python scripts/update_market_quotes.py --official-close-only
+          git add -- market-quotes.json market-quotes-meta.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Update official Portfolio quote cache"
+            git pull --rebase origin main
+            git push origin main
+          fi

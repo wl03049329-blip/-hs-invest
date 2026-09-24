@@ -301,7 +301,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 .homeOpportunityGroup{display:grid;gap:7px;background:#07130e;border:1px solid var(--line);border-radius:15px;padding:10px}.homeOpportunityGroup h3{font-size:13px;margin:0;color:#dffff0}.homeOpportunityRow{display:grid;grid-template-columns:1fr auto;gap:3px 8px;width:100%;text-align:left;color:inherit;background:#102219;border:1px solid #244332;border-radius:11px;padding:9px}.homeOpportunityRow span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.homeOpportunityRow strong{color:#dffff0}.homeOpportunityRow small{grid-column:1/-1;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.strategyBadge{font-size:11px;font-weight:900;color:#dffff0;background:#173126;border-radius:999px;padding:6px 9px}.watchStrategy label{display:grid;gap:3px;color:var(--muted);font-size:10px}.watchStrategy select,.drawdownReference select,.drawdownReference input{background:#07130e;border:1px solid var(--line);color:#fff;border-radius:9px;padding:7px;max-width:150px}.drawdownTool{margin:12px 0}.drawdownForm{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin:12px 0}.drawdownForm label{display:grid;gap:5px;color:var(--muted);font-size:12px}.drawdownForm input{width:100%;background:#07130e;border:1px solid var(--line);color:#fff;border-radius:12px;padding:11px}.drawdownSummary{margin-top:12px}.drawdownTitle,.drawdownReference,.drawdownHeadline{display:flex;gap:10px;align-items:center;justify-content:space-between}.drawdownTitle h3{margin:0}.drawdownTitle span{font-size:11px;color:#dffff0;background:#173126;border-radius:999px;padding:6px 9px}.drawdownReference{justify-content:flex-start;margin:12px 0;flex-wrap:wrap}.drawdownReference label{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:12px}.drawdownHeadline{display:grid;grid-template-columns:repeat(3,1fr)}.drawdownHeadline>div{background:#07130e;border:1px solid var(--line);border-radius:13px;padding:10px}.drawdownHeadline span,.drawdownHeadline small{display:block;color:var(--muted);font-size:10px}.drawdownHeadline b{display:block;font-size:20px;margin:4px 0}.drawdownTableWrap{overflow:auto;margin-top:12px;border:1px solid var(--line);border-radius:13px}.drawdownTable{min-width:0}.drawdownTable th,.drawdownTable td{padding:10px;text-align:left}.drawdownTable tr.current{background:#453c10;color:#ffe46f}.drawdownTable th:first-child,.drawdownTable td:first-child{position:static;background:transparent}.strategyBreakdown small{display:block;margin-top:8px;color:var(--muted)}
 @media(max-width:620px){.watchRow{grid-template-columns:minmax(0,1fr) auto}.watchStrategy{grid-column:1/-1}.watchStrategy select{max-width:none;width:100%}.homeOpportunityRow{font-size:12px}.drawdownHeadline{gap:6px}.drawdownHeadline>div{padding:8px}.drawdownHeadline b{font-size:16px}.drawdownForm{grid-template-columns:1fr}.drawdownForm .btn{width:100%}}
 </style>
-<link rel="stylesheet" href="portfolio-v6.css?v=20260924-portfolio-ux-cash-v1" />
+<link rel="stylesheet" href="portfolio-v6.css?v=20260925-portfolio-quote-freshness-v1" />
 <link rel="stylesheet" href="v62-tech.css?v=20260809b" />
 <link rel="stylesheet" href="formal-black-gold.css?v=20260920-radar-header-compact-v1" />
 <style id="radarPhase32CriticalLayout">
@@ -2316,7 +2316,8 @@ function parsePublicQuoteCache(payload){
     const code=String(raw?.code||"").toUpperCase(),price=Number(raw?.price),previousClose=Number(raw?.previous_close);
     if(!/^[0-9A-Z]{4,10}$/.test(code)||!Number.isFinite(price)||price<=0||!Number.isFinite(previousClose)||previousClose<=0)continue;
     const optionalNumber=value=>value===null||value===undefined||value===""?null:(Number.isFinite(Number(value))?Number(value):null);
-    quotes.set(code,{price,previousClose,name:String(raw.name||code),date:String(raw.date||""),quoteTime:String(raw.quote_time||""),quoteMode:raw.quote_mode==="delayed"?"delayed":"close",open:optionalNumber(raw.open),high:optionalNumber(raw.high),low:optionalNumber(raw.low),volume:optionalNumber(raw.volume),market:raw.market==="TPEx"?"TPEx":"TWSE",fetchedAt:String(payload.updated_at||"")});
+    const market=raw.market==="TPEx"?"TPEx":"TWSE";
+    quotes.set(code,{price,previousClose,name:String(raw.name||code),date:String(raw.date||""),quoteTime:String(raw.quote_time||""),quoteMode:raw.quote_mode==="delayed"?"delayed":"close",open:optionalNumber(raw.open),high:optionalNumber(raw.high),low:optionalNumber(raw.low),volume:optionalNumber(raw.volume),market,fetchedAt:String(payload.updated_at||""),officialMarketDate:String(payload.official_source_dates?.[market]||""),officialCheckedAt:String(payload.official_last_checked_at||"")});
   }
   return quotes;
 }
@@ -2572,7 +2573,7 @@ async function refreshLiveQuotes({force=false}={}){
           const [cache,canonicalCoreSnapshot]=await Promise.all([fetchNoStore(`market-quotes.json?ts=${now}`,signal),railwaySelected?Promise.resolve(railwayCanonicalSnapshot):loadCanonicalCoreLedger(signal).catch(()=>null)]),quotes=parsePublicQuoteCache(cache),canonicalCoreSnapshots=liveCanonicalCoreSnapshots;
           if(quotes.size){livePublicQuotes=quotes;liveMarketCacheVersion=String(cache.updated_at||metaTime);liveRadarRefresh=cache.radar_refresh||liveRadarRefresh;liveRadarRefreshAttempt=cache.radar_refresh_attempt||liveRadarRefreshAttempt;liveRadarCompleteness=cache.intraday_completeness||liveRadarCompleteness;window.dispatchEvent(new CustomEvent("hs:delayed-quotes",{detail:{quotes,sourceUpdatedAt:liveMarketCacheVersion,checkedAt:new Date().toISOString(),source:"github_actions_cache",radarRefresh:liveRadarRefresh,radarRefreshAttempt:liveRadarRefreshAttempt,radarCompleteness:liveRadarCompleteness,canonicalCoreSnapshot,canonicalCoreSnapshots}}));successes++}
         }catch{}
-      }else window.dispatchEvent(new CustomEvent("hs:quote-cache-checked",{detail:{sourceUpdatedAt:metaTime,checkedAt:new Date().toISOString()}}));
+      }else window.dispatchEvent(new CustomEvent("hs:quote-cache-checked",{detail:{sourceUpdatedAt:metaTime,checkedAt:new Date().toISOString(),officialCheckedAt:String(metaResult.value?.official_last_checked_at||"")}}));
     }
     if(proxyResult.status==="fulfilled"&&proxyResult.value){applyAuthorizedMarket(proxyResult.value,{includeCommodities:false});successes++}
     else if(proxyResult.status==="rejected")liveQuoteHttpStatus=Number(proxyResult.reason?.status)||0;
@@ -5103,7 +5104,7 @@ window.HSLiveMarket=Object.freeze({
 initLiveDebugPanel();liveDiagnosticRecord("initial_page_load",{render_state_before:"FRONTEND_STATE_PENDING",render_state_after:"FRONTEND_STATE_PENDING"});loadFrontendBuildMetadata();loadAlerts();renderWatchlist();renderEvents();renderTrump();switchChipTab(localStorage.getItem(CHIP_TAB_STORAGE_KEY)||"overview",{scroll:false});switchTab(sessionStorage.getItem("hsRadar.activeTab")||"today",{scroll:false});scheduleCnnPoll();refreshLiveQuotes({force:true});scheduleLongRankRefresh();ensureStockCatalog().finally(async()=>{await ensureRadarPushRulesSync();await load();const pushedEtf=new URLSearchParams(location.search).get("radarEtf");if(/^\d{4,6}$/.test(pushedEtf||"")){switchTab("signals",{scroll:false});showRadarDetail(pushedEtf)}});
 
 </script>
-<script src="portfolio-core.js?v=20260920-portfolio-decision-center-p1"></script>
+<script src="portfolio-core.js?v=20260925-portfolio-quote-freshness-v1"></script>
 <script src="portfolio-performance-core.js?v=20260924-portfolio-ux-cash-v1"></script>
 <script src="portfolio-ledger-core.js?v=20260924-portfolio-ux-cash-v1"></script>
 <script src="portfolio-analytics-core.js?v=20260920-portfolio-analytics-p5"></script>
@@ -5112,7 +5113,7 @@ initLiveDebugPanel();liveDiagnosticRecord("initial_page_load",{render_state_befo
 <script src="portfolio-dashboard-core.js?v=20260920-portfolio-dashboard-v1"></script>
 <script src="portfolio-full-backup-core.js?v=20260924-portfolio-ux-cash-v1"></script>
 <script src="portfolio-etf-catalog.js?v=20260924-etf-universe-v1"></script>
-<script src="portfolio-v6.js?v=20260924-portfolio-ux-cash-v1"></script>
+<script src="portfolio-v6.js?v=20260925-portfolio-quote-freshness-v1"></script>
 <script src="personal-capital-ui.js?v=20260824-phase4"></script>
 </body>
 </html>
