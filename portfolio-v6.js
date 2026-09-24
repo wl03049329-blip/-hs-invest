@@ -311,7 +311,7 @@
   }
 
   function holdingName(row) {
-    return row.customName || row.quote?.name || row.name || row.code;
+    return row.customName || catalog.find(item => item.code === row.code)?.name || row.name || row.quote?.name || row.code;
   }
 
   function radarFor(code) {
@@ -1037,13 +1037,16 @@
     saveHoldings();
     marketCacheVersion = "";
     closePortfolioModal();
-    refreshPortfolio();
+    const sharedQuotes = window.HSLiveMarket?.latestQuotes?.();
+    if (sharedQuotes instanceof Map && sharedQuotes.size) applySharedQuotes({detail: {quotes: sharedQuotes, sourceUpdatedAt: "", source: "shared_cache"}});
+    else refreshPortfolio();
     updateQuotes({force: true});
   }
 
-  function submitPortfolio(event) {
+  async function submitPortfolio(event) {
     event.preventDefault();
     try {
+      await loadCatalog();
       const item = formHolding();
       if (editingCode) {
         commitHolding(item, "edit");

@@ -1360,7 +1360,6 @@ let cnnPollInFlight=null;
 let cnnLastAttemptAt=0;
 const CNN_POLL_INTERVAL=20*60*1000;
 const LIVE_QUOTE_PROXY_KEY=HSStorage.keys.liveQuoteProxy;
-const LIVE_QUOTE_PUBLIC_CODES=new Set(["0050","00830","00662","00757","009815","00935","00631L","00733","006201","2330"]);
 const LONG_RADAR_CODES=new Set(["0050","00662","00757","00830","00935","009815"]);
 const LONG_RADAR_SCORED_CODES=new Set(["0050","00662","00757","00830","00935"]);
 const LONG_TERM_CORE_SCORE_VERSION=window.HS_LONG_TERM_CORE_SCORE_VERSION||"FINAL_CORE_WEIGHT_V1";
@@ -2315,7 +2314,7 @@ function parsePublicQuoteCache(payload){
   const quotes=new Map();
   for(const raw of payload?.items||[]){
     const code=String(raw?.code||"").toUpperCase(),price=Number(raw?.price),previousClose=Number(raw?.previous_close);
-    if(!LIVE_QUOTE_PUBLIC_CODES.has(code)||!Number.isFinite(price)||price<=0||!Number.isFinite(previousClose)||previousClose<=0)continue;
+    if(!/^[0-9A-Z]{4,10}$/.test(code)||!Number.isFinite(price)||price<=0||!Number.isFinite(previousClose)||previousClose<=0)continue;
     const optionalNumber=value=>value===null||value===undefined||value===""?null:(Number.isFinite(Number(value))?Number(value):null);
     quotes.set(code,{price,previousClose,name:String(raw.name||code),date:String(raw.date||""),quoteTime:String(raw.quote_time||""),quoteMode:raw.quote_mode==="delayed"?"delayed":"close",open:optionalNumber(raw.open),high:optionalNumber(raw.high),low:optionalNumber(raw.low),volume:optionalNumber(raw.volume),market:raw.market==="TPEx"?"TPEx":"TWSE",fetchedAt:String(payload.updated_at||"")});
   }
