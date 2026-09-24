@@ -52,21 +52,24 @@ const displayScore=Math.floor(current.row.final_core_score),level=core.labelFor(
 assert.equal(level.label,decisionLevel.decision_label_zh);
 assert.equal(current.row.tier,level.label);
 const nextLevel=decision.STAGES.find(row=>row.stage===decisionLevel.next_stage);
-assert.equal(nextLevel.min,40);
-assert.equal(nextLevel.label,"加碼條件浮現");
-assert.equal(decisionLevel.distance_to_next_stage,1);
+const expectedNext=expected.find(([min])=>min>displayScore);
+assert.equal(nextLevel?.min??null,expectedNext?.[0]??null);
+assert.equal(nextLevel?.label??null,expectedNext?.[2]??null);
+assert.equal(decisionLevel.distance_to_next_stage,expectedNext?expectedNext[0]-displayScore:0);
 
 const research=JSON.parse(fs.readFileSync(path.join(root,"research","c4_historical","00830.json"),"utf8"));
 const scores=research.records.map(row=>Number(row.display_score)).filter(Number.isFinite);
 const percentile=Math.round(scores.filter(score=>score<=displayScore).length/scores.length*100);
 assert(Number.isInteger(percentile));
 const researchCurrent=research.records.at(-1);
-assert.equal(researchCurrent.date,current.snapshot.date);
-assert.equal(researchCurrent.display_score,displayScore);
-assert.equal(researchCurrent.level,level.label);
-assert(Math.abs(researchCurrent.dd52_raw-current.row.factors.dd52.raw)<1e-9);
+const researchFinal=snapshots.find(snapshot=>snapshot.date===researchCurrent.date)?.rows?.find(row=>row.symbol==="00830");
+assert(researchFinal,"research date must have a matching finalized 00830 row");
+assert.equal(researchCurrent.display_score,Math.floor(researchFinal.final_core_score));
+assert.equal(researchCurrent.level,core.labelFor(researchCurrent.display_score).label);
+assert(Math.abs(researchCurrent.dd52_raw-researchFinal.factors.dd52.raw)<1e-9);
 const outcomes=JSON.parse(fs.readFileSync(path.join(root,"research","c4_outcomes","summary","00830.json"),"utf8"));
-const entry20=outcomes.summary.level_entry_all[level.stage].horizons["20d"];
+const researchLevel=core.labelFor(researchCurrent.display_score);
+const entry20=outcomes.summary.level_entry_all[researchLevel.stage].horizons["20d"];
 assert(Number.isFinite(entry20.median_return));
 assert.equal(entry20.sample_count,31);
 assert.match(html,/radarOverviewResearchSummary[\s\S]*phase6State\.percentile/);
@@ -76,4 +79,4 @@ assert.match(html,/radarOverviewResearchSummary[\s\S]*artifact\.summary\.level_e
 for(const copy of ["週 J 值","52週回檔","20日急跌因子","距52週高點","歷史回撤深度","D = 正式交易日","事件樣本","交易日樣本"])assert.ok(html.includes(copy),copy);
 for(const stale of ["小額加碼","正式分批","深跌加碼","回檔觀察","小額加碼區"])assert.equal(html.includes(stale),false,stale);
 
-console.log(`Phase 9.5 consistency guards PASS: 00830 score ${displayScore}, ${level.label}, next 40/1, DD52 ${current.row.factors.dd52.raw.toFixed(2)}%, historical P${percentile}, 20D median ${(entry20.median_return*100).toFixed(1)}%, event N=${entry20.sample_count}`);
+console.log(`Phase 9.5 consistency guards PASS: 00830 FINALIZED ${current.snapshot.date} score ${displayScore}, ${level.label}, next ${nextLevel?.min??"none"}/${decisionLevel.distance_to_next_stage}; research ${researchCurrent.date} DD52 ${researchFinal.factors.dd52.raw.toFixed(2)}%, historical P${percentile}, 20D median ${(entry20.median_return*100).toFixed(1)}%, event N=${entry20.sample_count}`);

@@ -46,8 +46,9 @@ assert.match(css,/\.radarFactorTitleV32\{[^}]*word-break:keep-all;overflow-wrap:
 assert.match(css,/\.radarFactorMetricV32\{display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%/);
 assert.doesNotMatch(css,/\.radarFactorStackV32\{[^}]*repeat\(/,"V32 base layout must never use a multi-column grid");
 assert.match(css,/@media\(max-width:430px\)\{[\s\S]*?\.radarFactorModelV32\{display:none\}/);
-const stylesheetAt=html.indexOf('formal-black-gold.css?v=20260920-radar-header-compact-v1'),criticalAt=html.indexOf('id="radarPhase32CriticalLayout"');
-assert.ok(stylesheetAt>=0&&criticalAt>stylesheetAt,"fresh HTML must load the versioned CSS before the critical cache safeguard");
+const stylesheet=html.match(/<link\b[^>]*\brel="stylesheet"[^>]*\bhref="formal-black-gold\.css(?:\?[^\"]*)?"[^>]*>/);
+const stylesheetAt=stylesheet?.index??-1,criticalAt=html.indexOf('id="radarPhase32CriticalLayout"');
+assert.ok(stylesheetAt>=0&&criticalAt>stylesheetAt,"fresh HTML must load the formal stylesheet before the critical cache safeguard");
 const critical=html.slice(criticalAt,html.indexOf("</style>",criticalAt));
 assert.doesNotMatch(critical,/@media/);assert.match(critical,/\.radarFactorStackV32\{display:flex;flex-direction:column/);assert.match(critical,/\.radarFactorMetricV32\{display:flex;justify-content:space-between/);assert.match(critical,/word-break:keep-all;overflow-wrap:normal/);
 assert.match(html,/<html[^>]*data-build-sha="PENDING"[^>]*data-radar-phase="3\.2-mobile-stack-v32"/);assert.match(html,/data-radar-factor-layout="mobile-stack-v32"/);assert.match(html,/function radarPhase31LayoutDiagnostics\(\)/);assert.match(html,/document\.documentElement\.dataset\.buildSha=LIVE_APP_BUILD_SHA/);
