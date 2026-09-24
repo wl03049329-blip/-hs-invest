@@ -21,10 +21,12 @@
   const TWSE_URL = "https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL";
   const TPEX_URL = "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_quotes";
   const MARKET_CACHE_URL = "market-quotes.json";
+  const ETF_UNIVERSE_URL = "etf-universe.json";
   const MARKET_META_URL = "market-quotes-meta.json";
   const BENCHMARK_URL = "backtest/long-term/historical-adjusted.json";
   const COLORS = ["#52e38c", "#72b8ff", "#ff9d42", "#bd72ff", "#ff6674", "#ffd84d", "#42d7d1", "#d9a7ff"];
   const $v6 = selector => document.querySelector(selector);
+  const etfCatalog = window.HSPortfolioEtfCatalog;
   const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[char]));
 
   let holdings = loadHoldings();
@@ -928,21 +930,25 @@
     if (catalog.length) return catalog;
     if (catalogLoading) return catalogLoading;
     catalogLoading = (async () => {
-      const fallback = [];
-      try {
-        if (Array.isArray(watchlist)) fallback.push(...watchlist.map(item => ({code: item.id, name: item.name})));
-      } catch {
-        // The current ETF list may still be loading.
-      }
-      try {
-        const rows = await apiGet({dataset: "TaiwanStockInfo"}, {soft: true});
-        const seen = new Set();
-        catalog = [...fallback, ...(Array.isArray(rows) ? rows.map(row => ({code: String(row.stock_id || ""), name: String(row.stock_name || "")})) : [])]
-          .map(item => ({code: core.normalizeCode(item.code), name: core.sanitizeName(item.name)}))
-          .filter(item => core.CODE_PATTERN.test(item.code) && !seen.has(item.code) && seen.add(item.code));
-      } catch {
-        catalog = fallback;
-      }
+      const previous = catalog;
+      const [universe, marketQuotes] = await Promise.allSettled([
+        fetchJson(ETF_UNIVERSE_URL),
+        fetchJson(MARKET_CACHE_URL)
+      ]);
+      const sources = {
+        core,
+        universe: universe.status === "fulfilled" ? universe.value : null,
+        marketQuotes: marketQuotes.status === "fulfilled" ? marketQuotes.value : null,
+        watchlist: typeof watchlist === "undefined" ? [] : watchlist,
+        holdings,
+        previous
+      };
+      catalog = etfCatalog.build(sources);
+      // FinMind supplements stocks; its latency or outage must not delay ETF search.
+      apiGet({dataset: "TaiwanStockInfo"}, {soft: true}).then(stocks => {
+        catalog = etfCatalog.build({...sources, holdings, stocks, previous: catalog});
+        if ($v6("#portfolioModal").classList.contains("show")) searchCatalog($v6("#portfolioCode").value);
+      }).catch(() => {});
       return catalog;
     })().finally(() => { catalogLoading = null; });
     return catalogLoading;
@@ -955,7 +961,7 @@
       element.innerHTML = "";
       return;
     }
-    const rows = catalog.filter(item => item.code.toLowerCase().includes(normalized) || item.name.toLowerCase().includes(normalized)).slice(0, 8);
+    const rows = etfCatalog.search(catalog, normalized);
     element.innerHTML = rows.map(item => `<button class="portfolioSearchResult" type="button" role="option" data-portfolio-result="${escapeHtml(item.code)}"><span><b>${escapeHtml(item.code)}</b> · ${escapeHtml(item.name)}</span><small>選取</small></button>`).join("");
     element.querySelectorAll("[data-portfolio-result]").forEach(button => button.addEventListener("click", () => {
       const item = catalog.find(entry => entry.code === button.dataset.portfolioResult);
@@ -976,6 +982,7 @@
     $v6("#portfolioShares").value = item?.shares || "";
     $v6("#portfolioAverageCost").value = item?.averageCost || "";
     $v6("#portfolioCustomName").value = item?.customName || "";
+    $v6("#portfolioCustomName").placeholder = "例如 長期核心部位";
     $v6("#portfolioStrategyType").value = item?.strategyType || "";
     $v6("#portfolioTargetAllocation").value = Number.isFinite(item?.targetAllocation) ? item.targetAllocation : "";
     $v6("#portfolioFormError").textContent = "";
@@ -1003,7 +1010,7 @@
       customName: $v6("#portfolioCustomName").value,
       strategyType: $v6("#portfolioStrategyType").value,
       targetAllocation: $v6("#portfolioTargetAllocation").value,
-      name: catalogItem?.name || holdings.find(item => item.code === code)?.name || ""
+      name: catalogItem?.name || quoteMap.get(code)?.name || publicQuoteMap.get(code)?.name || holdings.find(item => item.code === code)?.name || code
     });
   }
 
@@ -1445,7 +1452,6 @@
     $v6("#portfolioTargetForm").addEventListener("submit",saveTargetBatch);
     $v6("#portfolioTargetSymbolAdd").addEventListener("click",addTargetSymbol);
     $v6("#portfolioCode").addEventListener("input", event => {
-      event.target.value = core.normalizeCode(event.target.value).replace(/[^0-9A-Z]/g, "").slice(0, 10);
       searchCatalog(event.target.value);
     });
     $v6("#portfolioDuplicateActions").querySelectorAll("[data-duplicate-action]").forEach(button => button.addEventListener("click", () => duplicateAction(button.dataset.duplicateAction)));

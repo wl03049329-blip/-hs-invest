@@ -1046,10 +1046,10 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       <button id="portfolioModalClose" class="close" type="button" aria-label="關閉持股編輯視窗">關閉</button>
     </div>
     <form id="portfolioForm" novalidate>
-      <label class="portfolioField">股票或 ETF 代號
-        <input id="portfolioCode" name="code" inputmode="text" autocomplete="off" maxlength="10" required aria-describedby="portfolioCodeHelp" placeholder="例如 0050、2330" />
+      <label class="portfolioField">股票或 ETF 代號／名稱
+        <input id="portfolioCode" name="code" inputmode="text" autocomplete="off" maxlength="60" required aria-describedby="portfolioCodeHelp" placeholder="輸入代號、ETF 名稱或發行商" />
       </label>
-      <div id="portfolioCodeHelp" class="fieldHelp">可搜尋目前 ETF 清單與 FinMind TaiwanStockInfo；搜尋文字只在此頁面比對。</div>
+      <div id="portfolioCodeHelp" class="fieldHelp">可搜尋正式 ETF 清單、名稱與發行商；合法代號即使暫無商品資料仍可新增。名稱搜尋請先點選結果。</div>
       <div id="portfolioSearchResults" class="portfolioSearchResults" role="listbox" aria-label="股票搜尋結果"></div>
       <div class="portfolioFieldGrid">
         <label class="portfolioField">股數
@@ -5104,7 +5104,8 @@ initLiveDebugPanel();liveDiagnosticRecord("initial_page_load",{render_state_befo
 <script src="portfolio-resilience-core.js?v=20260920-portfolio-resilience-p7"></script>
 <script src="portfolio-dashboard-core.js?v=20260920-portfolio-dashboard-v1"></script>
 <script src="portfolio-full-backup-core.js?v=20260921-full-backup-v1"></script>
-<script src="portfolio-v6.js?v=20260921-full-backup-v1"></script>
+<script src="portfolio-etf-catalog.js?v=20260924-etf-universe-v1"></script>
+<script src="portfolio-v6.js?v=20260924-etf-universe-v1"></script>
 <script src="personal-capital-ui.js?v=20260824-phase4"></script>
 </body>
 </html>
