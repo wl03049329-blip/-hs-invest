@@ -5,6 +5,7 @@ const path=require("node:path");
 const vm=require("node:vm");
 const html=fs.readFileSync(path.join(__dirname,"..","index.html"),"utf8");
 const css=fs.readFileSync(path.join(__dirname,"..","formal-black-gold.css"),"utf8");
+const validation=require(path.join(__dirname,"..","c4-validation-metadata.js"));
 const panel=html.slice(html.indexOf('<article id="watchPanel"'),html.indexOf('<div class="sectionHead radarDetailHeading"'));
 const modal=html.slice(html.indexOf('<div id="watchModal"'),html.indexOf('<div id="watchDiagnosticModal"'));
 
@@ -23,18 +24,18 @@ assert.match(html,/currentFormalCoreScoreForSymbol\(symbol\)/);
 function source(name,next){const start=html.indexOf(`function ${name}(`);assert.ok(start>=0,name);return html.slice(start,html.indexOf(`function ${next}(`,start))}
 const context={
   HSFinalCoreProduction:{SUPPORTED_TICKERS:["0050","00662","00757","00830","00935"]},
-  researchC4HistoryStatus:new Map([["009815","WAIT_NATIVE"]]),
+  window:{HSC4ValidationMetadata:validation},
   currentFormalCoreScoreForSymbol:symbol=>({available:true,score:39.4,display_score:39,trading_date:"2026-09-24"}),
   esc:value=>String(value??""),fmt:value=>String(value),signed:value=>String(value),
   watchDirectionIcon:()=>"↑",adHocReasonText:()=>"歷史行情不足，尚無法完整計算 C4。"
 };
 context.HSFinalCoreProduction.labelFor=()=>({label:"回檔訊號出現"});
 vm.createContext(context);
-vm.runInContext(source("watchValidationStatus","adHocComponentRow"),context);
+vm.runInContext(source("watchUnavailableState","adHocComponentRow"),context);
 vm.runInContext(source("watchDiagnosticCard","renderWatchDiagnostics"),context);
-assert.equal(context.watchValidationStatus("00830"),"正式");
-assert.equal(context.watchValidationStatus("009815"),"驗證中");
-assert.equal(context.watchValidationStatus("00635U"),"參考");
+assert.equal(validation.resolve("00830").label,"正式");
+assert.equal(validation.resolve("009815").label,"參考");
+assert.equal(validation.resolve("00635U").label,"參考");
 assert.equal(context.watchUnavailableState("INSUFFICIENT_DAILY_HISTORY"),"DATA_INSUFFICIENT");
 assert.equal(context.watchUnavailableState("PRICE_DATA_UNAVAILABLE"),"DATA_UNAVAILABLE");
 assert.equal(context.watchScoreForDisplay("00830",{available:true,score:55,displayScore:55}).score,39.4,"formal watchlist score must use canonical selection");
