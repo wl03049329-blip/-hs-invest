@@ -78,7 +78,7 @@ check(plan.rows.every(row => Object.hasOwn(row, "beforeAllocation") && Object.ha
 check(performance.buildCapitalAllocationPlan({rows: [{symbol: "0050", marketValue: 10, weight: 100, targetAllocation: 100, price: 1, coreScore: null}], availableCash: 100}).rows[0].coreScore === null, "Missing Core Score fails soft");
 check(performance.buildCapitalAllocationPlan({rows: [{symbol: "0050", marketValue: 10, weight: 10, targetAllocation: 100, price: null}], availableCash: 100}).rows[0].reasonCodes.includes("PRICE_UNAVAILABLE"), "Missing quote fails soft");
 check(performance.buildCapitalAllocationPlan({rows: [{symbol: "0050", marketValue: 100, weight: 100, targetAllocation: 50, price: 10}], availableCash: 100}).rows[0].allocationAmount === 0, "All-overweight scenario does not invent an allocation");
-check(/capitalPlanCashScenario/.test(ui) && !/capitalPlanCashScenario\s*=\s*ledger/.test(ui), "Scenario cash remains transient UI state");
+check(/buildCashOnlyRebalancePlan/.test(ui) && /ledgerState\?\.valid\?ledgerState\.cash:rebalanceSettings\.cash/.test(ui), "Smart plan reads canonical cash without a second scenario balance");
 check(/data-portfolio-tool="performance"/.test(html) && /data-portfolio-tool="risk"/.test(html) && /data-portfolio-tool="transactions"/.test(html), "Advanced Phase panels remain present");
 
 console.log(`PASS ${passed} Portfolio Brokerage Dashboard assertions`);

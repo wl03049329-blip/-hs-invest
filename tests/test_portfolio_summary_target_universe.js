@@ -72,7 +72,7 @@ const html = fs.readFileSync(path.join(__dirname,"..","index.html"),"utf8");
 check(ui.includes("core.calculatePortfolio(effectiveHoldings(), quoteMap"), "calculation rows use effective holdings");
 check(/marketRows = computed\.rows\s*\.filter\(row => row\.quoteStatus === "current"/.test(ui), "chart and Hero use the same current-price eligibility");
 check(ui.includes("const rows = rebalanceRows()"), "rebalance uses full target universe");
-check(ui.includes("rebalanceSettings.targets = nextTargets"), "target-only universe persists in existing settings");
+check(/rebalanceSettings\.targets\s*=\s*nextTargets/.test(ui), "target-only universe persists in existing settings");
 check(/const updateRebalanceSettings = \(\) => \{\s*rebalanceSettings = \{\s*\.\.\.rebalanceSettings,/.test(ui), "cash and profile edits preserve target-only symbols");
 check(html.includes('id="portfolioTargetSymbolAdd"'), "user can add unheld target symbol");
 check(/data-target-batch=/.test(ui) && !/data-target-batch=[^>]*disabled/.test(ui), "target-only input remains editable");

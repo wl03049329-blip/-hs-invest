@@ -54,8 +54,8 @@
   let benchmarkRows = [];
   let historicalRowsBySymbol = new Map();
   let holdingsSortDirection = "desc";
-  let capitalPlanCashScenario = 0;
-  let activePortfolioTool = "performance";
+  let activePortfolioTool = "overview";
+  let targetDraft = new Map();
   let portfolioAnalysisPeriod = "1M";
   let ledger = loadLedger();
   let ledgerState = ledger ? ledgerCore.derivePortfolioStateFromLedger(ledger.events) : null;
@@ -100,7 +100,7 @@
       if (!raw || typeof raw !== "object") return fallback;
       const cash = Number(raw.cash), customTolerance = Number(raw.customTolerance), customDays = Number(raw.customDays);
       return {
-        cash: Number.isFinite(cash) && cash >= 0 ? cash : 0,
+        cash: Number.isFinite(cash) ? cash : 0,
         profile: ["conservative", "balanced", "trend", "custom"].includes(raw.profile) ? raw.profile : "trend",
         customTolerance: Number.isFinite(customTolerance) && customTolerance > 0 && customTolerance <= 20 ? customTolerance : 3,
         reminder: ["30", "90", "custom"].includes(String(raw.reminder)) ? String(raw.reminder) : "90",
@@ -160,9 +160,9 @@
   }
 
   function applyLedgerUiMode() {
-    const active=Boolean(ledger),add=$v6("#portfolioAddBtn"),cash=$v6("#rebalanceCash"),planCash=$v6("#capitalPlanCash");
-    if(add){add.textContent=active?"＋ 新增交易":"＋ 新增持股";add.setAttribute("aria-label",active?"新增交易":"新增持股")}
-    if(cash)cash.disabled=active;if(planCash)planCash.disabled=false;
+    const add=$v6("#portfolioAddBtn"),cash=$v6("#rebalanceCash");
+    if(add){add.textContent="＋ 新增交易";add.setAttribute("aria-label","新增交易")}
+    if(cash)cash.disabled=Boolean(ledger);
   }
 
   function persistLedger(nextLedger) {
@@ -303,6 +303,10 @@
     ];
     fields.forEach(([valueSelector,value,noteSelector,note])=>{const valueNode=$v6(valueSelector),noteNode=$v6(noteSelector);valueNode.textContent=Number.isFinite(value)?money(value):"—";valueNode.className=valueClass(value);noteNode.textContent=note;noteNode.className=valueClass(Number.isFinite(value)?value:null)});
     heroValue.textContent=Number.isFinite(summary.stockMarketValue)?money(summary.stockMarketValue):"—";
+    const cash=ledgerState?.valid?ledgerState.cash:rebalanceSettings.cash;
+    $v6("#portfolioHeroCash").textContent=money(cash);
+    $v6("#portfolioHeroTotalAssets").textContent=summary.marketValueStatus==="complete"||summary.holdingCount===0?money((summary.stockMarketValue||0)+cash):"—";
+    $v6("#portfolioHeroAssetNote").textContent=summary.marketValueStatus==="partial"?"部分行情缺失，總資產暫不估算":summary.holdingCount&&summary.marketValueStatus!=="complete"?"行情暫缺，總資產暫不估算":"持股市值＋現金";
     $v6("#portfolioHeroCostBasis").textContent=summary.marketValueStatus==="partial"?"部分行情缺失":Number.isFinite(summary.remainingCostBasis)?`成本 ${money(summary.remainingCostBasis)}`:summary.holdingCount?"成本資料不完整":"成本 —";
   }
 
@@ -365,7 +369,7 @@
   function renderList() {
     const list=$v6("#portfolioList"),viewport=$v6("#portfolioHoldingsTableViewport"),empty=$v6("#portfolioHoldingsEmpty");
     if (!effectiveHoldings().length) {
-      list.innerHTML="";viewport.hidden=true;empty.hidden=false;empty.querySelector("[data-portfolio-empty-add]")?.addEventListener("click",()=>ledger?openTransaction():openPortfolioModal());
+      list.innerHTML="";$v6("#portfolioMobileHoldings").innerHTML="";viewport.hidden=true;empty.hidden=false;empty.querySelector("[data-portfolio-empty-add]")?.addEventListener("click",()=>ledger?openTransaction():openPortfolioModal());
       return;
     }
     viewport.hidden=false;empty.hidden=true;
@@ -387,37 +391,11 @@
         <div role="cell"><b class="${valueClass(row.ytd)}">${percent(row.ytd)}</b></div>
       </article>`;
     }).join("");
+    const mobile=$v6("#portfolioMobileHoldings");
+    mobile.innerHTML=sortedRows().map(row=>{const current=row.quoteStatus==="current",name=holdingName(row),radar=radarFor(row.code);return `<article class="portfolioMobileHolding"><button type="button" data-mobile-holding="${escapeHtml(row.code)}" class="portfolioMobileHoldingHead"><span><b>${escapeHtml(name)}</b><small>${escapeHtml(row.code)}${radar?`｜HS ${Number.isFinite(radar.score)?number(radar.score,0):"—"}`:""}</small></span><span aria-hidden="true">›</span></button><div class="portfolioMobileHoldingValue"><span>持股市值</span><b>${current&&Number.isFinite(row.marketValue)?money(row.marketValue):"行情暫缺"}</b><small>目前資產占比 ${current&&Number.isFinite(row.weight)?plainPercent(row.weight):"—"}</small></div><div class="portfolioMobileHoldingMetrics"><span>今日損益 <b class="${valueClass(current?row.todayPnl:null)}">${current&&Number.isFinite(row.todayPnl)?money(row.todayPnl):"—"}</b></span><span>未實現損益 <b class="${valueClass(current?row.totalPnl:null)}">${current&&Number.isFinite(row.totalPnl)?money(row.totalPnl):"—"}</b></span><span>股數 <b>${number(row.shares,4)}</b></span><span>平均成本 <b>${cost(row.averageCost)}</b></span></div></article>`}).join("");
+    mobile.querySelectorAll("[data-mobile-holding]").forEach(button=>button.addEventListener("click",()=>ledger?openLedger():openPortfolioModal(button.dataset.mobileHolding)));
     list.querySelectorAll("[data-edit-holding]").forEach(button=>button.addEventListener("click",()=>ledger?openLedger():openPortfolioModal(button.dataset.editHolding)));
-    list.querySelectorAll("[data-target-edit]").forEach(button=>button.addEventListener("click",()=>openInlineTargetEditor(button.dataset.targetEdit)));
-  }
-
-  function applyTargetUpdates(updates) {
-    const targetMap = new Map(updates.map(item => [core.normalizeCode(item.code), item.value]));
-    const next = holdings.map(item => targetMap.has(item.code) ? core.validateHolding({...item, targetAllocation: targetMap.get(item.code)}) : item);
-    const nextTargets = {...rebalanceSettings.targets};
-    for (const [code,value] of targetMap) {
-      if (!core.CODE_PATTERN.test(code)) throw new Error("股票代號格式不正確。");
-      const normalized = dashboardCore.normalizeTarget(value);
-      if (!normalized.ok) throw new Error("目標配置需為 0–100，最多一位小數。");
-      if (!next.some(item=>item.code===code)) nextTargets[code]=normalized.value;
-    }
-    const allocation = dashboardCore.targetSummary(dashboardCore.targetAllocationItems(next,nextTargets).map(item=>item.targetAllocation));
-    if (!allocation.valid || allocation.status==="over") throw new Error(`目標配置合計不可超過 100%（目前 ${number(allocation.total, 1)}%）。`);
-    holdings = next;
-    rebalanceSettings.targets = nextTargets;
-    saveHoldings();
-    saveRebalanceSettings();
-    refreshPortfolio();
-  }
-
-  function openInlineTargetEditor(code) {
-    const cell=$v6(`[data-holding-code="${CSS.escape(code)}"] .holdingTargetCell`),holding=holdings.find(item=>item.code===code);
-    if(!cell||!holding)return;
-    cell.innerHTML=`<form class="holdingTargetInline" data-target-inline="${escapeHtml(code)}"><label><span>目標 %</span><input type="number" min="0" max="100" step="0.1" inputmode="decimal" value="${Number.isFinite(holding.targetAllocation)?holding.targetAllocation:""}" aria-label="${escapeHtml(code)} 目標佔比"></label><span><button type="submit">儲存</button><button type="button" data-target-inline-cancel>取消</button></span><small class="holdingTargetInlineError" role="alert"></small></form>`;
-    const form=cell.querySelector("form"),input=form.querySelector("input"),error=form.querySelector(".holdingTargetInlineError");
-    form.addEventListener("submit",event=>{event.preventDefault();const normalized=dashboardCore.normalizeTarget(input.value);if(!normalized.ok){error.textContent="請輸入 0–100，最多一位小數。";return}try{applyTargetUpdates([{code,value:normalized.value}])}catch(reason){error.textContent=reason.message}});
-    form.querySelector("[data-target-inline-cancel]").addEventListener("click",renderList);
-    input.focus();input.select();
+    list.querySelectorAll("[data-target-edit]").forEach(button=>button.addEventListener("click",openTargetModal));
   }
 
   function targetBatchSummary() {
@@ -429,37 +407,44 @@
     return{inputs,summary};
   }
 
+  function renderTargetDraft() {
+    const rows=$v6("#portfolioTargetBatchRows");
+    rows.innerHTML=targetDraft.size?[...targetDraft].map(([code,value])=>{
+      const item=targetAllocationItems().find(row=>row.code===code);
+      const name=item?holdingName(item):catalog.find(row=>row.code===code)?.name||code;
+      return `<div class="portfolioTargetBatchRow"><label for="target-${escapeHtml(code)}"><b>${escapeHtml(code)}</b><small>${escapeHtml(name)}${item?.shares===0?"｜尚未持有":""}</small></label><span><input id="target-${escapeHtml(code)}" type="number" min="0" max="100" step="0.1" inputmode="decimal" value="${escapeHtml(value)}" data-target-batch="${escapeHtml(code)}" aria-label="${escapeHtml(code)} 目標佔比"><em>%</em><button type="button" data-target-remove="${escapeHtml(code)}" aria-label="移除 ${escapeHtml(code)} 的目標配置">移除</button></span></div>`;
+    }).join(""):'<p class="rebalancePending">尚未設定目標；可搜尋代號或名稱加入 ETF。</p>';
+    rows.querySelectorAll("[data-target-batch]").forEach(input=>input.addEventListener("input",()=>{targetDraft.set(input.dataset.targetBatch,input.value);targetBatchSummary()}));
+    rows.querySelectorAll("[data-target-remove]").forEach(button=>button.addEventListener("click",()=>{targetDraft.delete(button.dataset.targetRemove);renderTargetDraft()}));
+    targetBatchSummary();
+  }
+
   function openTargetModal() {
     const modal=$v6("#portfolioTargetModal"),rows=$v6("#portfolioTargetBatchRows");
-    const items=targetAllocationItems();
-    rows.innerHTML=items.length?items.map(item=>`<label class="portfolioTargetBatchRow"><span><b>${escapeHtml(item.code)}</b><small>${escapeHtml(holdingName(item))}${item.shares===0?"｜尚未持有":""}</small></span><span><input type="number" min="0" max="100" step="0.1" inputmode="decimal" value="${Number.isFinite(item.targetAllocation)?item.targetAllocation:""}" data-target-batch="${escapeHtml(item.code)}" aria-label="${escapeHtml(item.code)} 目標佔比"><em>%</em></span></label>`).join(""):'<p class="rebalancePending">輸入標的代號即可設定目標配置。</p>';
+    targetDraft=new Map(targetAllocationItems().filter(item=>Number.isFinite(item.targetAllocation)).map(item=>[item.code,String(item.targetAllocation)]));
     $v6("#portfolioTargetBatchError").textContent="";
-    rows.querySelectorAll("[data-target-batch]").forEach(input=>input.addEventListener("input",targetBatchSummary));
-    targetBatchSummary();modal.classList.add("show");modal.setAttribute("aria-hidden","false");
-    setTimeout(()=>rows.querySelector("input")?.focus(),40);
+    renderTargetDraft();modal.classList.add("show");modal.setAttribute("aria-hidden","false");
+    loadCatalog().then(()=>{$v6("#portfolioTargetSuggestions").innerHTML=catalog.map(item=>`<option value="${escapeHtml(item.code)}" label="${escapeHtml(item.name)}"></option>`).join("")});
   }
 
   function closeTargetModal(){const modal=$v6("#portfolioTargetModal");modal.classList.remove("show");modal.setAttribute("aria-hidden","true")}
 
   function addTargetSymbol() {
-    const input=$v6("#portfolioTargetSymbol"),code=core.normalizeCode(input.value),error=$v6("#portfolioTargetBatchError");
+    const input=$v6("#portfolioTargetSymbol"),query=input.value.trim(),match=catalog.find(row=>row.code===core.normalizeCode(query)||row.name===query),code=core.normalizeCode(match?.code||query),error=$v6("#portfolioTargetBatchError");
     if(!core.CODE_PATTERN.test(code)){error.textContent="請輸入有效的 4–10 碼標的代號。";return}
-    if(targetAllocationItems().some(item=>item.code===code)){error.textContent="此標的已在目標配置清單。";return}
-    const pending=new Map([...$v6("#portfolioTargetBatchRows").querySelectorAll("[data-target-batch]")].map(row=>[row.dataset.targetBatch,row.value]));
-    rebalanceSettings.targets[code]=null;
-    saveRebalanceSettings();
-    openTargetModal();
-    for(const row of $v6("#portfolioTargetBatchRows").querySelectorAll("[data-target-batch]"))if(pending.has(row.dataset.targetBatch))row.value=pending.get(row.dataset.targetBatch);
-    targetBatchSummary();
-    input.value="";
+    if(targetDraft.has(code)){error.textContent="此標的已在目標配置清單。";return}
+    targetDraft.set(code,"");error.textContent="";renderTargetDraft();input.value="";
+    $v6(`[data-target-batch="${CSS.escape(code)}"]`)?.focus();
   }
 
   function saveTargetBatch(event) {
     event.preventDefault();
     const {inputs,summary}=targetBatchSummary(),error=$v6("#portfolioTargetBatchError");
-    if(!summary.valid){error.textContent="每檔目標配置需為 0–100，最多一位小數。";return}
-    if(summary.status==="over"){error.textContent=`目標配置超出 ${number(Math.abs(summary.gap),1)}%，請調整後再儲存。`;return}
-    try{applyTargetUpdates(inputs.map(input=>({code:input.dataset.targetBatch,value:dashboardCore.normalizeTarget(input.value).value})));closeTargetModal()}catch(reason){error.textContent=reason.message}
+    if(!summary.valid||inputs.some(input=>dashboardCore.normalizeTarget(input.value).value===null)){error.textContent="每檔目標配置需為 0–100，最多一位小數。";return}
+    if(!summary.complete){error.textContent=`儲存前目標配置須合計 100%（目前 ${number(summary.total,1)}%）。`;return}
+    const nextTargets={},next=holdings.map(item=>{const targetAllocation=targetDraft.has(item.code)?dashboardCore.normalizeTarget(targetDraft.get(item.code)).value:null;return item.targetAllocation===targetAllocation?item:core.validateHolding({...item,targetAllocation})});
+    for(const [code,value] of targetDraft)if(!next.some(item=>item.code===code))nextTargets[code]=dashboardCore.normalizeTarget(value).value;
+    holdings=next;rebalanceSettings.targets=nextTargets;saveHoldings();saveRebalanceSettings();closeTargetModal();refreshPortfolio();
   }
 
   function rebalanceTrend(row) {
@@ -498,11 +483,11 @@
     const allocationState = dashboardCore.targetSummary(rows.map(row=>row.targetAllocation));
     const total = allocationState.total;
     const totalMessage = targetTotalMessage(total, allocationState.complete);
-    const cash = Number.isFinite(rebalanceSettings.cash) && rebalanceSettings.cash >= 0 ? rebalanceSettings.cash : 0;
+    const cash = Number.isFinite(rebalanceSettings.cash) ? rebalanceSettings.cash : 0;
     const allocationTotal = Number.isFinite(computed.allocationTotal) ? computed.allocationTotal : 0;
     const estimated = Boolean(computed.allocationEstimated);
     const totalAssets = allocationTotal + cash;
-    $v6("#rebalanceTotalAssets").textContent = rows.length && totalAssets > 0 ? money(totalAssets) : "—";
+    $v6("#rebalanceTotalAssets").textContent = rows.length ? money(totalAssets) : "—";
     $v6("#rebalanceValueMode").textContent = effectiveHoldings().length ? (estimated ? "依成本暫估" : "依目前市值") : "尚未持有標的";
     $v6("#rebalanceCashSummary").textContent = money(cash);
     $v6("#rebalanceEstimateNote").hidden = !estimated || !holdings.length;
@@ -536,7 +521,7 @@
       const item = readoutByCode.get(row.code);
       const stateClass = item ? `is-${item.state}` : "is-pending";
       const gapText = item ? `${item.allocationGap > 0 ? "+" : ""}${number(item.allocationGap, 1)}%` : "—";
-      return `<label class="rebalanceTargetRow ${stateClass}"><span class="rebalanceTargetIdentity"><b>${escapeHtml(row.code)}</b><span>${escapeHtml(holdingName(row))}</span></span><span class="rebalanceTargetCompare"><small>目前 ${item ? `${number(item.currentWeight, 1)}%` : "—"}</small><span>→</span><span class="rebalanceTargetInput"><small>目標</small><input type="number" min="0" max="100" step="0.1" inputmode="decimal" value="${Number.isFinite(row.targetAllocation) ? row.targetAllocation : ""}" data-rebalance-target="${escapeHtml(row.code)}" aria-label="${escapeHtml(row.code)} 目標配置">%</span></span><span class="rebalanceGapBadge ${stateClass}">${item ? `${item.stateLabel} ${gapText}` : "尚未設定"}</span></label>`;
+      return `<label class="rebalanceTargetRow ${stateClass}"><span class="rebalanceTargetIdentity"><b>${escapeHtml(row.code)}</b><span>${escapeHtml(holdingName(row))}</span></span><span class="rebalanceTargetCompare"><small>目前 ${item ? `${number(item.currentWeight, 1)}%` : "—"}</small><span>→</span><span class="rebalanceTargetInput"><small>目標</small><input type="number" min="0" max="100" step="0.1" inputmode="decimal" value="${Number.isFinite(row.targetAllocation) ? row.targetAllocation : ""}" data-rebalance-target="${escapeHtml(row.code)}" aria-label="開啟 ${escapeHtml(row.code)} 目標配置" readonly>%</span></span><span class="rebalanceGapBadge ${stateClass}">${item ? `${item.stateLabel} ${gapText}` : "尚未設定"}</span></label>`;
     }).join("") : '<p class="rebalancePending">新增持股後即可設定目標配置。</p>';
 
     output.innerHTML = rows.length ? rows.map(row => {
@@ -552,7 +537,7 @@
     const suggestedTotal = advice.formal ? advice.rows.reduce((sum, row) => sum + Math.max(0, Number(row.suggestedAmount) || 0), 0) : 0;
     $v6("#rebalanceSuggestedTotal").textContent = advice.formal ? money(suggestedTotal) : "—";
     $v6("#rebalanceApplyBtn").disabled = !advice.formal;
-    targetRows.querySelectorAll("[data-rebalance-target]").forEach(input => input.addEventListener("input", updateTargetAllocation));
+    targetRows.querySelectorAll("[data-rebalance-target]").forEach(input => input.addEventListener("click",openTargetModal));
     if (focusTarget) {
       const input = targetRows.querySelector(`[data-rebalance-target="${CSS.escape(focusTarget)}"]`);
       if (input) {
@@ -768,17 +753,20 @@
   }
 
   function renderCapitalPlan() {
-    const plan = performanceCore.buildCapitalAllocationPlan({
-      rows: computed.rows.map(row => ({code: row.code, marketValue: row.quoteStatus === "current" ? row.marketValue : null, weight: row.weight, targetAllocation: row.targetAllocation, price: row.quoteStatus === "current" ? row.quote?.price : null, coreScore: radarFor(row.code)?.score ?? null})),
-      availableCash: capitalPlanCashScenario,
-      allocationHealthScore: core.allocationHealthScore
+    const actual=new Map(computed.rows.map(row=>[row.code,row]));
+    const cash=ledgerState?.valid?ledgerState.cash:rebalanceSettings.cash;
+    const plan = performanceCore.buildCashOnlyRebalancePlan({
+      rows:targetAllocationItems().map(item=>{
+        const row=actual.get(item.code),quote=row?.quote||publicQuoteMap.get(item.code)||quoteMap.get(item.code);
+        const current=quote&&core.quoteFreshness(quote).isCurrent;
+        return{code:item.code,targetAllocation:item.targetAllocation,marketValue:row?row.quoteStatus==="current"?row.marketValue:null:0,price:current?quote.price:null};
+      }),availableCash:cash
     });
     const summary = $v6("#capitalPlanSummary"), output = $v6("#capitalPlanRows");
-    summary.innerHTML = [["可投入",money(plan.cash)],["建議配置",money(plan.allocated)],["保留現金",money(plan.remaining)],["健康度",Number.isFinite(plan.healthBefore)&&Number.isFinite(plan.healthAfter)?`${plan.healthBefore} → ${plan.healthAfter}`:"—"]].map(([label,value])=>`<article><span>${label}</span><b>${escapeHtml(value)}</b></article>`).join("");
-    if (!holdings.length) { output.innerHTML = '<div class="capitalPlanEmpty">新增持股後才會建立投入模擬。</div>'; return; }
-    if (plan.cash <= 0) { output.innerHTML = '<div class="capitalPlanEmpty">輸入本次可投入金額後，系統會依目標配置差異產生模擬。</div>'; return; }
-    const visible = plan.rows.filter(row => row.allocationAmount > 0 || row.reasonCodes.includes("PRICE_UNAVAILABLE") || row.reasonCodes.includes("TARGET_MISSING"));
-    output.innerHTML = visible.length ? visible.map(row => {const radar=radarFor(row.symbol);return `<article class="capitalPlanRow"><div class="capitalPlanIdentity"><b>${escapeHtml(row.symbol)}</b><small>${Number.isFinite(row.coreScore)?`HS ${number(row.coreScore,0)}｜${escapeHtml(radar?.coreLabel||"正式狀態暫缺")}`:"HS 分數暫缺"}</small></div><div class="capitalPlanAmount"><b>${row.allocationAmount>0?money(row.allocationAmount):"不配置"}</b><small>${Number.isFinite(row.estimatedUnits)&&row.allocationAmount>0?`約 ${number(row.estimatedUnits,2)} 股｜模擬`:"等待必要資料"}</small></div><div class="capitalPlanAllocation"><span>目前 <b>${plainPercent(row.beforeAllocation)}</b></span><i>→</i><span>投入後 <b>${plainPercent(row.afterAllocation)}</b></span><i>→</i><span>目標 <b>${plainPercent(row.targetAllocation)}</b></span></div><div class="capitalPlanReason"><b>為什麼</b><span>${escapeHtml(capitalReasonText(row.reasonCodes))}</span></div></article>`}).join("") : '<div class="capitalPlanEmpty">目前沒有符合投入條件的低配部位，資金維持保留。</div>';
+    summary.innerHTML = [["可用現金",money(cash)],["建議投入",cash<=0?money(0):plan.status==="READY"?money(plan.allocated):"—"],["預計保留",plan.status==="READY"||plan.status==="NO_CASH"?money(plan.remaining):"—"]].map(([label,value])=>`<article><span>${label}</span><b>${escapeHtml(value)}</b></article>`).join("");
+    if(plan.status==="TARGET_MISSING"||plan.status==="TARGET_INCOMPLETE"){output.innerHTML='<div class="capitalPlanEmpty">請先設定 ETF 目標配置，合計 100% 後顯示現金分配建議。</div>';return}
+    if(plan.status==="PRICE_UNAVAILABLE"){output.innerHTML=`<div class="capitalPlanEmpty">${cash<=0?"目前沒有可配置現金。":""}${escapeHtml(plan.rows.filter(row=>row.status==="PRICE_UNAVAILABLE").map(row=>row.symbol).join("、"))} 行情暫缺，暫時無法完整計算配置；不產生買入建議。</div>`;return}
+    output.innerHTML=plan.rows.map(row=>`<article class="capitalPlanRow"><div class="capitalPlanIdentity"><b>${escapeHtml(row.symbol)}</b><small>目前 ${plainPercent(row.currentAllocation)} → 目標 ${plainPercent(row.target)}</small></div><div class="capitalPlanAmount"><b>${row.status==="OVERWEIGHT"?"目前已高於目標":plan.status==="NO_CASH"?"目前沒有可配置現金":row.allocationAmount>0?`本次建議投入 ${money(row.allocationAmount)}`:"本次暫不投入"}</b><small>${row.allocationAmount>0?`約可買 ${number(row.estimatedUnits,0)} 股｜僅供試算`:row.status==="OVERWEIGHT"?"本次不投入新資金":"等待下一筆可用現金"}</small></div></article>`).join("");
   }
 
   const LEDGER_LABELS={OPENING_POSITION:"期初部位",OPENING_CASH:"期初現金",BUY:"買入",SELL:"賣出",DEPOSIT:"入金",WITHDRAWAL:"出金",DIVIDEND:"股息",FEE:"其他費用",TAX:"額外稅額",SPLIT:"股票分割",REVERSE_SPLIT:"反向分割",STOCK_DIVIDEND:"股票股利"};
@@ -796,7 +784,23 @@
   function closeLedgerModals(){["#portfolioLedgerMigrationModal","#portfolioTransactionModal","#portfolioLedgerModal"].forEach(selector=>{const node=$v6(selector);node.classList.remove("show");node.setAttribute("aria-hidden","true")});editingLedgerEventId=null}
   function migrateLedger(){if(ledger)return;const now=new Date().toISOString();if(!localStorage.getItem(ledgerCore.LEGACY_BACKUP_KEY))localStorage.setItem(ledgerCore.LEGACY_BACKUP_KEY,JSON.stringify({version:1,createdAt:now,holdings,rebalanceSettings}));persistLedger(ledgerCore.migrateLegacyPortfolio({holdings,cash:rebalanceSettings.cash,tradeDate:taipeiToday(),timestamp:now}));closeLedgerModals();refreshPortfolio()}
   function transactionVisibility(){const type=$v6("#portfolioTransactionType").value,trade=["OPENING_POSITION","BUY","SELL"].includes(type),corporate=ledgerCore.CORPORATE_ACTIONS.has(type),symbol=trade||type==="DIVIDEND"||corporate;$v6("[data-transaction-symbol]").hidden=!symbol;$v6("[data-transaction-trade]").hidden=!trade;$v6("[data-transaction-amount]").hidden=trade||corporate;$v6("[data-transaction-corporate]").hidden=!corporate;$v6("#portfolioTransactionRatioLabel").textContent=type==="STOCK_DIVIDEND"?"每股配發股數":"調整比率";$v6("[data-transaction-costs]").hidden=!trade||type==="OPENING_POSITION";$v6("[data-transaction-tax]").hidden=type!=="SELL"}
-  function openTransaction(eventId=null){if(!ledger){openMigration();return}editingLedgerEventId=eventId;const event=eventId?ledger.events.find(row=>row.id===eventId):null,select=$v6("#portfolioTransactionType");select.querySelectorAll("[data-opening-option]").forEach(node=>node.remove());if(event?.type.startsWith("OPENING_")){const option=document.createElement("option");option.value=event.type;option.textContent=LEDGER_LABELS[event.type];option.dataset.openingOption="true";select.prepend(option)}$v6("#portfolioTransactionTitle").textContent=event?`${LEDGER_LABELS[event.type]}紀錄`:"新增交易";select.value=event?.type||"BUY";select.disabled=Boolean(event?.type.startsWith("OPENING_"));$v6("#portfolioTransactionDate").value=event?.tradeDate||taipeiToday();$v6("#portfolioTransactionSymbol").value=event?.symbol||"";$v6("#portfolioTransactionQuantity").value=event?.quantity||"";$v6("#portfolioTransactionPrice").value=event?.unitPrice||"";$v6("#portfolioTransactionAmount").value=event?.grossAmount||"";$v6("#portfolioTransactionRatio").value=event?.type==="STOCK_DIVIDEND"?event.sharesPerShare||"":event?.ratio||"";$v6("#portfolioTransactionFee").value=event?.fee||0;$v6("#portfolioTransactionTax").value=event?.tax||0;$v6("#portfolioTransactionNote").value=event?.note||"";$v6("#portfolioTransactionError").textContent="";$v6("#portfolioTransactionWarning").hidden=true;transactionVisibility();const modal=$v6("#portfolioTransactionModal");modal.classList.add("show");modal.setAttribute("aria-hidden","false")}
+  function updateCashImpactNote(){
+    const note=$v6("#portfolioCashImpactNote");
+    const amount=Number($v6("#portfolioTransactionQuantity").value)*Number($v6("#portfolioTransactionPrice").value)+Number($v6("#portfolioTransactionFee").value||0);
+    const after=(ledgerState?.valid?ledgerState.cash:rebalanceSettings.cash)-amount;
+    note.hidden=$v6("#portfolioTransactionType").value!=="BUY"||!Number.isFinite(amount)||amount<=0||after>=0;
+    if(!note.hidden)note.textContent=`此交易後現金將為 ${money(after)}；仍可儲存交易。`;
+  }
+  function openCashModal(){const modal=$v6("#portfolioCashModal");$v6("#portfolioCashType").value="DEPOSIT";$v6("#portfolioCashAmount").value="";$v6("#portfolioCashDate").value=taipeiToday();$v6("#portfolioCashNote").value="";$v6("#portfolioCashError").textContent="";modal.classList.add("show");modal.setAttribute("aria-hidden","false")}
+  function closeCashModal(){const modal=$v6("#portfolioCashModal");modal.classList.remove("show");modal.setAttribute("aria-hidden","true")}
+  function submitCash(event){
+    event.preventDefault();const amount=Number($v6("#portfolioCashAmount").value),error=$v6("#portfolioCashError");
+    if(!Number.isFinite(amount)||amount<=0){error.textContent="請輸入有效的正數金額。";return}
+    const entry=ledgerCore.normalizeEvent({type:$v6("#portfolioCashType").value,tradeDate:$v6("#portfolioCashDate").value,timestamp:new Date().toISOString(),grossAmount:amount,note:$v6("#portfolioCashNote").value,source:"MANUAL"});
+    if(!entry){error.textContent="請確認類型、日期與金額。";return}
+    try{if(!ledger)migrateLedger();const result=ledgerCore.mutateLedger(ledger,{type:"ADD",event:entry});if(!result.ok){error.textContent=result.error||"現金紀錄驗證失敗。";return}persistLedger(result.ledger);closeCashModal();refreshPortfolio()}catch(reason){error.textContent=reason?.message||"儲存失敗，資料未變更。"}
+  }
+  function openTransaction(eventId=null){if(!ledger){openMigration();return}editingLedgerEventId=eventId;const event=eventId?ledger.events.find(row=>row.id===eventId):null,select=$v6("#portfolioTransactionType");select.querySelectorAll("[data-opening-option]").forEach(node=>node.remove());if(event?.type.startsWith("OPENING_")){const option=document.createElement("option");option.value=event.type;option.textContent=LEDGER_LABELS[event.type];option.dataset.openingOption="true";select.prepend(option)}$v6("#portfolioTransactionTitle").textContent=event?`${LEDGER_LABELS[event.type]}紀錄`:"新增交易";select.value=event?.type||"BUY";select.disabled=Boolean(event?.type.startsWith("OPENING_"));$v6("#portfolioTransactionDate").value=event?.tradeDate||taipeiToday();$v6("#portfolioTransactionSymbol").value=event?.symbol||"";$v6("#portfolioTransactionQuantity").value=event?.quantity||"";$v6("#portfolioTransactionPrice").value=event?.unitPrice||"";$v6("#portfolioTransactionAmount").value=event?.grossAmount||"";$v6("#portfolioTransactionRatio").value=event?.type==="STOCK_DIVIDEND"?event.sharesPerShare||"":event?.ratio||"";$v6("#portfolioTransactionFee").value=event?.fee||0;$v6("#portfolioTransactionTax").value=event?.tax||0;$v6("#portfolioTransactionNote").value=event?.note||"";$v6("#portfolioTransactionError").textContent="";$v6("#portfolioTransactionWarning").hidden=true;transactionVisibility();updateCashImpactNote();const modal=$v6("#portfolioTransactionModal");modal.classList.add("show");modal.setAttribute("aria-hidden","false")}
   function transactionFormEvent(){const type=$v6("#portfolioTransactionType").value,trade=["OPENING_POSITION","BUY","SELL"].includes(type),corporate=ledgerCore.CORPORATE_ACTIONS.has(type),ratio=$v6("#portfolioTransactionRatio").value;return{type,tradeDate:$v6("#portfolioTransactionDate").value,timestamp:editingLedgerEventId?ledger.events.find(row=>row.id===editingLedgerEventId)?.timestamp:new Date().toISOString(),symbol:$v6("#portfolioTransactionSymbol").value,quantity:trade?$v6("#portfolioTransactionQuantity").value:null,unitPrice:trade?$v6("#portfolioTransactionPrice").value:null,grossAmount:trade||corporate?null:$v6("#portfolioTransactionAmount").value,ratio:corporate&&type!=="STOCK_DIVIDEND"?ratio:null,sharesPerShare:type==="STOCK_DIVIDEND"?ratio:null,fee:type==="OPENING_POSITION"||corporate?0:$v6("#portfolioTransactionFee").value,tax:type==="OPENING_POSITION"||corporate?0:$v6("#portfolioTransactionTax").value,note:$v6("#portfolioTransactionNote").value,source:editingLedgerEventId?ledger.events.find(row=>row.id===editingLedgerEventId)?.source||"MANUAL":"MANUAL",updatedAt:new Date().toISOString()}}
   function submitTransaction(event){event.preventDefault();const input=transactionFormEvent(),normalized=ledgerCore.normalizeEvent(input),warning=$v6("#portfolioTransactionWarning");if(!normalized){$v6("#portfolioTransactionError").textContent="請確認日期、代號、股數、價格、比率或金額皆為有效正數。";return}if(!editingLedgerEventId&&ledgerCore.detectLikelyDuplicate(ledger.events,normalized)&&warning.hidden){warning.textContent="可能為重複交易；若確實為另一筆交易，請再次按儲存。";warning.hidden=false;return}if(normalized.type==="OPENING_POSITION"&&!confirm("修改期初部位會改變正式績效基準，確定繼續？"))return;const result=ledgerCore.mutateLedger(ledger,{type:editingLedgerEventId?"EDIT":"ADD",id:editingLedgerEventId,event:normalized});if(!result.ok){$v6("#portfolioTransactionError").textContent=result.error||"交易後帳本狀態無效，未儲存任何變更。";return}if(ledgerCore.CORPORATE_ACTIONS.has(normalized.type))createRecovery(editingLedgerEventId?"BEFORE_CORPORATE_ACTION_EDIT":"BEFORE_CORPORATE_ACTION");persistLedger(result.ledger);closeLedgerModals();refreshPortfolio();updateQuotes({force:true})}
   function deleteLedgerEvent(id){const event=ledger?.events.find(row=>row.id===id);if(!event||!confirm(`刪除這筆「${LEDGER_LABELS[event.type]}」紀錄？`))return;if(event.type==="OPENING_POSITION"&&!confirm("刪除期初部位會改變正式績效基準，確定繼續？"))return;const result=ledgerCore.mutateLedger(ledger,{type:"DELETE",id});if(!result.ok){alert(result.error||"刪除後會造成後續交易無效，未刪除任何資料。");return}if(ledgerCore.CORPORATE_ACTIONS.has(event.type))createRecovery("BEFORE_CORPORATE_ACTION_DELETE");persistLedger(result.ledger);renderAllLedger();refreshPortfolio()}
@@ -1115,7 +1119,7 @@
   function renderWorkflow(){renderGoalAndActivity();renderRecurring();renderAnnualReport();renderCalendar();renderDataStatus()}
   function normalizePortfolioTool(name){return({overview:"performance",performance:"performance",analytics:"analytics",recurring:"analytics",risk:"risk",transactions:"transactions",report:"report",calendar:"calendar",settings:"settings"})[name]||"performance"}
   function showPortfolioTool(name,{scroll=true}={}){activePortfolioTool=normalizePortfolioTool(name);document.querySelectorAll("[data-portfolio-tool]").forEach(node=>{node.hidden=node.dataset.portfolioTool!==activePortfolioTool});$v6("#portfolioWorkflowNav").querySelectorAll("[data-portfolio-section]").forEach(button=>{const active=normalizePortfolioTool(button.dataset.portfolioSection)===activePortfolioTool;button.classList.toggle("active",active);button.setAttribute("aria-selected",String(active))});if(scroll)$v6("#portfolioWorkflowNav").scrollIntoView({behavior:"smooth",block:"start"})}
-  function workflowSectionTarget(name){showPortfolioTool(name,{scroll:false});return document.querySelector(`[data-portfolio-tool="${normalizePortfolioTool(name)}"]`)}
+  function workflowSectionTarget(name){$v6("#portfolioMoreTools").open=true;showPortfolioTool(name,{scroll:false});return document.querySelector(`[data-portfolio-tool="${normalizePortfolioTool(name)}"]`)}
   function holdingsView(name){const viewport=$v6("#portfolioHoldingsTableViewport"),table=$v6(".portfolioHoldingsTable"),target=$v6(`[data-column-group="${name}"]`),sticky=$v6(".portfolioHoldingsTableHead .holdingColSymbol");if(!viewport||!target||!table)return;table.dataset.view=name;viewport.scrollTo({left:name==="position"?0:Math.max(0,target.offsetLeft-(sticky?.offsetWidth||0)),behavior:"smooth"});document.querySelectorAll("[data-holdings-view]").forEach(button=>button.classList.toggle("active",button.dataset.holdingsView===name))}
   function openCsvPreview(preview,fileName){csvImportPreview=preview;csvImportFileName=fileName;$v6("#portfolioCsvPreviewSummary").innerHTML=[["總筆數",preview.total],["有效",preview.valid],["警告",preview.warning],["錯誤",preview.errors],["疑似重複",preview.duplicates]].map(row=>`<article><span>${row[0]}</span><b>${row[1]}</b></article>`).join("");const labels={VALID:"可匯入",WARNING:"需確認",ERROR:"無法匯入",DUPLICATE_CANDIDATE:"疑似重複"};$v6("#portfolioCsvPreviewRows").innerHTML=preview.rows.map((row,index)=>`<label class="portfolioCsvRow" data-status="${row.status}"><input type="checkbox" data-csv-select="${index}" ${row.selected?"checked":""} ${row.status==="ERROR"?"disabled":""}><span>#${row.rowNumber}</span><b class="portfolioCsvStatus">${labels[row.status]}</b><span data-csv-symbol>${escapeHtml(row.event?.symbol||row.event?.type||row.raw?.type||"—")}</span><small data-csv-detail>${escapeHtml(row.event?`${row.event.tradeDate}｜${row.event.type}｜${row.event.quantity??row.event.grossAmount}`:"欄位驗證失敗")}</small><small data-csv-message>${escapeHtml(row.messages.join("；")||"格式與欄位有效")}</small></label>`).join("");$v6("#portfolioCsvPreviewError").textContent="";const modal=$v6("#portfolioCsvPreviewModal");modal.classList.add("show");modal.setAttribute("aria-hidden","false")}
   function closeCsvPreview(){const modal=$v6("#portfolioCsvPreviewModal");modal.classList.remove("show");modal.setAttribute("aria-hidden","true");$v6("#portfolioCsvImportFile").value=""}
@@ -1402,19 +1406,6 @@
     renderQuoteStatus(`${quoteTimeLabel()}｜${event.detail.source==="authorized_proxy"?"授權延遲行情":"公開快取"}`);
   }
 
-  function updateTargetAllocation(event) {
-    const input = event.currentTarget;
-    const code = core.normalizeCode(input.dataset.rebalanceTarget);
-    const raw = String(input.value || "").trim();
-    const targetAllocation = raw === "" ? null : Number(raw);
-    if (targetAllocation !== null && (!Number.isFinite(targetAllocation) || targetAllocation < 0 || targetAllocation > 100)) {
-      input.setCustomValidity("目標配置必須介於 0 到 100%。");
-      return;
-    }
-    input.setCustomValidity("");
-    try{applyTargetUpdates([{code,value:targetAllocation}])}catch(reason){input.setCustomValidity(reason.message);input.reportValidity();return}
-  }
-
   function useCurrentAllocationAsTargets() {
     const targets = core.targetsFromAllocation(computed.rows);
     if (!targets.length) return;
@@ -1442,7 +1433,11 @@
   }
 
   function bindEvents() {
-    $v6("#portfolioAddBtn").addEventListener("click", () => ledger ? openTransaction() : openPortfolioModal());
+    $v6("#portfolioAddBtn").addEventListener("click", () => openTransaction());
+    $v6("#portfolioAddCashBtn").addEventListener("click",openCashModal);
+    $v6("#portfolioCashClose").addEventListener("click",closeCashModal);
+    $v6("#portfolioCashModal").addEventListener("click",event=>{if(event.target===$v6("#portfolioCashModal"))closeCashModal()});
+    $v6("#portfolioCashForm").addEventListener("submit",submitCash);
     $v6("#portfolioModalClose").addEventListener("click", closePortfolioModal);
     $v6("#portfolioModal").addEventListener("click", event => { if (event.target === $v6("#portfolioModal")) closePortfolioModal(); });
     $v6("#portfolioForm").addEventListener("submit", submitPortfolio);
@@ -1451,6 +1446,8 @@
     $v6("#portfolioTargetModal").addEventListener("click",event=>{if(event.target===$v6("#portfolioTargetModal"))closeTargetModal()});
     $v6("#portfolioTargetForm").addEventListener("submit",saveTargetBatch);
     $v6("#portfolioTargetSymbolAdd").addEventListener("click",addTargetSymbol);
+    $v6("#portfolioSmartTargetOpen").addEventListener("click",openTargetModal);
+    $v6("#portfolioTargetCancel").addEventListener("click",closeTargetModal);
     $v6("#portfolioCode").addEventListener("input", event => {
       searchCatalog(event.target.value);
     });
@@ -1481,6 +1478,7 @@
     $v6("#portfolioAnnualYear").addEventListener("change",renderAnnualReport);$v6("#portfolioAnnualCsvBtn").addEventListener("click",()=>{if(!annualReport?.available)return;downloadText(`\uFEFF${workflowCore.exportAnnualCsv(annualReport)}`,`hs-portfolio-annual-${annualReport.year}.csv`,"text/csv;charset=utf-8")});$v6("#portfolioAnnualPrintBtn").addEventListener("click",()=>window.print());
     $v6("#portfolioCalendarMonth").addEventListener("change",renderCalendar);
     $v6("#portfolioWorkflowNav").addEventListener("click",event=>{const button=event.target.closest("[data-portfolio-section]");if(button)showPortfolioTool(button.dataset.portfolioSection)});
+    $v6("#portfolioMoreTools").addEventListener("toggle",event=>$v6("#portfolio").classList.toggle("portfolioMoreOpen",event.target.open));
     document.querySelectorAll("[data-portfolio-section]").forEach(button=>{
       if(button.closest("#portfolioWorkflowNav"))return;
       button.addEventListener("click",()=>{
@@ -1491,9 +1489,10 @@
     $v6("#portfolioClearBtn").addEventListener("click", clearHoldings);
     $v6("#portfolioTransactionAddBtn").addEventListener("click", () => openTransaction());
     $v6("#portfolioLedgerViewBtn").addEventListener("click", openLedger);
-    $v6("#portfolioLedgerMigrateBtn").addEventListener("click", migrateLedger);
+    $v6("#portfolioLedgerMigrateBtn").addEventListener("click",()=>{migrateLedger();if(ledger)openTransaction()});
     document.querySelectorAll("[data-ledger-close]").forEach(button=>button.addEventListener("click",closeLedgerModals));
-    $v6("#portfolioTransactionType").addEventListener("change",transactionVisibility);
+    $v6("#portfolioTransactionType").addEventListener("change",()=>{transactionVisibility();updateCashImpactNote()});
+    ["#portfolioTransactionQuantity","#portfolioTransactionPrice","#portfolioTransactionFee"].forEach(selector=>$v6(selector).addEventListener("input",updateCashImpactNote));
     $v6("#portfolioTransactionForm").addEventListener("submit",submitTransaction);
     $v6("#portfolioLedgerFilters").addEventListener("click",event=>{const button=event.target.closest("[data-ledger-filter]");if(!button)return;ledgerFilter=button.dataset.ledgerFilter;$v6("#portfolioLedgerFilters").querySelectorAll("button").forEach(node=>node.classList.toggle("active",node===button));renderAllLedger()});
     $v6("#portfolioLedgerAllList").addEventListener("click",event=>{const edit=event.target.closest("[data-ledger-edit]"),remove=event.target.closest("[data-ledger-delete]");if(edit)openTransaction(edit.dataset.ledgerEdit);else if(remove)deleteLedgerEvent(remove.dataset.ledgerDelete)});
@@ -1511,9 +1510,7 @@
     });
     const rebalanceIds = ["rebalanceCash", "rebalanceProfile", "rebalanceCustomTolerance", "rebalanceReminder", "rebalanceCustomDays", "rebalanceCashFirst", "rebalanceTrendProtection"];
     $v6("#rebalanceCash").value = rebalanceSettings.cash;
-    $v6("#capitalPlanCash").value = capitalPlanCashScenario;
     $v6("#rebalanceCash").disabled = Boolean(ledger);
-    $v6("#capitalPlanCash").disabled = false;
     applyLedgerUiMode();
     $v6("#rebalanceProfile").value = rebalanceSettings.profile;
     $v6("#rebalanceCustomTolerance").value = rebalanceSettings.customTolerance;
@@ -1536,7 +1533,6 @@
       saveRebalanceSettings(); syncRebalanceControls(); refreshPortfolio();
     };
     $v6("#rebalanceCash").addEventListener("input", updateRebalanceSettings);
-    $v6("#capitalPlanCalculate").addEventListener("click",()=>{capitalPlanCashScenario=Math.max(0,Number($v6("#capitalPlanCash").value)||0);renderCapitalPlan()});
     rebalanceIds.filter(id => id !== "rebalanceCash").forEach(id => $v6(`#${id}`).addEventListener("change", updateRebalanceSettings));
     $v6("#rebalanceUseCurrentBtn").addEventListener("click", useCurrentAllocationAsTargets);
     $v6("#rebalanceApplyBtn").addEventListener("click", showRebalanceSimulation);

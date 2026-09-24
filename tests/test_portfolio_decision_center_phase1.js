@@ -67,7 +67,7 @@ assert.match(ui, /window\.HSFinalCoreProduction\?\.labelFor/);
 assert.doesNotMatch(ui, /score\s*>=\s*(?:30|40|45|50|65|70)/, "portfolio UI must not create a second Core Score mapping");
 assert.match(ui, /尚未建立個人持股/);
 assert.match(ui, /行情資料不完整/);
-assert.match(ui, /capitalReasonText\(row\.reasonCodes\)/);
+assert.match(ui, /buildCashOnlyRebalancePlan/);
 
 for (const width of [760, 430, 375]) assert.match(css, new RegExp(`@media\\(max-width:${width}px\\)`));
 assert.match(css, /\.portfolioDecisionGrid\{display:grid/);

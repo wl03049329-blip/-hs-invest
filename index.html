@@ -301,7 +301,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 .homeOpportunityGroup{display:grid;gap:7px;background:#07130e;border:1px solid var(--line);border-radius:15px;padding:10px}.homeOpportunityGroup h3{font-size:13px;margin:0;color:#dffff0}.homeOpportunityRow{display:grid;grid-template-columns:1fr auto;gap:3px 8px;width:100%;text-align:left;color:inherit;background:#102219;border:1px solid #244332;border-radius:11px;padding:9px}.homeOpportunityRow span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.homeOpportunityRow strong{color:#dffff0}.homeOpportunityRow small{grid-column:1/-1;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.strategyBadge{font-size:11px;font-weight:900;color:#dffff0;background:#173126;border-radius:999px;padding:6px 9px}.watchStrategy label{display:grid;gap:3px;color:var(--muted);font-size:10px}.watchStrategy select,.drawdownReference select,.drawdownReference input{background:#07130e;border:1px solid var(--line);color:#fff;border-radius:9px;padding:7px;max-width:150px}.drawdownTool{margin:12px 0}.drawdownForm{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin:12px 0}.drawdownForm label{display:grid;gap:5px;color:var(--muted);font-size:12px}.drawdownForm input{width:100%;background:#07130e;border:1px solid var(--line);color:#fff;border-radius:12px;padding:11px}.drawdownSummary{margin-top:12px}.drawdownTitle,.drawdownReference,.drawdownHeadline{display:flex;gap:10px;align-items:center;justify-content:space-between}.drawdownTitle h3{margin:0}.drawdownTitle span{font-size:11px;color:#dffff0;background:#173126;border-radius:999px;padding:6px 9px}.drawdownReference{justify-content:flex-start;margin:12px 0;flex-wrap:wrap}.drawdownReference label{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:12px}.drawdownHeadline{display:grid;grid-template-columns:repeat(3,1fr)}.drawdownHeadline>div{background:#07130e;border:1px solid var(--line);border-radius:13px;padding:10px}.drawdownHeadline span,.drawdownHeadline small{display:block;color:var(--muted);font-size:10px}.drawdownHeadline b{display:block;font-size:20px;margin:4px 0}.drawdownTableWrap{overflow:auto;margin-top:12px;border:1px solid var(--line);border-radius:13px}.drawdownTable{min-width:0}.drawdownTable th,.drawdownTable td{padding:10px;text-align:left}.drawdownTable tr.current{background:#453c10;color:#ffe46f}.drawdownTable th:first-child,.drawdownTable td:first-child{position:static;background:transparent}.strategyBreakdown small{display:block;margin-top:8px;color:var(--muted)}
 @media(max-width:620px){.watchRow{grid-template-columns:minmax(0,1fr) auto}.watchStrategy{grid-column:1/-1}.watchStrategy select{max-width:none;width:100%}.homeOpportunityRow{font-size:12px}.drawdownHeadline{gap:6px}.drawdownHeadline>div{padding:8px}.drawdownHeadline b{font-size:16px}.drawdownForm{grid-template-columns:1fr}.drawdownForm .btn{width:100%}}
 </style>
-<link rel="stylesheet" href="portfolio-v6.css?v=20260920-portfolio-resilience-p7" />
+<link rel="stylesheet" href="portfolio-v6.css?v=20260924-portfolio-ux-cash-v1" />
 <link rel="stylesheet" href="v62-tech.css?v=20260809b" />
 <link rel="stylesheet" href="formal-black-gold.css?v=20260920-radar-header-compact-v1" />
 <style id="radarPhase32CriticalLayout">
@@ -460,21 +460,25 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
   <section id="portfolio" class="section portfolioPage tabHidden" data-tab-section="portfolio" aria-labelledby="portfolioTitle">
     <div class="portfolioTopline">
       <div><p class="eyebrow">MY PORTFOLIO</p><h2 id="portfolioTitle">我的投資組合</h2></div>
-      <button id="portfolioAddBtn" class="btn" type="button" aria-label="新增持股">＋ 新增持股</button>
+      <span class="portfolioToplineNote">持股與現金一眼掌握</span>
     </div>
-    <div class="portfolioAdvancedHeading"><p class="eyebrow">ADVANCED TOOLS</p><h2>進階投資工具</h2></div>
-    <nav id="portfolioWorkflowNav" class="portfolioWorkflowNav" aria-label="進階投資工具"><button class="active" type="button" data-portfolio-section="performance">績效</button><button type="button" data-portfolio-section="analytics">分析</button><button type="button" data-portfolio-section="risk">風險</button><button type="button" data-portfolio-section="transactions">交易</button><button type="button" data-portfolio-section="report">報告</button><button type="button" data-portfolio-section="calendar">日曆</button><button type="button" data-portfolio-section="settings">設定</button></nav>
+    <details id="portfolioMoreTools" class="panel portfolioMoreTools"><summary>績效與更多工具 <span aria-hidden="true">›</span></summary>
+      <nav id="portfolioWorkflowNav" class="portfolioWorkflowNav" aria-label="績效與更多工具"><button class="active" type="button" data-portfolio-section="performance">績效</button><button type="button" data-portfolio-section="analytics">分析</button><button type="button" data-portfolio-section="risk">風險</button><button type="button" data-portfolio-section="transactions">交易</button><button type="button" data-portfolio-section="report">報告</button><button type="button" data-portfolio-section="calendar">日曆</button><button type="button" data-portfolio-section="settings">設定</button></nav>
+    </details>
     <span id="portfolioOverviewAnchor" class="portfolioSectionAnchor" aria-hidden="true"></span>
     <article class="panel portfolioDecisionHero" aria-labelledby="portfolioHeroTitle">
       <header class="portfolioHeroHead">
         <div><span id="portfolioHeroTitle">投資組合摘要</span><small id="portfolioHoldingCount">尚未建立持股</small></div>
         <span id="portfolioMarketMode" class="modeBadge">判斷交易時段中</span>
       </header>
+      <div class="portfolioAssetTotal"><span>總資產</span><b id="portfolioHeroTotalAssets">—</b><small id="portfolioHeroAssetNote">持股市值＋現金</small></div>
       <div id="portfolioSummary" class="portfolioSummary" aria-live="polite">
         <article class="summaryCard"><span>今日損益</span><b id="portfolioHeroTodayPnl">—</b><small id="portfolioHeroTodayRate">行情資料準備中</small></article>
-        <article class="summaryCard"><span>累積損益</span><b id="portfolioHeroUnrealizedPnl">—</b><small id="portfolioHeroUnrealizedRate">不含已實現與股息</small></article>
+        <article class="summaryCard"><span>未實現損益</span><b id="portfolioHeroUnrealizedPnl">—</b><small id="portfolioHeroUnrealizedRate">不含已實現與股息</small></article>
         <article class="summaryCard"><span>股票市值</span><b id="portfolioHeroMarketValue">—</b><small id="portfolioHeroCostBasis">成本 —</small></article>
+        <article class="summaryCard portfolioCashCard"><span>可用現金</span><b id="portfolioHeroCash">—</b><small>依交易帳本</small></article>
       </div>
+      <div class="portfolioHeroActions"><button id="portfolioAddBtn" class="btn" type="button" aria-label="新增交易">＋ 新增交易</button><button id="portfolioAddCashBtn" class="btn" type="button">＋ 新增現金</button></div>
       <div class="portfolioHeroStatus">
         <span id="portfolioQuoteStatus" role="status" aria-live="polite">尚未更新行情</span>
         <div class="portfolioHeroControls">
@@ -532,7 +536,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 
     </div>
 
-    <article class="panel portfolioAttentionPanel" data-portfolio-tool="analytics" aria-labelledby="portfolioAttentionTitle">
+    <article class="panel portfolioAttentionPanel" aria-labelledby="portfolioAttentionTitle">
       <div class="panelTitle compactTitle"><div><p class="eyebrow">DECISION FOCUS</p><h2 id="portfolioAttentionTitle">今日需要注意</h2></div><small>依配置與正式 HS 訊號整理</small></div>
       <div id="portfolioAttentionList" class="portfolioAttentionList" aria-live="polite"></div>
     </article>
@@ -562,15 +566,15 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
           <div id="portfolioList" class="portfolioList" role="rowgroup"></div>
         </div>
       </div>
+      <div id="portfolioMobileHoldings" class="portfolioMobileHoldings" aria-live="polite"></div>
       <small class="portfolioHoldingsMethod">← 表格可水平滑動｜趨勢報酬以最近有效收盤調整價計算 →</small>
     </section>
 
     <section class="panel portfolioCapitalPlan" aria-labelledby="portfolioCapitalPlanTitle">
-      <header class="portfolioCapitalHead"><div><p class="eyebrow">SMART REBALANCE</p><h2 id="portfolioCapitalPlanTitle">HS 智慧再平衡</h2><small>依目前配置與 HS Core Score 模擬新資金配置。</small></div><label>本次可投入現金<input id="capitalPlanCash" type="number" min="0" step="1000" inputmode="decimal" value="0" aria-label="本次可投入金額"></label></header>
-      <button id="capitalPlanCalculate" class="btn capitalPlanCalculate" type="button">計算配置方案</button>
+      <header class="portfolioCapitalHead"><div><p class="eyebrow">SMART REBALANCE</p><h2 id="portfolioCapitalPlanTitle">智慧再平衡</h2><small>只使用目前可用現金，依既有持股與目標缺口分配；不建議賣出超配 ETF。</small></div><button id="portfolioSmartTargetOpen" class="btn" type="button">設定我的目標配置</button></header>
       <div id="capitalPlanSummary" class="capitalPlanSummary"></div>
       <div id="capitalPlanRows" class="capitalPlanRows"></div>
-      <p class="capitalPlanDisclaimer">僅為配置模擬，不會修改真實持股，也不會自動下單。</p>
+      <p class="capitalPlanDisclaimer">僅供資金分配參考，不會修改真實持股，也不會自動下單。</p>
     </section>
 
     <section id="portfolioLedgerPanel" class="panel portfolioLedgerPanel" data-portfolio-tool="transactions" aria-labelledby="portfolioLedgerTitle">
@@ -1029,12 +1033,26 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       <button id="portfolioTargetModalClose" class="close" type="button" aria-label="關閉目標配置視窗">關閉</button>
     </div>
     <p class="portfolioTargetIntro">可加入尚未持有的標的並設定目標；智慧再平衡需目標合計 100%。</p>
-    <div class="portfolioTargetBatchRow"><label for="portfolioTargetSymbol">加入目標標的</label><span><input id="portfolioTargetSymbol" type="text" maxlength="10" autocomplete="off" placeholder="例如 00662"><button id="portfolioTargetSymbolAdd" class="miniBtn" type="button">加入</button></span></div>
+    <div class="portfolioTargetBatchRow"><label for="portfolioTargetSymbol">加入目標標的</label><span><input id="portfolioTargetSymbol" type="text" maxlength="60" list="portfolioTargetSuggestions" autocomplete="off" placeholder="輸入 ETF 代號或名稱"><datalist id="portfolioTargetSuggestions"></datalist><button id="portfolioTargetSymbolAdd" class="miniBtn" type="button">加入</button></span></div>
     <form id="portfolioTargetForm" novalidate>
       <div id="portfolioTargetBatchRows" class="portfolioTargetBatchRows"></div>
       <p id="portfolioTargetBatchTotal" class="portfolioTargetBatchTotal" role="status" aria-live="polite">目標配置合計 0%</p>
       <div id="portfolioTargetBatchError" class="formError" role="alert"></div>
-      <button class="btn portfolioSaveBtn" type="submit">儲存目標配置</button>
+      <div class="portfolioTargetActions"><button class="miniBtn" type="button" id="portfolioTargetCancel">取消</button><button class="btn portfolioSaveBtn" type="submit">儲存目標配置</button></div>
+    </form>
+  </div>
+</div>
+
+<div id="portfolioCashModal" class="modal portfolioModal" role="dialog" aria-modal="true" aria-labelledby="portfolioCashTitle" aria-hidden="true">
+  <div class="sheet portfolioSheet portfolioCashSheet">
+    <div class="sheetHead"><div><p class="eyebrow">CASH FLOW</p><h3 id="portfolioCashTitle">新增現金</h3></div><button id="portfolioCashClose" class="close" type="button">關閉</button></div>
+    <form id="portfolioCashForm" novalidate>
+      <label class="portfolioField">類型<select id="portfolioCashType"><option value="DEPOSIT">存入</option><option value="WITHDRAWAL">取出</option></select></label>
+      <label class="portfolioField">金額<input id="portfolioCashAmount" type="number" min="0.01" step="0.01" inputmode="decimal" required></label>
+      <label class="portfolioField">日期<input id="portfolioCashDate" type="date" required></label>
+      <label class="portfolioField">備註（選填）<input id="portfolioCashNote" maxlength="240"></label>
+      <div id="portfolioCashError" class="formError" role="alert"></div>
+      <button class="btn portfolioSaveBtn" type="submit">儲存現金紀錄</button>
     </form>
   </div>
 </div>
@@ -1110,7 +1128,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       <label class="portfolioField" data-transaction-corporate hidden><span id="portfolioTransactionRatioLabel">調整比率</span><input id="portfolioTransactionRatio" type="number" inputmode="decimal" min="0" step="any" placeholder="例如 2 代表 1 股變 2 股"><small>只調整股數；總成本與現金不變。</small></label>
       <div class="portfolioFieldGrid" data-transaction-costs><label class="portfolioField">手續費<input id="portfolioTransactionFee" type="number" inputmode="decimal" min="0" step="any" value="0"></label><label class="portfolioField" data-transaction-tax>交易稅<input id="portfolioTransactionTax" type="number" inputmode="decimal" min="0" step="any" value="0"></label></div>
       <label class="portfolioField">備註（選填）<input id="portfolioTransactionNote" maxlength="240"></label>
-      <div id="portfolioTransactionWarning" class="portfolioTransactionWarning" hidden></div><div id="portfolioTransactionError" class="formError" role="alert"></div>
+      <div id="portfolioCashImpactNote" class="portfolioTransactionWarning" hidden></div><div id="portfolioTransactionWarning" class="portfolioTransactionWarning" hidden></div><div id="portfolioTransactionError" class="formError" role="alert"></div>
       <button class="btn portfolioSaveBtn" type="submit">儲存交易</button>
     </form>
   </div>
@@ -5097,15 +5115,15 @@ initLiveDebugPanel();liveDiagnosticRecord("initial_page_load",{render_state_befo
 
 </script>
 <script src="portfolio-core.js?v=20260920-portfolio-decision-center-p1"></script>
-<script src="portfolio-performance-core.js?v=20260920-portfolio-risk-p3"></script>
-<script src="portfolio-ledger-core.js?v=20260920-portfolio-ledger-p4"></script>
+<script src="portfolio-performance-core.js?v=20260924-portfolio-ux-cash-v1"></script>
+<script src="portfolio-ledger-core.js?v=20260924-portfolio-ux-cash-v1"></script>
 <script src="portfolio-analytics-core.js?v=20260920-portfolio-analytics-p5"></script>
 <script src="portfolio-workflow-core.js?v=20260920-portfolio-workflow-p6"></script>
 <script src="portfolio-resilience-core.js?v=20260920-portfolio-resilience-p7"></script>
 <script src="portfolio-dashboard-core.js?v=20260920-portfolio-dashboard-v1"></script>
-<script src="portfolio-full-backup-core.js?v=20260921-full-backup-v1"></script>
+<script src="portfolio-full-backup-core.js?v=20260924-portfolio-ux-cash-v1"></script>
 <script src="portfolio-etf-catalog.js?v=20260924-etf-universe-v1"></script>
-<script src="portfolio-v6.js?v=20260924-etf-universe-v1"></script>
+<script src="portfolio-v6.js?v=20260924-portfolio-ux-cash-v1"></script>
 <script src="personal-capital-ui.js?v=20260824-phase4"></script>
 </body>
 </html>

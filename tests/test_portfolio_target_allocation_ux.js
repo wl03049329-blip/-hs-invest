@@ -51,11 +51,11 @@ equal(core.validateHolding({...holdings[0],targetAllocation:17.5}).targetAllocat
 check(html.includes('id="portfolioTargetEditorOpen"'), "compact target CTA exists");
 check(html.includes('id="portfolioTargetModal"'), "bulk target editor exists");
 check(html.includes("目標佔比"), "holdings table includes target column");
-check(/data-target-edit/.test(ui) && /openInlineTargetEditor/.test(ui), "inline target editor is wired");
+check(/data-target-edit/.test(ui) && /addEventListener\("click",openTargetModal\)/.test(ui), "holdings target button opens complete target editor");
 check(/data-target-batch/.test(ui) && /saveTargetBatch/.test(ui), "bulk target save is wired");
-check(/applyTargetUpdates[\s\S]*saveHoldings\(\)/.test(ui), "target update uses existing holdings persistence");
+check(/saveTargetBatch[\s\S]*saveHoldings\(\)/.test(ui), "target update uses existing holdings persistence");
 check(/refreshPortfolio\(\)/.test(ui), "target update refreshes rebalance immediately");
-check(/dashboardCore\.targetSummary\(dashboardCore\.targetAllocationItems\(next,nextTargets\)/.test(ui), "aggregate target validation includes unheld symbols");
+check(/targetBatchSummary\(\)/.test(ui) && /if\(!summary\.complete\)/.test(ui), "aggregate target save requires one hundred percent");
 check(/dashboardCore\.fixedCost/.test(ui), "centralized cost formatter is used");
 check(/portfolioTargetBatchTotal\.is-complete/.test(css), "complete total has restrained status styling");
 check(/@media\(max-width:430px\)[^{]*\{[^}]*portfolioHoldingsTools/.test(css), "mobile holdings tools are responsive");

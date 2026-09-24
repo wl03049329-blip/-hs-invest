@@ -9,7 +9,7 @@
   const clamp=(value,min,max)=>Math.min(max,Math.max(min,value));
   function validateSnapshot(raw){
     const tradingDate=date(raw?.date),time=timestamp(raw?.timestamp),market=finite(raw?.totalMarketValue),cash=finite(raw?.cash),assets=finite(raw?.totalAssets),pnl=finite(raw?.unrealizedPnL);
-    if(!tradingDate||!time||market===null||market<0||cash===null||cash<0||assets===null||assets<0||pnl===null||!raw?.holdings||typeof raw.holdings!=="object"||Array.isArray(raw.holdings))return null;
+    if(!tradingDate||!time||market===null||market<0||cash===null||assets===null||pnl===null||!raw?.holdings||typeof raw.holdings!=="object"||Array.isArray(raw.holdings))return null;
     const holdings={};
     for(const [symbol,item] of Object.entries(raw.holdings)){
       const quantity=finite(item?.quantity),marketPrice=finite(item?.marketPrice),marketValue=finite(item?.marketValue);
@@ -112,5 +112,25 @@
     const allocated=Math.round(cash)-remainingCash,remaining=remainingCash,healthFn=typeof allocationHealthScore==="function"?allocationHealthScore:()=>null;
     return{status:cash<=0?"ZERO_CASH":eligible.length?"READY":"NO_ELIGIBLE_TARGET",cash,allocated,remaining,rows:planned.sort((a,b)=>b.allocationAmount-a.allocationAmount||a.symbol.localeCompare(b.symbol)),healthBefore:healthFn(valid.map(row=>({weight:row.current,targetAllocation:row.target}))),healthAfter:healthFn(planned.map(row=>({weight:row.afterAllocation,targetAllocation:row.targetAllocation})))};
   }
-  return Object.freeze({VERSION,STORAGE_KEY,PERIOD_DAYS,CAPITAL_EVENT_TYPES,validateSnapshot,appendDailySnapshot,selectPeriod,assetChange,alignBenchmark,portfolioSignature,analyzePortfolioContinuity,guardBenchmark,calculateConcentration,calculateAllocationDeviation,calculateMaxDrawdown,calculateAnnualizedVolatility,buildCapitalAllocationPlan});
+  function buildCashOnlyRebalancePlan({rows=[],availableCash=0}={}){
+    const cash=finite(availableCash);
+    const source=(Array.isArray(rows)?rows:[]).map(row=>({
+      symbol:String(row?.code||row?.symbol||"").trim().toUpperCase(),
+      target:finite(row?.targetAllocation),
+      marketValue:finite(row?.marketValue),
+      price:finite(row?.price)
+    }));
+    const configured=source.filter(row=>row.target!==null);
+    if(!configured.length)return{status:"TARGET_MISSING",cash,allocated:0,remaining:cash,rows:[]};
+    if(configured.some(row=>!/^[0-9A-Z]{4,10}$/.test(row.symbol)||row.target<0||row.target>100)||Math.abs(configured.reduce((sum,row)=>sum+row.target,0)-100)>.01)return{status:"TARGET_INCOMPLETE",cash,allocated:0,remaining:cash,rows:[]};
+    if(configured.some(row=>row.marketValue===null||row.marketValue<0||row.price===null||row.price<=0))return{status:"PRICE_UNAVAILABLE",cash,allocated:0,remaining:cash,rows:configured.map(row=>({...row,status:row.marketValue===null||row.price===null||row.price<=0?"PRICE_UNAVAILABLE":"WAITING"}))};
+    const currentTotal=configured.reduce((sum,row)=>sum+row.marketValue,0);
+    const usableCash=Math.max(0,cash||0),projected=currentTotal+usableCash;
+    const gaps=configured.map(row=>({...row,currentAllocation:currentTotal>0?row.marketValue/currentTotal*100:0,gap:Math.max(0,projected*row.target/100-row.marketValue)}));
+    const gapTotal=gaps.reduce((sum,row)=>sum+row.gap,0),scale=gapTotal>usableCash&&gapTotal>0?usableCash/gapTotal:1;
+    const planned=gaps.map(row=>{const budget=Math.max(0,Math.floor(row.gap*scale*100)/100),estimatedUnits=row.price>0?Math.floor((budget/row.price)+1e-8):0,allocationAmount=Math.round(estimatedUnits*row.price*100)/100;return{...row,budget,estimatedUnits,allocationAmount,status:row.gap<=0?"OVERWEIGHT":usableCash<=0?"NO_CASH":"READY"}});
+    const allocated=Math.round(planned.reduce((sum,row)=>sum+row.allocationAmount,0)*100)/100;
+    return{status:usableCash<=0?"NO_CASH":"READY",cash,allocated,remaining:Math.round((usableCash-allocated)*100)/100,rows:planned.sort((a,b)=>b.allocationAmount-a.allocationAmount||a.symbol.localeCompare(b.symbol))};
+  }
+  return Object.freeze({VERSION,STORAGE_KEY,PERIOD_DAYS,CAPITAL_EVENT_TYPES,validateSnapshot,appendDailySnapshot,selectPeriod,assetChange,alignBenchmark,portfolioSignature,analyzePortfolioContinuity,guardBenchmark,calculateConcentration,calculateAllocationDeviation,calculateMaxDrawdown,calculateAnnualizedVolatility,buildCapitalAllocationPlan,buildCashOnlyRebalancePlan});
 });
