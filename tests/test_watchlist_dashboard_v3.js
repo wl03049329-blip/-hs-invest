@@ -4,6 +4,7 @@ const fs=require("node:fs");
 const path=require("node:path");
 const vm=require("node:vm");
 const html=fs.readFileSync(path.join(__dirname,"..","index.html"),"utf8");
+const css=fs.readFileSync(path.join(__dirname,"..","formal-black-gold.css"),"utf8");
 const panel=html.slice(html.indexOf('<article id="watchPanel"'),html.indexOf('<div class="sectionHead radarDetailHeading"'));
 const modal=html.slice(html.indexOf('<div id="watchModal"'),html.indexOf('<div id="watchDiagnosticModal"'));
 
@@ -16,6 +17,7 @@ assert.doesNotMatch(panel+modal,/watchStrategyMode|data-buy-plan-mode|data-watch
 assert.match(html,/確定要移除全部自選嗎/);
 assert.match(html,/此操作只會移除追蹤清單，不會影響個人持股資料/);
 assert.match(html,/allowListedAsset:true/);
+assert.match(css,/#watchModal\{z-index:100\}/,"add sheet must stay above mobile bottom navigation (z-index 80)");
 assert.match(html,/currentFormalCoreScoreForSymbol\(symbol\)/);
 
 function source(name,next){const start=html.indexOf(`function ${name}(`);assert.ok(start>=0,name);return html.slice(start,html.indexOf(`function ${next}(`,start))}
