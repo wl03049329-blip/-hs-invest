@@ -60,6 +60,29 @@ for(const symbol of ["00635U","2330"]){
 context.renderWatchAdHocResult({kind:"ready",ticker:"00635U",score:{available:false,reason:"INSUFFICIENT_DAILY_HISTORY"}});
 assert.match(node("#watchAdHocResult").innerHTML,/HS C4 暫無分數/);
 assert.doesNotMatch(node("#watchAdHocResult").innerHTML,/HS C4 0|驗證中/);
+context.currentFormalCoreScoreForSymbol=()=>({available:false,reason:"WAIT_NATIVE"});
+for(const [symbol,resolver,label] of [["009815",validation,"參考"],["0050",validation,"正式"],["00878",validating,"驗證中"]]){
+  context.window.HSC4ValidationMetadata=resolver;
+  const unavailable={available:false,reason:"INSUFFICIENT_DAILY_HISTORY"};
+  context.renderWatchAdHocResult({kind:"ready",ticker:symbol,name:symbol,score:unavailable});
+  const quick=node("#watchAdHocResult").innerHTML;
+  const watch=context.watchDiagnosticCard({id:symbol,name:symbol},{kind:"ready",diagnostic,adHoc:unavailable});
+  context.watchlist.push({id:symbol,name:symbol});
+  context.watchDiagnosticState.set(symbol,{kind:"ready",diagnostic,adHoc:unavailable});
+  context.openWatchDiagnostic(symbol,null);
+  const detail=node("#watchDiagnosticContent").innerHTML;
+  for(const rendered of [quick,watch,detail]){
+    assert.match(rendered,/HS C4 暫無分數/,`${symbol} unavailable calculation state`);
+    assert.match(rendered,new RegExp(label),`${symbol} validation status remains visible`);
+    assert.doesNotMatch(rendered,/HS C4 0|一般持有|回檔訊號出現|<div class="watchAdHocComponents">/,`${symbol} must not gain a fake score, tier or factors`);
+  }
+  context.watchlist.pop();
+}
+context.window.HSC4ValidationMetadata=validation;
+context.renderWatchAdHocResult({kind:"ready",ticker:"0050",score:score("0050")});
+assert.match(node("#watchAdHocResult").innerHTML,/HS C4 暫無分數[\s\S]*正式/,"canonical unavailable must retain FORMAL badge");
+assert.doesNotMatch(node("#watchAdHocResult").innerHTML,/HS C4 0|<div class="watchAdHocComponents">/);
+context.currentFormalCoreScoreForSymbol=()=>({available:true,score:39.4,display_score:39,trading_date:"2026-09-24"});
 assert.equal(context.watchScoreForDisplay("00830",score("00830")).score,39.4,"validation status cannot replace canonical formal score");
 assert.equal(context.watchScoreForDisplay("00830",score("00830")).tier,core.labelFor(39.4).label,"formal status cannot alter canonical tier");
 assert.equal(context.watchScoreForDisplay("00635U",score("00635U")).score,23.4,"reference status cannot change the research score");
