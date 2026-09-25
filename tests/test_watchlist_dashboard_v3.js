@@ -5,7 +5,9 @@ const path=require("node:path");
 const vm=require("node:vm");
 const html=fs.readFileSync(path.join(__dirname,"..","index.html"),"utf8");
 const css=fs.readFileSync(path.join(__dirname,"..","formal-black-gold.css"),"utf8");
-const validation=require(path.join(__dirname,"..","c4-validation-metadata.js"));
+const formalSource=html.match(/const LONG_RADAR_SCORED_CODES=new Set\((\[[^\]]+\])\)/);assert.ok(formalSource,"production Formal source must exist");
+const formalSymbols=new Set(JSON.parse(formalSource[1]));
+const validation=require(path.join(__dirname,"..","c4-validation-metadata.js")).createResolver({formalC4Source:{isFormalC4Symbol:symbol=>formalSymbols.has(symbol)}});
 const panel=html.slice(html.indexOf('<article id="watchPanel"'),html.indexOf('<div class="sectionHead radarDetailHeading"'));
 const modal=html.slice(html.indexOf('<div id="watchModal"'),html.indexOf('<div id="watchDiagnosticModal"'));
 

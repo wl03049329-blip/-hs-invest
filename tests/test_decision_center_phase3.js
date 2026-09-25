@@ -55,7 +55,14 @@ const after=Object.fromEntries(protectedFiles.map(file=>[file,crypto.createHash(
 console.log("N PASS: all eligible production records reconcile without protected mutation");
 
 const latest=artifact.snapshots.at(-1),highest=[...latest.rows].filter(item=>symbols.includes(item.symbol)).sort((a,b)=>b.final_core_score-a.final_core_score)[0],actual=sandbox.officialC4ChangeAttribution(highest.symbol,artifact);
-assert.equal(actual.status,"READY");assert.equal(actual.latest.score,highest.final_core_score);assert.equal(actual.mainDriver,"weekly_j");
+assert.equal(actual.status,"READY");assert.equal(actual.latest.score,highest.final_core_score);
+const factorKeys=["weekly_j","dd52","crash"],largestMagnitude=Math.max(...factorKeys.map(key=>Math.abs(actual.componentDeltas[key])));
+const previousSnapshot=artifact.snapshots.find(item=>item.date===actual.previous.date),previousRow=previousSnapshot?.rows.find(item=>item.symbol===highest.symbol);
+assert.ok(previousRow,"previous valid FINALIZED row must exist");
+for(const key of factorKeys)assert.ok(Math.abs(actual.componentDeltas[key]-(highest.factors[key].contribution-previousRow.factors[key].contribution))<1e-9,`${key} change must match stored FINALIZED factors`);
+if(actual.smallChange)assert.equal(actual.mainDriver,null);
+else{assert.ok(factorKeys.includes(actual.mainDriver));assert.ok(Math.abs(actual.componentDeltas[actual.mainDriver])>=largestMagnitude-1e-9,"main driver follows the largest stored factor change");}
+assert.match(sandbox.officialC4ChangeCompactHtml(actual),/主要原因/);
 console.log(`PRODUCTION PASS: ${highest.symbol} ${actual.previous.score.toFixed(4)} -> ${actual.latest.score.toFixed(4)} (${actual.scoreDelta.toFixed(4)}), main=${actual.mainDriver}`);
 
 for(const text of ["較上次","主要原因","為什麼變？","分數變動來源","尚無前次正式紀錄可比較","模型版本不同，暫不比較"])assert.ok(html.includes(text));

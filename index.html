@@ -2360,7 +2360,7 @@ function currentFormalCoreScoreForSymbol(symbol,targetDate=taipeiToday(),now=new
   if(LONG_RADAR_CODES.has(ticker)&&!LONG_RADAR_SCORED_CODES.has(ticker))return{available:false,ticker,score:null,display_score:null,status:"UNAVAILABLE",reason:"WAIT_NATIVE"};
   return window.HSCanonicalScoreResolver?.selectFormalCoreScore?.(currentDualTrackCoreView(targetDate,now),ticker)||{available:false,ticker,score:null,display_score:null,status:"UNAVAILABLE",reason:"RESOLVER_UNAVAILABLE"};
 }
-window.HSFormalCoreScoreAdapter=Object.freeze({scoreFor:currentFormalCoreScoreForSymbol});
+window.HSFormalCoreScoreAdapter=Object.freeze({scoreFor:currentFormalCoreScoreForSymbol,isFormalC4Symbol:symbol=>LONG_RADAR_SCORED_CODES.has(String(symbol||"").trim().toUpperCase())});
 function currentFrontendLiveRenderState(dualTrack=currentDualTrackCoreView(taipeiToday(),new Date())){
   const marketState=decisionCenterEffectiveMarketState(dualTrack),selectedSnapshotTime=window.HSLiveDiagnostics?.latestSnapshotTime(liveCanonicalCoreSnapshots),diagnostics=liveCoreSourceState?.diagnostics||{};
   return window.HSLiveDiagnostics?.classifyRenderState({marketState,sourceStatus:liveCoreSourceState?.status,transportError:liveCoreSourceState?.transport_error===true,pending:Boolean(liveQuoteInFlight),liveSnapshotCount:liveCanonicalCoreSnapshots.length,selectedSnapshotTime,freshnessCheck:diagnostics.freshness_check})||"FRONTEND_STATE_PENDING";

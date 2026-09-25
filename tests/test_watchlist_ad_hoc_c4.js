@@ -56,6 +56,8 @@ assert.equal(core.buildAdHocScore({...stock,metadata:{id:"2330",name:"unverified
 
 const waitNative=core.buildAdHocScore(input("009815"));
 assert.equal(waitNative.available,true);assert.equal(waitNative.mode,"AD_HOC");assert.equal(waitNative.officialEligible,false);assert.equal(core.buildFinal(input("009815")).coreScore,null,"009815 official WAIT_NATIVE behavior remains unavailable");
+const formalButCapitalExcluded=core.buildAdHocScore(input("00757"));
+assert.equal(formalButCapitalExcluded.available,true);assert.equal(formalButCapitalExcluded.mode,"AD_HOC");assert.equal(formalButCapitalExcluded.officialEligible,true);
 
 const short=core.buildAdHocScore(input("00878",tradingRows(120)));
 assert.equal(short.available,false);assert.equal(short.score,null);assert.equal(short.reason,"INSUFFICIENT_DAILY_HISTORY");
