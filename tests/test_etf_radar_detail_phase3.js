@@ -79,5 +79,6 @@ assert.deepEqual(scrolled.map(item=>item.id),["0050","00662","00830","00935"].ma
 assert.ok(scrolled.every(item=>item.options.behavior==="smooth"&&item.options.block==="start"));
 handlers[0]({target:{closest:()=>({dataset:{radarExplainTarget:"missing"}})},preventDefault:()=>prevented++,stopPropagation:()=>stopped++});
 assert.equal(scrolled.length,4,"missing target safely returns");assert.equal(prevented,4);assert.equal(stopped,4);
+assert.match(css,/\.radarWhyScore\{scroll-margin-top:60px\}/,"jump target clears the sticky detail header");
 assert.doesNotMatch(html.slice(start,end),/fetch\(|localStorage|intraday|provisional/i);
 console.log("PASS ETF detail finalized-only score explanation, prior complete snapshot, missing values, tiers and mobile stack");
