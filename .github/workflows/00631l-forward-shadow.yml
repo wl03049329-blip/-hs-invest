@@ -1,0 +1,90 @@
+name: 00631L Daily Forward Shadow
+
+on:
+  schedule:
+    # Taipei 17:47, 19:47, 21:47. Runtime date, never cron date, governs capture.
+    - cron: '47 9,11,13 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Validate live sources without publishing observations
+        type: boolean
+        default: true
+  push:
+    paths:
+      - 'research/hs_leverage/phase_l7_daily.py'
+      - 'research/hs_leverage/test_phase_l7_daily.py'
+      - 'research/hs_leverage/phase_l7_forward_policy.json'
+      - '.github/workflows/00631l-forward-shadow.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hs-00631l-forward-shadow
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m unittest discover -s research/hs_leverage -p 'test_phase_l7*.py'
+
+  daily:
+    needs: test
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate current checkout before collection
+        run: python -m unittest discover -s research/hs_leverage -p 'test_phase_l7*.py'
+      - name: Collect completed daily bars and evaluate forward only
+        id: collect
+        continue-on-error: true
+        env:
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+        run: |
+          if [ "$DRY_RUN" = "true" ]; then
+            python research/hs_leverage/phase_l7_daily.py --dry-run
+          else
+            python research/hs_leverage/phase_l7_daily.py
+          fi
+      - name: Publish only operational shadow state
+        if: github.event_name == 'schedule' || inputs.dry_run == false
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for file in 00631L-adjusted-daily.json hs_leverage_c_v1_forward_ledger.jsonl hs_leverage_c_v1_outcomes.jsonl daily-status.json daily-incidents.jsonl; do
+            path="research/hs_leverage/forward/$file"
+            if [ -f "$path" ]; then git add -- "$path"; fi
+          done
+          if ! git diff --cached --quiet; then
+            git diff --cached --check
+            git commit -m 'Update 00631L forward shadow validation'
+            # Unrelated updater commits may advance main. Rebase preserves their
+            # changes; overlapping ledger conflicts fail rather than overwrite.
+            published=false
+            for attempt in 1 2 3; do
+              git pull --rebase origin main
+              if git push origin HEAD:main; then published=true; break; fi
+              sleep 3
+            done
+            test "$published" = true
+          fi
+      - name: Preserve failure as a failed workflow
+        if: steps.collect.outcome == 'failure'
+        run: exit 1
