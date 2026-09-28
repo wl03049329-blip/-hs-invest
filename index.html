@@ -4017,7 +4017,7 @@ function radarDetailCoreStatusHtml(x,decision,score,dailyPair,presentation,rank)
   const changeLabel=!Number.isFinite(delta)?"歷史資料不足":delta===0?"今日持平":`今日 ${delta>0?"+":""}${delta} 分`;
   const comparison=Number.isFinite(delta)?`${previousScore} → ${latestScore}`:"前一有效正式交易日資料不足",next=radarOverviewNextLevel(hasScore?latestScore:null);
   const nextLabel=!next.available?"資料暫缺":next.isMaxLevel?"已進入最高級距":`${next.nextLabel}（${next.nextThreshold} 分）｜還差 ${next.distance} 分`;
-  return`<section class="radarV2Section radarDetailCoreStatus" aria-label="${esc(x.id)} 今日判讀"><small class="radarDetailCoreEyebrow">今日判讀</small><div class="radarDetailCoreIdentity">${radarOverviewRankBadgeHtml(rank)}<span><b>${esc(x.id)}</b><small>${esc(x.name)}</small></span></div><div class="radarDetailCoreLead"><span class="radarDetailCoreScore"><small>正式分數</small><b>${hasScore?latestScore:"—"}</b></span><strong>${esc(hasScore?latest.status:"資料暫缺")}</strong></div><div class="radarDetailCoreFacts"><div class="radarDetailCoreDelta"><small>今日變化</small><span><em class="${deltaUi.tone}">${esc(changeLabel)}</em><b>${esc(comparison)}</b></span></div><div class="radarDetailCoreNext"><small>下一級</small><b>${esc(nextLabel)}</b></div></div><small class="radarDetailCoreAsOf">正式資料截至 ${esc(latest?.tradingDate||"資料時間待更新")}</small></section>`;
+  return`<section class="radarV2Section radarDetailCoreStatus" aria-label="${esc(x.id)} 今日判讀"><small class="radarDetailCoreEyebrow">今日判讀</small><div class="radarDetailCoreIdentity">${radarOverviewRankBadgeHtml(rank)}<span><b>${esc(x.id)}</b><small>${esc(x.name)}</small></span></div><div class="radarDetailCoreLead"><span class="radarDetailCoreScore"><small>正式分數</small><b>${hasScore?latestScore:"—"}</b></span><strong>${esc(hasScore?latest.status:"資料暫缺")}</strong></div><div class="radarDetailCoreFacts"><div class="radarDetailCoreDelta"><small>今日變化</small><span><em class="${deltaUi.tone}">${esc(changeLabel)}</em><b>${esc(comparison)}</b></span></div><div class="radarDetailCoreNext"><small>下一級</small><b>${esc(nextLabel)}</b></div></div><small class="radarDetailCoreAsOf">正式資料截至 ${esc(latest?.tradingDate||"資料時間待更新")}</small>${hasScore&&Number.isFinite(latest?.finalCoreScore)?`<button class="radarExplainJump" type="button" data-radar-explain-jump>為什麼今天是 ${latest.finalCoreScore.toFixed(1)} 分？</button>`:""}</section>`;
 }
 function radarPrimaryDriver(decision){
   const factors=decision?.coreFactors||{},labels={weeklyJ:"週 J 值低檔",dd52:"52週回檔深度",crash:"20日急跌因子"};
@@ -4025,20 +4025,22 @@ function radarPrimaryDriver(decision){
   return winner?`目前主要由 ${labels[winner.key]||winner.key} 推升 Core Score。`:"";
 }
 const RADAR_EXPLAIN_FACTOR_DEFINITIONS=[
-  {key:"dd52",label:"52週回檔",model:"DD52",rawSuffix:"%"},
-  {key:"weekly_j",label:"週 J 值",model:"Weekly J",rawSuffix:""},
-  {key:"crash",label:"20日急跌因子",model:"Crash 20D",rawSuffix:"%"}
+  {key:"dd52",label:"52週回檔",model:"DD52",rawSuffix:"%",meaning:"觀察價格距離近 52 週高點的回落程度。"},
+  {key:"weekly_j",label:"週 J 值",model:"Weekly J",rawSuffix:"",meaning:"觀察週線動能的相對位置。"},
+  {key:"crash",label:"20日急跌因子",model:"Crash 20D",rawSuffix:"%",meaning:"觀察近 20 日價格的急跌幅度。"}
 ];
 function radarOfficialFactorRecord(ticker,snapshot){
-  const date=String(snapshot?.date||""),row=(snapshot?.rows||[]).find(item=>item?.symbol===ticker),rawTotal=Number(row?.final_core_score),dataAsOf=String(row?.data_as_of||"");
-  if(snapshot?.snapshot_type!=="FINALIZED_CLOSE"||snapshot?.finalized!==true||!isCompletedTradingDate(date)||!row||row?.status==="WAIT_NATIVE"||row?.core_score_version!==LONG_TERM_CORE_SCORE_VERSION||!Number.isFinite(rawTotal)||rawTotal<0||rawTotal>100||!dataAsOf.startsWith(`${date}T`))return null;
+  const date=String(snapshot?.date||""),row=(snapshot?.rows||[]).find(item=>item?.symbol===ticker),storedScore=row?.final_core_score,rawTotal=Number(storedScore),dataAsOf=String(row?.data_as_of||"");
+  if(snapshot?.snapshot_type!=="FINALIZED_CLOSE"||snapshot?.finalized!==true||!isCompletedTradingDate(date)||!row||storedScore===null||storedScore===undefined||storedScore===""||row?.status==="WAIT_NATIVE"||row?.core_score_version!==LONG_TERM_CORE_SCORE_VERSION||!Number.isFinite(rawTotal)||rawTotal<0||rawTotal>100||!dataAsOf.startsWith(`${date}T`))return null;
   const factors=RADAR_EXPLAIN_FACTOR_DEFINITIONS.map(definition=>{const source=row?.factors?.[definition.key]||{},valid=value=>value!==null&&value!==undefined&&value!==""&&Number.isFinite(Number(value)),raw=Number(source.raw),score=Number(source.score),weight=Number(source.weight),contribution=Number(source.contribution),available=[source.raw,source.score,source.weight,source.contribution].every(valid);return{...definition,raw,score,weight,contribution,available}});
-  return{date,rawTotal,displayScore:Math.floor(rawTotal),factors,complete:factors.every(factor=>factor.available)};
+  const complete=factors.every(factor=>factor.available)&&Math.abs(factors.reduce((sum,factor)=>sum+factor.contribution,0)-rawTotal)<=.15;
+  return{date,rawTotal,displayScore:Math.floor(rawTotal),dataAsOf,scoreVersion:row.core_score_version,snapshotStatus:snapshot.snapshot_type,factors,complete};
 }
 function radarOfficialFactorPair(ticker,artifact=typeof finalizedCoreScoreHistoryArtifact!=="undefined"?finalizedCoreScoreHistoryArtifact:null){
   if(artifact?.schema_version!==1||artifact?.core_score_version!==LONG_TERM_CORE_SCORE_VERSION||!Array.isArray(artifact?.snapshots))return{current:null,previous:null};
-  const records=[...artifact.snapshots].sort((a,b)=>String(b?.date||"").localeCompare(String(a?.date||""))).map(snapshot=>radarOfficialFactorRecord(ticker,snapshot)).filter(Boolean);
-  return{current:records[0]||null,previous:records[1]||null};
+  const sorted=[...artifact.snapshots].sort((a,b)=>String(b?.date||"").localeCompare(String(a?.date||""))),records=sorted.map(snapshot=>radarOfficialFactorRecord(ticker,snapshot)).filter(Boolean);
+  const current=records.find(record=>record.date===sorted[0]?.date)||null,previous=current?.complete?records.find(record=>record.date<current.date&&record.complete)||null:null;
+  return{current,previous};
 }
 function radarExplainNumber(value,digits=2){
   if(!Number.isFinite(value))return"—";
@@ -4053,25 +4055,35 @@ function radarExplainDeltaTone(value){return!Number.isFinite(value)||Math.abs(va
 function radarFactorAttribution(pair){
   const current=pair?.current,previous=pair?.previous;if(!current?.complete||!previous?.complete)return null;
   const deltas=current.factors.map(factor=>{const before=previous.factors.find(item=>item.key===factor.key);return{key:factor.key,label:factor.label,value:factor.contribution-before.contribution}});
-  return{deltas,total:deltas.reduce((sum,item)=>sum+item.value,0),displayDelta:current.displayScore-previous.displayScore};
+  const total=deltas.reduce((sum,item)=>sum+item.value,0),rawDelta=current.rawTotal-previous.rawTotal;
+  if(Math.abs(total-rawDelta)>.15)return null;
+  return{deltas,total,rawDelta,displayDelta:current.displayScore-previous.displayScore};
 }
 function radarExplainSummary(attribution){
-  if(!attribution)return"因子變化資料暫缺";
-  const meaningful=attribution.deltas.filter(item=>Math.abs(item.value)>.1),total=attribution.total;
-  if(!meaningful.length)return"最新正式分數變化不大，三因子整體維持穩定。";
+  if(!attribution)return"暫無完整前次比較資料";
+  const meaningful=attribution.deltas.filter(item=>Math.abs(item.value)>.1),total=attribution.rawDelta;
+  if(!meaningful.length)return"今天與前次正式分數差異不大，三項核心因子變化有限。";
   const direction=total<-.1?-1:total>.1?1:0;
-  if(!direction)return"最新正式分數變化不大，三因子互有消長。";
+  if(!direction)return"今天與前次正式分數差異不大，三項因子互有消長。";
   const candidates=meaningful.filter(item=>Math.sign(item.value)===direction).sort((a,b)=>Math.abs(b.value)-Math.abs(a.value));
-  if(!candidates.length)return"最新正式分數變化不大，三因子互有消長。";
+  if(!candidates.length)return"暫無完整前次比較資料";
   const leaders=[candidates[0]],second=candidates[1];if(second&&Math.abs(second.value)>=Math.max(.1,Math.abs(candidates[0].value)*.35))leaders.push(second);
-  const names=leaders.map(item=>item.label).join("與");return direction<0?`最新正式分數下降主要來自${names}轉弱。`:`最新正式分數上升主要由${names}帶動。`;
+  const names=leaders.map(item=>item.label).join("與");return direction<0?`今天正式分數比前次下降 ${radarExplainNumber(Math.abs(total),1)} 分，主要因${names}貢獻減少。`:`今天正式分數比前次提高 ${radarExplainNumber(total,1)} 分，主要因${names}貢獻增加。`;
 }
 function radarWhyScoreHtml(x,decision){
-  const pair=radarOfficialFactorPair(x.id),current=pair.current,attribution=radarFactorAttribution(pair),main=current?.complete?[...current.factors].sort((a,b)=>b.contribution-a.contribution)[0]:null,percentage=main&&current.rawTotal>0?Math.round(main.contribution/current.rawTotal*100):null;
-  const factorCards=RADAR_EXPLAIN_FACTOR_DEFINITIONS.map(definition=>{const factor=current?.factors?.find(item=>item.key===definition.key),available=factor?.available===true,raw=available?`${radarExplainNumber(factor.raw,2)}${definition.rawSuffix}`:"—";return`<section class="radarFactorCardV32${main?.key===definition.key?" is-main":""}"><header class="radarFactorHeaderV32"><span class="radarFactorTitleV32">${esc(definition.label)}<small class="radarFactorModelV32">${esc(definition.model)}</small></span><strong class="radarFactorValueV32">${raw}</strong></header><div class="radarFactorMetricsV32"><div class="radarFactorMetricV32"><span>因子分數</span><strong>${available?radarExplainNumber(factor.score,2):"—"}</strong></div><div class="radarFactorMetricV32"><span>權重</span><strong>${available?`${radarExplainNumber(factor.weight,0)}%`:"—"}</strong></div><div class="radarFactorMetricV32 is-contribution"><span>分數貢獻</span><strong>${available?radarExplainSigned(factor.contribution,2):"—"}</strong></div></div></section>`}).join("");
+  const pair=radarOfficialFactorPair(x.id),current=pair.current,attribution=radarFactorAttribution(pair);
+  if(!current?.complete)return`<section class="radarV2Section radarWhyScore"><header class="radarExplainTitle"><h3>分數拆解</h3></header><p class="radarExplainUnavailable">${current?"正式因子資料不足，暫無分數拆解。":"目前沒有正式 HS Core Score，因此暫無分數拆解。"}</p></section>`;
+  const main=[...current.factors].sort((a,b)=>b.contribution-a.contribution)[0],tier=window.HSFinalCoreProduction?.labelFor(current.rawTotal)?.label||"資料不足",next=radarOverviewNextLevel(current.displayScore),nextLabel=!next.available||next.isMaxLevel?"":`距離${next.nextLabel}：還差 ${next.distance} 分`;
+  const factorCards=current.factors.map(factor=>{
+    const delta=attribution?.deltas.find(item=>item.key===factor.key)?.value;
+    const change=!Number.isFinite(delta)?"暫無完整前次比較資料":Math.abs(delta)<.005?"此項貢獻與前次相同。":`此項貢獻比前次${delta>0?"增加":"減少"} ${radarExplainNumber(Math.abs(delta),2)} 分。`;
+    const share=current.rawTotal>0?Math.max(0,Math.min(100,factor.contribution/current.rawTotal*100)):0;
+    return`<section class="radarFactorCardV32${main.key===factor.key?" is-main":""}"><header class="radarFactorHeaderV32"><span class="radarFactorTitleV32">${esc(factor.label)}<small class="radarFactorModelV32">${esc(factor.model)}</small></span><strong class="radarFactorValueV32">貢獻 ${radarExplainNumber(factor.contribution,2)}</strong></header><div class="radarFactorContributionTrack" aria-hidden="true"><i style="width:${share}%"></i></div><p class="radarFactorMeaning"><small>這個指標在看什麼？</small>${esc(factor.meaning)}</p><p class="radarFactorMeaning"><small>今天發生什麼變化？</small><span class="${radarExplainDeltaTone(delta)}">${esc(change)}</span></p></section>`;
+  }).join("");
   const attributionRows=attribution?attribution.deltas.map(item=>`<div><span>${esc(item.label)}</span><b class="${radarExplainDeltaTone(item.value)}">${radarExplainSigned(item.value,2)}</b></div>`).join(""):"";
-  const displayChange=current&&pair.previous?`<div class="radarExplainDisplayChange"><span><b>${pair.previous.displayScore}</b><i>→</i><b>${current.displayScore}</b></span><strong class="${radarExplainDeltaTone(attribution?.displayDelta)}">${Number.isFinite(attribution?.displayDelta)?`${attribution.displayDelta>0?"▲":attribution.displayDelta<0?"▼":""}${Math.abs(attribution.displayDelta)}`:"—"}</strong></div>`:`<div class="radarExplainDisplayChange is-unavailable"><span>今日變化</span><strong>—</strong></div>`;
-  return`<section class="radarV2Section radarWhyScore"><header class="radarExplainTitle"><h3>分數拆解</h3><small>Core Score 正式三因子｜資料來自最新正式盤後</small></header><div class="radarExplainLead"><div class="radarExplainScore"><small>Core Score</small><b>${current?current.displayScore:"—"}</b></div><div class="radarExplainPrimary"><small>目前分數主要來自</small><b>${main?esc(main.label):"資料暫缺"}</b>${Number.isFinite(percentage)?`<em>約占目前總分 ${percentage}%</em>`:""}</div></div><div class="radarFactorStackV32" data-radar-factor-layout="mobile-stack-v32">${factorCards}</div>${current?.complete?`<div class="radarExplainTotals"><span><small>原始總分</small><b>${radarExplainNumber(current.rawTotal,2)}</b></span><span><small>顯示分數</small><b>${current.displayScore}</b></span></div>`:`<p class="radarExplainUnavailable">分數拆解資料不完整</p>`}<section class="radarExplainToday"><header><h4>最新正式分數變化</h4><small>前一正式盤後 → 最新正式盤後</small></header>${displayChange}${attribution?`<div class="radarExplainAttribution">${attributionRows}<div class="is-total"><span>合計</span><b class="${radarExplainDeltaTone(attribution.total)}">${radarExplainSigned(attribution.total,2)}</b></div></div>`:`<p class="radarExplainUnavailable">因子變化資料暫缺</p>`}<div class="radarExplainReading"><small>最新判讀</small><p>${esc(radarExplainSummary(attribution))}</p></div></section></section>`;
+  const comparison=attribution?`<div class="radarExplainDisplayChange"><span><small>前次 ${esc(pair.previous.date)}</small><b>${radarExplainNumber(pair.previous.rawTotal,1)}</b><i>→</i><small>今日 ${esc(current.date)}</small><b>${radarExplainNumber(current.rawTotal,1)}</b></span><strong class="${radarExplainDeltaTone(attribution.rawDelta)}">${radarExplainSigned(attribution.rawDelta,1)}</strong></div>`:`<p class="radarExplainUnavailable">暫無完整前次比較資料</p>`;
+  const details=current.factors.map(factor=>{const before=pair.previous?.factors.find(item=>item.key===factor.key);return`<div class="radarExplainDetailRow"><b>${esc(factor.label)}</b><span>原始值 ${radarExplainNumber(factor.raw,2)}${factor.rawSuffix}</span><span>因子分數 ${radarExplainNumber(factor.score,2)}</span><span>權重 ${radarExplainNumber(factor.weight,0)}%</span><span>貢獻 ${radarExplainNumber(factor.contribution,2)}</span>${before?`<span>前次原始值 ${radarExplainNumber(before.raw,2)}${factor.rawSuffix}</span><span>前次貢獻 ${radarExplainNumber(before.contribution,2)}</span>`:""}</div>`}).join("");
+  return`<section class="radarV2Section radarWhyScore" id="radar-score-explain-${esc(x.id)}"><header class="radarExplainTitle"><h3>分數拆解</h3><small>正式盤後三因子｜${esc(current.date)}</small></header><p class="radarExplainIntro">${esc(radarExplainSummary(attribution))}</p><div class="radarExplainLead"><div class="radarExplainScore"><small>正式原始分數</small><b>${radarExplainNumber(current.rawTotal,1)}</b></div><div class="radarExplainPrimary"><small>正式級距</small><b>${esc(tier)}</b>${nextLabel?`<em>${esc(nextLabel)}</em>`:""}<em>目前貢獻最高：${esc(main.label)}</em></div></div><div class="radarFactorStackV32" data-radar-factor-layout="mobile-stack-v32">${factorCards}</div><section class="radarExplainToday"><header><h4>今日與前次正式交易日</h4><small>只比較完整且同版本的正式資料</small></header>${comparison}${attribution?`<div class="radarExplainAttribution">${attributionRows}<div class="is-total"><span>三因子貢獻變化合計</span><b class="${radarExplainDeltaTone(attribution.total)}">${radarExplainSigned(attribution.total,2)}</b></div></div>`:""}</section><details class="radarExplainDetails"><summary>查看計算細節</summary><div><p>Score version：${esc(current.scoreVersion)}｜資料日期：${esc(current.date)}｜資料截至：${esc(current.dataAsOf)}｜Snapshot：${esc(current.snapshotStatus)}</p><p>正式原始總分：${radarExplainNumber(current.rawTotal,2)}｜顯示分數：${current.displayScore}${pair.previous?`｜前次正式原始分數：${radarExplainNumber(pair.previous.rawTotal,2)}`:""}</p>${details}</div></details></section>`;
 }
 const RADAR_TREND_PHASE4_PERIODS={"10D":10,"20D":20,"60D":60,"120D":120};
 function radarTrendPhase4Thresholds(){
@@ -4902,6 +4914,7 @@ document.addEventListener("click",event=>{const button=event.target.closest("[da
 let lastHsStoryTrigger=$("#openHsStory");
 function renderHsCanonicalScoreGuide(){
   const target=$("#hsCanonicalScoreGuide");if(!target)return;
+document.addEventListener("click",event=>{const button=event.target.closest("[data-radar-explain-jump]");if(!button)return;event.preventDefault();event.stopPropagation();button.closest(".radarV2Card")?.querySelector(".radarWhyScore")?.scrollIntoView({behavior:"smooth",block:"start"})});
   const labels=[...(HSFinalCoreProduction?.LABELS||[])].sort((a,b)=>a.min-b.min);
   target.innerHTML=labels.map((item,index)=>{const max=index<labels.length-1?labels[index+1].min-1:100;return`<div><span>${item.min}–${max}</span><b>${esc(item.label)}</b></div>`}).join("");
 }

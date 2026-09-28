@@ -1,57 +1,55 @@
 "use strict";
-
 const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path"),vm=require("node:vm");
 const root=path.resolve(__dirname,".."),html=fs.readFileSync(path.join(root,"index.html"),"utf8"),css=fs.readFileSync(path.join(root,"formal-black-gold.css"),"utf8");
-const start=html.indexOf("const RADAR_EXPLAIN_FACTOR_DEFINITIONS"),end=html.indexOf("function radarScoreTrendHtml",start);
-assert.ok(start>=0&&end>start,"Phase 3 explainability helpers must exist");
-const context={Number,Math,String,esc:value=>String(value),LONG_TERM_CORE_SCORE_VERSION:"FINAL_CORE_WEIGHT_V1",isCompletedTradingDate:date=>/^2026-\d{2}-\d{2}$/.test(String(date))};
-vm.createContext(context);vm.runInContext(`${html.slice(start,end)}\nthis.render=radarWhyScoreHtml;this.pair=radarOfficialFactorPair;this.record=radarOfficialFactorRecord;this.attribute=radarFactorAttribution;this.summary=radarExplainSummary;`,context);
-
+const core=require("../final-core-production.js"),decision=require("../hs-decision-layer-v1.js");
+const start=html.indexOf("const RADAR_EXPLAIN_FACTOR_DEFINITIONS"),end=html.indexOf("const RADAR_TREND_PHASE4_PERIODS",start);
+assert.ok(start>=0&&end>start,"existing score breakdown helpers must remain");
+const nextLevel=value=>{const score=Math.floor(value),threshold=decision.NEXT_THRESHOLDS.find(item=>item>score);return threshold===undefined?{available:true,isMaxLevel:true}:{available:true,isMaxLevel:false,nextLabel:decision.STAGES.find(item=>item.min===threshold).label,distance:threshold-score}};
+const context={Number,Math,String,esc:value=>String(value),LONG_TERM_CORE_SCORE_VERSION:core.LONG_TERM_CORE_SCORE_VERSION,isCompletedTradingDate:date=>/^2026-\d{2}-\d{2}$/.test(String(date)),window:{HSFinalCoreProduction:core,HSDecisionLayerV1:decision},radarOverviewNextLevel:nextLevel};
+vm.createContext(context);vm.runInContext(`${html.slice(start,end)}\nthis.render=radarWhyScoreHtml;this.pair=radarOfficialFactorPair;`,context);
 const factor=(raw,score,weight,contribution)=>({raw,score,weight,contribution});
-const row=(score,{dd52=39.05,weekly=6.3,crash=0,missing=null}={})=>({symbol:"00830",final_core_score:score,core_score_version:"FINAL_CORE_WEIGHT_V1",data_as_of:"2026-09-17T13:30:00+08:00",factors:{dd52:missing==="dd52"?{raw:null,score:null,weight:55,contribution:null}:factor(-21.28,71,55,dd52),weekly_j:missing==="weekly_j"?{raw:null,score:null,weight:30,contribution:null}:factor(31.7,21,30,weekly),crash:missing==="crash"?{raw:null,score:null,weight:15,contribution:null}:factor(-4.05,0,15,crash)}});
-const snapshot=(date,item)=>({date,snapshot_type:"FINALIZED_CLOSE",finalized:true,rows:[{...item,data_as_of:`${date}T13:30:00+08:00`}]});
-const artifact=(current,previous=null)=>({schema_version:1,core_score_version:"FINAL_CORE_WEIGHT_V1",snapshots:[...(previous?[snapshot("2026-09-16",previous)]:[]),snapshot("2026-09-17",current)]});
-const render=(current,previous=null)=>{context.finalizedCoreScoreHistoryArtifact=artifact(current,previous);return context.render({id:"00830"},{});};
-
-let output=render(row(45.35),row(49.35,{dd52:41.85,weekly:7.5,crash:0}));
-assert.match(output,/目前分數主要來自[\s\S]*52週回檔/);assert.match(output,/約占目前總分 86%/);
-assert.ok(output.indexOf("52週回檔")<output.indexOf("週 J 值")&&output.indexOf("週 J 值")<output.indexOf("20日急跌因子"),"factor order must stay fixed");
-assert.match(output,/原始總分[\s\S]*45\.35/);assert.match(output,/顯示分數[\s\S]*>45</);assert.match(output,/>49<[\s\S]*→[\s\S]*>45<[\s\S]*▼4/);
-assert.match(output,/52週回檔<\/span><b class="is-negative">-2\.80/);assert.match(output,/週 J 值<\/span><b class="is-negative">-1\.20/);assert.match(output,/20日急跌因子<\/span><b class="is-neutral">0\.00/);assert.match(output,/合計<\/span><b class="is-negative">-4\.00/);
-assert.match(output,/最新正式分數下降主要來自52週回檔與週 J 值轉弱。/);
-
-output=render(row(50,{dd52:43.05,weekly:6.5,crash:.45}),row(45.8,{dd52:39.05,weekly:6.3,crash:.45}));
-assert.match(output,/class="is-positive">\+4\.00/);assert.match(output,/class="is-positive">\+0\.20/);assert.match(output,/最新正式分數上升主要由52週回檔帶動。/);
-
-output=render(row(45.35,{dd52:39.08,weekly:6.27,crash:0}),row(45.35,{dd52:39.05,weekly:6.3,crash:0}));
-assert.match(output,/最新正式分數變化不大，三因子整體維持穩定。/);
-
-output=render(row(45.35),null);assert.match(output,/因子變化資料暫缺/);assert.match(output,/最新正式分數變化[\s\S]*—/);
-output=render(row(45.35,{missing:"dd52"}),row(49.35,{dd52:41.85,weekly:7.5,crash:0}));assert.match(output,/分數拆解資料不完整/);assert.doesNotMatch(output,/約占目前總分/);assert.match(output,/52週回檔[\s\S]*>—</);
-output=render(row(0,{dd52:0,weekly:0,crash:0}),row(0,{dd52:0,weekly:0,crash:0}));assert.doesNotMatch(output,/約占目前總分/);
-
-context.finalizedCoreScoreHistoryArtifact={schema_version:1,core_score_version:"FINAL_CORE_WEIGHT_V1",snapshots:[snapshot("2026-09-17",{symbol:"00830",status:"WAIT_NATIVE",final_core_score:null,core_score_version:"FINAL_CORE_WEIGHT_V1",data_as_of:"2026-09-17T13:30:00+08:00"})]};
-assert.match(context.render({id:"00830"},{}),/資料暫缺/);
-
-const renderedDom=render(row(45.35));
-assert.match(renderedDom,/<div class="radarFactorStackV32" data-radar-factor-layout="mobile-stack-v32"><section class="radarFactorCardV32/);
-assert.equal((renderedDom.match(/<section class="radarFactorCardV32/g)||[]).length,3,"production renderer must place exactly three vertically stacked factor sections under the V32 parent");
-assert.doesNotMatch(renderedDom,/class="radarExplainFactors"|class="radarExplainFactor(?:\s|"|Metrics)/,"Phase 3.2 renderer must not emit the legacy three-column factor DOM");
-assert.match(renderedDom,/radarFactorHeaderV32[\s\S]*radarFactorTitleV32[\s\S]*radarFactorValueV32/);
-assert.equal((renderedDom.match(/class="radarFactorMetricV32/g)||[]).length,9,"each factor must render three full-width metric rows");
+const makeRow=(symbol,score,{dd52=39.05,weekly=6.3,crash=0,missing=null,version=core.LONG_TERM_CORE_SCORE_VERSION}={})=>({symbol,final_core_score:score,core_score_version:version,factors:{dd52:missing==="dd52"?{raw:null,score:null,weight:55,contribution:null}:factor(-21.28,71,55,dd52),weekly_j:factor(31.7,21,30,weekly),crash:factor(-4.05,0,15,crash)}});
+const snapshot=(date,row)=>({date,snapshot_type:"FINALIZED_CLOSE",finalized:true,rows:[{...row,data_as_of:`${date}T13:30:00+08:00`} ]});
+const setArtifact=snapshots=>{context.finalizedCoreScoreHistoryArtifact={schema_version:1,core_score_version:core.LONG_TERM_CORE_SCORE_VERSION,snapshots}};
+const render=(symbol="00830")=>context.render({id:symbol},{});
+setArtifact([snapshot("2026-09-17",makeRow("00830",45.35)),snapshot("2026-09-16",makeRow("00830",49.35,{dd52:41.85,weekly:7.5}))]);
+let output=render();
+assert.match(output,/今天正式分數比前次下降 4\.0 分/);
+assert.match(output,/正式原始分數<\/small><b>45\.4/);
+assert.match(output,new RegExp(core.labelFor(45.35).label));
+assert.match(output,/距離正式加碼訊號：還差 5 分/);
+assert.match(output,/52週回檔[\s\S]*貢獻 39\.05/);
+assert.match(output,/此項貢獻比前次減少 2\.8 分/);
+assert.match(output,/前次 2026-09-16[\s\S]*今日 2026-09-17/);
+assert.match(output,/三因子貢獻變化合計[\s\S]*-4\.00/);
+assert.match(output,/查看計算細節[\s\S]*Score version：FINAL_CORE_WEIGHT_V1/);
+assert.equal((output.match(/<section class="radarFactorCardV32/g)||[]).length,3);
+assert.ok(output.indexOf("52週回檔")<output.indexOf("週 J 值")&&output.indexOf("週 J 值")<output.indexOf("20日急跌因子"));
+setArtifact([snapshot("2026-09-21",makeRow("00830",50,{dd52:43.05,weekly:6.5,crash:.45})),snapshot("2026-09-18",makeRow("00830",45,{missing:"dd52"})),snapshot("2026-09-16",makeRow("00830",45.8,{dd52:39.05,weekly:6.3,crash:.45}))]);
+assert.equal(context.pair("00830").previous.date,"2026-09-16","skip incomplete intervening day");
+assert.match(render(),/今天正式分數比前次提高 4\.2 分/);
+setArtifact([snapshot("2026-09-17",makeRow("00830",45.35,{dd52:40.05,weekly:5.3})),snapshot("2026-09-16",makeRow("00830",45.35))]);
+assert.match(render(),/三項因子互有消長/);
+setArtifact([snapshot("2026-09-17",makeRow("00830",45.35))]);
+assert.match(render(),/暫無完整前次比較資料/);assert.doesNotMatch(render(),/前次正式原始分數：0/);
+setArtifact([snapshot("2026-09-17",makeRow("00830",45.35,{missing:"dd52"}))]);
+assert.match(render(),/正式因子資料不足，暫無分數拆解/);
+setArtifact([snapshot("2026-09-17",makeRow("00830",45.35,{dd52:12}))]);
+assert.match(render(),/正式因子資料不足，暫無分數拆解/,"inconsistent contributions must fail closed");
+setArtifact([snapshot("2026-09-17",makeRow("00830",null))]);
+assert.match(render(),/目前沒有正式 HS Core Score/);assert.doesNotMatch(render(),/正式原始分數<\/small><b>0/);
+setArtifact([snapshot("2026-09-17",makeRow("00830",0,{dd52:0,weekly:0,crash:0}))]);
+assert.match(render(),/正式原始分數<\/small><b>0/);
+setArtifact([snapshot("2026-09-17",makeRow("00830",null)),snapshot("2026-09-16",makeRow("00830",45.35))]);
+assert.equal(context.pair("00830").current,null,"older formal score must not replace missing latest score");assert.match(render(),/目前沒有正式 HS Core Score/);
+setArtifact([snapshot("2026-09-17",makeRow("00830",45.35)),snapshot("2026-09-16",makeRow("00830",49.35,{version:"OLD_VERSION"}))]);
+assert.equal(context.pair("00830").previous,null);assert.match(render(),/暫無完整前次比較資料/);
+context.finalizedCoreScoreHistoryArtifact=JSON.parse(fs.readFileSync(path.join(root,"finalized-core-score-snapshots-v1.json"),"utf8"));
+for(const symbol of ["0050","00662","00830","00935"]){const pair=context.pair(symbol),rendered=render(symbol);assert.ok(pair.current?.complete,`${symbol} formal factors`);assert.match(rendered,new RegExp(core.labelFor(pair.current.rawTotal).label));assert.ok(Math.abs(pair.current.factors.reduce((sum,item)=>sum+item.contribution,0)-pair.current.rawTotal)<.15)}
+assert.match(render("009815"),/目前沒有正式 HS Core Score/);
 assert.match(css,/\.radarFactorStackV32\{display:flex;flex-direction:column;width:100%;min-width:0/);
 assert.match(css,/\.radarFactorCardV32\{width:100%;min-width:0/);
-assert.match(css,/\.radarFactorHeaderV32\{display:flex;align-items:baseline;justify-content:space-between;gap:16px/);
 assert.match(css,/\.radarFactorTitleV32\{[^}]*word-break:keep-all;overflow-wrap:normal/);
-assert.match(css,/\.radarFactorMetricV32\{display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%/);
-assert.doesNotMatch(css,/\.radarFactorStackV32\{[^}]*repeat\(/,"V32 base layout must never use a multi-column grid");
-assert.match(css,/@media\(max-width:430px\)\{[\s\S]*?\.radarFactorModelV32\{display:none\}/);
-const stylesheet=html.match(/<link\b[^>]*\brel="stylesheet"[^>]*\bhref="formal-black-gold\.css(?:\?[^\"]*)?"[^>]*>/);
-const stylesheetAt=stylesheet?.index??-1,criticalAt=html.indexOf('id="radarPhase32CriticalLayout"');
-assert.ok(stylesheetAt>=0&&criticalAt>stylesheetAt,"fresh HTML must load the formal stylesheet before the critical cache safeguard");
-const critical=html.slice(criticalAt,html.indexOf("</style>",criticalAt));
-assert.doesNotMatch(critical,/@media/);assert.match(critical,/\.radarFactorStackV32\{display:flex;flex-direction:column/);assert.match(critical,/\.radarFactorMetricV32\{display:flex;justify-content:space-between/);assert.match(critical,/word-break:keep-all;overflow-wrap:normal/);
-assert.match(html,/<html[^>]*data-build-sha="PENDING"[^>]*data-radar-phase="3\.2-mobile-stack-v32"/);assert.match(html,/data-radar-factor-layout="mobile-stack-v32"/);assert.match(html,/function radarPhase31LayoutDiagnostics\(\)/);assert.match(html,/document\.documentElement\.dataset\.buildSha=LIVE_APP_BUILD_SHA/);
+assert.match(html,/data-radar-explain-jump/);
 assert.doesNotMatch(html.slice(start,end),/fetch\(|localStorage|intraday|provisional/i);
-assert.match(html.slice(start,end),/snapshot\?\.snapshot_type!=="FINALIZED_CLOSE"/);assert.match(html.slice(start,end),/snapshot\?\.finalized!==true/);assert.match(html.slice(start,end),/current\.factors\.map\(factor=>/);
-console.log("PASS ETF Radar Detail Phase 3 finalized-only score explainability, attribution, missing-data and mobile guards");
+console.log("PASS ETF detail finalized-only score explanation, prior complete snapshot, missing values, tiers and mobile stack");
