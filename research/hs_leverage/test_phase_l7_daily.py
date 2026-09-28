@@ -313,6 +313,8 @@ class DailyTests(unittest.TestCase):
             result = daily.run(self.root, now=at("2026-08-25"))
         collect.assert_not_called()
         self.assertTrue(result["reason"].startswith("EXPLICIT_INTEGRITY_REVIEW_REQUIRED"))
+        self.assertTrue(result["requires_integrity_review"])
+        self.assertEqual(len(shadow.read_jsonl(self.root / daily.INCIDENTS)), 1)
         self.assertFalse(self.ledger.exists())
 
     def test_transient_transport_failure_retries_without_fake_evaluation(self):

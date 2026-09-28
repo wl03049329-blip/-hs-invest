@@ -432,15 +432,17 @@ def run(root=shadow.ROOT, now=None, fetcher=fetch_json, dry_run=False):
                 atomic_json(root / STATUS, status)
             return status
     except Exception as exc:
+        awaiting_review = str(exc).startswith("EXPLICIT_INTEGRITY_REVIEW_REQUIRED:")
         status = {"status": "FAIL_CLOSED", "signal_status": "NO_SIGNAL", "reason": str(exc),
                   "checked_at": now.isoformat(), "latest_data_date": prior["item"]["rows"][-1]["date"] if prior else historical["item"]["rows"][-1]["date"],
                   "data_integrity": "FAIL", "dry_run": dry_run,
-                  "requires_integrity_review": any(marker in str(exc) for marker in REVIEW_MARKERS),
+                  "requires_integrity_review": awaiting_review or any(marker in str(exc) for marker in REVIEW_MARKERS),
                   **summarize(records, realized)}
         if not dry_run:
             atomic_json(root / STATUS, status)
-            shadow.append_record(root / INCIDENTS, {"record_type": "DAILY_VALIDATION_FAILURE",
-                                 "record_id": "FAIL:" + now.astimezone(TAIPEI).date().isoformat() + ":" + digest(str(exc)), **status})
+            if not awaiting_review:
+                shadow.append_record(root / INCIDENTS, {"record_type": "DAILY_VALIDATION_FAILURE",
+                                     "record_id": "FAIL:" + now.astimezone(TAIPEI).date().isoformat() + ":" + digest(str(exc)), **status})
         return status
 
 
