@@ -1215,6 +1215,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 <script src="radar-push-subscription-v1.js?v=20260920-background-alert-cutover-phase11b2c"></script>
 <script src="swing-strategy-core.js?v=20260809a"></script>
 <script src="leverage-v1-core.js?v=20260822-l1"></script>
+<script src="leverage-state-view.js"></script>
 <script src="generic-etf-diagnostics.js?v=20260925-watchlist-c4-v1"></script>
 <script src="persistence-core.js?v=20260809a"></script>
 <script src="drawdown-price-core.js"></script>
@@ -3293,6 +3294,27 @@ function leverageV1State(item){
   const core=window.HSLeverageV1Core;
   return core?.evaluateCrashVelocity?.(item?.officialRows)||{strategy:"HS_LEVERAGE_C_V1",threshold:null,trainingEnd:"2025-12-31",forwardStart:"2026-08-24",status:"DATA_UNAVAILABLE",available:false,trigger:false,value:null,dataAsOf:null};
 }
+let leverageOfficialStatus=null;
+let leverageOfficialRows=null;
+async function loadLeverageOfficialStatus(){
+  leverageOfficialStatus=null;
+  leverageOfficialRows=null;
+  try{
+    const response=await fetch("00631l-leverage-status-v1.json",{cache:"no-store"});
+    if(!response.ok)return;
+    leverageOfficialStatus=window.HSLeverageStateView?.officialStatus(await response.json())||null;
+    if(!leverageOfficialStatus)return;
+  }catch{leverageOfficialStatus=null;return}
+  try{
+    const price=await fetch("research/hs_leverage/forward/00631L-adjusted-daily.json",{cache:"no-store"});
+    if(!price.ok)return;
+    const source=await price.json();
+    if(source?.metadata?.ticker==="00631L"&&source?.metadata?.price_basis==="Adjusted OHLC"&&source?.metadata?.expected_completed_bar===leverageOfficialStatus.price.latest_completed_bar&&Array.isArray(source?.item?.rows))leverageOfficialRows=source.item.rows;
+  }catch{leverageOfficialRows=null}
+}
+function leverageStateJudgementHtml(item){
+  return window.HSLeverageStateView?.renderHtml(item,leverageOfficialStatus,leverageOfficialRows)||'<section class="leverageStateReading">00631L 狀態資料不足。</section>';
+}
 function leverageRadarDashboardHtml(item){
   const v1=leverageV1State(item),threshold=Number(v1.threshold),velocity=Number(v1.value),available=v1.available&&Number.isFinite(velocity)&&Number.isFinite(threshold)&&threshold>0,progress=available?clamp(velocity/threshold*100,0,100):0,status=v1.trigger?"V1 TRIGGER":available?"待命":"資料不足",distance=available?Math.round(progress):null;
   const velocityText=available?fmt(velocity):"資料不足",thresholdText=Number.isFinite(threshold)?fmt(threshold):"資料不足",copy=v1.trigger?"歷史極端急跌條件已達成，仍依正式 V1 狀態與 Forward Shadow 規則觀察。":available?"目前尚未進入歷史極端急跌區，不主動出手，等待真正罕見的恐慌機會。":"Crash Velocity 或正式門檻資料不足，維持 FAIL CLOSED，不以舊波段分數替代。";
@@ -4340,7 +4362,7 @@ function buildRadarV2Card({x,mode,decision,stage,score,longRank,longRankChange,l
   }
   if(mode==="leveraged"){
     const leverage=leverageV1State(x),status=leverage.trigger?"V1 TRIGGER":leverage.available?"待命":"資料不足";
-    return`<details class="${cardClass}" data-etf-id="${esc(x.id)}"><summary class="radarDetailSummary swingSummary leverageSummary"><span class="strategyBadge">HS LEVERAGE</span><span><b>${esc(x.id)}｜極端恐慌後的超車工具</b><small>${esc(status)}｜5D Crash Velocity</small></span><strong>${Number.isFinite(leverage.value)?fmt(leverage.value):"—"}<small>急跌速度</small></strong></summary><div class="signalCardDetails"><div data-detail-panel="overview">${leverageRadarDashboardHtml(x)}</div></div></details>`;
+    return`<details class="${cardClass}" data-etf-id="${esc(x.id)}"><summary class="radarDetailSummary swingSummary leverageSummary"><span class="strategyBadge">HS LEVERAGE</span><span><b>${esc(x.id)}｜極端恐慌後的超車工具</b><small>${esc(status)}｜5D Crash Velocity</small></span><strong>${Number.isFinite(leverage.value)?fmt(leverage.value):"—"}<small>急跌速度</small></strong></summary><div class="signalCardDetails"><div data-detail-panel="overview">${leverageRadarDashboardHtml(x)}${leverageStateJudgementHtml(x)}</div></div></details>`;
   }
   const s=x.swingDecision||{},exit=s.exitPressure?.score;
   return`<details class="${cardClass}" data-etf-id="${esc(x.id)}"><summary class="radarDetailSummary swingSummary"><span class="strategyBadge">${esc(strategyModeLabel(mode))}</span><span><b>${esc(x.id)} ${esc(x.name)}</b><small>${esc(stage?.label||"資料不足")}｜Exit Pressure ${metricScore(exit)}</small></span><strong>${scoreText}<small>分</small></strong></summary><div class="signalCardDetails"><div class="detailTabs swingDetailTabs" role="tablist"><button class="active" type="button" data-detail-view="overview" aria-selected="true">總覽</button><button type="button" data-detail-view="breakdown" aria-selected="false">分數拆解</button><button type="button" data-detail-view="action" aria-selected="false">操作分層</button></div><div data-detail-panel="overview">${swingOverviewHtml(x)}</div><div data-detail-panel="breakdown" hidden>${strategyBreakdownHtml(x,mode)}<div class="detailGrandTotal"><span>綜合波段買點分</span><b>${scoreText}<small>／100</small></b></div></div><div data-detail-panel="action" hidden><section class="swingActionLayer"><div><small>目前位置</small><b>${esc(stage?.label||"資料不足")}</b></div><div><small>建議行動</small><b>${esc(s.recommendedAction||stage?.recommendation||"等待資料更新")}</b></div><div><small>下一個確認條件</small><b>${mode==="leveraged"?"等待恐慌與反轉條件同步改善":mode==="swing00733"?"依既有 Setup／Stage 等待拉回修復或重新加速":"依既有止跌與突破條件等待確認"}</b></div><div><small>主要風險</small><b>Exit Pressure ${metricScore(exit)}｜建議部位 ${Number.isFinite(stage?.targetPosition)?stage.targetPosition+"%":"—"}</b></div></section></div>${detailAdvancedHtml(x)}</div></details>`;
@@ -4393,7 +4415,7 @@ function syncRadarDetailStickyNav(id,visible){
   const item=all.find(x=>String(x.id)===String(id||"")),mode=item?strategyModeFor(item):"long_term_core",decision=item?strategyDecisionFor(item,mode):null,score=item?displayScore(item,mode):null,presentation=decision?.finalPresentation||(item&&mode==="long_term_core"?radarDecisionLayerFor(item):null),statusLabel=mode==="long_term_core"?finalDecisionBadgeLabel(presentation):decision?.stage?.label;
   const symbol=$("#radarDetailStickySymbol"),scoreNode=$("#radarDetailStickyScore");
   if(symbol)symbol.textContent=item?.id||String(id||"—");
-  if(scoreNode)scoreNode.textContent=item?.id==="009815"||decision?.scoreStatus==="wait_native"?"WAIT_NATIVE":Number.isFinite(score)?`${score} · ${statusLabel||"資料不足"}`:"資料暫缺";
+  if(scoreNode)scoreNode.textContent=item?.id==="00631L"?"HS LEVERAGE · V1":item?.id==="009815"||decision?.scoreStatus==="wait_native"?"WAIT_NATIVE":Number.isFinite(score)?`${score} · ${statusLabel||"資料不足"}`:"資料暫缺";
 }
 let homeC4Return=null;
 function openHomeC4RadarDetail(symbol){
@@ -5061,7 +5083,7 @@ async function load(){
   try{
     await Promise.all([loadFinalizedCoreScoreHistory(),loadResearchC4History()]);
     await loadResearchC4Outcomes();
-    await Promise.all([loadCorporateActionTables(),loadEtfValuation()]);
+    await Promise.all([loadCorporateActionTables(),loadEtfValuation(),loadLeverageOfficialStatus()]);
     const settled=await Promise.allSettled(ids.map(one));
     all=settled.filter(x=>x.status==="fulfilled").map(x=>x.value);
     const failed=settled.map((x,i)=>x.status==="rejected"?ids[i]:null).filter(Boolean);

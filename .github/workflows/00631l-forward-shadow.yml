@@ -34,6 +34,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m unittest discover -s research/hs_leverage -p 'test_phase_l7*.py'
+      - run: python -m unittest discover -s research/hs_leverage -p 'test_frontend_status.py'
 
   daily:
     needs: test
@@ -52,6 +53,7 @@ jobs:
           python-version: '3.12'
       - name: Validate current checkout before collection
         run: python -m unittest discover -s research/hs_leverage -p 'test_phase_l7*.py'
+      - run: python -m unittest discover -s research/hs_leverage -p 'test_frontend_status.py'
       - name: Collect completed daily bars and evaluate forward only
         id: collect
         continue-on-error: true
@@ -66,12 +68,18 @@ jobs:
       - name: Publish only operational shadow state
         if: github.event_name == 'schedule' || inputs.dry_run == false
         run: |
+          if [ "${{ steps.collect.outcome }}" = "success" ]; then
+            python research/hs_leverage/build_frontend_status.py
+          fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           for file in 00631L-adjusted-daily.json hs_leverage_c_v1_forward_ledger.jsonl hs_leverage_c_v1_outcomes.jsonl daily-status.json daily-incidents.jsonl; do
             path="research/hs_leverage/forward/$file"
             if [ -f "$path" ]; then git add -- "$path"; fi
           done
+          if [ "${{ steps.collect.outcome }}" = "success" ]; then
+            git add -- 00631l-leverage-status-v1.json
+          fi
           if ! git diff --cached --quiet; then
             git diff --cached --check
             git commit -m 'Update 00631L forward shadow validation'
