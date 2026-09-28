@@ -51,5 +51,33 @@ assert.match(css,/\.radarFactorStackV32\{display:flex;flex-direction:column;widt
 assert.match(css,/\.radarFactorCardV32\{width:100%;min-width:0/);
 assert.match(css,/\.radarFactorTitleV32\{[^}]*word-break:keep-all;overflow-wrap:normal/);
 assert.match(html,/data-radar-explain-jump/);
+const heroStart=html.indexOf("function radarDetailCoreStatusHtml("),heroEnd=html.indexOf("function radarPrimaryDriver(",heroStart);
+assert.ok(heroStart>=0&&heroEnd>heroStart);
+const heroContext={Number,esc:value=>String(value),finalizedCoreScoreHistoryArtifact:{},officialArtifactCoreScoreHistory:(_artifact,symbol)=>[{displayScore:25,finalCoreScore:25.3,status:"一般持有",tradingDate:"2026-09-24"},{displayScore:24}],radarOverviewScoreDelta:()=>({tone:"neutral"}),radarOverviewNextLevel:()=>({available:false}),radarOverviewRankBadgeHtml:()=>""};
+vm.createContext(heroContext);vm.runInContext(`${html.slice(heroStart,heroEnd)}\nthis.hero=radarDetailCoreStatusHtml;`,heroContext);
+for(const symbol of ["0050","00662","00830","00935"]){
+  const hero=heroContext.hero({id:symbol,name:symbol},{},null,null,null,1);
+  const breakdown=`<section class="radarV2Section radarWhyScore" id="radar-score-explain-${symbol}">`;
+  assert.match(hero,new RegExp(`data-radar-explain-target="radar-score-explain-${symbol}"`));
+  assert.match(breakdown,new RegExp(`id="${hero.match(/data-radar-explain-target="([^"]+)"/)[1]}"`));
+}
+heroContext.officialArtifactCoreScoreHistory=()=>[{displayScore:null,finalCoreScore:null,status:"WAIT_NATIVE",tradingDate:null}];
+assert.doesNotMatch(heroContext.hero({id:"009815",name:"009815"},{},null,null,null,1),/data-radar-explain-jump|為什麼今天是/);
+const listenerStart=html.indexOf('document.addEventListener("click",event=>{const button=event.target.closest("[data-radar-explain-jump]")');
+assert.ok(listenerStart>=0&&listenerStart<html.indexOf("function renderHsCanonicalScoreGuide("));
+assert.equal((html.match(/document\.addEventListener\("click",event=>\{const button=event\.target\.closest\("\[data-radar-explain-jump\]"\)/g)||[]).length,1,"delegated jump listener registered once");
+const listener=html.slice(listenerStart,html.indexOf("\n",listenerStart));
+assert.doesNotMatch(listener,/closest\("\.radarV2Card"\)|querySelector\("\.radarWhyScore"\)/);
+const handlers=[],scrolled=[];let prevented=0,stopped=0;
+const documentMock={addEventListener:(_type,handler)=>handlers.push(handler),getElementById:id=>id==="missing"?null:{scrollIntoView:options=>scrolled.push({id,options})}};
+vm.runInNewContext(listener,{document:documentMock});assert.equal(handlers.length,1);
+for(const symbol of ["0050","00662","00830","00935"]){
+  const targetId=`radar-score-explain-${symbol}`;
+  handlers[0]({target:{closest:()=>({dataset:{radarExplainTarget:targetId}})},preventDefault:()=>prevented++,stopPropagation:()=>stopped++});
+}
+assert.deepEqual(scrolled.map(item=>item.id),["0050","00662","00830","00935"].map(symbol=>`radar-score-explain-${symbol}`));
+assert.ok(scrolled.every(item=>item.options.behavior==="smooth"&&item.options.block==="start"));
+handlers[0]({target:{closest:()=>({dataset:{radarExplainTarget:"missing"}})},preventDefault:()=>prevented++,stopPropagation:()=>stopped++});
+assert.equal(scrolled.length,4,"missing target safely returns");assert.equal(prevented,4);assert.equal(stopped,4);
 assert.doesNotMatch(html.slice(start,end),/fetch\(|localStorage|intraday|provisional/i);
 console.log("PASS ETF detail finalized-only score explanation, prior complete snapshot, missing values, tiers and mobile stack");
