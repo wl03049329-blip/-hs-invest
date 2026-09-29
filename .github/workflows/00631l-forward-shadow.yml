@@ -4,6 +4,12 @@ on:
   schedule:
     # Taipei 17:47, 19:47, 21:47. Runtime date, never cron date, governs capture.
     - cron: '47 9,11,13 * * 1-5'
+  # A completed official EOD run is an independent wake-up if GitHub drops
+  # this workflow's scheduled events. The same daily idempotency still applies.
+  workflow_run:
+    workflows: [Finalize official EOD Core Score history]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
     inputs:
       dry_run:
@@ -26,6 +32,10 @@ concurrency:
 
 jobs:
   test:
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.event == 'schedule' &&
+       github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -38,7 +48,12 @@ jobs:
 
   daily:
     needs: test
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' ||
+       (github.event_name == 'workflow_run' &&
+        github.event.workflow_run.event == 'schedule' &&
+        github.event.workflow_run.conclusion == 'success'))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -66,7 +81,7 @@ jobs:
             python research/hs_leverage/phase_l7_daily.py
           fi
       - name: Publish only operational shadow state
-        if: github.event_name == 'schedule' || inputs.dry_run == false
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_run' || inputs.dry_run == false
         run: |
           if [ "${{ steps.collect.outcome }}" = "success" ]; then
             python research/hs_leverage/build_frontend_status.py
