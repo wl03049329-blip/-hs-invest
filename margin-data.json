@@ -1,74 +1,74 @@
 {
-  "data_date": "2026-09-24",
-  "updated_at": "2026-09-24T22:45:08+08:00",
+  "data_date": "2026-09-29",
+  "updated_at": "2026-09-30T00:24:20+08:00",
   "data_mode": "after_hours",
   "model": {
     "name": "rolling_estimated_margin_cost",
     "financing_ratio": 0.6,
     "initial_maintenance_ratio": 166.6667,
-    "warmup_trading_days": 155,
+    "warmup_trading_days": 156,
     "is_estimated": true,
     "sample_state": "ready"
   },
   "margin_balance": {
-    "estimated_financing_principal": 940131425563,
-    "daily_change": 10191815431,
-    "daily_change_pct": 1.1,
-    "change_20d": 88656347586,
-    "percentile_60d": 80.0,
-    "balance_shares": 11628208000
+    "estimated_financing_principal": 946433597981,
+    "daily_change": 6302172418,
+    "daily_change_pct": 0.67,
+    "change_20d": 84483940248,
+    "percentile_60d": 81.7,
+    "balance_shares": 11669152000
   },
   "maintenance_ratio": {
-    "value": 169.66,
-    "daily_change": 0.41,
-    "average_20d": 166.3,
-    "percentile_60d": 88.3,
-    "collateral_market_value": 1595041901730,
-    "estimated_financing_principal": 940131425563,
+    "value": 168.12,
+    "daily_change": -1.54,
+    "average_20d": 166.12,
+    "percentile_60d": 75.0,
+    "collateral_market_value": 1591137458990,
+    "estimated_financing_principal": 946433597981,
     "method": "rolling_estimated_margin_cost",
     "is_estimated": true
   },
   "short_balance": {
-    "shares": 235966000,
-    "daily_change": -10767000
+    "shares": 258567000,
+    "daily_change": 22601000
   },
   "markets": {
     "twse": {
-      "collateral_market_value": 1192523424820.0,
-      "estimated_remaining_cost": 1161186343265.0,
-      "estimated_financing_principal": 696711805959.0,
-      "margin_balance_shares": 9279156000.0,
+      "collateral_market_value": 1186654860270.0,
+      "estimated_remaining_cost": 1168253070001.0,
+      "estimated_financing_principal": 700951842001.0,
+      "margin_balance_shares": 9302046000.0,
       "matched_count": 1234,
       "missing_count": 1,
-      "stale_price_count": 5,
-      "maintenance_ratio": 171.16
+      "stale_price_count": 2,
+      "maintenance_ratio": 169.29
     },
     "tpex": {
-      "collateral_market_value": 402518476910.0,
-      "estimated_remaining_cost": 405699366008.0,
-      "estimated_financing_principal": 243419619605.0,
-      "margin_balance_shares": 2349052000.0,
+      "collateral_market_value": 404482598720.0,
+      "estimated_remaining_cost": 409136259967.0,
+      "estimated_financing_principal": 245481755980.0,
+      "margin_balance_shares": 2367106000.0,
       "matched_count": 824,
       "missing_count": 0,
-      "stale_price_count": 6,
-      "maintenance_ratio": 165.36
+      "stale_price_count": 7,
+      "maintenance_ratio": 164.77
     },
     "combined": {
-      "collateral_market_value": 1595041901730.0,
-      "estimated_remaining_cost": 1566885709272.0,
-      "estimated_financing_principal": 940131425563.0,
-      "margin_balance_shares": 11628208000.0,
+      "collateral_market_value": 1591137458990.0,
+      "estimated_remaining_cost": 1577389329968.0,
+      "estimated_financing_principal": 946433597981.0,
+      "margin_balance_shares": 11669152000.0,
       "matched_count": 2058,
       "missing_count": 1,
-      "stale_price_count": 11,
-      "maintenance_ratio": 169.66
+      "stale_price_count": 9,
+      "maintenance_ratio": 168.12
     }
   },
   "coverage": {
     "matched_count": 2058,
     "missing_count": 1,
     "coverage_ratio": 100.0,
-    "stale_price_count": 11
+    "stale_price_count": 9
   },
   "risk_state": "依推估維持率判讀",
   "summary": "融資本金採逐檔滾動成本推估；融資增減與維持率需交叉觀察，單日變動不代表後續方向。",
@@ -1015,6 +1015,12 @@
       "estimated_financing_principal": 940131425563.0,
       "collateral_market_value": 1595041901730.0,
       "maintenance_ratio": 169.66
+    },
+    {
+      "date": "2026-09-29",
+      "estimated_financing_principal": 946433597981.0,
+      "collateral_market_value": 1591137458990.0,
+      "maintenance_ratio": 168.12
     }
   ],
   "missing_securities": [
