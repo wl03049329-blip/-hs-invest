@@ -10,6 +10,7 @@ import hashlib
 import json
 import math
 import os
+import subprocess
 import tempfile
 import time
 import urllib.request
@@ -104,7 +105,7 @@ def validate_rows(rows):
         require(all(not isinstance(row[k], bool) and math.isfinite(float(row[k])) for k in FIELDS), "NONFINITE_OHLC")
 
 
-def parse_yahoo(payload, historical, expected, latest_fallback=None):
+def parse_yahoo(payload, historical, expected, latest_fallback=None, previous_anchor=None):
     require(payload.get("chart", {}).get("error") is None, "YAHOO_SOURCE_ERROR")
     results = payload.get("chart", {}).get("result")
     require(isinstance(results, list) and len(results) == 1, "YAHOO_SCHEMA_ERROR")
@@ -161,6 +162,11 @@ def parse_yahoo(payload, historical, expected, latest_fallback=None):
                      "adjustment_factor": factor, "provider_ohlc": raw})
     if latest_fallback is not None and not any(r["date"] == expected for r in rows):
         rows.append(latest_fallback)
+    if previous_anchor is not None:
+        require(not any(r["date"] == previous_anchor["date"] for r in rows),
+                "FALLBACK_PREVIOUS_ANCHOR_CONFLICT")
+        rows.append(previous_anchor)
+        rows.sort(key=lambda row: row["date"])
     validate_rows(rows)
     require(rows[-1]["date"] == expected, "STALE_ADJUSTED_OHLC")
     compare_history(historical, rows)
@@ -205,10 +211,105 @@ def months_between(first, last):
         day = (day.replace(day=28) + timedelta(days=4)).replace(day=1)
 
 
-def latest_twse_fallback(yahoo, historical, prior, official, expected, now, fetcher, receipts):
+def verified_previous_bar(root, prior, policy, official, expected):
+    """Attest the immediately previous bar against a successful tracked run.
+
+    Old operational rows predate per-bar provenance. Their price blob, source
+    receipts, successful same-day status and bot publication must coincide in
+    Git history. A dirty checkout or fixture cannot impersonate that history.
+    """
+    require(prior is not None and len(official) >= 2, "FALLBACK_PREVIOUS_ANCHOR_MISSING")
+    anchor = prior["item"]["rows"][-1]
+    require(anchor["date"] == official[-2]["date"] and anchor["date"] < expected,
+            "FALLBACK_PREVIOUS_ANCHOR_NOT_ADJACENT")
+    relative = SNAPSHOT
+
+    def git(*args):
+        try:
+            return subprocess.check_output(("git", "-C", str(root), *args), stderr=subprocess.DEVNULL)
+        except (OSError, subprocess.CalledProcessError) as exc:
+            raise Error("FALLBACK_PREVIOUS_ANCHOR_UNVERIFIED") from exc
+
+    require(not git("status", "--porcelain", "--", relative).strip(), "FALLBACK_PREVIOUS_ANCHOR_UNVERIFIED")
+    published = git("log", "-1", "--format=%H", "HEAD", "--", relative).decode().strip()
+    require(len(published) == 40, "FALLBACK_PREVIOUS_ANCHOR_UNVERIFIED")
+    author = git("show", "-s", "--format=%an <%ae>", published).decode().strip()
+    require(author == "github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>",
+            "FALLBACK_PREVIOUS_ANCHOR_UNVERIFIED")
+    try:
+        published_price = json.loads(git("show", published + ":" + relative))
+        published_status = json.loads(git("show", published + ":" + STATUS))
+        head_price = json.loads(git("show", "HEAD:" + relative))
+        published_ledger = [json.loads(line) for line in
+            git("show", published + ":" + policy["paths"]["forward_ledger"]).decode().splitlines()
+            if line.strip()]
+    except (ValueError, Error) as exc:
+        raise Error("FALLBACK_PREVIOUS_ANCHOR_UNVERIFIED") from exc
+    require(prior == published_price == head_price, "FALLBACK_PREVIOUS_ANCHOR_UNVERIFIED")
+    previous_hash = None
+    for record in published_ledger:
+        require(record.get("previous_record_hash") == previous_hash
+                and record.get("record_hash") == shadow.payload_hash(record, previous_hash),
+                "FALLBACK_PREVIOUS_ANCHOR_UNVERIFIED")
+        previous_hash = record["record_hash"]
+    evaluations = [record for record in published_ledger
+                   if record.get("record_type") == "SIGNAL_EVALUATION"]
+    require(len(evaluations) == published_status.get("forward_observations")
+            and all(record.get("evaluation_date", "9999") <= anchor["date"] for record in evaluations),
+            "FALLBACK_PREVIOUS_ANCHOR_UNVERIFIED")
+    metadata = prior.get("metadata", {})
+    receipts = metadata.get("source_receipts_sha256", {})
+    require(metadata.get("price_basis") == "Adjusted OHLC"
+            and metadata.get("corporate_action_status") == "REVALIDATED"
+            and metadata.get("expected_completed_bar") == anchor["date"]
+            and metadata.get("data_version") == published_status.get("data_version")
+            and all(isinstance(receipts.get(key), str) and len(receipts[key]) == 64
+                    for key in ("yahoo", "calendar", "twse_" + anchor["date"].replace("-", "")[:6]))
+            and published_status.get("status") in ("APPENDED", "NOOP_ALREADY_RECORDED",
+                                                     "NO_CURRENT_COMPLETED_SESSION_NO_BACKFILL")
+            and published_status.get("data_integrity") == "PASS"
+            and published_status.get("dry_run") is False
+            and published_status.get("latest_data_date") == anchor["date"]
+            and str(published_status.get("workflow_run_id", "")).isdigit(),
+            "FALLBACK_PREVIOUS_ANCHOR_UNVERIFIED")
+    try:
+        checked = datetime.fromisoformat(published_status["checked_at"])
+    except (KeyError, ValueError, TypeError) as exc:
+        raise Error("FALLBACK_PREVIOUS_ANCHOR_UNVERIFIED") from exc
+    require(checked.tzinfo is not None
+            and checked >= datetime.combine(date.fromisoformat(anchor["date"]), day_time(16, 30), TAIPEI),
+            "FALLBACK_PREVIOUS_ANCHOR_UNVERIFIED")
+    try:
+        generated = datetime.fromisoformat(metadata["generated_at"])
+    except (KeyError, ValueError, TypeError) as exc:
+        raise Error("FALLBACK_PREVIOUS_ANCHOR_UNVERIFIED") from exc
+    require(generated.tzinfo is not None and timedelta(0) <= checked - generated <= timedelta(minutes=5),
+            "FALLBACK_PREVIOUS_ANCHOR_UNVERIFIED")
+    require(anchor.get("adjustment_factor") == 1, "FALLBACK_ADJUSTMENT_UNRESOLVED")
+    source = anchor.get("source_provenance")
+    require(source is None or (source.get("integrity_status") == "PASS"
+            and source.get("trading_date") == anchor["date"]
+            and source.get("adjustment_factor") == 1
+            and source.get("effective_source") in ("YAHOO", "TWSE_FALLBACK")),
+            "FALLBACK_PREVIOUS_ANCHOR_UNVERIFIED")
+    restored = dict(anchor)
+    if source is None:
+        restored["source_provenance"] = {
+            "trading_date": anchor["date"], "primary_source": "YAHOO", "effective_source": "YAHOO",
+            "raw_source": "YAHOO", "fallback_used": False, "fallback_reason": None,
+            "adjustment_factor": 1, "adjustment_status": "PERSISTED_VERIFIED_FACTOR_ONE",
+            "collected_at": metadata["generated_at"], "integrity_status": "PASS"}
+    restored["source_provenance"] = {**restored["source_provenance"],
+        "evidence_mode": "PERSISTED_VERIFIED_PREVIOUS_BAR", "verified_commit": published,
+        "verified_workflow_run_id": published_status["workflow_run_id"]}
+    return restored
+
+
+def latest_twse_fallback(yahoo, historical, prior, official, expected, now, fetcher, receipts,
+                         previous_anchor=None):
     """Only a missing/null latest bar, with independent corporate-action proof.
 
-    Use the same distribution/split datasets as the existing price publisher.
+    Check distribution, split, reduction and par-value action datasets.
     An empty *validated* event response plus unchanged factor-one anchors is
     evidence; a missing response or a prior raw price alone is not evidence.
     """
@@ -219,12 +320,14 @@ def latest_twse_fallback(yahoo, historical, prior, official, expected, now, fetc
                if datetime.fromtimestamp(stamp, TAIPEI).date().isoformat() == expected]
     require(len(indices) <= 1, "DUPLICATE_SOURCE_DATE")
     index = indices[0] if indices else None
-    missing = index is None
-    if index is not None:
-        values = [quotes[k][index] for k in (*FIELDS, "volume")] + [adjusted[index]]
-        require(any(v is None for v in values), "LATEST_PRIMARY_NOT_NULL")
-        require(all(v is None or (isinstance(v, (int, float)) and not isinstance(v, bool)
-                    and math.isfinite(v) and v > 0) for v in values), "INVALID_PRIMARY_FALLBACK_VALUE")
+    require(index is not None, "FALLBACK_CURRENT_SOURCE_EVIDENCE_MISSING")
+    values = [quotes[k][index] for k in (*FIELDS, "volume")] + [adjusted[index]]
+    require(any(v is None for v in values), "LATEST_PRIMARY_NOT_NULL")
+    require(all(v is None or (isinstance(v, (int, float)) and not isinstance(v, bool)
+                and math.isfinite(v) and v > 0) for v in values), "INVALID_PRIMARY_FALLBACK_VALUE")
+    require(all(isinstance(quotes[k][index], (int, float)) and not isinstance(quotes[k][index], bool)
+                and math.isfinite(quotes[k][index]) and quotes[k][index] > 0 for k in ("open", "high", "low")),
+            "FALLBACK_CURRENT_SOURCE_EVIDENCE_MISSING")
     require(official[-1]["date"] == expected, "LATEST_OFFICIAL_BAR_UNAVAILABLE")
     latest = official[-1]
     # A reviewed, restored OHLC anchor is mandatory, not a guessed multiplier.
@@ -232,49 +335,62 @@ def latest_twse_fallback(yahoo, historical, prior, official, expected, now, fetc
     require(anchor_data["metadata"].get("price_basis") == "Adjusted OHLC", "FALLBACK_ADJUSTMENT_BASIS_REQUIRED")
     anchors = [r for r in anchor_data["item"]["rows"] if r["date"] < expected]
     require(bool(anchors), "FALLBACK_ADJUSTMENT_ANCHOR_REQUIRED")
-    anchor = anchors[-1]
+    anchor = previous_anchor if previous_anchor is not None else anchors[-1]
     require(anchor.get("adjustment_factor") == 1 and len(official) >= 2
-            and anchor["date"] == official[-2]["date"], "FALLBACK_ADJUSTMENT_FACTOR_UNPROVEN")
+            and anchor["date"] == official[-2]["date"], "FALLBACK_ADJUSTMENT_UNRESOLVED")
     # Validate current Yahoo factors too: a new retroactive adjustment must fail.
     complete = [i for i, stamp in enumerate(result["timestamp"])
                 if anchor["date"] <= datetime.fromtimestamp(stamp, TAIPEI).date().isoformat() < expected
                 and quotes["close"][i] is not None and adjusted[i] is not None]
-    require(bool(complete), "FALLBACK_CURRENT_SOURCE_EVIDENCE_MISSING")
+    require(bool(complete) or previous_anchor is not None, "FALLBACK_CURRENT_SOURCE_EVIDENCE_MISSING")
     require(all(quotes["close"][i] > 0 and adjusted[i] / quotes["close"][i] == 1 for i in complete),
             "FALLBACK_ADJUSTMENT_FACTOR_UNPROVEN")
-    for dataset in ("TaiwanStockDividendResult", "TaiwanStockSplitPrice"):
-        url = (f"{ACTION_URL}?dataset={dataset}&data_id=00631L"
+    for dataset in ("TaiwanStockDividendResult", "TaiwanStockSplitPrice",
+                    "TaiwanStockCapitalReductionReferencePrice", "TaiwanStockParValueChange"):
+        # Par-value changes are an all-market FinMind dataset (no data_id).
+        symbol_filter = "" if dataset == "TaiwanStockParValueChange" else "&data_id=00631L"
+        url = (f"{ACTION_URL}?dataset={dataset}{symbol_filter}"
                f"&start_date={anchor['date']}&end_date={expected}")
         events = fetcher(url)
         require(events.get("status") == 200 and events.get("msg") == "success"
                 and isinstance(events.get("data"), list), "CORPORATE_ACTION_SOURCE_UNAVAILABLE")
         receipts[dataset] = digest(events)
         for event in events["data"]:
-            require(event.get("stock_id") == "00631L" and isinstance(event.get("date"), str),
+            require(isinstance(event.get("stock_id"), str) and isinstance(event.get("date"), str),
                     "CORPORATE_ACTION_SCHEMA_REVIEW_REQUIRED")
             require(date.fromisoformat(event["date"]).isoformat() == event["date"]
                     and anchor["date"] <= event["date"] <= expected, "CORPORATE_ACTION_DATE_REVIEW_REQUIRED")
-        require(not events["data"], "CORPORATE_ACTION_REVIEW_REQUIRED")
-    if index is not None:
-        require(all(quotes[k][index] is None or abs(quotes[k][index] - latest[k]) <= .011 for k in FIELDS),
-                "OFFICIAL_OHLC_CONFLICT:" + expected)
-        if adjusted[index] is not None:
-            require(abs(adjusted[index] - latest["close"]) <= .011, "FALLBACK_ADJUSTMENT_FACTOR_UNPROVEN")
-            if quotes["close"][index] is not None:
-                require(adjusted[index] / quotes["close"][index] == 1, "FALLBACK_ADJUSTMENT_FACTOR_UNPROVEN")
+            if dataset != "TaiwanStockParValueChange":
+                require(event["stock_id"] == "00631L", "CORPORATE_ACTION_SCHEMA_REVIEW_REQUIRED")
+        require(not any(event["stock_id"] == "00631L" for event in events["data"]),
+                "CORPORATE_ACTION_REVIEW_REQUIRED")
+    require(all(abs(quotes[k][index] - latest[k]) <= .011 for k in ("open", "high", "low")),
+            "FALLBACK_CURRENT_CROSSCHECK_FAILED:" + expected)
+    require(quotes["close"][index] is None or abs(quotes["close"][index] - latest["close"]) <= .011,
+            "FALLBACK_CURRENT_CROSSCHECK_FAILED:" + expected)
+    if adjusted[index] is not None:
+        require(abs(adjusted[index] - latest["close"]) <= .011, "FALLBACK_ADJUSTMENT_UNRESOLVED")
+        if quotes["close"][index] is not None:
+            require(adjusted[index] / quotes["close"][index] == 1, "FALLBACK_ADJUSTMENT_UNRESOLVED")
     raw = {k: latest[k] for k in FIELDS}
     return {"date": expected, **raw, "volume": latest["volume"], "raw_close": latest["close"],
             "adjustment_factor": 1, "provider_ohlc": raw,
             "source_provenance": {"trading_date": expected, "primary_source": "YAHOO",
                 "effective_source": "TWSE_FALLBACK", "raw_source": "TWSE", "fallback_used": True,
-                "primary_source_status": "MISSING" if missing else "NULL",
-                "fallback_reason": "LATEST_COMPLETED_PRIMARY_MISSING" if missing else "LATEST_COMPLETED_PRIMARY_NULL",
+                "primary_source_status": "NULL",
+                "fallback_reason": ("YAHOO_CURRENT_CLOSE_ADJCLOSE_NULL"
+                                    if quotes["close"][index] is None and adjusted[index] is None
+                                    else "LATEST_COMPLETED_PRIMARY_NULL"),
+                "evidence_mode": ("PERSISTED_VERIFIED_PREVIOUS_BAR" if previous_anchor is not None
+                                  else "CURRENT_YAHOO_FACTOR_ONE"),
+                "yahoo_volume": quotes["volume"][index], "twse_volume": latest["volume"],
+                "volume_discrepancy": (quotes["volume"][index] != latest["volume"]),
                 "adjustment_factor": 1, "adjustment_status": "VERIFIED_FACTOR_ONE_NO_ACTION",
                 "adjustment_anchor_date": anchor["date"], "collected_at": now.isoformat(),
                 "integrity_status": "PASS"}}
 
 
-def collect(historical, prior, policy, now, fetcher=fetch_json):
+def collect(historical, prior, policy, now, fetcher=fetch_json, root=shadow.ROOT):
     local = now.astimezone(TAIPEI)
     holidays_payload = fetcher(CALENDAR_URL)
     holidays = calendar_days(holidays_payload, local.year)
@@ -294,14 +410,23 @@ def collect(historical, prior, policy, now, fetcher=fetch_json):
         receipts["twse_" + month] = digest(payload)
         official.extend(r for r in parse_official(payload, month) if r["date"] <= expected)
     validate_rows(official)
+    previous_anchor = None
+    if prior and len(official) >= 2:
+        previous = official[-2]["date"]
+        yahoo_dates = {datetime.fromtimestamp(stamp, TAIPEI).date().isoformat()
+                       for stamp in yahoo["chart"]["result"][0]["timestamp"]}
+        if previous not in yahoo_dates:
+            previous_anchor = verified_previous_bar(root, prior, policy, official, expected)
     try:
-        rows = parse_yahoo(yahoo, historical, expected)
+        rows = parse_yahoo(yahoo, historical, expected, previous_anchor=previous_anchor)
     except Error as exc:
         # Do not turn any historical/schema/action failure into a fallback.
         require(str(exc) in ("MISSING_SOURCE_OHLC:" + expected,
                             "MISSING_ADJUSTED_CLOSE:" + expected, "STALE_ADJUSTED_OHLC"), str(exc))
-        fallback = latest_twse_fallback(yahoo, historical, prior, official, expected, now, fetcher, receipts)
-        rows = parse_yahoo(yahoo, historical, expected, latest_fallback=fallback)
+        fallback = latest_twse_fallback(yahoo, historical, prior, official, expected, now, fetcher,
+                                        receipts, previous_anchor)
+        rows = parse_yahoo(yahoo, historical, expected, latest_fallback=fallback,
+                           previous_anchor=previous_anchor)
     if prior:
         compare_history(prior, rows)
     relevant = [r for r in rows if r["date"] >= first]
@@ -496,7 +621,7 @@ def run(root=shadow.ROOT, now=None, fetcher=fetch_json, dry_run=False):
     # official entry/outcome. Publication is one Git commit in the workflow.
     try:
         require_incident_review(root, records)
-        data, holidays = collect(historical, prior, policy, now, fetcher)
+        data, holidays = collect(historical, prior, policy, now, fetcher, root=root)
         if live_clock:
             finished = datetime.now(timezone.utc)
             require(finished.astimezone(TAIPEI).date() == now.astimezone(TAIPEI).date(), "CAPTURE_WINDOW_CLOSED")
