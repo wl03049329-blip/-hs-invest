@@ -29,7 +29,18 @@ class FrontendStatusTest(unittest.TestCase):
             target = self.root / relative
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(source.read_bytes() if source.exists() else b"")
-        self.latest = self.read("research/hs_leverage/forward/daily-status.json")["latest_data_date"]
+        # A mutable production failure report is not a successful-build fixture.
+        # Construct a coherent success case only in this temporary test root;
+        # the rejection test below independently verifies failed validation.
+        policy = self.read("research/hs_leverage/phase_l7_forward_policy.json")
+        price = self.read("research/hs_leverage/forward/00631L-adjusted-daily.json")
+        records, realized = daily.validate_ledgers(self.root / policy["paths"]["forward_ledger"],
+                                                   self.root / policy["paths"]["outcomes_ledger"], policy)
+        self.latest = price["item"]["rows"][-1]["date"]
+        self.write("research/hs_leverage/forward/daily-status.json", {
+            "status": "NOOP_ALREADY_RECORDED", "data_integrity": "PASS", "dry_run": False,
+            "latest_data_date": self.latest, "data_version": price["metadata"]["data_version"],
+            "checked_at": price["metadata"]["generated_at"], **daily.summarize(records, realized)})
 
     def read(self, relative):
         return json.loads((self.root / relative).read_text(encoding="utf-8"))
