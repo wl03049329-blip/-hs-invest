@@ -20,6 +20,19 @@ def require(value, reason):
         raise ValueError(reason)
 
 
+def classify_freshness(latest_completed_bar, expected_completed_bar):
+    try:
+        if not isinstance(latest_completed_bar, str) or not isinstance(expected_completed_bar, str):
+            return "UNKNOWN"
+        latest = date.fromisoformat(latest_completed_bar)
+        expected = date.fromisoformat(expected_completed_bar)
+        if latest.isoformat() != latest_completed_bar or expected.isoformat() != expected_completed_bar:
+            return "UNKNOWN"
+    except ValueError:
+        return "UNKNOWN"
+    return "CURRENT" if latest == expected else "STALE" if latest < expected else "UNKNOWN"
+
+
 def build(root: Path, expected_completed_bar: str, next_completed_bar: str | None = None) -> dict:
     policy = shadow.read_json(root / "research/hs_leverage/phase_l7_forward_policy.json")
     forward = root / "research/hs_leverage/forward"
@@ -35,7 +48,14 @@ def build(root: Path, expected_completed_bar: str, next_completed_bar: str | Non
     require(metadata.get("ticker") == "00631L" and metadata.get("frequency") == "1d" and metadata.get("price_basis") == "Adjusted OHLC", "INVALID_PRICE_SOURCE")
     latest_bar = rows[-1]["date"]
     require(latest_bar == status.get("latest_data_date") == metadata.get("expected_completed_bar"), "PRICE_STATUS_DATE_MISMATCH")
-    require(latest_bar <= expected_completed_bar, "FUTURE_PRICE_BAR")
+    freshness = classify_freshness(latest_bar, expected_completed_bar)
+    if isinstance(expected_completed_bar, str):
+        try:
+            expected_date = date.fromisoformat(expected_completed_bar)
+        except ValueError:
+            expected_date = None
+        if expected_date is not None and expected_date.isoformat() == expected_completed_bar:
+            require(date.fromisoformat(latest_bar) <= expected_date, "FUTURE_PRICE_BAR")
     require(metadata.get("data_version") == status.get("data_version"), "PRICE_VERSION_MISMATCH")
     counts = daily.summarize(records, realized)
     for key in ("forward_observations", "eligible_observations", "pending_outcomes", "completed_outcomes", "outcomes_by_horizon"):
@@ -59,7 +79,7 @@ def build(root: Path, expected_completed_bar: str, next_completed_bar: str | Non
         "generated_at": checked_at,
         "price": {"latest_completed_bar": latest_bar,
                   "expected_completed_bar": expected_completed_bar,
-                  "freshness": "CURRENT" if latest_bar == expected_completed_bar and next_completed_bar else "STALE" if latest_bar < expected_completed_bar else "UNKNOWN",
+                  "freshness": freshness,
                   "stale_after": datetime.combine(date.fromisoformat(next_completed_bar), time(16, 30), daily.TAIPEI).isoformat() if next_completed_bar else None},
         "shadow": {"status": policy["status"], "latest_evaluation_date": evaluation_date,
                    "triggered": current.get("signal_triggered") if current else None,

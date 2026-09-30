@@ -4,9 +4,11 @@ import hashlib
 import json
 import tempfile
 import unittest
+from datetime import datetime
 from pathlib import Path
 
 import build_frontend_status as frontend
+import phase_l7_daily as daily
 import phase_l7_shadow as shadow
 
 
@@ -49,11 +51,28 @@ class FrontendStatusTest(unittest.TestCase):
         self.assertEqual(first["shadow"]["observation_count"], status["forward_observations"])
         self.assertEqual(first["shadow"]["eligible_count"], status["eligible_observations"])
         self.assertEqual(first["workflow"]["last_successful_validation_at"], None)
+        self.assertEqual(first["price"]["freshness"], "CURRENT")
 
     def test_stale_uses_expected_trading_day_not_calendar_subtraction(self):
-        result = frontend.build(self.root, "2026-09-29")
-        self.assertEqual(result["price"]["freshness"], "STALE")
-        self.assertEqual(result["price"]["latest_completed_bar"], self.latest)
+        self.assertEqual(frontend.classify_freshness("2026-09-29", "2026-09-30"), "STALE")
+        self.assertEqual(frontend.classify_freshness("2026-09-30", "2026-09-30"), "CURRENT")
+
+    def test_weekend_holiday_and_taipei_midnight_expected_day(self):
+        self.assertEqual(daily.expected_day(datetime.fromisoformat("2026-10-05T08:00:00+08:00"), set()), "2026-10-02")
+        holidays = {"2026-09-25", "2026-09-28"}
+        self.assertEqual(daily.expected_day(datetime.fromisoformat("2026-09-29T08:00:00+08:00"), holidays), "2026-09-24")
+        self.assertEqual(daily.expected_day(datetime.fromisoformat("2026-09-30T16:06:00+00:00"), set()), "2026-09-30")
+
+    def test_unknown_only_for_missing_or_invalid_dates(self):
+        for latest, expected in ((None, "2026-09-30"), ("2026-09-29", None),
+                                 ("bad-date", "2026-09-30"), ("2026-09-29", "bad-date")):
+            self.assertEqual(frontend.classify_freshness(latest, expected), "UNKNOWN")
+        self.assertEqual(frontend.build(self.root, None)["price"]["freshness"], "UNKNOWN")
+        self.assertEqual(frontend.build(self.root, "bad-date")["price"]["freshness"], "UNKNOWN")
+
+    def test_future_bar_fails_closed(self):
+        with self.assertRaisesRegex(ValueError, "FUTURE_PRICE_BAR"):
+            frontend.build(self.root, "1900-01-01")
 
     def test_failed_validation_and_mismatch_fail_closed(self):
         path = "research/hs_leverage/forward/daily-status.json"
