@@ -1,40 +1,41 @@
 {
   "version": 1,
-  "updated_at": "2026-09-29T14:13:46.363317Z",
-  "data_date": "2026-09-29",
+  "updated_at": "2026-09-30T14:03:48.280592Z",
+  "data_date": "2026-09-30",
   "foreign_tx": {
-    "long": 8788,
-    "short": 87817,
-    "net": -79029,
-    "net_change": -1998
+    "long": 12351,
+    "short": 90502,
+    "net": -78151,
+    "net_change": 878
   },
   "estimated_non_institutional_mtx": {
-    "long": 30218,
-    "short": 24668,
-    "net": 5550,
-    "net_change": -1865
+    "long": 30601,
+    "short": 25969,
+    "net": 4632,
+    "net_change": -918
   },
   "estimated_non_institutional_tmf": {
-    "long": 70709,
-    "short": 52523,
-    "net": 18186,
-    "net_change": 11467
+    "long": 65730,
+    "short": 57687,
+    "net": 8043,
+    "net_change": -10143
   },
   "methodology": "外資臺股期貨採期交所三大法人未平倉資料。MTX/TMF 非三大法人部位推估＝一般交易時段、相同交易日、同商品所有有效月份（含 MTX 週契約）全市場未平倉量，分別扣除自營商、投信、外資及陸資的多方／空方未平倉口數。",
   "source_status": {
     "aligned": true,
     "freshness": "SOURCE_FALLBACK",
     "source_provider": "TAIFEX_OFFICIAL_CSV",
-    "source_checked_at": "2026-09-29T14:13:46.363317Z",
-    "latest_expected_trading_date": "2026-09-29",
+    "source_checked_at": "2026-09-30T14:03:48.280592Z",
+    "latest_expected_trading_date": "2026-09-30",
     "lag_trading_days": 0,
     "net_change_available": true,
-    "net_change_baseline_date": "2026-09-24",
+    "net_change_baseline_date": "2026-09-29",
     "session_scope": "一般交易時段未平倉量",
     "mtx_contract_scope": [
       "202609W5",
       "202610",
       "202610W1",
+      "202610W2",
       "202611",
       "202612",
       "202703",
@@ -52,7 +53,7 @@
     "institutional_source": "https://openapi.taifex.com.tw/v1/MarketDataOfMajorInstitutionalTradersDetailsOfFuturesContractsBytheDate",
     "market_source": "https://openapi.taifex.com.tw/v1/DailyMarketReportFut",
     "diagnostics": [
-      "TAIFEX_PRIMARY:SOURCE_NOT_READY:2026-09-24"
+      "TAIFEX_PRIMARY:SOURCE_NOT_READY:2026-09-29"
     ]
   }
 }
