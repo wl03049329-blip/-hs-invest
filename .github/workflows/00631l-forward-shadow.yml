@@ -20,6 +20,8 @@ on:
     paths:
       - 'research/hs_leverage/phase_l7_daily.py'
       - 'research/hs_leverage/test_phase_l7_daily.py'
+      - 'research/hs_leverage/phase_l7_incidents.py'
+      - 'research/hs_leverage/test_phase_l7_incidents.py'
       - 'research/hs_leverage/phase_l7_forward_policy.json'
       - '.github/workflows/00631l-forward-shadow.yml'
 
@@ -81,9 +83,9 @@ jobs:
             python research/hs_leverage/phase_l7_daily.py
           fi
       - name: Publish only operational shadow state
-        if: github.event_name == 'schedule' || github.event_name == 'workflow_run' || inputs.dry_run == false
+        if: steps.collect.outputs.classification != 'KNOWN_FAIL_CLOSED_DEDUPED' && (github.event_name == 'schedule' || github.event_name == 'workflow_run' || inputs.dry_run == false)
         run: |
-          if [ "${{ steps.collect.outcome }}" = "success" ]; then
+          if [ "${{ steps.collect.outputs.classification }}" = "VALIDATED" ]; then
             python research/hs_leverage/build_frontend_status.py
           fi
           git config user.name 'github-actions[bot]'
@@ -92,7 +94,7 @@ jobs:
             path="research/hs_leverage/forward/$file"
             if [ -f "$path" ]; then git add -- "$path"; fi
           done
-          if [ "${{ steps.collect.outcome }}" = "success" ]; then
+          if [ "${{ steps.collect.outputs.classification }}" = "VALIDATED" ]; then
             git add -- 00631l-leverage-status-v1.json
           fi
           if ! git diff --cached --quiet; then

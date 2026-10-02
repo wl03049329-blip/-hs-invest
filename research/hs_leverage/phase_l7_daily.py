@@ -18,6 +18,7 @@ from datetime import date, datetime, time as day_time, timedelta, timezone
 from pathlib import Path
 
 import phase_l7_shadow as shadow
+import phase_l7_incidents as incidents
 
 TAIPEI = timezone(timedelta(hours=8))
 BASE = "research/hs_leverage"
@@ -617,11 +618,35 @@ def run(root=shadow.ROOT, now=None, fetcher=fetch_json, dry_run=False):
     outcomes = root / policy["paths"]["outcomes_ledger"]
     records, realized = validate_ledgers(ledger, outcomes, policy)
     prior = shadow.read_json(root / SNAPSHOT) if (root / SNAPSHOT).exists() else None
+    probe = {}
+    def read_source(url):
+        payload = fetcher(url)
+        if url == CALENDAR_URL:
+            probe["holidays"] = calendar_days(payload, now.astimezone(TAIPEI).year)
+            probe["target"] = expected_day(now, probe["holidays"])
+        elif "query1.finance.yahoo.com/" in url:
+            probe["yahoo"] = payload
+        elif url.startswith(DAILY_URL):
+            month = url.split("date=")[1][:6]
+            probe.setdefault("official", []).extend(parse_official(payload, month))
+        return payload
+    awaiting_review = False
     # All mutations are computed in isolation. A failure cannot leave a partial
     # official entry/outcome. Publication is one Git commit in the workflow.
     try:
-        require_incident_review(root, records)
-        data, holidays = collect(historical, prior, policy, now, fetcher, root=root)
+        try:
+            require_incident_review(root, records)
+        except Error as exc:
+            if not str(exc).startswith("EXPLICIT_INTEGRITY_REVIEW_REQUIRED:"):
+                raise
+            awaiting_review = True
+        # Review latch blocks publication, not a read-only recovery probe.
+        data, holidays = collect(historical, prior, policy, now, read_source, root=root)
+        probe.update(target=data["metadata"]["expected_completed_bar"], holidays=holidays,
+                     data_version=data["metadata"]["data_version"])
+        if awaiting_review:
+            return operational_failure(root, policy, prior, historical, records, realized, now,
+                                       dry_run, probe, "RECOVERY_EVIDENCE_AVAILABLE", True)
         if live_clock:
             finished = datetime.now(timezone.utc)
             require(finished.astimezone(TAIPEI).date() == now.astimezone(TAIPEI).date(), "CAPTURE_WINDOW_CLOSED")
@@ -657,18 +682,80 @@ def run(root=shadow.ROOT, now=None, fetcher=fetch_json, dry_run=False):
                 atomic_json(root / STATUS, status)
             return status
     except Exception as exc:
-        awaiting_review = str(exc).startswith("EXPLICIT_INTEGRITY_REVIEW_REQUIRED:")
-        status = {"status": "FAIL_CLOSED", "signal_status": "NO_SIGNAL", "reason": str(exc),
-                  "checked_at": now.isoformat(), "latest_data_date": prior["item"]["rows"][-1]["date"] if prior else historical["item"]["rows"][-1]["date"],
-                  "data_integrity": "FAIL", "dry_run": dry_run,
-                  "requires_integrity_review": awaiting_review or any(marker in str(exc) for marker in REVIEW_MARKERS),
-                  **summarize(records, realized)}
-        if not dry_run:
-            atomic_json(root / STATUS, status)
-            if not awaiting_review:
-                shadow.append_record(root / INCIDENTS, {"record_type": "DAILY_VALIDATION_FAILURE",
-                                     "record_id": "FAIL:" + now.astimezone(TAIPEI).date().isoformat() + ":" + digest(str(exc)), **status})
-        return status
+        reason = (str(exc) if isinstance(exc, Error) else "SOURCE_TRANSPORT_ERROR"
+                  if isinstance(exc, OSError) else "UNEXPECTED_VALIDATION_ERROR")
+        # Corrupt incident chains cannot be appended to or notification-deduped.
+        if shadow.validate_hash_chain(root / INCIDENTS)["status"] != "PASS":
+            return {"status": "FAIL_CLOSED", "reason": "INCIDENT_HASH_CHAIN_INVALID",
+                    "data_integrity": "FAIL", "requires_integrity_review": True,
+                    "workflow_classification": "NEW_FAIL_CLOSED"}
+        return operational_failure(root, policy, prior, historical, records, realized, now,
+                                   dry_run, probe, reason, awaiting_review)
+
+
+def operational_failure(root, policy, prior, historical, records, realized, now,
+                        dry_run, probe, reason, awaiting_review):
+    anchor = (prior or historical)["item"]["rows"][-1]["date"]
+    target = probe.get("target")
+    recovery = reason == "RECOVERY_EVIDENCE_AVAILABLE"
+    history = shadow.read_jsonl(root / INCIDENTS)
+    reviewed = {r.get("incident_id") for r in records
+                if r.get("record_type") == "CORPORATE_ACTION_RECOVERY"
+                and r.get("integrity_review_status") == "PASS" and r.get("approved_by")
+                and r.get("new_data_version") and len(r.get("recovery_steps_completed", [])) >= 8}
+    unresolved = [r for r in history if r["record_id"] not in reviewed
+                  and r.get("requires_integrity_review")]
+    pending_p0 = next((r["reason"] for r in unresolved if incidents.p0_reason(r["reason"])), None)
+    root_reason = pending_p0 or (unresolved[-1]["reason"] if recovery and unresolved else reason)
+    context = incidents.identity(target, root_reason, anchor, policy)
+    evidence = source_probe_evidence(probe, anchor, target)
+    if recovery:
+        evidence.update(validation="PASS", data_version=probe.get("data_version"))
+    classification, key = incidents.classify(
+        context, evidence, history, reviewed, expected_day, probe.get("holidays", set()),
+        recovery=recovery, legacy_progress=any(not row["missing"] for row in evidence.get("sessions", [])))
+    if pending_p0:
+        classification = "NEW_FAIL_CLOSED"  # A pending P0 review is never a green known failure.
+    status = {"status": "FAIL_CLOSED", "system_state": "FAIL_CLOSED", "signal_status": "NO_SIGNAL",
+              "reason": root_reason, "checked_at": now.isoformat(), "latest_data_date": anchor,
+              "expected_completed_bar": target, "freshness": "STALE" if target and anchor < target else "UNKNOWN",
+              "data_integrity": "FAIL", "dry_run": dry_run,
+              "requires_integrity_review": awaiting_review or recovery or reason != "SOURCE_TRANSPORT_ERROR",
+              "workflow_classification": classification, "incident_identity": context,
+              "incident_fingerprint": key, "source_probe_evidence": evidence, **summarize(records, realized)}
+    if not dry_run and classification != "KNOWN_FAIL_CLOSED_DEDUPED":
+        shadow.append_record(root / INCIDENTS, {"record_type": "DAILY_VALIDATION_FAILURE",
+                            "record_id": "OPERATIONAL:" + key, **status})
+        atomic_json(root / STATUS, status)
+    return status
+
+
+def source_probe_evidence(probe, anchor, target):
+    """Stable field availability/values only, not raw payload or transport metadata."""
+    sessions = sorted({r["date"] for r in probe.get("official", []) if target and anchor < r["date"] <= target})
+    if not sessions:
+        return {"sessions": [], "availability": "UNKNOWN"}
+    try:
+        result = probe["yahoo"]["chart"]["result"][0]
+        quote = result["indicators"]["quote"][0]
+        adjusted = result["indicators"]["adjclose"][0]["adjclose"]
+        by_date = {datetime.fromtimestamp(stamp, TAIPEI).date().isoformat(): i
+                   for i, stamp in enumerate(result["timestamp"])}
+        evidence = []
+        for day in sessions:
+            i = by_date.get(day)
+            values, missing = {}, []
+            for field in (*FIELDS, "volume", "adjclose"):
+                series = adjusted if field == "adjclose" else quote.get(field, [])
+                value = series[i] if i is not None and i < len(series) else None
+                if isinstance(value, bool) or not isinstance(value, (float, int)) or not math.isfinite(value) or value < 0 or (field != "volume" and value == 0):
+                    missing.append(field)
+                else:
+                    values[field] = value
+            evidence.append({"date": day, "missing": missing, "values": values})
+        return {"sessions": evidence}
+    except (KeyError, IndexError, TypeError, ValueError, OverflowError):
+        return {"sessions": [], "availability": "INVALID_SCHEMA"}
 
 
 def main():
@@ -686,13 +773,24 @@ def main():
         try:
             status = run(dry_run=args.dry_run)
         except Exception as exc:
-            status = {"status": "FAIL_CLOSED", "reason": str(exc), "live_capital": False, "production_signal": False}
+            status = {"status": "FAIL_CLOSED", "system_state": "FAIL_CLOSED",
+                      "reason": str(exc) if isinstance(exc, Error) else "UNEXPECTED_VALIDATION_ERROR",
+                      "data_integrity": "FAIL", "requires_integrity_review": True,
+                      "workflow_classification": "NEW_FAIL_CLOSED",
+                      "live_capital": False, "production_signal": False}
         print(json.dumps(status, ensure_ascii=False, indent=2))
+        classification = status.get("workflow_classification", "VALIDATED" if status["status"] != "FAIL_CLOSED" else "NEW_FAIL_CLOSED")
+        output = os.environ.get("GITHUB_OUTPUT")
+        if output:
+            with open(output, "a", encoding="utf-8") as handle:
+                handle.write("classification=" + classification + "\n")
         summary = os.environ.get("GITHUB_STEP_SUMMARY")
         if summary:
             with open(summary, "a", encoding="utf-8") as handle:
                 handle.write("## 00631L Forward Shadow\n\n```json\n" + json.dumps(status, indent=2) + "\n```\n")
-        return 2 if status["status"] == "FAIL_CLOSED" else 0
+                if classification == "KNOWN_FAIL_CLOSED_DEDUPED":
+                    handle.write("\n" + incidents.WARNING)
+        return incidents.exit_code(status)
     finally:
         lock.unlink()
 

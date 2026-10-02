@@ -309,12 +309,12 @@ class DailyTests(unittest.TestCase):
     def test_integrity_incident_cannot_silently_reenable(self):
         with patch.object(shadow, "load_context", return_value=(self.policy, self.historical)), patch.object(daily, "collect", side_effect=daily.Error("CORPORATE_ACTION_REVIEW_REQUIRED")):
             daily.run(self.root, now=at("2026-08-24"))
-        with patch.object(shadow, "load_context", return_value=(self.policy, self.historical)), patch.object(daily, "collect") as collect:
+        with patch.object(shadow, "load_context", return_value=(self.policy, self.historical)), patch.object(daily, "collect", return_value=(data_for(self.rows[:7]), set())) as collect:
             result = daily.run(self.root, now=at("2026-08-25"))
-        collect.assert_not_called()
-        self.assertTrue(result["reason"].startswith("EXPLICIT_INTEGRITY_REVIEW_REQUIRED"))
+        collect.assert_called_once()  # A read-only probe is required even with a latch.
+        self.assertEqual(result["workflow_classification"], "RECOVERY_EVIDENCE_AVAILABLE")
         self.assertTrue(result["requires_integrity_review"])
-        self.assertEqual(len(shadow.read_jsonl(self.root / daily.INCIDENTS)), 1)
+        self.assertEqual(len(shadow.read_jsonl(self.root / daily.INCIDENTS)), 2)
         self.assertFalse(self.ledger.exists())
 
     def test_transient_transport_failure_retries_without_fake_evaluation(self):
