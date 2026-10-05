@@ -1,12 +1,66 @@
 {
   "status": "FAIL_CLOSED",
+  "system_state": "FAIL_CLOSED",
   "signal_status": "NO_SIGNAL",
   "reason": "FALLBACK_ADJUSTMENT_UNRESOLVED",
-  "checked_at": "2026-10-02T16:06:55.808899+00:00",
+  "checked_at": "2026-10-05T16:19:11.497697+00:00",
   "latest_data_date": "2026-09-30",
+  "expected_completed_bar": "2026-10-05",
+  "freshness": "STALE",
   "data_integrity": "FAIL",
   "dry_run": false,
   "requires_integrity_review": true,
+  "workflow_classification": "RECOVERY_EVIDENCE_AVAILABLE",
+  "incident_identity": {
+    "target_completed_trading_date": "2026-10-05",
+    "normalized_root_cause": "FALLBACK_ADJUSTMENT_UNRESOLVED",
+    "latest_verified_anchor_date": "2026-09-30",
+    "source_failure_class": "YAHOO_ADJUSTED_EVIDENCE_MISSING",
+    "policy_version": "HS_LEVERAGE_C_V1_FORWARD_POLICY_2026:V1:HS_LEVERAGE_C_V1_THRESHOLD_2026_TRAIN_END_2025-12-31"
+  },
+  "incident_fingerprint": "c23ebe0b2143dd6e85af270596bf95d764d30baf1d6758940fc717d852fd2318",
+  "source_probe_evidence": {
+    "sessions": [
+      {
+        "date": "2026-10-01",
+        "missing": [],
+        "values": {
+          "open": 39.130001068115234,
+          "high": 39.619998931884766,
+          "low": 38.900001525878906,
+          "close": 39.619998931884766,
+          "volume": 103690858,
+          "adjclose": 39.619998931884766
+        }
+      },
+      {
+        "date": "2026-10-02",
+        "missing": [],
+        "values": {
+          "open": 39.58000183105469,
+          "high": 39.709999084472656,
+          "low": 39.290000915527344,
+          "close": 39.58000183105469,
+          "volume": 98917831,
+          "adjclose": 39.58000183105469
+        }
+      },
+      {
+        "date": "2026-10-05",
+        "missing": [],
+        "values": {
+          "open": 41.31999969482422,
+          "high": 41.790000915527344,
+          "low": 41.13999938964844,
+          "close": 41.540000915527344,
+          "volume": 275099741,
+          "adjclose": 41.540000915527344
+        }
+      }
+    ],
+    "validation": "PASS",
+    "data_version": "adjusted_daily_v1:49ed57e6099428eb36ba6a5e83e8f99017d7da9592a5d7e99436d2a2413e5573"
+  },
   "forward_observations": 1,
   "eligible_observations": 0,
   "signal_trigger_count": 0,
