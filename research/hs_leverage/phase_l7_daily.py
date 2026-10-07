@@ -47,16 +47,80 @@ def digest(value):
 
 def fetch_json(url):
     # Transport retries never substitute another instrument, frequency or quote.
-    for attempt in range(3):
+    # Yahoo's transport AND semantic retries share the three-request budget in
+    # select_yahoo_payload; nested transport retries would exceed that budget.
+    attempts = 1 if url.startswith("https://query1.finance.yahoo.com/") else 3
+    for attempt in range(attempts):
         try:
             request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 HS-Forward-Shadow/1.0"})
             with urllib.request.urlopen(request, timeout=30) as response:
                 require(response.status == 200, "SOURCE_HTTP_ERROR")
                 return json.loads(response.read().decode("utf-8-sig"))
         except (OSError, ValueError):
-            if attempt == 2:
+            if attempt == attempts - 1:
                 raise
             time.sleep(2 ** attempt)
+
+
+def yahoo_candidate_key(payload, expected):
+    """Rank an intact payload, without accepting/repairing any price rows."""
+    require(isinstance(payload, dict) and payload.get("chart", {}).get("error") is None,
+            "YAHOO_SOURCE_ERROR")
+    results = payload.get("chart", {}).get("result")
+    require(isinstance(results, list) and len(results) == 1, "YAHOO_SCHEMA_ERROR")
+    result = results[0]
+    meta = result.get("meta", {})
+    require(meta.get("symbol") == "00631L.TW", "SYMBOL_MISMATCH")
+    require(meta.get("dataGranularity") == "1d", "DAILY_FREQUENCY_REQUIRED")
+    require(meta.get("exchangeTimezoneName") == "Asia/Taipei", "EXCHANGE_TIMEZONE_MISMATCH")
+    require(meta.get("currency") == "TWD" and meta.get("instrumentType") == "ETF", "INSTRUMENT_MISMATCH")
+    for kind, events in result.get("events", {}).items():
+        for event in events.values():
+            day = datetime.fromtimestamp(event["date"], TAIPEI).date().isoformat()
+            require(kind == "splits" and day == "2026-03-31"
+                    and event.get("numerator") == 22 and event.get("denominator") == 1,
+                    "CORPORATE_ACTION_REVIEW_REQUIRED")
+    try:
+        stamps = result["timestamp"]
+        quote = result["indicators"]["quote"][0]
+        adjusted = result["indicators"]["adjclose"][0]["adjclose"]
+        require(all(len(quote[k]) == len(stamps) for k in (*FIELDS, "volume"))
+                and len(adjusted) == len(stamps), "YAHOO_ARRAY_LENGTH_MISMATCH")
+        dates = [datetime.fromtimestamp(stamp, TAIPEI).date().isoformat() for stamp in stamps]
+        require(dates == sorted(set(dates)), "DUPLICATE_SOURCE_DATE")
+        covered, complete = [], []
+        for i, day in enumerate(dates):
+            if day > expected:
+                continue
+            covered.append(day)
+            values = [quote[k][i] for k in (*FIELDS, "volume")] + [adjusted[i]]
+            if all(isinstance(v, (int, float)) and not isinstance(v, bool)
+                   and math.isfinite(v) and v > 0 for v in values):
+                raw = {k: quote[k][i] for k in FIELDS}
+                if shadow.valid_bar({"date": day, **raw}) is None:
+                    complete.append(day)
+        return (expected in complete, len(complete), len(covered))
+    except (KeyError, IndexError, TypeError, ValueError, OverflowError) as exc:
+        raise Error("YAHOO_SCHEMA_ERROR") from exc
+
+
+def select_yahoo_payload(url, expected, fetcher=fetch_json):
+    """At most three identical requests; select ONE whole payload, never merge."""
+    best, best_key = None, None
+    for _ in range(3):
+        try:
+            payload = fetcher(url)
+            key = yahoo_candidate_key(payload, expected)
+        except (OSError, ValueError):
+            continue
+        except Error as exc:
+            if str(exc) not in ("YAHOO_SOURCE_ERROR", "YAHOO_SCHEMA_ERROR", "YAHOO_ARRAY_LENGTH_MISMATCH"):
+                raise  # An identity/action/P0 issue cannot be hidden by retry.
+            continue
+        if best_key is None or key > best_key:
+            best, best_key = payload, key
+    require(best is not None, "YAHOO_SOURCE_UNAVAILABLE")
+    return best
 
 
 def iso_roc(value):
@@ -106,7 +170,8 @@ def validate_rows(rows):
         require(all(not isinstance(row[k], bool) and math.isfinite(float(row[k])) for k in FIELDS), "NONFINITE_OHLC")
 
 
-def parse_yahoo(payload, historical, expected, latest_fallback=None, previous_anchor=None):
+def parse_yahoo(payload, historical, expected, latest_fallback=None, previous_anchor=None,
+                official_bridge=None):
     require(payload.get("chart", {}).get("error") is None, "YAHOO_SOURCE_ERROR")
     results = payload.get("chart", {}).get("result")
     require(isinstance(results, list) and len(results) == 1, "YAHOO_SCHEMA_ERROR")
@@ -136,6 +201,9 @@ def parse_yahoo(payload, historical, expected, latest_fallback=None, previous_an
         day = datetime.fromtimestamp(timestamp, TAIPEI).date().isoformat()
         if day < first or day > expected:
             continue  # Never persist a current, incomplete provider bar.
+        if official_bridge and day in official_bridge:
+            rows.append(official_bridge[day])
+            continue
         if day == expected and latest_fallback is not None:
             rows.append(latest_fallback)
             continue
@@ -163,6 +231,10 @@ def parse_yahoo(payload, historical, expected, latest_fallback=None, previous_an
                      "adjustment_factor": factor, "provider_ohlc": raw})
     if latest_fallback is not None and not any(r["date"] == expected for r in rows):
         rows.append(latest_fallback)
+    if official_bridge:
+        seen = {r["date"] for r in rows}
+        rows.extend(row for day, row in official_bridge.items() if day not in seen)
+        rows.sort(key=lambda row: row["date"])
     if previous_anchor is not None:
         require(not any(r["date"] == previous_anchor["date"] for r in rows),
                 "FALLBACK_PREVIOUS_ANCHOR_CONFLICT")
@@ -212,8 +284,11 @@ def months_between(first, last):
         day = (day.replace(day=28) + timedelta(days=4)).replace(day=1)
 
 
-def verified_previous_bar(root, prior, policy, official, expected):
-    """Attest the immediately previous bar against a successful tracked run.
+def verified_previous_bar(root, prior, policy, official, expected, allow_gap=False):
+    """Attest a published anchor against a successful tracked run.
+
+    The legacy fallback still requires adjacency; the bounded bridge explicitly
+    opts into a multi-session span without weakening publication attestation.
 
     Old operational rows predate per-bar provenance. Their price blob, source
     receipts, successful same-day status and bot publication must coincide in
@@ -221,8 +296,11 @@ def verified_previous_bar(root, prior, policy, official, expected):
     """
     require(prior is not None and len(official) >= 2, "FALLBACK_PREVIOUS_ANCHOR_MISSING")
     anchor = prior["item"]["rows"][-1]
-    require(anchor["date"] == official[-2]["date"] and anchor["date"] < expected,
+    require((anchor["date"] <= expected if allow_gap else anchor["date"] < expected)
+            and (allow_gap or anchor["date"] == official[-2]["date"]),
             "FALLBACK_PREVIOUS_ANCHOR_NOT_ADJACENT")
+    require(not allow_gap or any(r["date"] == anchor["date"] for r in official),
+            "FALLBACK_PREVIOUS_ANCHOR_UNVERIFIED")
     relative = SNAPSHOT
 
     def git(*args):
@@ -291,8 +369,9 @@ def verified_previous_bar(root, prior, policy, official, expected):
     require(source is None or (source.get("integrity_status") == "PASS"
             and source.get("trading_date") == anchor["date"]
             and source.get("adjustment_factor") == 1
-            and source.get("effective_source") in ("YAHOO", "TWSE_FALLBACK")),
+            and source.get("effective_source") in ("YAHOO", "TWSE_FALLBACK", "TWSE_FACTOR_ONE_BRIDGE")),
             "FALLBACK_PREVIOUS_ANCHOR_UNVERIFIED")
+    require(not allow_gap or source is not None, "BRIDGE_ANCHOR_PROVENANCE_REQUIRED")
     restored = dict(anchor)
     if source is None:
         restored["source_provenance"] = {
@@ -391,7 +470,8 @@ def latest_twse_fallback(yahoo, historical, prior, official, expected, now, fetc
                 "integrity_status": "PASS"}}
 
 
-def collect(historical, prior, policy, now, fetcher=fetch_json, root=shadow.ROOT):
+def collect(historical, prior, policy, now, fetcher=fetch_json, root=shadow.ROOT,
+            allow_official_bridge=False, bridge_review_required=False):
     local = now.astimezone(TAIPEI)
     holidays_payload = fetcher(CALENDAR_URL)
     holidays = calendar_days(holidays_payload, local.year)
@@ -400,7 +480,7 @@ def collect(historical, prior, policy, now, fetcher=fetch_json, root=shadow.ROOT
     start = int(datetime(2014, 10, 23, tzinfo=TAIPEI).timestamp())
     url = (f"https://query1.finance.yahoo.com/v8/finance/chart/00631L.TW?period1={start}"
            f"&period2={int(now.timestamp())}&interval=1d&events=div%2Csplits")
-    yahoo = fetcher(url)
+    yahoo = select_yahoo_payload(url, expected, fetcher)
     # Verify the complete current-year sequence against official instrument
     # sessions (including suspensions), not merely a weekday approximation.
     official = []
@@ -411,15 +491,24 @@ def collect(historical, prior, policy, now, fetcher=fetch_json, root=shadow.ROOT
         receipts["twse_" + month] = digest(payload)
         official.extend(r for r in parse_official(payload, month) if r["date"] <= expected)
     validate_rows(official)
+    bridge_rows, bridge_review = {}, None
+    if allow_official_bridge:
+        import phase_l7_bridge as bridge
+        if bridge_review_required or (prior and bridge.needed(yahoo, prior, official, expected)):
+            bridge_rows, bridge_review = bridge.prepare(
+                root, prior, policy, yahoo, official, expected, holidays, now, fetcher, receipts)
+        elif prior:
+            bridge.verify_primary_factor_one(yahoo, prior, official, expected)
     previous_anchor = None
     if prior and len(official) >= 2:
         previous = official[-2]["date"]
         yahoo_dates = {datetime.fromtimestamp(stamp, TAIPEI).date().isoformat()
                        for stamp in yahoo["chart"]["result"][0]["timestamp"]}
-        if previous not in yahoo_dates:
+        if previous not in yahoo_dates and previous not in bridge_rows:
             previous_anchor = verified_previous_bar(root, prior, policy, official, expected)
     try:
-        rows = parse_yahoo(yahoo, historical, expected, previous_anchor=previous_anchor)
+        rows = parse_yahoo(yahoo, historical, expected, previous_anchor=previous_anchor,
+                           official_bridge=bridge_rows)
     except Error as exc:
         # Do not turn any historical/schema/action failure into a fallback.
         require(str(exc) in ("MISSING_SOURCE_OHLC:" + expected,
@@ -464,7 +553,8 @@ def collect(historical, prior, policy, now, fetcher=fetch_json, root=shadow.ROOT
                          "corporate_action_status": "REVALIDATED", "completed_bar_required": True,
                          "official_validation_from": first, "source_receipts_sha256": receipts,
                          "source_url": url, "official_source_url": DAILY_URL,
-                         "source_repairs": historical["metadata"].get("source_repairs", {})},
+                         "source_repairs": historical["metadata"].get("source_repairs", {}),
+                         **({"official_factor_one_bridge": bridge_review} if bridge_review else {})},
             "item": {"rows": rows}}, holidays
 
 
@@ -609,10 +699,13 @@ def atomic_json(path, value):
             os.unlink(name)
 
 
-def run(root=shadow.ROOT, now=None, fetcher=fetch_json, dry_run=False):
+def run(root=shadow.ROOT, now=None, fetcher=fetch_json, dry_run=False,
+        review_source_gap_recovery=False):
     live_clock = now is None
     now = now or datetime.now(timezone.utc)
     require(now.tzinfo is not None, "AWARE_CLOCK_REQUIRED")
+    require(not review_source_gap_recovery or (os.environ.get("GITHUB_EVENT_NAME") == "workflow_dispatch"
+            and not dry_run), "RECOVERY_MANUAL_NON_DRY_DISPATCH_REQUIRED")
     policy, historical = shadow.load_context(root)
     ledger = root / policy["paths"]["forward_ledger"]
     outcomes = root / policy["paths"]["outcomes_ledger"]
@@ -625,7 +718,11 @@ def run(root=shadow.ROOT, now=None, fetcher=fetch_json, dry_run=False):
             probe["holidays"] = calendar_days(payload, now.astimezone(TAIPEI).year)
             probe["target"] = expected_day(now, probe["holidays"])
         elif "query1.finance.yahoo.com/" in url:
-            probe["yahoo"] = payload
+            # Failure evidence must describe the selected candidate, not the
+            # last (possibly worse) retry. No OHLC is merged across responses.
+            key = yahoo_candidate_key(payload, probe["target"])
+            if "yahoo" not in probe or key > yahoo_candidate_key(probe["yahoo"], probe["target"]):
+                probe["yahoo"] = payload
         elif url.startswith(DAILY_URL):
             month = url.split("date=")[1][:6]
             probe.setdefault("official", []).extend(parse_official(payload, month))
@@ -641,7 +738,27 @@ def run(root=shadow.ROOT, now=None, fetcher=fetch_json, dry_run=False):
                 raise
             awaiting_review = True
         # Review latch blocks publication, not a read-only recovery probe.
-        data, holidays = collect(historical, prior, policy, now, read_source, root=root)
+        import phase_l7_bridge as bridge
+        allow_bridge = review_source_gap_recovery or bridge.approved(records)
+        collect_options = {"allow_official_bridge": True} if allow_bridge else {}
+        if review_source_gap_recovery:
+            collect_options["bridge_review_required"] = True
+        data, holidays = collect(historical, prior, policy, now, read_source, root=root, **collect_options)
+        if review_source_gap_recovery:
+            bridge.review(root, policy, records, data, now, holidays)
+            records, realized = validate_ledgers(ledger, outcomes, policy)
+            # Approval does not reuse a cached price payload for publication.
+            # Run normal collection again with a new three-request budget.
+            probe.clear()
+            data, holidays = collect(historical, prior, policy, now, read_source, root=root,
+                                     allow_official_bridge=True)
+            try:
+                require_incident_review(root, records)
+                awaiting_review = False
+            except Error as exc:
+                if not str(exc).startswith("EXPLICIT_INTEGRITY_REVIEW_REQUIRED:"):
+                    raise
+                awaiting_review = True
         probe.update(target=data["metadata"]["expected_completed_bar"], holidays=holidays,
                      data_version=data["metadata"]["data_version"])
         if awaiting_review:
@@ -665,6 +782,7 @@ def run(root=shadow.ROOT, now=None, fetcher=fetch_json, dry_run=False):
                     "live_capital": False, "production_signal": False, "capital_allocation_pct": 0})
             status = update_ledgers(staged, policy, data, now, holidays)
             status.update({"checked_at": now.isoformat(), "data_integrity": "PASS", "dry_run": dry_run,
+                           "requires_integrity_review": False,
                            "data_version": data["metadata"]["data_version"],
                            "workflow_run_id": os.environ.get("GITHUB_RUN_ID"),
                            "threshold_valid_through": policy["threshold"]["threshold_effective_to"]})
@@ -761,6 +879,8 @@ def source_probe_evidence(probe, anchor, target):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dry-run", action="store_true", help="Validate live sources without writing any operational state.")
+    parser.add_argument("--review-source-gap-recovery", action="store_true",
+                        help="One authorized workflow_dispatch review; never enabled by a schedule.")
     args = parser.parse_args()
     lock = shadow.ROOT / FORWARD / ".daily.lock"
     lock.parent.mkdir(parents=True, exist_ok=True)
@@ -771,7 +891,8 @@ def main():
     try:
         os.close(fd)
         try:
-            status = run(dry_run=args.dry_run)
+            options = {"review_source_gap_recovery": True} if args.review_source_gap_recovery else {}
+            status = run(dry_run=args.dry_run, **options)
         except Exception as exc:
             status = {"status": "FAIL_CLOSED", "system_state": "FAIL_CLOSED",
                       "reason": str(exc) if isinstance(exc, Error) else "UNEXPECTED_VALIDATION_ERROR",

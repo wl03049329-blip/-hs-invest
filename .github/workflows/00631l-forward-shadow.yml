@@ -16,12 +16,19 @@ on:
         description: Validate live sources without publishing observations
         type: boolean
         default: true
+      review_source_gap_recovery:
+        description: One authorized source-gap integrity review with fresh factor-one evidence
+        type: boolean
+        default: false
   push:
     paths:
       - 'research/hs_leverage/phase_l7_daily.py'
       - 'research/hs_leverage/test_phase_l7_daily.py'
       - 'research/hs_leverage/phase_l7_incidents.py'
       - 'research/hs_leverage/test_phase_l7_incidents.py'
+      - 'research/hs_leverage/phase_l7_bridge.py'
+      - 'research/hs_leverage/test_phase_l7_bridge.py'
+      - 'research/hs_leverage/test_phase_l7_yahoo_selection.py'
       - 'research/hs_leverage/phase_l7_forward_policy.json'
       - '.github/workflows/00631l-forward-shadow.yml'
 
@@ -76,7 +83,13 @@ jobs:
         continue-on-error: true
         env:
           DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+          REVIEW_SOURCE_GAP_RECOVERY: ${{ github.event_name == 'workflow_dispatch' && inputs.review_source_gap_recovery }}
         run: |
+          if [ "$REVIEW_SOURCE_GAP_RECOVERY" = "true" ]; then
+            test "$DRY_RUN" = "false"
+            python research/hs_leverage/phase_l7_daily.py --review-source-gap-recovery
+            exit $?
+          fi
           if [ "$DRY_RUN" = "true" ]; then
             python research/hs_leverage/phase_l7_daily.py --dry-run
           else
