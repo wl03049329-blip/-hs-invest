@@ -1,89 +1,6 @@
 {
-  "status": "FAIL_CLOSED",
-  "system_state": "FAIL_CLOSED",
-  "signal_status": "NO_SIGNAL",
-  "reason": "FALLBACK_ADJUSTMENT_UNRESOLVED",
-  "checked_at": "2026-10-07T17:01:53.558075+00:00",
-  "latest_data_date": "2026-09-30",
-  "expected_completed_bar": "2026-10-07",
-  "freshness": "STALE",
-  "data_integrity": "FAIL",
-  "dry_run": false,
-  "requires_integrity_review": true,
-  "workflow_classification": "NEW_FAIL_CLOSED",
-  "incident_identity": {
-    "target_completed_trading_date": "2026-10-07",
-    "normalized_root_cause": "FALLBACK_ADJUSTMENT_UNRESOLVED",
-    "latest_verified_anchor_date": "2026-09-30",
-    "source_failure_class": "YAHOO_ADJUSTED_EVIDENCE_MISSING",
-    "policy_version": "HS_LEVERAGE_C_V1_FORWARD_POLICY_2026:V1:HS_LEVERAGE_C_V1_THRESHOLD_2026_TRAIN_END_2025-12-31"
-  },
-  "incident_fingerprint": "a4b9b321eff5f4151ce34f50ca96d06c6459d92134ea367e5074fa94a2a4b241",
-  "source_probe_evidence": {
-    "sessions": [
-      {
-        "date": "2026-10-01",
-        "missing": [],
-        "values": {
-          "open": 39.130001068115234,
-          "high": 39.619998931884766,
-          "low": 38.900001525878906,
-          "close": 39.619998931884766,
-          "volume": 103690858,
-          "adjclose": 39.619998931884766
-        }
-      },
-      {
-        "date": "2026-10-02",
-        "missing": [],
-        "values": {
-          "open": 39.58000183105469,
-          "high": 39.709999084472656,
-          "low": 39.290000915527344,
-          "close": 39.58000183105469,
-          "volume": 98917831,
-          "adjclose": 39.58000183105469
-        }
-      },
-      {
-        "date": "2026-10-05",
-        "missing": [],
-        "values": {
-          "open": 41.31999969482422,
-          "high": 41.790000915527344,
-          "low": 41.13999938964844,
-          "close": 41.540000915527344,
-          "volume": 275099741,
-          "adjclose": 41.540000915527344
-        }
-      },
-      {
-        "date": "2026-10-06",
-        "missing": [
-          "open",
-          "high",
-          "low",
-          "close",
-          "volume",
-          "adjclose"
-        ],
-        "values": {}
-      },
-      {
-        "date": "2026-10-07",
-        "missing": [
-          "close",
-          "adjclose"
-        ],
-        "values": {
-          "open": 41.59000015258789,
-          "high": 41.939998626708984,
-          "low": 41.54999923706055,
-          "volume": 97947293
-        }
-      }
-    ]
-  },
+  "status": "NO_CURRENT_COMPLETED_SESSION_NO_BACKFILL",
+  "latest_data_date": "2026-10-07",
   "forward_observations": 1,
   "eligible_observations": 0,
   "signal_trigger_count": 0,
@@ -111,5 +28,12 @@
   "holding_policy": "HOLDING_HORIZON_UNRESOLVED",
   "live_capital": false,
   "production_signal": false,
-  "capital_allocation_pct": 0
+  "capital_allocation_pct": 0,
+  "checked_at": "2026-10-07T18:56:13.712877+00:00",
+  "data_integrity": "PASS",
+  "dry_run": false,
+  "requires_integrity_review": false,
+  "data_version": "adjusted_daily_v1:abb7aa63365142183b5de4b62bf6d3665b819c233e8c31265eecdc1e21290e42",
+  "workflow_run_id": "37670506555",
+  "threshold_valid_through": "2026-12-31"
 }
