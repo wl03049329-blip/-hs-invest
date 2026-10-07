@@ -2,8 +2,8 @@
   "status": "FAIL_CLOSED",
   "system_state": "FAIL_CLOSED",
   "signal_status": "NO_SIGNAL",
-  "reason": "OFFICIAL_SESSION_CONTINUITY_FAIL",
-  "checked_at": "2026-10-07T14:41:05.551395+00:00",
+  "reason": "FALLBACK_ADJUSTMENT_UNRESOLVED",
+  "checked_at": "2026-10-07T17:01:53.558075+00:00",
   "latest_data_date": "2026-09-30",
   "expected_completed_bar": "2026-10-07",
   "freshness": "STALE",
@@ -13,12 +13,12 @@
   "workflow_classification": "NEW_FAIL_CLOSED",
   "incident_identity": {
     "target_completed_trading_date": "2026-10-07",
-    "normalized_root_cause": "OFFICIAL_SESSION_CONTINUITY_FAIL",
+    "normalized_root_cause": "FALLBACK_ADJUSTMENT_UNRESOLVED",
     "latest_verified_anchor_date": "2026-09-30",
-    "source_failure_class": "OFFICIAL_SESSION_CONTINUITY_FAIL",
+    "source_failure_class": "YAHOO_ADJUSTED_EVIDENCE_MISSING",
     "policy_version": "HS_LEVERAGE_C_V1_FORWARD_POLICY_2026:V1:HS_LEVERAGE_C_V1_THRESHOLD_2026_TRAIN_END_2025-12-31"
   },
-  "incident_fingerprint": "ec59cd7c0667bd5eb88de4a3e7c8d61f54dc1e58e881022ee5dc6272f7fd3624",
+  "incident_fingerprint": "a4b9b321eff5f4151ce34f50ca96d06c6459d92134ea367e5074fa94a2a4b241",
   "source_probe_evidence": {
     "sessions": [
       {
@@ -71,14 +71,15 @@
       },
       {
         "date": "2026-10-07",
-        "missing": [],
+        "missing": [
+          "close",
+          "adjclose"
+        ],
         "values": {
           "open": 41.59000015258789,
           "high": 41.939998626708984,
           "low": 41.54999923706055,
-          "close": 41.75,
-          "volume": 97947293,
-          "adjclose": 41.75
+          "volume": 97947293
         }
       }
     ]
