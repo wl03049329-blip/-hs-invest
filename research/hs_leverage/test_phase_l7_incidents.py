@@ -234,12 +234,43 @@ class IncidentTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "VALIDATION_NOT_SUCCESSFUL"):
             frontend.build(self.root, "2026-10-02")
         node = os.environ.get("HS_TEST_NODE", "node")
-        script = """const fs=require('fs'),assert=require('assert');
+        # This contract needs an expired snapshot, not the rolling production
+        # artifact: a legitimate recovery can advance its stale_after date.
+        script = """const assert=require('node:assert/strict');
         const view=require('./leverage-state-view.js');
-        const snapshot=JSON.parse(fs.readFileSync('00631l-leverage-status-v1.json'));
+        const snapshot={
+          schema_version:1,symbol:'00631L',strategy_id:'HS_LEVERAGE_C_V1',
+          price:{latest_completed_bar:'2026-09-30',expected_completed_bar:'2026-09-30',
+                 freshness:'CURRENT',stale_after:'2026-10-01T16:30:00+08:00'},
+          shadow:{status:'FORWARD_SHADOW_ACTIVE',latest_evaluation_date:'2026-09-29',
+                  triggered:null,eligible_count:0,observation_count:1},
+          outcomes:{pending_20d:0,pending_40d:0,pending_60d:0,
+                    completed_20d:0,completed_40d:0,completed_60d:0},
+          capital:{production_signal:false,live_capital:false,allocation_pct:0},
+          workflow:{last_successful_validation_at:null}
+        };
+        const cutoff=Date.parse(snapshot.price.stale_after);
+        const expiredAt=Date.parse('2026-10-03T00:00:00+08:00');
+        const expired=view.officialStatus(snapshot,expiredAt);
+        assert.equal(expired.price.freshness,'STALE');
         snapshot.workflow.conclusion='success';
-        const value=view.officialStatus(snapshot,Date.parse('2026-10-03T00:00:00+08:00'));
-        assert.equal(value.price.freshness,'STALE');"""
+        const before=JSON.stringify(snapshot);
+        assert.equal(view.officialStatus(snapshot,cutoff-1).price.freshness,'CURRENT');
+        for(const now of [cutoff,expiredAt]){
+          const value=view.officialStatus(snapshot,now);
+          assert.equal(value.price.freshness,'STALE');
+          assert.deepEqual(value.price,expired.price);
+          assert.deepEqual(value.shadow,snapshot.shadow);
+          assert.deepEqual(value.outcomes,snapshot.outcomes);
+          assert.deepEqual(value.capital,snapshot.capital);
+          assert.equal(value.workflow.last_successful_validation_at,null);
+        }
+        assert.equal(JSON.stringify(snapshot),before);
+        for(const freshness of ['STALE','UNKNOWN']){
+          const value=view.officialStatus({...snapshot,price:{...snapshot.price,freshness}},cutoff-1);
+          assert.equal(value.price.freshness,freshness);
+        }
+        assert.equal(view.officialStatus({...snapshot,price:{...snapshot.price,stale_after:null}},expiredAt),null);"""
         subprocess.run([node, "-e", script], cwd=shadow.ROOT, check=True)
         self.assertNotIn("conclusion", (shadow.ROOT / "leverage-state-view.js").read_text(encoding="utf-8"))
         self.assertEqual((self.root / "00631l-leverage-status-v1.json").read_bytes(),
