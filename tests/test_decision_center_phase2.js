@@ -68,7 +68,8 @@ assert.doesNotMatch(html,/id="homeSwingBrief"/);
 assert.doesNotMatch(source,/calculateFinalCore|buildFinal\(|buildAdHocScore\(|evaluateCrashVelocity|localStorage|sessionStorage|\.setItem\(/);
 console.log("PASS HS mockup dashboard is responsive, six-symbol and presentation-only");
 
-const archived=JSON.parse(fs.readFileSync("intraday-core-snapshots-v1.json","utf8")).snapshots;
+// Fixed, provenance-backed history: production's rolling 500-row archive ages out these dates.
+const archived=require("./fixtures/intraday-ui-historical.json").snapshots;
 sandbox.archivedIntradayCoreSnapshots=archived;
 const previous=sandbox.homeC4PreviousSessionSummary("00830","2026-09-17");
 assert.deepEqual(JSON.parse(JSON.stringify(previous)),{date:"2026-09-16",high:50,low:49,last:49});

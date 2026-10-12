@@ -32,7 +32,7 @@ check("首頁 ETF 盤中狀態與正式分數邊界完整", () => {
   assert.match(html, /validatedRadarRefresh\(detail\.radarRefresh,quotes\)/);
   assert.match(html, /const verifiedCacheQuote=verifiedRefresh&&LONG_RADAR_SCORED_CODES\.has\(x\.id\)/);
   assert.match(html, /const authorizedFresh=detail\.source==="authorized_proxy"/);
-  assert.match(html, /displayStatus=!row\.useLive&&premarket\?"前日 FINAL":status/);
+  assert.match(html, /displayStatus=status==="UNAVAILABLE"\?"資料不可用":!row\.useLive&&premarket\?"前日 FINAL":status/);
   assert.match(html, /row\.useLive\?"LIVE":"FINAL"/);
 });
 

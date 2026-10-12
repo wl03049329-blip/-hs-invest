@@ -71,6 +71,7 @@ def create_app(
         alert_task = None if os.getenv("HS_BACKGROUND_ALERT_DISABLE") == "1" else asyncio.create_task(active_background_evaluator.run_forever(), name="hs-background-alert-evaluator")
         if os.getenv("HS_LIVE_DISABLE_SCHEDULER") != "1":
             task = asyncio.create_task(active_scheduler.run_forever(), name=f"hs-live-{active_mode}-scheduler")
+        _.state.scheduler_task = task
         yield
         for running in (task, alert_task):
             if running:
@@ -79,6 +80,7 @@ def create_app(
                     await running
 
     instance = FastAPI(title="HS Live Backend V1", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
+    instance.state.scheduler_task = None
     allowed_origin = os.getenv("HS_LIVE_ALLOWED_ORIGIN")
     if allowed_origin:
         instance.add_middleware(CORSMiddleware, allow_origins=[allowed_origin], allow_methods=["GET", "POST"], allow_headers=["Accept", "Content-Type"])
@@ -90,7 +92,11 @@ def create_app(
     @instance.get("/healthz")
     def healthz() -> dict:
         now = datetime.now(TAIPEI)
-        diagnostics = active_store.readiness(now, backend_mode=active_mode, current_bucket=bucket_run_id(now))
+        task = instance.state.scheduler_task
+        enabled = os.getenv("HS_LIVE_DISABLE_SCHEDULER") != "1"
+        scheduler = (active_scheduler.diagnostics(now, running=task is not None and not task.done(), enabled=enabled)
+                     if hasattr(active_scheduler, "diagnostics") else {"status": "UNKNOWN" if enabled else "DISABLED", "heartbeat_at": None})
+        diagnostics = active_store.readiness(now, backend_mode=active_mode, current_bucket=bucket_run_id(now), scheduler=scheduler)
         return {
             "status": "ok",
             "mode": active_mode,

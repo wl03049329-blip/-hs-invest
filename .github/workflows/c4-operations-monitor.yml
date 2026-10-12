@@ -1,0 +1,62 @@
+name: C4 independent operations monitor
+
+on:
+  schedule:
+    - cron: "7,17,27,37,47,57 1-5 * * 1-5"
+    - cron: "7,17,27,37 6 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  deployments: read
+  issues: write
+
+concurrency:
+  group: c4-operations-monitor
+  cancel-in-progress: false
+
+jobs:
+  check:
+    # Explicit post-subscription opt-in. Never ping a Free/Serverless service.
+    if: vars.HS_OPS_RUNTIME_PROFILE == 'hobby-always-on'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Read-only endpoint and publication check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HS_OPS_RUNTIME_PROFILE: hobby-always-on
+        run: python -m scripts.check_c4_operations > "${RUNNER_TEMP}/c4-operations.json"
+      - name: Notify operational failure without sending ETF signals
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let report;
+            try { report = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + '/c4-operations.json', 'utf8')); }
+            catch { report = {alerts:['MONITOR_EXECUTION_FAILED'],publication_verification:'UNKNOWN'}; }
+            const marker = '<!-- hs-c4-operations-monitor-v1 -->';
+            const issues = await github.paginate(github.rest.issues.listForRepo, {...context.repo, state:'open', per_page:100});
+            const existing = issues.find(i => !i.pull_request && i.user?.login === 'github-actions[bot]' && i.body?.includes(marker));
+            if (report.alerts.length) {
+              const body = marker + '\nC4 資料鏈異常（不是 ETF 交易提醒）\n\n' + report.alerts.map(x => '- ' + x).join('\n')
+                + '\n\n公開資料驗證：' + report.publication_verification;
+              if (!existing) await github.rest.issues.create({...context.repo, title:'C4 operations: data pipeline requires attention', body});
+              else if (existing.body !== body) await github.rest.issues.update({...context.repo, issue_number:existing.number, body});
+            } else if (existing && report.publication_verification === 'PUBLISHED_VERIFIED') {
+              await github.rest.issues.update({...context.repo, issue_number:existing.number, state:'closed'});
+            }
+            core.summary.addHeading('C4 operational evidence').addCodeBlock(JSON.stringify(report,null,2),'json');
+            await core.summary.write();
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: c4-operations-evidence
+          path: ${{ runner.temp }}/c4-operations.json
+          retention-days: 7

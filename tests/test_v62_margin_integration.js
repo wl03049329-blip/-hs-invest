@@ -7,7 +7,7 @@ const portfolio = fs.readFileSync(path.join(root, "portfolio-v6.js"), "utf8");
 const css = fs.readFileSync(path.join(root, "portfolio-v6.css"), "utf8");
 const updater = fs.readFileSync(path.join(root, "scripts", "update_margin_data.py"), "utf8");
 
-assert.match(html, /HS ETF 股市雷達 2\.0/);
+const versionCheck=require("./helpers/current-product-contracts").checkProductVersion(html);
 assert.match(html, /marginBalanceCard/);
 assert.match(html, /融資融券餘額/);
 assert.match(html, /HSMarginRiskCore\.displayValues\(risk\)/);
@@ -22,3 +22,4 @@ assert.doesNotMatch(html + portfolio, /221\.33/);
 assert.match(html, /市場推估融資維持率僅用於觀察整體融資戶壓力/);
 assert.match(html, /查看 FOMO、推估方法、缺漏與資料來源/);
 console.log("v6.2 rolling margin integration tests passed");
+versionCheck.catch(error=>{console.error(error);process.exitCode=1});

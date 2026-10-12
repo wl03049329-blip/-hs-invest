@@ -224,9 +224,12 @@ class ApiSurfaceTests(unittest.TestCase):
 
 
 class DeploymentConfigTests(unittest.TestCase):
-    def test_railway_is_single_replica_singapore_single_worker(self) -> None:
+    def test_railway_inherits_dashboard_placement_with_single_worker(self) -> None:
         config = json.loads((ROOT / "railway.json").read_text(encoding="utf-8"))
-        self.assertEqual(config["deploy"]["multiRegionConfig"], {"asia-southeast1-eqsg3a": {"numReplicas": 1}})
+        # Placement belongs to the existing service; code must not migrate its Volume.
+        for placement_key in ("region", "multiRegionConfig", "numReplicas"):
+            with self.subTest(placement_key=placement_key):
+                self.assertNotIn(placement_key, config["deploy"])
         dockerfile = (ROOT / "backend" / "Dockerfile").read_text(encoding="utf-8")
         self.assertIn("HS_LIVE_VOLUME_PATH=/data/hs-live", dockerfile)
         self.assertIn("--workers 1", dockerfile)

@@ -108,6 +108,17 @@ class ShadowScheduler:
         self.scorer = scorer or C4Bridge(store)
         self.publisher = publisher or GitHubArtifactPublisher()
         self._lock = asyncio.Lock()
+        self.last_heartbeat_at: datetime | None = None
+        self.tick_in_progress = False
+
+    def diagnostics(self, now: datetime, *, running: bool, enabled: bool) -> dict[str, Any]:
+        age = (now - self.last_heartbeat_at).total_seconds() if self.last_heartbeat_at else None
+        status = ("DISABLED" if not enabled else "STOPPED" if not running else
+                  "STARTING" if age is None else "HEALTHY" if 0 <= age <= 600 else "STALLED")
+        return {"status": status, "task_running": running, "enabled": enabled,
+                "heartbeat_at": self.last_heartbeat_at.isoformat() if self.last_heartbeat_at else None,
+                "heartbeat_age_sec": age, "tick_in_progress": self.tick_in_progress,
+                "heartbeat_threshold_sec": 600}
 
     def _save_unavailable(
         self,
@@ -314,5 +325,11 @@ class ShadowScheduler:
 
     async def run_forever(self) -> None:
         while True:
-            await self.tick()
+            self.last_heartbeat_at = datetime.now(TAIPEI)
+            self.tick_in_progress = True
+            try:
+                await self.tick()
+            finally:
+                self.tick_in_progress = False
+                self.last_heartbeat_at = datetime.now(TAIPEI)
             await asyncio.sleep(30)

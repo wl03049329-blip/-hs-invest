@@ -49,7 +49,7 @@ check("持股資料僅寫入 localStorage 且未放進網址", () => {
   assert.match(ui, /localStorage\.setItem\(HOLDINGS_KEY/);
   assert.doesNotMatch(ui, /URLSearchParams|history\.pushState|history\.replaceState|location\.search/);
   assert.doesNotMatch(ui, /sendBeacon|gtag|fetch\(\s*[`'"][^`'"]*(?:holdings|portfolio)/i);
-  assert.doesNotMatch(ui, /console\./);
+  require("./helpers/current-product-contracts").checkPortfolioConsolePrivacy(ui);
 });
 
 check("行情請求使用整批固定網址，不包含持股代號", () => {

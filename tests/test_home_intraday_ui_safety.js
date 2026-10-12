@@ -93,7 +93,8 @@ assert.match(css,/#homeEtfBrief \.hsDashboardC4Card\.is-leader \.hsC4LeaderBody 
 assert.match(css,/\.app\{padding-bottom:max\(124px,calc\(104px \+ env\(safe-area-inset-bottom\)\)\)\}/);
 console.log("PASS: responsive CSS safety selectors present");
 
-const archive=JSON.parse(fs.readFileSync("intraday-core-snapshots-v1.json","utf8"));
+// Preserve the original Golden Baseline independently of production retention.
+const archive=require("./fixtures/intraday-ui-historical.json");
 const today=archive.snapshots.filter(snapshot=>snapshot.status==="SUCCESS"&&snapshot.trading_date==="2026-09-21"&&snapshot.items?.["00830"]?.status==="SUCCESS");
 assert.equal(today.length,54);
 assert.equal(today.at(-1).items["00830"].score,31.35);

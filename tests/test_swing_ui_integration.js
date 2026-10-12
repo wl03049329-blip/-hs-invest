@@ -25,9 +25,15 @@ assert.match(html,/recordForwardSwingSignal/);
 assert.match(html,/rawScore:result\.rawBuyScore/);
 assert.match(html,/marketStatus:/);
 const portfolio = fs.readFileSync("portfolio-v6.js","utf8");
-assert.match(portfolio,/Trade ID/);
-assert.match(portfolio,/買點／出場壓力/);
-assert.match(portfolio,/cooldownRemaining/);
+// Trade state remains in its existing swing engine; Portfolio now uses its transaction ledger UI.
+const swing=require("../swing-strategy-core.js");
+const state=swing.normalizeTradeState({tradeId:"00733-fixture",symbol:"00733",state:"CLOSED",cooldownRemaining:5});
+assert.strictEqual(state.tradeId,"00733-fixture");
+assert.strictEqual(state.cooldownRemaining,5);
+assert.strictEqual(swing.transitionTradeState(state,{action:"OPEN",cooldownRemaining:5}).error,"cooldown_active");
+assert.match(portfolio,/HSPortfolioLedgerCore/);
+assert.match(portfolio,/derivePortfolioStateFromLedger\(ledger\.events\)/);
+assert.match(portfolio,/ledger\?openLedger\(\):openPortfolioModal/);
 
 const visibleHomeOrder = ["hsDecisionRoom","homeSentiment","homeEtfBrief","homeLeverageBrief"];
 let cursor = -1;

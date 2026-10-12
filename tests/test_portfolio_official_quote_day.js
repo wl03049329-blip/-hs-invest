@@ -25,7 +25,14 @@ vm.runInContext(`${html.slice(parserStart, parserEnd)};this.parse=parsePublicQuo
 const shared = parser.parse(payload);
 assert.equal(shared.get("006208").officialMarketDate, "2026-09-23");
 assert.equal(shared.get("009815").officialMarketDate, "2026-09-24");
-assert.equal(core.parseCachedQuotes(payload).get("006208").officialMarketDate, "2026-09-23");
+// The parser's production 14-day guard remains real; the historical fixture gets an explicit clock.
+const fixtureNow=Date.parse("2026-09-24T06:00:00Z"),originalNow=Date.now;
+try{
+  Date.now=()=>fixtureNow;
+  assert.equal(core.parseCachedQuotes(payload).get("006208").officialMarketDate, "2026-09-23");
+  assert.throws(()=>core.parseCachedQuotes({...payload,updated_at:"2026-09-01T00:00:00Z"}),/行情快取更新時間不合理/);
+  assert.throws(()=>core.parseCachedQuotes({...payload,updated_at:"2026-09-25T00:00:00Z"}),/行情快取更新時間不合理/);
+}finally{Date.now=originalNow}
 
 const holding = core.validateHolding({code: "006208", shares: 1000, averageCost: 256, name: "富邦台50"});
 const calculate = quotes => core.calculatePortfolio([holding], quotes, {now: Date.parse("2026-09-24T06:00:00Z")});

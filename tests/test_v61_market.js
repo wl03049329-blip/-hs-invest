@@ -88,7 +88,7 @@ check("ETF雷達自選與精選互相獨立且使用 namespaced localStorage", (
   assert.match(html, /function radarList\(\)/);
   assert.match(html, /HSStorage\.keys\.watchlist/);
   assert.match(html, /localStorage\.setItem\(RADAR_MODE_STORAGE_KEY/);
-  assert.match(html, /弘昇精選固定追蹤 8 檔 ETF/);
+  require("./helpers/current-product-contracts").checkFeaturedWatchlist(html);
 });
 
 check("精簡買點卡可展開且有非色彩訊號", () => {

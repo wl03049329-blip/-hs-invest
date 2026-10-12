@@ -39,9 +39,9 @@
     const items={};
     for(const symbol of expected){
       const row=payload?.tickers?.[symbol],score=Number(row?.score),displayScore=Number(row?.display_score),quoteAsOf=String(row?.quote_as_of||""),quoteMs=Date.parse(quoteAsOf),ageSeconds=(nowMs-quoteMs)/1000;
-      if(row?.status!=="AVAILABLE"||!Number.isFinite(score)||score<0||score>100||!Number.isFinite(displayScore))return unavailable(`INVALID_SCORE:${symbol}`,payload,{api_live_snapshot_count:1,freshness_check:"REJECTED",reject_reason:"INVALID_SCORE",symbol});
+      if(row?.status!=="AVAILABLE"||typeof row.score!=="number"||typeof row.display_score!=="number"||!Number.isFinite(score)||score<0||score>100||!Number.isFinite(displayScore)||displayScore<0||displayScore>100)return unavailable(`INVALID_SCORE:${symbol}`,payload,{api_live_snapshot_count:1,freshness_check:"REJECTED",reject_reason:"INVALID_SCORE",symbol});
       if(!quoteAsOf.startsWith(`${tradingDate}T`)||!Number.isFinite(quoteMs)||ageSeconds<0||ageSeconds>maxAgeSeconds||!VALID_FRESHNESS.has(String(row?.freshness||"")))return unavailable(`QUOTE_NOT_CURRENT:${symbol}`,payload,{api_live_snapshot_count:1,freshness_check:"REJECTED",reject_reason:ageSeconds>maxAgeSeconds?"QUOTE_TOO_OLD":ageSeconds<0?"QUOTE_IN_FUTURE":"QUOTE_NOT_CURRENT",symbol,quote_age_sec:Number.isFinite(ageSeconds)?Math.round(ageSeconds):null,threshold_sec:maxAgeSeconds});
-      items[symbol]={status:"SUCCESS",score,display_score:displayScore,delta_vs_previous_close:Number.isFinite(Number(row.delta_vs_official))?Number(row.delta_vs_official):null,market_as_of:quoteAsOf,freshness:String(row.freshness),quote_source:String(row.quote_source||""),score_version:scoreVersion,trading_date:tradingDate,calculated_at:String(payload.calculated_at||asOf)};
+      items[symbol]={status:"SUCCESS",score,display_score:displayScore,delta_vs_previous_close:typeof row.delta_vs_official==="number"&&Number.isFinite(row.delta_vs_official)?row.delta_vs_official:null,market_as_of:quoteAsOf,freshness:String(row.freshness),quote_source:String(row.quote_source||""),score_version:scoreVersion,trading_date:tradingDate,calculated_at:String(payload.calculated_at||asOf)};
     }
     const wait=payload?.tickers?.["009815"];
     if(wait?.status!=="WAIT_NATIVE"||wait?.freshness!=="WAIT_NATIVE")return unavailable("WAIT_NATIVE_CONTRACT_MISMATCH",payload);

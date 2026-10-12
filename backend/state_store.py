@@ -198,7 +198,8 @@ class StateStore:
                     break
         return unavailable_public(reason, now=now, previous=public, market_state="OPEN") if reason else public
 
-    def readiness(self, now: datetime, *, backend_mode: str, current_bucket: str) -> dict[str, Any]:
+    def readiness(self, now: datetime, *, backend_mode: str, current_bucket: str,
+                  scheduler: dict[str, Any] | None = None) -> dict[str, Any]:
         """Return sanitized operational telemetry without provider payloads or secrets."""
         state = self.snapshot()
         public = self.public_state(now, expected_mode=backend_mode)
@@ -219,7 +220,20 @@ class StateStore:
             primary_tick_age = max(0, (now.astimezone(TAIPEI) - primary_tick.astimezone(TAIPEI)).total_seconds())
         except (TypeError, ValueError):
             pass
+        scheduler = scheduler or {"status": "UNKNOWN", "heartbeat_at": None}
+        off_session = public.get("market_state") in ("CLOSED", "HOLIDAY")
+        data_status = "CURRENT" if public.get("status") == "AVAILABLE" else "OFF_SESSION" if off_session else "UNAVAILABLE"
+        ready = scheduler.get("status") == "HEALTHY" and (off_session or data_status == "CURRENT")
         return {
+            "service_alive": True,
+            "readiness_status": "READY" if ready else "DEGRADED",
+            "readiness_scope": "LIVE_API_AND_SCHEDULER_ONLY",
+            "scheduler": scheduler,
+            "data_status": data_status,
+            "data_reason": public.get("diagnostic_reason"),
+            "last_successful_bucket": (last_success or {}).get("run_id"),
+            "publication_verification": "PENDING_EXTERNAL_VERIFICATION" if state.get("publication_status") == "DISPATCH_ACCEPTED" else "NOT_VERIFIED",
+            "publication_complete": False,
             "backend_mode": backend_mode,
             "service_status": "READY",
             "market_state": public.get("market_state", "UNAVAILABLE"),
@@ -249,7 +263,7 @@ class StateStore:
             "latest_trading_date": state.get("market_date"),
             "live_completeness": state.get("completeness", "0/5"),
             "required_symbols_status": {
-                symbol: ("AVAILABLE" if state.get("completeness") == "5/5" and state_timestamps.get(symbol) else "UNAVAILABLE")
+                symbol: ("AVAILABLE" if public.get("status") == "AVAILABLE" and tickers.get(symbol, {}).get("status") == "AVAILABLE" else "UNAVAILABLE")
                 for symbol in REQUIRED_SYMBOLS
             },
             "publication_status": state.get("publication_status", "NOT_CONFIGURED"),

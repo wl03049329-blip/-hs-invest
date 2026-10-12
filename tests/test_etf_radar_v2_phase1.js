@@ -21,9 +21,16 @@ assert.match(html,/function radarOfficialFactorPair\(ticker,artifact=/);
 assert.match(html,/snapshot\?\.snapshot_type!=="FINALIZED_CLOSE"/);
 assert.match(html,/snapshot\?\.finalized!==true/);
 assert.match(html,/factor\.contribution-before\.contribution/);
-assert.match(html,/目前分數主要來自/);
+assert.match(html,/目前貢獻最高：\$\{esc\(main\.label\)\}/);
 assert.match(html,/原始總分/);
-assert.match(html,/最新正式分數變化/);
+assert.match(html,/今日與前次正式交易日/);
+// Execute the production summary helper: contribution direction and missing values remain protected.
+const vm=require("node:vm"),summaryStart=html.indexOf("function radarExplainNumber"),summaryEnd=html.indexOf("function radarWhyScoreHtml",summaryStart),summaryContext={};
+assert.ok(summaryStart>0&&summaryEnd>summaryStart);
+vm.runInNewContext(html.slice(summaryStart,summaryEnd),summaryContext);
+assert.match(summaryContext.radarExplainSummary({rawDelta:4,deltas:[{key:"dd52",label:"52週回檔",value:4}]}),/提高 4\.0 分.*52週回檔貢獻增加/);
+assert.match(summaryContext.radarExplainSummary({rawDelta:-4,deltas:[{key:"weekly_j",label:"週 J 值",value:-4}]}),/下降 4\.0 分.*週 J 值貢獻減少/);
+assert.equal(summaryContext.radarExplainSummary(null),"暫無完整前次比較資料");
 assert.match(core,/weeklyJ[\s\S]{0,120}weight:30/);
 assert.match(core,/dd52[\s\S]{0,120}weight:55/);
 assert.match(core,/crash[\s\S]{0,120}weight:15/);
@@ -51,7 +58,8 @@ assert.ok(detailStart>=0&&detailEnd>detailStart,"ETF Radar V2 renderer must exis
 const longDetail=html.slice(detailStart,detailEnd);
 assert.ok(longDetail.indexOf("radarDetailCoreStatusHtml")<longDetail.indexOf("radarWhyScoreHtml"));
 assert.ok(longDetail.indexOf("radarDetailCoreStatusHtml")<longDetail.indexOf("radarDecisionSummaryHtml"));
-assert.ok(longDetail.indexOf("radarWhyScoreHtml")<longDetail.indexOf("radarScoreTrendHtml"));
+assert.ok(longDetail.indexOf("radarScoreTrendHtml")<longDetail.indexOf("radarWhyScoreHtml"));
+assert.ok(longDetail.indexOf("radarMarketPositionHtml")<longDetail.indexOf("radarWhyScoreHtml"));
 assert.ok(longDetail.indexOf("radarScoreTrendHtml")<longDetail.indexOf("radarMarketPositionHtml"));
 assert.match(css,/\.radarV2Section\{/);
 assert.match(css,/\.radarScoreTrend svg\{/);
