@@ -1,6 +1,28 @@
 {
-  "status": "APPENDED",
+  "status": "FAIL_CLOSED",
+  "system_state": "FAIL_CLOSED",
+  "signal_status": "NO_SIGNAL",
+  "reason": "BRIDGE_HISTORICAL_GAP_REVIEW_REQUIRED:2026-10-13",
+  "checked_at": "2026-10-13T17:10:19.617632+00:00",
   "latest_data_date": "2026-10-13",
+  "expected_completed_bar": "2026-10-13",
+  "freshness": "UNKNOWN",
+  "data_integrity": "FAIL",
+  "dry_run": false,
+  "requires_integrity_review": true,
+  "workflow_classification": "NEW_FAIL_CLOSED",
+  "incident_identity": {
+    "target_completed_trading_date": "2026-10-13",
+    "normalized_root_cause": "BRIDGE_HISTORICAL_GAP_REVIEW_REQUIRED",
+    "latest_verified_anchor_date": "2026-10-13",
+    "source_failure_class": "BRIDGE_HISTORICAL_GAP_REVIEW_REQUIRED",
+    "policy_version": "HS_LEVERAGE_C_V1_FORWARD_POLICY_2026:V1:HS_LEVERAGE_C_V1_THRESHOLD_2026_TRAIN_END_2025-12-31"
+  },
+  "incident_fingerprint": "3c2f5da7d16222839fa8e351ddc2137ae990621bcbdee48bb65c2b44626ca31a",
+  "source_probe_evidence": {
+    "sessions": [],
+    "availability": "UNKNOWN"
+  },
   "forward_observations": 2,
   "eligible_observations": 0,
   "signal_trigger_count": 0,
@@ -28,12 +50,5 @@
   "holding_policy": "HOLDING_HORIZON_UNRESOLVED",
   "live_capital": false,
   "production_signal": false,
-  "capital_allocation_pct": 0,
-  "checked_at": "2026-10-13T15:14:15.970592+00:00",
-  "data_integrity": "PASS",
-  "dry_run": false,
-  "requires_integrity_review": false,
-  "data_version": "adjusted_daily_v1:d471bf62e085222de230d2c6cf4448a3efb88a8fbe9e5cccedaa3dd97d70920a",
-  "workflow_run_id": "38420207666",
-  "threshold_valid_through": "2026-12-31"
+  "capital_allocation_pct": 0
 }
