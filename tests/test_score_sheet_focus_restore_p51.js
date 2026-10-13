@@ -18,6 +18,10 @@ const decision={coreScore:32,coreScoreDisplay:32,label:"回檔訊號出現",hist
 const nodes={"#coreScoreModal":coreModal,"#coreScoreContent":coreContent,"#coreScoreHistoryModal":historyModal,"#coreScoreHistoryContent":historyContent,"#coreScoreHistoryTicker":historyTicker};
 const finalCore=require("../final-core-production.js");
 const context={document,all:items,$:selector=>nodes[selector],strategyDecisionFor:()=>decision,coreStatusTier:()=>"status-tier-2",historicalTriggerText:()=>"歷史觸發約 22.10%",HSFinalCoreProduction:finalCore,esc:String,fmt:value=>String(value),requestAnimationFrame:fn=>fn(),coreScoreHistoryState:ticker=>ticker==="009815"?{kind:"wait_native",rows:[]}:{kind:"empty",rows:[]},console};
+// Display records can exist without live prices; focus assertions remain intact.
+// The real adapter / official snapshot contract is tested separately.
+context.radarDisplayItems=()=>items;
+context.homepageFinalDecision=()=>decision;
 vm.createContext(context);vm.runInContext(html.slice(start,end),context);
 
 const core00830=trigger("core-00830");context.openCoreScoreModal("00830",core00830);context.closeCoreScoreModal();

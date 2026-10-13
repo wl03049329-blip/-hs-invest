@@ -6,7 +6,10 @@ const official=html.slice(html.indexOf("function officialArtifactCoreScoreHistor
 const phase4=html.slice(html.indexOf("const RADAR_TREND_PHASE4_PERIODS"),html.indexOf("function featuredDiagnosticFor"));
 assert.ok(official.startsWith("function")&&phase4.startsWith("const"));
 const context={Number,Math,String,Map,Object,window:{HSDecisionLayerV1:decision},LONG_TERM_CORE_SCORE_VERSION:"FINAL_CORE_WEIGHT_V1",HSFinalCoreProduction:require(path.join(root,"final-core-production.js")),isCompletedTradingDate:date=>/^\d{4}-\d{2}-\d{2}$/.test(date),esc:value=>String(value),coreScoreTrendRanges:new Map(),radarOfficialFactorPair:(symbol,artifact)=>{const row=artifact.snapshots.find(snapshot=>snapshot.finalized&&snapshot.snapshot_type==="FINALIZED_CLOSE")?.rows.find(item=>item.symbol===symbol);return{current:row?{date:row.data_as_of.slice(0,10),factors:[{key:"dd52",available:true,raw:row.factors.dd52.raw}]}:null}},finalizedCoreScoreHistoryArtifact:null};
-vm.createContext(context);vm.runInContext(`${official}\n${phase4}\nthis.api={state:radarTrendPhase4State,events:radarTrendPhase4Events,thresholds:radarTrendPhase4Thresholds,priceRows:radarTrendPhase4PriceRows,render:radarScoreTrendHtml,chart:radarTrendPhase4Chart,extrema:radarTrendPhase4Extrema,domain:radarTrendPhase4Domain};`,context);
+context.window.HSRadarHistory=require(path.join(root,"radar-history-core.js"));
+vm.createContext(context);
+vm.runInContext(fs.readFileSync(path.join(root,"radar-history-view.js"),"utf8"),context);
+vm.runInContext(`${official}\n${phase4}\nthis.api={state:radarTrendPhase4State,events:radarTrendPhase4Events,thresholds:radarTrendPhase4Thresholds,priceRows:radarTrendPhase4PriceRows,render:radarScoreTrendHtml,chart:radarTrendPhase4Chart,extrema:radarTrendPhase4Extrema,domain:radarTrendPhase4Domain};`,context);
 const dates=[];for(let day=new Date("2026-09-17T00:00:00Z");dates.length<125;day.setUTCDate(day.getUTCDate()-1))if(day.getUTCDay()>=1&&day.getUTCDay()<=5)dates.unshift(day.toISOString().slice(0,10));
 const snapshots=dates.map((date,index)=>({date,snapshot_type:"FINALIZED_CLOSE",finalized:true,rows:[{symbol:"00830",final_core_score:30+index*.21,core_score_version:"FINAL_CORE_WEIGHT_V1",data_as_of:`${date}T13:30:00+08:00`,tier:"回檔訊號出現",factors:{dd52:{raw:-21.28}}}]}));
 const artifact={schema_version:1,core_score_version:"FINAL_CORE_WEIGHT_V1",snapshots:[...snapshots].reverse()};
@@ -19,15 +22,13 @@ for(const period of ["10D","20D","60D","120D"]){
   assert.equal(extrema.amplitude,selected.high-selected.low);
   assert.equal(extrema.highDate,selected.rows[extrema.highIndex].tradingDate.slice(5).replace("-","/"));
   assert.equal(extrema.lowDate,selected.rows[extrema.lowIndex].tradingDate.slice(5).replace("-","/"));
-  assert.match(rendered,new RegExp(`aria-pressed="true" data-core-trend-range="${period}"`));
-  assert.match(rendered,new RegExp(`目前</small><b>${selected.current.displayScore}</b>`));
-  assert.match(rendered,new RegExp(`${period} 高點</small><b>${selected.high}<time>（${extrema.highDate}）`));
-  assert.match(rendered,new RegExp(`${period} 低點</small><b>${selected.low}<time>（${extrema.lowDate}）`));
-  assert.match(rendered,new RegExp(`${period} 振幅</small><b>${extrema.amplitude} 分`));
-  assert.ok(rendered.indexOf('radarTrendP4ExtremaSummary')<rendered.indexOf('radarTrendP4Chart'));
-  assert.match(rendered,/class="radarTrendP4Line" d="M[^\"]+ H[^\"]+ V/);
-  assert.doesNotMatch(rendered,/<polyline/);
-  assert.match(rendered,new RegExp(`${selected.first.tradingDate} 至 ${selected.current.tradingDate}`));
+  // Interactive chart owns the calendar range and visible extrema. Existing
+  // numeric state/event/adjusted-performance contracts above remain unchanged.
+  assert.equal((rendered.match(/data-radar-history="00830"/g)||[]).length,1);
+  assert.match(rendered,new RegExp(`data-history-range="${period}"`));
+  assert.match(rendered,/radarHistoryExtrema/);
+  assert.ok(rendered.indexOf('radarHistoryExtrema')<rendered.indexOf('radarHistoryCanvas'));
+  assert.doesNotMatch(rendered,/radarTrendP4Chart|<polyline/);
 }
 context.coreScoreTrendRanges.set("00830","10D");
 const base=context.api.state(item,"10D",artifact),flatAt=score=>{const rows=[{displayScore:score,tradingDate:"2026-09-16"},{displayScore:score,tradingDate:"2026-09-17"}];return{...base,high:score,low:score,rows,first:rows[0],current:rows[1]}};
@@ -67,9 +68,12 @@ const state=context.api.state(item,"10D",artifact);for(const days of [1,5,20,60]
 const thresholds=context.api.thresholds();assert.deepEqual(Array.from(thresholds,row=>row.value),decision.NEXT_THRESHOLDS);
 const crossing=(a,b)=>context.api.events([{displayScore:a,tradingDate:"2026-09-16"},{displayScore:b,tradingDate:"2026-09-17"}],thresholds);
 assert.match(crossing(46,51)[0].label,/進入「正式加碼訊號」/);assert.match(crossing(51,49)[0].label,/退出「正式加碼訊號」，回到「試探加碼」/);assert.match(crossing(29,32)[0].label,/進入「回檔訊號出現」/);assert.match(crossing(39,42)[0].label,/進入「加碼條件浮現」/);assert.match(crossing(44,46)[0].label,/進入「試探加碼」/);assert.match(crossing(48,67)[0].label,/進入「積極加碼訊號」/);assert.match(crossing(48,67)[0].detail,/正式加碼訊號/);assert.match(crossing(72,48)[0].label,/由「強力加碼訊號」回到「試探加碼」/);assert.equal(crossing(45,46).length,0);
-let rendered=context.api.render(item);assert.match(rendered,/data-radar-trend-phase="4"/);assert.match(rendered,/近期沒有跨級事件/);assert.match(rendered,/價格表現/);assert.match(rendered,/目前位置/);assert.match(rendered,/距52週高點/);assert.match(rendered,/距20日低點/);assert.doesNotMatch(rendered,/距60日高點/);
-context.coreScoreTrendRanges.set("00830","120D");rendered=context.api.render(item);assert.match(rendered,/aria-pressed="true" data-core-trend-range="120D"/);
-const short={...artifact,snapshots:artifact.snapshots.slice(0,7)};assert.equal(context.api.state(item,"120D",short).rows.length,7);context.finalizedCoreScoreHistoryArtifact=short;assert.match(context.api.render(item),/可用資料 7 日／目標 120 日/);
+let rendered=context.api.render(item);assert.match(rendered,/data-radar-history="00830"/);assert.match(rendered,/近期沒有跨級事件/);assert.match(rendered,/價格表現/);assert.match(rendered,/目前位置/);assert.match(rendered,/距52週高點/);assert.match(rendered,/距20日低點/);assert.doesNotMatch(rendered,/距60日高點/);
+context.coreScoreTrendRanges.set("00830","120D");rendered=context.api.render(item);assert.match(rendered,/data-history-range="120D"/);
+const short={...artifact,snapshots:artifact.snapshots.slice(0,7)};assert.equal(context.api.state(item,"120D",short).rows.length,7);context.finalizedCoreScoreHistoryArtifact=short;assert.match(context.api.render(item),/data-radar-history="00830"/);
+const calendar=dates,core=context.window.HSRadarHistory,visible=core.range(calendar,"120D");
+const counts=core.extrema(calendar,short.snapshots.map(s=>({time:s.date,value:s.rows[0].final_core_score})),[],visible);
+assert.equal(counts.sessions,120);assert.equal(counts.scoreCount,7,"calendar window must not invent 113 missing scores");
 const invalid={...artifact,snapshots:artifact.snapshots.map(snapshot=>({...snapshot,finalized:false}))};assert.equal(context.api.state(item,"10D",invalid).kind,"UNAVAILABLE");assert.equal(context.api.state({id:"009815"},"10D",artifact).kind,"WAIT_NATIVE");
 assert.equal(context.api.state({...item,officialRows:prices.slice(0,3)},"10D",artifact).priceReturns[1],null);assert.equal(context.api.state({...item,officialRowsAdjusted:false},"10D",artifact).distance60,null);
 assert.match(css,/@media\(max-width:600px\)[\s\S]*\.radarTrendP4Scores\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);

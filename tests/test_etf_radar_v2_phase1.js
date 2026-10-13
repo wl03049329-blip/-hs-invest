@@ -37,9 +37,11 @@ assert.match(core,/crash[\s\S]{0,120}weight:15/);
 
 // Phase 4 detail trend uses only finalized records; legacy local history stays isolated.
 assert.match(html,/function radarScoreTrendHtml\(x\)/);
-assert.match(html,/data-radar-trend-phase="4"/);
+assert.match(html,/window\.HSRadarHistoryView\.html\(ticker\)/);
+assert.match(html,/mountRadarHistoryChart\(target\)/);
 assert.match(html,/officialArtifactCoreScoreHistory\(artifact,x\?\.id,120\)/);
-assert.match(html,/正式盤後資料暫缺；不以盤中或本機資料補值/);
+const historyCore=require(path.join(root,"radar-history-core.js"));
+assert.deepEqual(historyCore.scores(null,"0050",require(path.join(root,"final-core-production.js")),()=>true).rows,[]);
 assert.match(html,/if\(rows\.length>=Math\.max\(1,Math\.min\(10,Number\(limit\)\|\|10\)\)\)break/);
 assert.match(html,/snapshotType&&snapshotType!=="FINALIZED_CLOSE"/);
 

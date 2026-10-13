@@ -1194,6 +1194,11 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
   </article>
 </div>
 
+<script src="vendor/lightweight-charts/lightweight-charts.standalone.production.js"></script>
+<script src="radar-history-core.js"></script>
+<script src="radar-history-source.js"></script>
+<script src="radar-history-view.js"></script>
+<link rel="stylesheet" href="radar-history.css">
 <script src="market-ui-core.js"></script>
 <script src="market-v61-core.js?v=20260803b"></script>
 <script src="commodity-quotes-core.js?v=20260803b"></script>
@@ -2858,7 +2863,36 @@ function itemsForList(list){
   const wanted=new Set(list.map(item=>item.id));
   return all.filter(item=>wanted.has(item.id));
 }
-function activeRadarItems(){return itemsForList(radarList())}
+// Display-only records: never insert these into `all`, model builders, rank
+// persistence or Forward evaluation. Price availability is not C4 availability.
+function radarDisplayItems(){
+  const items=[...all],present=new Set(items.map(x=>x.id));
+  const snapshot=currentCanonicalCoreSnapshot(taipeiToday());
+  const verified=snapshot&&canonicalScoreProductionInvariant(snapshot);
+  for(const id of LONG_RADAR_CODES){
+    if(present.has(id))continue;
+    const meta=DEFAULT_WATCHLIST.find(x=>x.id===id)||META[id]||{name:id};
+    const x={...meta,id,officialDisplayOnly:true,price:null,date:null,changePct:null,
+      j:null,k:null,d:null,fromHigh:null,fromLow:null,high52:null,low52:null,weekBias:null,
+      score:null,scoreMode:"unavailable",activeStrategyMode:"long_term_core",
+      signal:{className:"",label:"行情資料不足"},trend:{},officialRows:[],series:[],
+      historyStats:{},strategyDecisions:{},valuation:{status:"missing"}};
+    const record=verified?canonicalCoreItem(snapshot,id):null;
+    if(record&&record.source_status==="FINALIZED_EOD"){
+      const display=Number.isFinite(record.display_score)?record.display_score:null;
+      x.score=display;x.scoreMode="finalized_eod";
+      x.intraday={status:"SUCCESS",asOf:record.market_as_of,quoteDate:record.trading_date,canonical:record};
+      x.strategyDecisions.long_term_core={score:display,coreScore:record.score,
+        coreScoreDisplay:display,coreScoreVersion:record.score_version,coreFactors:record.core_factors,
+        scoreStatus:"complete",marketAsOf:record.market_as_of};
+      // Factors retain their official as-of date; unavailable market fields stay null.
+      x.j=Number.isFinite(record.weekly_j)?record.weekly_j:null;
+    }
+    items.push(x);
+  }
+  return items;
+}
+function activeRadarItems(){const wanted=new Set(radarList().map(x=>x.id));return radarDisplayItems().filter(x=>wanted.has(x.id)&&(!x.officialDisplayOnly||strategyModeFor(x)==="long_term_core"))}
 function historyPositionText(x){
   return x.historicalPosition?.available?`歷史低位 ${x.historicalPosition.lowPercentile}%`:"歷史樣本不足";
 }
@@ -4200,16 +4234,14 @@ function radarTrendPhase4Summary(state){
   return`目前 Core Score ${score}，近${days}個正式交易日${direction}。${priceText}${dd}${event?`近期${event.label}，目前位於「${level}」。`:`近期沒有重要跨級事件，目前維持「${level}」。`}`;
 }
 function radarScoreTrendHtml(x){
-  const ticker=x.id,period=coreScoreTrendRanges.get(ticker)||"10D",state=radarTrendPhase4State(x,period),controls=Object.keys(RADAR_TREND_PHASE4_PERIODS).map(key=>`<button type="button" class="${state.period===key?"active":""}" aria-pressed="${state.period===key}" data-core-trend-range="${key}" data-core-trend-ticker="${esc(ticker)}">${key}</button>`).join("");
-  const heading=`<header><h3>近期趨勢與訊號</h3><small>僅使用正式盤後資料｜D = 正式交易日</small></header><nav class="radarTrendP4Ranges" aria-label="近期趨勢期間">${controls}</nav>`;
-  if(state.kind!=="READY")return`<section class="radarV2Section radarScoreTrend radarTrendPhase4" data-radar-trend-phase="4" data-etf-id="${esc(ticker)}">${heading}<div class="radarTrendEmpty">${state.kind==="WAIT_NATIVE"?"等待原生資料；不產生趨勢、價格表現或訊號。":"正式盤後資料暫缺；不以盤中或本機資料補值。"}</div></section>`;
+  // 近期趨勢與訊號：僅使用正式盤後資料｜D = 正式交易日，互動圖表由獨立唯讀元件提供。
+  const ticker=x.id,state=radarTrendPhase4State(x,"20D"),chart=window.HSRadarHistoryView.html(ticker);
+  if(state.kind!=="READY")return chart;
   const metric=(label,value,tone="")=>`<div><small>${label}</small><b class="${tone}">${value}</b></div>`;
   const priceHtml=[1,5,20,60].map(days=>{const value=state.priceReturns[days];return metric(`${days}日`,Number.isFinite(value)?`${value>0?"+":""}${value.toFixed(2)}%`:"—",value>0?"is-up":value<0?"is-down":"")}).join("");
   const positionHtml=[["距52週高點",state.dd52],["距20日低點",state.rebound20]].map(([label,value])=>`<div><span>${label}</span><b class="${value>0?"is-up":value<0?"is-down":""}">${Number.isFinite(value)?`${value>0?"+":""}${value.toFixed(2)}%`:"—"}</b></div>`).join("");
   const events=state.events.length?state.events.map(event=>`<li><time>${esc(event.date.slice(5).replace("-","/"))}</time><span><b>${event.fromScore} → ${event.toScore}</b><strong>${esc(event.label)}</strong>${event.detail?`<small>${esc(event.detail)}</small>`:""}</span></li>`).join(""):'<li class="is-empty">近期沒有跨級事件</li>';
-  const legend=state.thresholds.map(item=>`<span>${item.value} ${esc(radarTrendPhase4Level(item.value,state.thresholds))}</span>`).join("");
-  const extrema=radarTrendPhase4Extrema(state),extremaHtml=`<div class="radarTrendP4ExtremaSummary" aria-label="${state.period} 近期分數狀態"><div><small>目前</small><b>${state.current.displayScore}</b></div><div><small>${state.period} 高點</small><b>${state.high}<time>（${extrema.highDate}）</time></b></div><div><small>${state.period} 低點</small><b>${state.low}<time>（${extrema.lowDate}）</time></b></div><div><small>${state.period} 振幅</small><b>${extrema.amplitude} 分</b></div></div>`;
-  return`<section class="radarV2Section radarScoreTrend radarTrendPhase4" data-radar-trend-phase="4" data-etf-id="${esc(ticker)}">${heading}<div class="radarTrendP4Body"><p class="radarTrendP4Note">${state.rows.length<RADAR_TREND_PHASE4_PERIODS[state.period]?`可用資料 ${state.rows.length} 日／目標 ${RADAR_TREND_PHASE4_PERIODS[state.period]} 日`:`最近 ${state.rows.length} 個正式交易日`}｜${esc(state.first.tradingDate)} 至 ${esc(state.current.tradingDate)}</p>${extremaHtml}<div class="radarTrendP4Chart">${radarTrendPhase4Chart(state)}</div><small class="radarTrendP4ScaleNote">縱軸依本區間分數縮放（最低 20 分跨度）；圖上門檻線僅顯示可視範圍內數值。</small><div class="radarTrendP4Legend" aria-label="正式分數門檻">${legend}</div><section class="radarTrendP4Block"><h4>價格表現</h4><div class="radarTrendP4Prices">${priceHtml}</div></section><section class="radarTrendP4Block"><h4>目前位置</h4><div class="radarTrendP4Positions">${positionHtml}</div></section><section class="radarTrendP4Block"><h4>近期跨級事件</h4><ol class="radarTrendP4Events">${events}</ol></section></div></section>`;
+  return chart+`<section class="radarV2Section radarTrendPhase4"><div class="radarTrendP4Body"><section class="radarTrendP4Block"><h4>價格表現</h4><small>沿用既有還原價格口徑；非上圖原始價格報酬</small><div class="radarTrendP4Prices">${priceHtml}</div></section><section class="radarTrendP4Block"><h4>目前位置</h4><div class="radarTrendP4Positions">${positionHtml}</div></section><section class="radarTrendP4Block"><h4>近期跨級事件</h4><ol class="radarTrendP4Events">${events}</ol></section></div></section>`;
 }
 function radarDetailTrendSummaryHtml(x){
   const state=radarTrendPhase4State(x,"20D"),metric=(label,value,tone="")=>`<div><small>${label}</small><b class="${tone}">${value}</b></div>`;
@@ -4367,7 +4399,7 @@ function radarHistoricalResearchHtml(x){
   const state=radarOverviewResearchSummary(x),position=Number.isFinite(state.percentile)?`P${state.percentile}`:"—",outcome=state.available?radarOutcomePercent(state.median20):"—",sample=state.available?`N=${state.sampleCount}`:state.kind==="WAIT_NATIVE"?"等待原生資料":"樣本不足";
   return`<details class="radarResearchHub" data-radar-research-hub><summary aria-expanded="false"><span><b>歷史研究</b><small>歷史位置 ${esc(position)} · 20日後 ${esc(outcome)} · ${esc(sample)}</small></span><i aria-hidden="true">⌄</i></summary><div class="radarResearchHubBody">${radarHistoryPhase6Html(x)}${radarOutcomePhase7BHtml(x)}</div></details>`;
 }
-function detailAdvancedHtml(x){return`${radarHistoricalResearchHtml(x)}<details class="detailAdvanced"><summary aria-expanded="false">其他詳細資料</summary>${valuationDetailsHtml(x)}${legacyComparisonHtml(x)}<section class="detailSection"><h4>歷史相似訊號統計</h4>${similarStatsHtml(x.historyStats.sameEnvironment,`相同市場環境｜${x.environment}`)}${similarStatsHtml(x.historyStats.allEnvironments,"全部市場環境")}</section>${buyPlanHtml(x)}</details>`}
+function detailAdvancedHtml(x){if(x.officialDisplayOnly)return`${radarHistoricalResearchHtml(x)}<section class="detailSection"><h4>行情資料不足</h4><p>價格、均線與即時漲跌暫不可用。正式 C4 依其資料日期獨立顯示；歷史圖僅呈現已驗證的保存日線，不代表今日行情。</p></section>`;return`${radarHistoricalResearchHtml(x)}<details class="detailAdvanced"><summary aria-expanded="false">其他詳細資料</summary>${valuationDetailsHtml(x)}${legacyComparisonHtml(x)}<section class="detailSection"><h4>歷史相似訊號統計</h4>${similarStatsHtml(x.historyStats.sameEnvironment,`相同市場環境｜${x.environment}`)}${similarStatsHtml(x.historyStats.allEnvironments,"全部市場環境")}</section>${buyPlanHtml(x)}</details>`}
 function buildRadarV2Card({x,mode,decision,stage,score,longRank,longRankChange,longScoreChange,formal,detailScoreState,tradeState,dailyPair}){
   const cardClass=`card signalCard radarV2Card ${x.signal.className} strategy-${mode}`,scoreText=Number.isFinite(score)?score:"—";
   if(mode==="long_term_core"){
@@ -4385,6 +4417,7 @@ function switchRadarDetailView(button){const card=button.closest(".radarV2Card")
 function switchRadarOverviewView(name){const active=name==="explain"?"explain":"overview";document.querySelectorAll("[data-radar-view]").forEach(button=>{const selected=button.dataset.radarView===active;button.classList.toggle("active",selected);button.setAttribute("aria-selected",String(selected))});document.querySelectorAll("[data-radar-view-panel]").forEach(panel=>{panel.hidden=panel.dataset.radarViewPanel!==active})}
 function renderCards(){
   const modeOrder={long_term_core:0,leveraged:1,swing00733:2,swing006201:3,swing:4,user_selected:5};
+  window.HSRadarHistoryView?.unmount();
   const radar=[...activeRadarItems()].sort((a,b)=>{const modeA=strategyModeFor(a),modeB=strategyModeFor(b),group=(modeOrder[modeA]??9)-(modeOrder[modeB]??9);if(group)return group;if(modeA==="long_term_core"&&modeB==="long_term_core")return longRankComparator(a,b);return(displayScore(b,modeB)??-1)-(displayScore(a,modeA)??-1)});
   const dailyPair=dailyLongRankPair();
   let longRankIndex=0;
@@ -4426,7 +4459,7 @@ function syncRadarDetailStickyNav(id,visible){
   const nav=$("#radarDetailStickyNav");if(!nav)return;
   nav.hidden=!visible;
   if(!visible)return;
-  const item=all.find(x=>String(x.id)===String(id||"")),mode=item?strategyModeFor(item):"long_term_core",decision=item?strategyDecisionFor(item,mode):null,score=item?displayScore(item,mode):null,presentation=decision?.finalPresentation||(item&&mode==="long_term_core"?radarDecisionLayerFor(item):null),statusLabel=mode==="long_term_core"?finalDecisionBadgeLabel(presentation):decision?.stage?.label;
+  const item=radarDisplayItems().find(x=>String(x.id)===String(id||"")),mode=item?strategyModeFor(item):"long_term_core",decision=item?strategyDecisionFor(item,mode):null,score=item?displayScore(item,mode):null,presentation=decision?.finalPresentation||(item&&mode==="long_term_core"?radarDecisionLayerFor(item):null),statusLabel=mode==="long_term_core"?finalDecisionBadgeLabel(presentation):decision?.stage?.label;
   const symbol=$("#radarDetailStickySymbol"),scoreNode=$("#radarDetailStickyScore");
   if(symbol)symbol.textContent=item?.id||String(id||"—");
   if(scoreNode)scoreNode.textContent=item?.id==="00631L"?"HS LEVERAGE · V1":item?.id==="009815"||decision?.scoreStatus==="wait_native"?"WAIT_NATIVE":Number.isFinite(score)?`${score} · ${statusLabel||"資料不足"}`:"資料暫缺";
@@ -4441,11 +4474,15 @@ function openHomeC4RadarDetail(symbol){
   switchTab("signals",{scroll:false});
   showRadarDetail(symbol);
 }
+function mountRadarHistoryChart(target){
+  const host=target?.querySelector("[data-radar-history]"),symbol=host?.dataset.radarHistory,item=radarDisplayItems().find(x=>x.id===symbol);
+  if(host&&item)window.HSRadarHistoryView?.mount(host,{symbol,name:item.name,artifact:finalizedCoreScoreHistoryArtifact,contract:window.HSFinalCoreProduction,thresholds:radarTrendPhase4Thresholds(),completed:isCompletedTradingDate,headers:apiHeaders});
+}
 function showRadarDetail(id,scroll=true){
   const deck=$("#cards"),target=deck?[...deck.querySelectorAll(".signalCard")].find(card=>card.dataset.etfId===String(id||"")):null;if(!deck||!target)return;
-  deck.dataset.selectedId=String(id);deck.classList.add("is-open");deck.querySelectorAll(".signalCard").forEach(card=>card.classList.toggle("is-selected",card===target));target.open=true;$("#radarDetailBack")?.classList.add("is-visible");syncRadarDetailStickyNav(id,true);$("#radarOverview")?.classList.add("detail-active");if(scroll)target.scrollIntoView({behavior:"smooth",block:"start"});
+  deck.dataset.selectedId=String(id);deck.classList.add("is-open");deck.querySelectorAll(".signalCard").forEach(card=>card.classList.toggle("is-selected",card===target));target.open=true;$("#radarDetailBack")?.classList.add("is-visible");syncRadarDetailStickyNav(id,true);$("#radarOverview")?.classList.add("detail-active");mountRadarHistoryChart(target);if(scroll)target.scrollIntoView({behavior:"smooth",block:"start"});
 }
-function closeRadarDetail(){const deck=$("#cards");if(!deck)return;deck.classList.remove("is-open");delete deck.dataset.selectedId;deck.querySelectorAll(".signalCard").forEach(card=>{card.classList.remove("is-selected");card.open=false});$("#radarDetailBack")?.classList.remove("is-visible");syncRadarDetailStickyNav(null,false);$("#radarOverview")?.classList.remove("detail-active");const previous=homeC4Return;homeC4Return=null;const back=$("#radarDetailStickyBack");if(back){back.setAttribute("aria-label","返回 ETF 雷達");back.title="返回 ETF 雷達"}const backText=$("#radarDetailBack");if(backText)backText.textContent="← 返回 ETF 雷達總覽";if(previous){switchTab("today",{scroll:false});requestAnimationFrame(()=>window.scrollTo(0,previous.scrollY))}else $("#radarOverview")?.scrollIntoView({behavior:"smooth",block:"start"})}
+function closeRadarDetail(){window.HSRadarHistoryView?.unmount();const deck=$("#cards");if(!deck)return;deck.classList.remove("is-open");delete deck.dataset.selectedId;deck.querySelectorAll(".signalCard").forEach(card=>{card.classList.remove("is-selected");card.open=false});$("#radarDetailBack")?.classList.remove("is-visible");syncRadarDetailStickyNav(null,false);$("#radarOverview")?.classList.remove("detail-active");const previous=homeC4Return;homeC4Return=null;const back=$("#radarDetailStickyBack");if(back){back.setAttribute("aria-label","返回 ETF 雷達");back.title="返回 ETF 雷達"}const backText=$("#radarDetailBack");if(backText)backText.textContent="← 返回 ETF 雷達總覽";if(previous){switchTab("today",{scroll:false});requestAnimationFrame(()=>window.scrollTo(0,previous.scrollY))}else $("#radarOverview")?.scrollIntoView({behavior:"smooth",block:"start"})}
 function formatYi(n){return `${fmt(n/1e8)} 億`}
 function signedYi(n){
   if(!Number.isFinite(n))return"—";
@@ -4945,7 +4982,7 @@ document.addEventListener("click",event=>{const button=event.target.closest("[da
 document.addEventListener("click",event=>{const button=event.target.closest("[data-radar-event-mode]");if(!button)return;event.preventDefault();radarEventMode=button.dataset.radarEventMode||"RECENT";radarEventRecentExpanded=false;document.querySelectorAll("[data-radar-event-mode]").forEach(item=>{const active=item===button;item.classList.toggle("active",active);item.setAttribute("aria-pressed",String(active))});renderRadarEventCenter()});
 document.addEventListener("click",event=>{if(!event.target.closest("[data-radar-event-more]"))return;event.preventDefault();radarEventRecentExpanded=true;renderRadarEventCenter()});
 $("#radarEventEtfFilter")?.addEventListener("change",event=>{radarEventEtfFilter=event.target.value||"ALL";radarEventRecentExpanded=false;renderRadarEventCenter()});
-document.addEventListener("click",event=>{const button=event.target.closest("[data-radar-outcome-tab],[data-radar-outcome-switch]");if(!button)return;event.preventDefault();event.stopPropagation();const host=button.closest("[data-radar-outcomes-phase]"),card=button.closest("[data-etf-id]"),ticker=card?.dataset.etfId,x=all.find(item=>item.id===ticker),mode=button.dataset.radarOutcomeTab||button.dataset.radarOutcomeSwitch;if(!host||!x||!["current","next","drawdown"].includes(mode))return;radarOutcomeModes.set(ticker,mode);host.outerHTML=radarOutcomePhase7BHtml(x)});
+document.addEventListener("click",event=>{const button=event.target.closest("[data-radar-outcome-tab],[data-radar-outcome-switch]");if(!button)return;event.preventDefault();event.stopPropagation();const host=button.closest("[data-radar-outcomes-phase]"),card=button.closest("[data-etf-id]"),ticker=card?.dataset.etfId,x=radarDisplayItems().find(item=>item.id===ticker),mode=button.dataset.radarOutcomeTab||button.dataset.radarOutcomeSwitch;if(!host||!x||!["current","next","drawdown"].includes(mode))return;radarOutcomeModes.set(ticker,mode);host.outerHTML=radarOutcomePhase7BHtml(x)});
 document.addEventListener("toggle",event=>{const disclosure=event.target;if(!(disclosure instanceof HTMLDetailsElement)||!disclosure.matches(".radarResearchHub,.radarMarketP5Disclosure,.detailAdvanced"))return;disclosure.querySelector(":scope>summary")?.setAttribute("aria-expanded",String(disclosure.open))},true);
 document.addEventListener("click",event=>{const button=event.target.closest("[data-official-c4-range]");if(!button)return;event.preventDefault();event.stopPropagation();const symbol=button.dataset.officialC4Symbol,range=button.dataset.officialC4Range,host=button.closest(".hsC4Trend"),card=host?.closest(".hsLiveCard");officialC4TrendRanges.set(symbol,range);if(host){host.outerHTML=officialC4TrendHtml(symbol);const replacement=card?.querySelector(`[data-official-c4-trend="${symbol}"]`);if(replacement)replacement.open=true}});
 let lastHsStoryTrigger=$("#openHsStory");
@@ -5031,6 +5068,7 @@ async function openDrawdownTool(code){
   try{await lookupDrawdown(code)}catch(error){$("#drawdownStatus").textContent=error.message||"查詢失敗";$("#drawdownResult").innerHTML=""}
 }
 function switchTab(name,{scroll=true}={}){
+  if(name!=="signals")window.HSRadarHistoryView?.unmount();
   if(name!=="signals"&&homeC4Return){
     homeC4Return=null;
     const back=$("#radarDetailStickyBack");if(back){back.setAttribute("aria-label","返回 ETF 雷達");back.title="返回 ETF 雷達"}
@@ -5040,6 +5078,7 @@ function switchTab(name,{scroll=true}={}){
   document.querySelectorAll(".appNavButton").forEach(btn=>{const active=btn.dataset.tab===name;btn.classList.toggle("active",active);btn.setAttribute("aria-current",active?"page":"false")});
   document.querySelectorAll("[data-tab-intro]").forEach(el=>el.classList.toggle("active",el.dataset.tabIntro===name));
   sessionStorage.setItem("hsRadar.activeTab",name);
+  if(name==="signals")mountRadarHistoryChart($("#cards .signalCard.is-selected"));
   if(scroll)document.querySelector(".topTabs")?.scrollIntoView({behavior:"smooth",block:"start"});
 }
 function switchBottomNavTab(button){
@@ -5096,6 +5135,8 @@ async function load(){
   const m=$("#message"),b=$("#reload"),buttonLabel=b.querySelector("span");syncWatchlistState();renderWatchlist();m.className="message info";m.textContent="正在更新最新資料…";b.disabled=true;b.setAttribute("aria-busy","true");if(buttonLabel)buttonLabel.textContent="更新中…";
   try{
     await Promise.all([loadFinalizedCoreScoreHistory(),loadResearchC4History()]);
+    // Radar-only display can render verified FINALIZED history without market prices.
+    renderCards();
     await loadResearchC4Outcomes();
     await Promise.all([loadCorporateActionTables(),loadEtfValuation(),loadLeverageOfficialStatus()]);
     const settled=await Promise.allSettled(ids.map(one));

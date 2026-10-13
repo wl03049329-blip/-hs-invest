@@ -1,0 +1,28 @@
+/* Chart-only additions; production score/tier styling is intentionally unchanged. */
+.radarHistoryV2{min-width:0;overflow:hidden;padding:16px;border:1px solid #534025;border-radius:14px;background:linear-gradient(150deg,#171208,#080807 65%);color:#e4d7bc}
+.radarHistoryV2>header{display:flex;gap:8px;align-items:baseline;justify-content:space-between;flex-wrap:wrap}
+.radarHistoryV2 h3{font-size:19px;margin:0 0 12px}.radarHistoryV2 small{color:#b5a88f;font-size:12px}
+.radarHistoryRanges{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px}
+.radarHistoryV2 button{min-height:38px;border:1px solid #574324;border-radius:8px;background:#131009;color:#d6c6a0;font:inherit;font-size:13px;cursor:pointer;padding:6px}
+.radarHistoryV2 button.active{color:#ffe6a0;border-color:#d2a852;background:#38280f}
+.radarHistoryV2 button:focus-visible,.radarHistoryCanvas:focus-visible{outline:2px solid #dfb858;outline-offset:2px}
+.radarHistoryTools{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.radarHistorySettings{border:1px solid #47381f;border-radius:9px;padding:10px;margin:8px 0}
+.radarHistorySettings summary{cursor:pointer;font-size:14px}.radarHistorySettings>div{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 6px;padding-top:12px}
+.radarHistorySettings label{font-size:13px;display:flex;align-items:center;gap:4px}.radarHistorySettings input{accent-color:#c8a459;width:18px;height:18px}
+.radarHistoryStatus,.radarHistoryHint{font-size:12px;line-height:1.6;color:#c6b99c;overflow-wrap:anywhere}
+.radarHistoryCanvas{width:100%;height:560px;min-width:0;touch-action:pan-y;contain:layout paint}
+.radarHistoryExtrema{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:12px 0}
+.radarHistoryExtrema>div{min-width:0;border:1px solid #45371f;border-radius:8px;padding:8px}
+.radarHistoryExtrema b,.radarHistoryExtrema time,.radarHistoryExtrema small{display:block;overflow-wrap:anywhere}
+.radarHistoryExtrema b{font-size:18px;color:#edd18a}.radarHistoryExtrema time{font-size:11px;color:#b7a98c}
+.radarHistoryDetail{padding:12px;border:1px solid #584223;border-radius:10px;overflow-wrap:anywhere}
+.radarHistoryDetail header{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}.radarHistoryDetail header b{font-size:16px}
+.radarHistoryDetail time{font-size:13px;color:#d4bb81}.radarHistoryDetail dl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:14px 0}
+.radarHistoryDetail dt{font-size:12px;color:#baab92}.radarHistoryDetail dd{margin:4px 0 0;font-size:16px;font-variant-numeric:tabular-nums;color:#f0d999}
+.radarHistoryDetail p,.radarHistoryDetail small{font-size:12px;line-height:1.6;display:block}.radarHistorySource{display:block;margin-top:12px;line-height:1.6}.radarHistorySource a{color:#dcc58b}
+/* The focused card is scrolled BELOW the 48px sticky selection bar, not beneath it. */
+.radarDetailDeck.is-open .signalCard.is-selected{scroll-margin-top:68px}
+@media(max-width:430px){.radarHistoryV2{padding:12px}.radarHistoryExtrema{grid-template-columns:repeat(2,minmax(0,1fr))}.radarHistoryRanges button{padding:6px 2px;font-size:12px}.radarHistoryDetail dl{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.radarHistoryDiagnostics{margin-top:12px;font-size:11px;color:#b9aa90}
+.radarHistoryDiagnostics pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:320px;overflow:auto}
