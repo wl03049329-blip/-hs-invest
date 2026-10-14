@@ -21,5 +21,5 @@ assert.match(flow,/\.radarFlowCard>\.signalCardDetails\{[^}]*padding:14px/);
 assert.match(flow,/\.radarFlowCard>\.signalCardDetails>\.detailTabs\{[^}]*position:static/);
 assert.match(flow,/\.radarFlowCard>\.signalCardDetails>\.detailTabs\{[^}]*margin:0 0 14px/);
 assert.doesNotMatch(flow,/translate|margin[^;}:]*:-|overflow:hidden/);
-assert.match(html,/radar-history\.css\?v=20261014-history-selection-v1/);
+assert.match(html,/radar-history\.css\?v=20261014-selected-labels-v1/);
 console.log('PASS six ETF natural-flow cards, both panels, retained chart/data helpers, versioned layout CSS');

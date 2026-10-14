@@ -24,7 +24,7 @@
     <p class="radarHistoryHint">上：C4 分數（金線）｜下：原始日 K（紅漲綠跌）<br>點選／長按查日期 · 拖曳看歷史 · 雙指縮放 · 上下滑動捲頁</p>
     <small class="radarHistorySource">原始價格報酬不含配息；不與下方既有還原價格表現混用。<br>Charts by <a href="https://www.tradingview.com/" target="_blank" rel="noopener">TradingView</a> · Lightweight Charts™ 5.0.9</small></section>`;}
 function cutoff(now,closeHour=18,closeMinute=0){const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(now),v=Object.fromEntries(parts.map(p=>[p.type,p.value])),day=`${v.year}-${v.month}-${v.day}`;return Number(v.hour)*60+Number(v.minute)>=closeHour*60+closeMinute?day:new Date(Date.parse(day+'T00:00:00Z')-86400000).toISOString().slice(0,10);}
-function unmount(){if(active){closeSheet(active,false);active.sheet?.remove();active.abort.abort();document.removeEventListener("visibilitychange",active.resume);root.removeEventListener("pageshow",active.resume);active.resize?.disconnect();active.chart?.remove();active.host.removeEventListener('click',active.click);active.host.removeEventListener('change',active.change);for(const type of INPUT_EVENTS)active.host.removeEventListener(type,active.input,true);active=null;}}
+function unmount(){if(active){closeSheet(active,false);active.sheet?.remove();active.labelStatus?.remove();clearSelectionLabels(active);active.abort.abort();document.removeEventListener("visibilitychange",active.resume);root.removeEventListener("pageshow",active.resume);active.resize?.disconnect();active.chart?.remove();active.host.removeEventListener('click',active.click);active.host.removeEventListener('change',active.change);for(const type of INPUT_EVENTS)active.host.removeEventListener(type,active.input,true);active=null;}}
   async function mount(host,{symbol,name,artifact,contract,thresholds,completed,headers}){
     if(active?.host===host&&active.symbol===symbol)return;
     unmount();if(!host||!root.LightweightCharts)return;
@@ -58,6 +58,13 @@ s.score=C.scores(artifact,symbol,contract,date=>completed(date)&&date<=cutoff(ne
   function setRange(s){if(active!==s||!s.chart)return;const r=C.range(s.axis,s.prefs.range);if(r)s.chart.timeScale().setVisibleLogicalRange(r.from===r.to?{from:r.from-.5,to:r.to+.5}:r);s.syncingCursor=true;try{s.chart.clearCrosshairPosition();}finally{s.syncingCursor=false;}syncControls(s);showDetail(s,s.axis.at(-1));syncCursor(s);}
   function syncControls(s){s.host.querySelectorAll('[data-history-range]').forEach(b=>{b.classList.toggle('active',b.dataset.historyRange===s.prefs.range);b.setAttribute('aria-pressed',String(b.dataset.historyRange===s.prefs.range));});s.host.querySelectorAll('[data-history-pref]').forEach(b=>b.checked=s.prefs[b.dataset.historyPref]);}
   const displayDate=time=>String(time||'—').replace(/-/g,'/');
+  // BusinessDay is an exchange date, not a local-midnight timestamp.
+  function formatChartDate(time){
+    if(typeof time==='string')return /^\d{4}-\d{2}-\d{2}$/.test(time)?displayDate(time):'—';
+    if(time&&typeof time==='object'&&Number.isInteger(time.year)&&Number.isInteger(time.month)&&Number.isInteger(time.day))return `${time.year}/${String(time.month).padStart(2,'0')}/${String(time.day).padStart(2,'0')}`;
+    if(typeof time==='number'&&Number.isFinite(time))return displayDate(new Date(time*1000).toISOString().slice(0,10));
+    return '—';
+  }
   function dataState(s,d){
     const states=[];
     if(s.score.invalid.includes(d.time)||s.invalid.includes(d.time))states.push('資料驗證失敗');
@@ -81,9 +88,57 @@ s.score=C.scores(artifact,symbol,contract,date=>completed(date)&&date<=cutoff(ne
       <small>股價前筆 ${displayDate(d.previousPriceDate)}｜${esc(dataState(s,d).join(' · '))}</small>
       <span class="radarHistorySourceState">股價：${p?'已驗證 RAW_UNADJUSTED':'資料不足'}</span>`;
     updateSheet(s,d);
+    syncSelectionLabels(s);
+  }
+  function clearSelectionLabels(s){
+    for(const entry of Object.values(s.selectionLabels||{}))entry.series.detachPrimitive(entry.primitive);
+    s.selectionLabels={};
+  }
+  function syncSelectionLabels(s){
+    if(!s.chart||s.rendering||!s.selected)return;
+    const c=s.score.rows.find(r=>r.time===s.selected),p=s.prices.find(r=>r.time===s.selected);
+    const line=s.scoreLines?.find(series=>series.data().some(r=>r.time===s.selected));
+    s.selectionLabels??={};
+    for(const [key,series,value,title,color] of [['score',line,c?.value,'C4：','#e8c367'],['price',s.priceSeries,p?.close,'收盤：','#b7cfe5']]){
+      const old=s.selectionLabels[key],valid=C.finite(value)&&series&&s.prefs[key];
+      if(old&&(!valid||old.series!==series)){old.series.detachPrimitive(old.primitive);delete s.selectionLabels[key];}
+      if(!valid)continue;
+      // Axis-only primitive: never paint the title over the selected candle/point.
+      // Resolve coordinates from the native pane scale on each render, including
+      // pan/zoom/resize. Formatting uses the same precision as the detail panel.
+      const current=s.selectionLabels[key];
+      if(current)current.primitive.select(value);
+      else{
+        let selectedValue=value,requestUpdate;
+        const views=[{
+          coordinate:()=>-1e9,
+          fixedCoordinate:()=>series.priceToCoordinate(selectedValue)??-1e9,
+          text:()=>title+num(selectedValue),
+          textColor:()=>'#090806',backColor:()=>color,
+          visible:()=>series.priceToCoordinate(selectedValue)!==null,
+          tickVisible:()=>true
+        }];
+        const primitive={
+          attached:context=>{requestUpdate=context.requestUpdate;},
+          detached:()=>{requestUpdate=undefined;},
+          priceAxisViews:()=>views,
+          select:next=>{selectedValue=next;requestUpdate?.();}
+        };
+        series.attachPrimitive(primitive);
+        s.selectionLabels[key]={series,primitive};
+      }
+    }
+    const canvas=s.host.querySelector('.radarHistoryCanvas');
+    if(!s.labelStatus){s.labelStatus=document.createElement('div');s.labelStatus.className='radarHistoryMissingLabel';s.labelStatus.setAttribute('role','status');canvas.append(s.labelStatus);}
+    s.labelStatus.textContent=[!c?'C4：無正式 C4':'',!p?'收盤：資料不足':''].filter(Boolean).join(' · ');
+    s.labelStatus.hidden=Boolean(c&&p);
+    canvas.dataset.selectionDate=s.selected;
+    canvas.dataset.selectedC4=c?String(c.value):'';
+    canvas.dataset.selectedClose=p?String(p.close):'';
   }
   function syncCursor(s){
     if(!s.chart||!s.selected||s.syncingCursor||s.rendering)return;
+    syncSelectionLabels(s);
     const p=s.prices.find(p=>p.time===s.selected),c=s.score.rows.find(c=>c.time===s.selected);
     const line=s.scoreLines?.find(line=>line.data().some(r=>r.time===s.selected));
     s.syncingCursor=true;
@@ -164,7 +219,7 @@ s.score=C.scores(artifact,symbol,contract,date=>completed(date)&&date<=cutoff(ne
   }
   function draw(s,preserve){
     if(active!==s)return;const L=root.LightweightCharts,oldRange=s.chart?.timeScale().getVisibleRange(),oldAxis=s.axis;s.axis=C.axis(s.dates,s.score.rows,s.prices);s.host.querySelector('.radarHistoryCanvas').hidden=!s.axis.length;if(!s.axis.length){s.status('歷史資料不足；可載入更早歷史或重新取得。');return;}s.rendering=true;
-    if(!s.chart){s.chart=L.createChart(s.host.querySelector('.radarHistoryCanvas'),{height:560,layout:{background:{color:'#090806'},textColor:'#c7baa2',fontSize:12,attributionLogo:true,panes:{separatorColor:'#574324',enableResize:false}},grid:{vertLines:{color:'#201c14'},horzLines:{color:'#201c14'}},rightPriceScale:{minimumWidth:64,autoScale:true},timeScale:{borderColor:'#574324',rightOffset:0,lockVisibleTimeRangeOnResize:true,minBarSpacing:.01,timeVisible:false},crosshair:{mode:L.CrosshairMode.Normal},handleScroll:{mouseWheel:false,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:false},handleScale:{mouseWheel:false,pinch:true,axisPressedMouseMove:true},trackingMode:{exitMode:L.TrackingModeExitMode.OnNextTap}});
+    if(!s.chart){s.chart=L.createChart(s.host.querySelector('.radarHistoryCanvas'),{height:560,localization:{timeFormatter:formatChartDate},layout:{background:{color:'#090806'},textColor:'#c7baa2',fontSize:12,attributionLogo:true,panes:{separatorColor:'#574324',enableResize:false}},grid:{vertLines:{color:'#201c14'},horzLines:{color:'#201c14'}},rightPriceScale:{minimumWidth:64,autoScale:true},timeScale:{borderColor:'#574324',rightOffset:0,lockVisibleTimeRangeOnResize:true,minBarSpacing:.01,timeVisible:false},crosshair:{mode:L.CrosshairMode.Normal,horzLine:{visible:false,labelVisible:false}},handleScroll:{mouseWheel:false,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:false},handleScale:{mouseWheel:false,pinch:true,axisPressedMouseMove:true},trackingMode:{exitMode:L.TrackingModeExitMode.OnNextTap}});
       s.chart.subscribeCrosshairMove(param=>{
         if(param.time)s.lastCrosshair={time:param.time,sourceEvent:Boolean(param.sourceEvent)};
         // Data/range/marker redraws also emit crosshair events. They must not
@@ -178,8 +233,9 @@ s.score=C.scores(artifact,symbol,contract,date=>completed(date)&&date<=cutoff(ne
       s.chart.subscribeClick(param=>{if(active!==s||!param.time||!param.sourceEvent)return;const time=typeof param.time==='string'?param.time:`${param.time.year}-${String(param.time.month).padStart(2,'0')}-${String(param.time.day).padStart(2,'0')}`;selectDate(s,time);});
       s.chart.timeScale().subscribeVisibleLogicalRangeChange(r=>visible(s,r));s.resize=new ResizeObserver(entries=>{const width=Math.floor(entries[0].contentRect.width);if(width>0)s.chart.applyOptions({width});});s.resize.observe(s.host.querySelector('.radarHistoryCanvas'));
       s.anchor=s.chart.addSeries(L.LineSeries,{color:'transparent',lineVisible:false,priceLineVisible:false,lastValueVisible:false},0);
-      s.priceSeries=s.chart.addSeries(L.CandlestickSeries,{upColor:'#ed786f',downColor:'#64c593',borderUpColor:'#ed786f',borderDownColor:'#64c593',wickUpColor:'#ed786f',wickDownColor:'#64c593'},1);s.priceMarkers=L.createSeriesMarkers(s.priceSeries,[]);s.chart.panes()[0].setHeight(230);s.chart.panes()[1].setHeight(300);
+      s.priceSeries=s.chart.addSeries(L.CandlestickSeries,{upColor:'#ed786f',downColor:'#64c593',borderUpColor:'#ed786f',borderDownColor:'#64c593',wickUpColor:'#ed786f',wickDownColor:'#64c593',lastValueVisible:false,priceLineVisible:false},1);s.priceMarkers=L.createSeriesMarkers(s.priceSeries,[]);s.chart.panes()[0].setHeight(230);s.chart.panes()[1].setHeight(300);
     }
+    clearSelectionLabels(s);
     for(const m of s.scoreMarkers||[])m.api.detach();s.scoreMarkers=[];
     for(const series of s.series)s.chart.removeSeries(series);s.series=[];
     const priceByDate=new Map(s.prices.map(r=>[r.time,r]));
