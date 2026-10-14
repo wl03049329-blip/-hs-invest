@@ -23,7 +23,7 @@ assert.match(html,/HSFormalCoreScoreAdapter=Object\.freeze\(\{scoreFor:currentFo
 const universeSource=html.match(/const LONG_RADAR_CODES=new Set\([^\n]+\);\s*const LONG_RADAR_SCORED_CODES=new Set\([^\n]+\);/)?.[0];
 const adapterSource=html.match(/window\.HSFormalCoreScoreAdapter=Object\.freeze\([^\n]+\);/)?.[0];
 assert.ok(universeSource&&adapterSource,"production Formal universe and adapter must exist");
-const browser={HSFinalCoreProduction:{SUPPORTED_TICKERS:["009815"]}};browser.window=browser;vm.createContext(browser);vm.runInContext(moduleSource,browser);
+const browser={HSFinalCoreProduction:{SUPPORTED_TICKERS:["009815"]}};browser.window=browser;vm.createContext(require("./c4-display-context")(browser));vm.runInContext(moduleSource,browser);
 assert.equal(browser.HSC4ValidationMetadata.resolve("0050").status,"REFERENCE","uninitialized formal C4 scope fails closed");
 vm.runInContext(`${universeSource}\nconst currentFormalCoreScoreForSymbol=()=>null;\n${adapterSource}`,browser);
 for(const symbol of ["0050","00662","00830","00935"])assert.equal(browser.HSC4ValidationMetadata.resolve(symbol).status,"FORMAL",symbol);
@@ -42,7 +42,7 @@ assert.doesNotMatch(html,/function watchValidationStatus\(|function watchValidat
 const nodes=new Map(),node=id=>{if(!nodes.has(id))nodes.set(id,{innerHTML:"",textContent:"",classList:{add(){}},setAttribute(){},focus(){},querySelector(){return null}});return nodes.get(id)};
 const watchlist=[{id:"00635U",name:"黃金ETF"},{id:"2330",name:"台積電"}];
 const context={window:{HSC4ValidationMetadata:validation},HSFinalCoreProduction:core,currentFormalCoreScoreForSymbol:()=>({available:true,score:39.4,display_score:39,trading_date:"2026-09-24"}),watchlist,watchDiagnosticState:new Map(),$:node,esc:value=>String(value??""),fmt:value=>String(value),signed:value=>String(value),watchDirectionIcon:()=>"→",watchMetric:()=>"—",watchDiagnosticSection:(title)=>`<section>${title}</section>`,adHocReasonText:()=>"歷史行情不足，尚無法完整計算 C4。",lastWatchDiagnosticTrigger:null};
-vm.createContext(context);
+vm.createContext(require("./c4-display-context")(context));
 vm.runInContext(source("watchUnavailableState","adHocComponentRow")+"\n"+source("adHocComponentRow","renderWatchAdHocResult")+"\n"+blocks.join("\n"),context);
 const score=(ticker)=>({available:true,ticker,name:ticker,score:23.4,displayScore:23,tier:"一般持有",scoreAsOf:"2026-09-24",components:{}});
 const diagnostic={price:100,changeValue:null,changePct:null,trend:null,pullback:null,weekly:null,rs:null,recovery:null,dataAsOf:"2026-09-24"};
@@ -55,7 +55,7 @@ for(const symbol of ["00635U","2330"]){
   context.openWatchDiagnostic(symbol,null);
   const detail=node("#watchDiagnosticContent").innerHTML;
   for(const rendered of [quick,watch,detail])assert.match(rendered,new RegExp(resolved.label));
-  assert.match(quick,/HS C4[\s\S]*>23</);assert.match(watch,/HS C4[\s\S]*>23</);assert.match(detail,/HS C4 23/);
+  assert.match(quick,/HS C4[\s\S]*>23\.4</);assert.match(watch,/HS C4[\s\S]*>23\.4</);assert.match(detail,/HS C4 23/);
 }
 context.renderWatchAdHocResult({kind:"ready",ticker:"00635U",score:{available:false,reason:"INSUFFICIENT_DAILY_HISTORY"}});
 assert.match(node("#watchAdHocResult").innerHTML,/HS C4 暫無分數/);

@@ -1,0 +1,21 @@
+"use strict";
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const D=require('../c4-display'),P=require('../final-core-production'),H=require('../radar-history-core');
+for(const [value,text] of [[51.5389,'51.5'],[16.5,'16.5'],[27,'27.0'],[27.25,'27.3'],[29,'29.0'],[-2,'-2.0'],[-27.25,'-27.3'],[1.05,'1.1'],[0,'0.0'],[-0,'0.0'],[-.01,'0.0']])assert.equal(D.score(value),text);
+for(const value of [null,undefined,'',false,'27',NaN,Infinity,-Infinity])assert.equal(D.score(value),'—');
+assert.equal(D.signed(27),'+'+'27.0');assert.equal(D.signed(-2),'-2.0');assert.equal(D.signed(null),'—');
+assert.equal(D.signed(27.25-27.16),'+0.1','subtract original scores before formatting');
+const data=JSON.parse(fs.readFileSync('finalized-core-score-snapshots-v1.json','utf8')),before=JSON.stringify(data);
+for(const snapshot of data.snapshots)for(const row of snapshot.rows){const n=row.final_core_score;if(typeof n!=='number')continue;const tier=JSON.stringify(P.labelFor(n));D.score(n);assert.equal(JSON.stringify(P.labelFor(n)),tier);}
+assert.equal(JSON.stringify(data),before,'display cannot mutate finalized values');
+const edge=29.96;assert.equal(D.score(edge),'30.0');assert.notEqual(P.labelFor(edge).label,P.labelFor(30).label,'rounding never feeds tier classification');
+const html=fs.readFileSync('index.html','utf8'),view=fs.readFileSync('radar-history-view.js','utf8');
+assert.ok(html.indexOf('c4-display.js')<html.indexOf('radar-history-view.js'));
+for(const expression of ['scoreNum(c.value)','scoreSigned(c.delta)','scoreNum(c.previousValue)','scoreNum(f?.contribution)','scoreNum(x.scoreHigh.value)','scoreNum(x.scoreLow.value)','priceFormat:{type:\'custom\',formatter:scoreNum,minMove:.1}'])assert.ok(view.includes(expression),expression);
+for(const expression of ['num(p?.close)','num(f?.raw)','C.segments(s.axis,s.score.rows)','series.priceToCoordinate(selectedValue)'])assert.ok(view.includes(expression),expression+' preserves raw price/indicator/coordinate');
+const start=html.indexOf('function radarDetailCoreStatusHtml'),end=html.indexOf('function radarPrimaryDriver',start);
+const context=require('./c4-display-context')({esc:String,finalizedCoreScoreHistoryArtifact:data,officialArtifactCoreScoreHistory:()=>[{finalCoreScore:27.25,displayScore:27,tradingDate:'2026-10-12',status:P.labelFor(27.25).label},{finalCoreScore:27.16,displayScore:27,tradingDate:'2026-10-08'}],radarOverviewScoreDelta:()=>({tone:''}),radarOverviewNextLevel:()=>({available:false}),radarOverviewRankBadgeHtml:()=>''});
+vm.runInNewContext(html.slice(start,end),context);
+const rendered=context.radarDetailCoreStatusHtml({id:'00830'},null,null,null,null,1);
+assert.match(rendered,/<b>27\.3<\/b>/);assert.match(rendered,/今日 \+0\.1 分/);assert.match(rendered,/27\.2 → 27\.3/);
+console.log('PASS shared C4 display precision, missing values, raw delta/tier/JSON and chart separation');

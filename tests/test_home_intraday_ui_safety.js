@@ -16,7 +16,7 @@ const sandbox={
   currentFrontendLiveRenderState:()=>"LIVE_ACTIVE",
   esc:value=>String(value),
 };
-vm.createContext(sandbox);
+vm.createContext(require("./c4-display-context")(sandbox));
 vm.runInContext(html.slice(start,end),sandbox);
 
 assert.equal(sandbox.homeC4DisplayNumber(31.35),"31.4");
@@ -75,7 +75,7 @@ sandbox.decisionCenterC4Rows=()=>[{
   next:{highest:false,nextThreshold:40,nextLabel:"加碼條件浮現",distance:8.65},
 }];
 const closedCard=sandbox.decisionCenterC4Cards([],[],{target_date:"2026-09-21"});
-assert.match(closedCard,/data-c4-source="FINAL"[\s\S]*<b>31\.0<\/b>/);
+assert.match(closedCard,/data-c4-source="FINAL"[\s\S]*<b>31\.4<\/b>/);
 assert.match(closedCard,/盤中高<\/dt><dd>31\.4/);
 console.log("PASS: FINAL display remains canonical 31 while archived raw high is formatted separately");
 

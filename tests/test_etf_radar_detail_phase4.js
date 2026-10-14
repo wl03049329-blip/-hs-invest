@@ -7,7 +7,7 @@ const phase4=html.slice(html.indexOf("const RADAR_TREND_PHASE4_PERIODS"),html.in
 assert.ok(official.startsWith("function")&&phase4.startsWith("const"));
 const context={Number,Math,String,Map,Object,window:{HSDecisionLayerV1:decision},LONG_TERM_CORE_SCORE_VERSION:"FINAL_CORE_WEIGHT_V1",HSFinalCoreProduction:require(path.join(root,"final-core-production.js")),isCompletedTradingDate:date=>/^\d{4}-\d{2}-\d{2}$/.test(date),esc:value=>String(value),coreScoreTrendRanges:new Map(),radarOfficialFactorPair:(symbol,artifact)=>{const row=artifact.snapshots.find(snapshot=>snapshot.finalized&&snapshot.snapshot_type==="FINALIZED_CLOSE")?.rows.find(item=>item.symbol===symbol);return{current:row?{date:row.data_as_of.slice(0,10),factors:[{key:"dd52",available:true,raw:row.factors.dd52.raw}]}:null}},finalizedCoreScoreHistoryArtifact:null};
 context.window.HSRadarHistory=require(path.join(root,"radar-history-core.js"));
-vm.createContext(context);
+vm.createContext(require("./c4-display-context")(context));
 vm.runInContext(fs.readFileSync(path.join(root,"radar-history-view.js"),"utf8"),context);
 vm.runInContext(`${official}\n${phase4}\nthis.api={state:radarTrendPhase4State,events:radarTrendPhase4Events,thresholds:radarTrendPhase4Thresholds,priceRows:radarTrendPhase4PriceRows,render:radarScoreTrendHtml,chart:radarTrendPhase4Chart,extrema:radarTrendPhase4Extrema,domain:radarTrendPhase4Domain};`,context);
 const dates=[];for(let day=new Date("2026-09-17T00:00:00Z");dates.length<125;day.setUTCDate(day.getUTCDate()-1))if(day.getUTCDay()>=1&&day.getUTCDay()<=5)dates.unshift(day.toISOString().slice(0,10));
@@ -39,7 +39,7 @@ for(const score of [0,24,100]){
   assert.equal(domain.max-domain.min,20);
   assert.ok(domain.min>=0&&domain.max<=100);
   assert.doesNotMatch(chart,/NaN|Infinity/);
-  assert.match(chart,new RegExp(`區間持平 ${score}｜09/16–09/17`));
+  assert.match(chart,new RegExp(`區間持平 ${score}\\.0｜09/16–09/17`));
   assert.equal((chart.match(/radarTrendP4Extremum/g)||[]).length,1);
   assert.equal(context.api.extrema(flat).amplitude,0);
 }

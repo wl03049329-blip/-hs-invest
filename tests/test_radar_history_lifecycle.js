@@ -54,7 +54,7 @@ class SheetNode extends Host{
 const sheets=[];
 const document={...bus(),visibilityState:"visible",documentElement:{style:{overflow:'auto'}},createElement:()=>new SheetNode(),body:{append:s=>sheets.push(s)}},window={...bus(),HSRadarHistory:C,HSRadarHistorySource:{Source},LightweightCharts:{createChart,LineSeries:"line",CandlestickSeries:"candle",HistogramSeries:"histogram",CrosshairMode:{Normal:0},TrackingModeExitMode:{OnNextTap:0},createSeriesMarkers:()=>({setMarkers(){},detach(){}})}};
 const storage=new Map(),context={window,document,console,AbortController,Intl,Date:class extends Date{constructor(...args){super(...(args.length?args:["2026-10-13T12:00:00Z"]))}static now(){return Date.parse("2026-10-13T12:00:00Z")}},ResizeObserver:class{observe(){}disconnect(){}},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)}};
-vm.runInNewContext(fs.readFileSync(require.resolve("../radar-history-view"),"utf8"),context);
+vm.runInNewContext(fs.readFileSync(require.resolve("../radar-history-view"),"utf8"),require("./c4-display-context")(context));
 const V=window.HSRadarHistoryView,args=symbol=>({symbol,name:symbol,artifact,contract:P,thresholds:[],completed:()=>true,headers:()=>({})});
 (async()=>{
   const h=new Host();await V.mount(h,args("0050"));
@@ -69,7 +69,9 @@ const V=window.HSRadarHistoryView,args=symbol=>({symbol,name:symbol,artifact,con
   const scoreLabel=labels(charts[0]).find(l=>l.pane===0);
   assert.equal(scoreLabel.view.fixedCoordinate(),60.2);
   scoreLabel.series.coordinateFactor=3;assert.equal(scoreLabel.view.fixedCoordinate(),90.30000000000001,'zoom/resize uses current native coordinates, not stale pixels');
-  scoreLabel.primitive.select(29.123456);assert.equal(scoreLabel.view.text(),'C4：29.1235');
+  scoreLabel.primitive.select(29.123456);assert.equal(scoreLabel.view.text(),'C4：29.1');
+  assert.equal(scoreLabel.view.fixedCoordinate(),29.123456*3,'one-decimal text must not round the plotted coordinate');
+  scoreLabel.primitive.select(27);assert.equal(scoreLabel.view.text(),'C4：27.0');
   scoreLabel.primitive.select(30.1);
   assert.ok(charts[0].series.filter(s=>s.type==='candle').every(s=>s.options.lastValueVisible===false&&s.options.priceLineVisible===false));
   assert.match(h.querySelector(".radarHistoryDetail").innerHTML,/2026-10-13/);

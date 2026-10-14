@@ -32,7 +32,7 @@ const context={
   watchDirectionIcon:()=>"↑",adHocReasonText:()=>"歷史行情不足，尚無法完整計算 C4。"
 };
 context.HSFinalCoreProduction.labelFor=()=>({label:"回檔訊號出現"});
-vm.createContext(context);
+vm.createContext(require("./c4-display-context")(context));
 vm.runInContext(source("watchUnavailableState","adHocComponentRow"),context);
 vm.runInContext(source("watchDiagnosticCard","renderWatchDiagnostics"),context);
 assert.equal(validation.resolve("00830").label,"正式");

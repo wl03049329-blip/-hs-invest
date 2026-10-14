@@ -22,7 +22,7 @@ const context={document,all:items,$:selector=>nodes[selector],strategyDecisionFo
 // The real adapter / official snapshot contract is tested separately.
 context.radarDisplayItems=()=>items;
 context.homepageFinalDecision=()=>decision;
-vm.createContext(context);vm.runInContext(html.slice(start,end),context);
+vm.createContext(require('./c4-display-context')(context));vm.runInContext(html.slice(start,end),context);
 
 const core00830=trigger("core-00830");context.openCoreScoreModal("00830",core00830);context.closeCoreScoreModal();
 assert.strictEqual(document.activeElement,core00830);console.log("TEST 1 PASS: Core Score Sheet restores its real trigger");

@@ -13,7 +13,7 @@ assert.ok(start>=0&&end>start,"P3 daily snapshot functions must exist");
 
 const memory=new Map(),context={Date,Number,Array,Object,Math,JSON,Set,HSIntradayBuyPointCore:intraday,HSFinalCoreProduction:production,LONG_TERM_CORE_SCORE_VERSION:"FINAL_CORE_WEIGHT_V1",DAILY_LONG_RANK_STORAGE_KEY:"hsRadar.dailyLongRank.v1",coreScoreTrendRanges:new Map(),finalizedCoreScoreHistoryArtifact:{schema_version:1,core_score_version:"FINAL_CORE_WEIGHT_V1",snapshots:[]},loadDailyLongRankHistory:()=>({schema_version:1,snapshots:[]}),esc:value=>String(value)};
 context.localStorage={getItem:key=>memory.get(key)||null,setItem:(key,value)=>memory.set(key,value)};
-vm.createContext(context);vm.runInContext(html.slice(start,end),context);
+vm.createContext(require("./c4-display-context")(context));vm.runInContext(html.slice(start,end),context);
 
 const item=(id,date,score,j,bias,drawdown,marketFear=60,valuation=55,availableWeight=100)=>({
   id,formalState:{date,j,weekBias:bias,fromHigh:drawdown},valuation:{score:valuation},
@@ -73,7 +73,7 @@ const canonicalPair=context.dailyLongRankPair({schema_version:1,snapshots:[confl
 assert.strictEqual(canonicalPair.latest.items["00830"].longTermScore,53);assert.strictEqual(canonicalPair.latest.items["00830"].historySource,"official");assert.strictEqual(canonicalPair.previous.items["00830"].longTermScore,47);assert.strictEqual(canonicalPair.latest.items["00830"].rank,1);assert.strictEqual(canonicalPair.previous.items["00830"].rank,2);
 assert.strictEqual(canonicalMove.scoreDelta,6);assert.strictEqual(canonicalMove.rankDelta,1);assert.strictEqual(canonicalMove.displayScoreChange,"正式日分數 +6");assert.strictEqual(canonicalMove.displayRankChange,"正式日排名 ↑1");
 const today=context.radarTodayHtml({id:"00830",name:"國泰費城半導體",intraday:{asOf:"2026-08-26T13:30:00+08:00"}},{label:"正式加碼訊號",marketAsOf:"2026-08-26T13:30:00+08:00"},53,canonicalPair);
-assert.match(today,/前一本機盤後試算 47 → 最新正式盤後 53　\+6/);assert.doesNotMatch(today,/最新本機盤後試算 47/);
+assert.match(today,/前一本機盤後試算 47\.0 → 最新正式盤後 53\.0　\+6/);assert.doesNotMatch(today,/最新本機盤後試算 47/);
 const trend=context.coreScoreHistoryState("00830",{schema_version:1,snapshots:[conflictPrevious,conflictLocalCurrent]});assert.strictEqual(trend.rows[0].displayScore,53);
 assert.deepStrictEqual([53,officialDisplay(canonicalPair.latest.items["00830"]),trend.rows[0].displayScore],[53,53,53]);
 for(const symbol of ["0050","00662","00757","00935"]){assert.strictEqual(canonicalPair.latest.items[symbol].historySource,"official");assert.strictEqual(canonicalPair.latest.items[symbol].longTermScore,Math.floor(Number(context.finalizedCoreScoreHistoryArtifact.snapshots[0].rows.find(row=>row.symbol===symbol).final_core_score)))}

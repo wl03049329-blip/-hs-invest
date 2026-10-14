@@ -4,6 +4,7 @@
   const C=root.HSRadarHistory,KEY='hsRadar.history.preferences.v1',INPUT_EVENTS=['mousemove','mousedown','touchstart','touchmove'];let active=null,source=null,sessionPreferences=null;
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const num=v=>C.finite(v)?String(Number(v.toFixed(4))):'—',signed=v=>C.finite(v)?(v>0?'+':'')+num(v):'—';
+  const scoreNum=v=>root.HSC4Display.score(v),scoreSigned=v=>root.HSC4Display.signed(v);
   const sourceMessage=reason=>({'SOURCE_HTTP_402':'行情來源額度已達上限，暫停重試','SOURCE_HTTP_429':'行情來源限制請求，暫停重試','SOURCE_COOLDOWN':'來源冷卻中，稍後再試；未繞過供應商限制','Failed to fetch':'來源無法連線或不允許瀏覽器讀取，原因尚無法由瀏覽器確認'}[reason]||reason);
   function layoutDiagnostics(){
     const selectors=['#radarOverview','#radarDetailStickyNav','#cards','.signalCard.is-selected','.signalCard.is-selected .signalCardDetails','.signalCard.is-selected .detailTabs','.signalCard.is-selected [data-detail-panel="score"]','.signalCard.is-selected [data-detail-panel="drawdown"]','.signalCard.is-selected .radarHistoryCanvas'];
@@ -80,9 +81,9 @@ s.score=C.scores(artifact,symbol,contract,date=>completed(date)&&date<=cutoff(ne
     const d=C.detail(time,s.dates,s.score.rows,s.prices,s.events),p=d.price,c=d.score;
     s.host.querySelector('.radarHistoryDetail').innerHTML=`
       <header><time datetime="${esc(time)}">${displayDate(time)}</time><b>${esc(s.symbol)} ${esc(s.name)}</b></header>
-      <div class="radarHistorySummary"><strong>${c?num(c.value)+' 分':'尚無正式分數'}</strong><span>${esc(c?.tier||'無正式 C4 紀錄')}</span><span>${c&&c.delta!==null?(c.delta>0?'↑ ':c.delta<0?'↓ ':'→ ')+signed(c.delta):'暫無前筆正式比較'}</span></div>
-      <small>C4 前筆 ${c?.previousDate?displayDate(c.previousDate)+'｜'+num(c.previousValue)+' 分':'資料不足'}</small>
-      <div class="radarHistoryContributions">${C.FACTORS.map(({key,label})=>{const f=c?.factors.find(f=>f.key===key);return`<span>${label}${f?.weight!=null?' '+num(f.weight)+'%':''} <b>${num(f?.contribution)}</b></span>`;}).join('')}</div>
+      <div class="radarHistorySummary"><strong>${c?scoreNum(c.value)+' 分':'尚無正式分數'}</strong><span>${esc(c?.tier||'無正式 C4 紀錄')}</span><span>${c&&c.delta!==null?(c.delta>0?'↑ ':c.delta<0?'↓ ':'→ ')+scoreSigned(c.delta):'暫無前筆正式比較'}</span></div>
+      <small>C4 前筆 ${c?.previousDate?displayDate(c.previousDate)+'｜'+scoreNum(c.previousValue)+' 分':'資料不足'}</small>
+      <div class="radarHistoryContributions">${C.FACTORS.map(({key,label})=>{const f=c?.factors.find(f=>f.key===key);return`<span>${label}${f?.weight!=null?' '+num(f.weight)+'%':''} <b>${scoreNum(f?.contribution)}</b></span>`;}).join('')}</div>
       <div class="radarHistoryPrice"><b>原始收盤 ${num(p?.close)}</b><span>${signed(d.change)}（${d.returnPct===null?'—':signed(d.returnPct)+'%'}）</span></div>
       <div class="radarHistoryOHLC">${[['O',p?.open],['H',p?.high],['L',p?.low],['C',p?.close]].map(([k,v])=>`<span>${k} <b>${num(v)}</b></span>`).join('')}</div>
       <small>股價前筆 ${displayDate(d.previousPriceDate)}｜${esc(dataState(s,d).join(' · '))}</small>
@@ -113,7 +114,7 @@ s.score=C.scores(artifact,symbol,contract,date=>completed(date)&&date<=cutoff(ne
         const views=[{
           coordinate:()=>-1e9,
           fixedCoordinate:()=>series.priceToCoordinate(selectedValue)??-1e9,
-          text:()=>title+num(selectedValue),
+          text:()=>title+(title==='C4：'?scoreNum(selectedValue):num(selectedValue)),
           textColor:()=>'#090806',backColor:()=>color,
           visible:()=>series.priceToCoordinate(selectedValue)!==null,
           tickVisible:()=>true
@@ -194,17 +195,17 @@ s.score=C.scores(artifact,symbol,contract,date=>completed(date)&&date<=cutoff(ne
     s.sheet.querySelector('[data-sheet-action="previous"]').disabled=!C.adjacent(dates,d.time,-1)&&(s.nextYear<s.firstYear||s.busy);
     s.sheet.querySelector('[data-sheet-action="next"]').disabled=!C.adjacent(dates,d.time,1);
     s.sheet.querySelector('.radarHistorySheetBody').innerHTML=`
-      <h3>正式 C4</h3><dl>${cells([['正式總分',c?num(c.value)+' 分':'無正式 C4 紀錄'],['正式級距',c?.tier||'—'],['前筆正式分數',num(c?.previousValue)],['分數增減',signed(c?.delta)],['比較日期',displayDate(c?.previousDate)]])}</dl>
+      <h3>正式 C4</h3><dl>${cells([['正式總分',c?scoreNum(c.value)+' 分':'無正式 C4 紀錄'],['正式級距',c?.tier||'—'],['前筆正式分數',scoreNum(c?.previousValue)],['分數增減',scoreSigned(c?.delta)],['比較日期',displayDate(c?.previousDate)]])}</dl>
       <h3>三項正式因子</h3>${!c||c.factors.some(f=>f.raw===null||f.weight===null||f.contribution===null)?'<p>該日未保存正式分項資料</p>':''}
-      <table><thead><tr><th>指標／權重</th><th>原始值</th><th>加權貢獻</th></tr></thead><tbody>${C.FACTORS.map(({key,label})=>{const f=c?.factors.find(f=>f.key===key);return`<tr><th>${label}<small>${f?.weight!=null?num(f.weight)+'%':'權重未保存'}</small></th><td>${num(f?.raw)}</td><td>${num(f?.contribution)}</td></tr>`;}).join('')}</tbody></table>
+      <table><thead><tr><th>指標／權重</th><th>原始值</th><th>加權貢獻</th></tr></thead><tbody>${C.FACTORS.map(({key,label})=>{const f=c?.factors.find(f=>f.key===key);return`<tr><th>${label}<small>${f?.weight!=null?num(f.weight)+'%':'權重未保存'}</small></th><td>${num(f?.raw)}</td><td>${scoreNum(f?.contribution)}</td></tr>`;}).join('')}</tbody></table>
       <p>直接讀取當時保存的正式計分輸出；未補算歷史分項。</p>
       <h3>ETF 原始行情</h3><dl>${cells([['Open',num(p?.open)],['High',num(p?.high)],['Low',num(p?.low)],['Close',num(p?.close)],['漲跌金額',signed(d.change)],['漲跌幅',d.returnPct===null?'—':signed(d.returnPct)+'%'],['前一有效價格日期',displayDate(d.previousPriceDate)]])}</dl>
       <p>原始價格漲跌不含配息。${d.dividends.length?' 當日除息 '+d.dividends.map(e=>num(e.amount)+' 元（'+esc(e.source)+'）').join('、'):''}</p>
       <h3>資料狀態</h3><p>${esc(dataState(s,d).join('｜'))}</p>
       <dl>${cells([['C4 版本',c?.version||'—'],['C4 來源',c?.source||'—'],['資料日期',c?.asOf||'—'],['正式更新',c?.updatedAt||'未保存'],['股價來源',p?.source||'—'],['行情取得',p?.fetchedAt||'—']])}</dl>
-      ${c?`<p>來源原始分數 ${esc(c.value)}</p>`:''}`;
+      ${c?`<p>來源正式分數 ${scoreNum(c.value)}</p>`:''}`;
   }
-  function visible(s,r){if(active!==s||!r)return;s.host.dataset.visibleFrom=String(r.from);s.host.dataset.visibleTo=String(r.to);const x=C.extrema(s.axis,s.score.rows,s.prices,r);if(!x)return;const entry=(label,row,key)=>`<div><small>${label}</small><b>${num(row?.[key])}</b><time>${esc(row?.time||'資料不足')}</time></div>`;s.host.querySelector('.radarHistoryExtrema').innerHTML=entry('C4 最高',x.scoreHigh,'value')+entry('C4 最低',x.scoreLow,'value')+entry('股價最高',x.priceHigh,'high')+entry('股價最低',x.priceLow,'low');
+  function visible(s,r){if(active!==s||!r)return;s.host.dataset.visibleFrom=String(r.from);s.host.dataset.visibleTo=String(r.to);const x=C.extrema(s.axis,s.score.rows,s.prices,r);if(!x)return;const entry=(label,row,key)=>`<div><small>${label}</small><b>${(key==='value'?scoreNum(row?.[key]):num(row?.[key]))}</b><time>${esc(row?.time||'資料不足')}</time></div>`;s.host.querySelector('.radarHistoryExtrema').innerHTML=entry('C4 最高',x.scoreHigh,'value')+entry('C4 最低',x.scoreLow,'value')+entry('股價最高',x.priceHigh,'high')+entry('股價最低',x.priceLow,'low');
     const latest=s.prices.at(-1)?.time,expected=s.dates.filter(d=>d<=s.cutoff).at(-1);s.host.dataset.calendarRange=s.dates[0]+"~"+s.dates.at(-1);s.host.dataset.loadedYears=[...s.years].sort().join(",");s.host.dataset.rejectedDates=s.invalid.join(",");s.status(`原始歷史起點 ${s.prices[0]?.time||"資料不足"}｜可視交易日 ${x.sessions}｜C4 ${x.scoreCount}/${x.sessions}｜股價 ${x.priceCount}/${x.sessions}。C4 截至 ${s.score.rows.at(-1)?.time||'資料不足'}；原始日線 ${latest||'資料不足'}（${latest===expected?'已驗證':'待更新'}）。${s.invalid.length||s.score.invalid.length?'驗證異常：已隔離不合格資料。':''}${s.nextYear>=s.firstYear?'已載入 '+[...s.years].sort().join('、')+'；可向左載入更早資料。':'已查詢來源全部交易日範圍。'}${s.dividendStatus==='UNAVAILABLE'?'除息資料不足。':''}`);
     if(s.warnings.size)s.status(s.host.querySelector('.radarHistoryStatus').textContent+' 最新增量未完成｜'+[...s.warnings].map(sourceMessage).join('、')+'；保留已驗證快取，不代表完整最新歷史。');
     if(s.observedOnly){s.status(s.host.querySelector('.radarHistoryStatus').textContent.replace('（已驗證）','（日期完整性待確認）').replace('已查詢來源全部交易日範圍。','已載入保存資料範圍。')+' 交易日曆不可用：僅按已保存行情／正式 C4 日期排列，不能確認缺日；MA 暫停顯示。');}
@@ -214,7 +215,7 @@ s.score=C.scores(artifact,symbol,contract,date=>completed(date)&&date<=cutoff(ne
     if(s.host.dataset.knownNoTradeDates)s.status(s.host.querySelector('.radarHistoryStatus').textContent+' 0050：2025/06/11–06/17 為已確認分割停牌五個交易日（TWSE 2025/06/17 公告），不補 K 線。');
     const points=[];if(s.prefs.extrema){if(x.priceHigh)points.push({time:x.priceHigh.time,position:'aboveBar',color:'#dfc587',shape:'circle',text:'高 '+num(x.priceHigh.high)});if(x.priceLow)points.push({time:x.priceLow.time,position:'belowBar',color:'#dfc587',shape:'circle',text:'低 '+num(x.priceLow.low)});}
     for(const e of s.events)if(s.prices.some(p=>p.time===e.time))points.push({time:e.time,position:'belowBar',color:'#b7a6de',shape:'arrowUp',text:'息 '+num(e.amount)});s.priceMarkers?.setMarkers(points.sort((a,b)=>a.time.localeCompare(b.time)));
-    for(const m of s.scoreMarkers||[]){const points=[];if(s.prefs.extrema&&s.prefs.score){if(x.scoreHigh&&m.times.has(x.scoreHigh.time))points.push({time:x.scoreHigh.time,position:'aboveBar',color:'#e8c367',shape:'circle',text:'高 '+num(x.scoreHigh.value)});if(x.scoreLow&&m.times.has(x.scoreLow.time)&&x.scoreLow.time!==x.scoreHigh?.time)points.push({time:x.scoreLow.time,position:'belowBar',color:'#e8c367',shape:'circle',text:'低 '+num(x.scoreLow.value)});}m.api.setMarkers(points.sort((a,b)=>a.time.localeCompare(b.time)));}
+    for(const m of s.scoreMarkers||[]){const points=[];if(s.prefs.extrema&&s.prefs.score){if(x.scoreHigh&&m.times.has(x.scoreHigh.time))points.push({time:x.scoreHigh.time,position:'aboveBar',color:'#e8c367',shape:'circle',text:'高 '+scoreNum(x.scoreHigh.value)});if(x.scoreLow&&m.times.has(x.scoreLow.time)&&x.scoreLow.time!==x.scoreHigh?.time)points.push({time:x.scoreLow.time,position:'belowBar',color:'#e8c367',shape:'circle',text:'低 '+scoreNum(x.scoreLow.value)});}m.api.setMarkers(points.sort((a,b)=>a.time.localeCompare(b.time)));}
     if(r.from<2&&s.prices.length&&!s.busy&&s.nextYear>=s.firstYear&&s.prefs.range!=='ALL')older(s).catch(error=>s.status('更早資料取得失敗｜'+error.message));
   }
   function draw(s,preserve){
@@ -232,7 +233,7 @@ s.score=C.scores(artifact,symbol,contract,date=>completed(date)&&date<=cutoff(ne
       });
       s.chart.subscribeClick(param=>{if(active!==s||!param.time||!param.sourceEvent)return;const time=typeof param.time==='string'?param.time:`${param.time.year}-${String(param.time.month).padStart(2,'0')}-${String(param.time.day).padStart(2,'0')}`;selectDate(s,time);});
       s.chart.timeScale().subscribeVisibleLogicalRangeChange(r=>visible(s,r));s.resize=new ResizeObserver(entries=>{const width=Math.floor(entries[0].contentRect.width);if(width>0)s.chart.applyOptions({width});});s.resize.observe(s.host.querySelector('.radarHistoryCanvas'));
-      s.anchor=s.chart.addSeries(L.LineSeries,{color:'transparent',lineVisible:false,priceLineVisible:false,lastValueVisible:false},0);
+      s.anchor=s.chart.addSeries(L.LineSeries,{color:'transparent',priceFormat:{type:'custom',formatter:scoreNum,minMove:.1},lineVisible:false,priceLineVisible:false,lastValueVisible:false},0);
       s.priceSeries=s.chart.addSeries(L.CandlestickSeries,{upColor:'#ed786f',downColor:'#64c593',borderUpColor:'#ed786f',borderDownColor:'#64c593',wickUpColor:'#ed786f',wickDownColor:'#64c593',lastValueVisible:false,priceLineVisible:false},1);s.priceMarkers=L.createSeriesMarkers(s.priceSeries,[]);s.chart.panes()[0].setHeight(230);s.chart.panes()[1].setHeight(300);
     }
     clearSelectionLabels(s);
@@ -241,7 +242,7 @@ s.score=C.scores(artifact,symbol,contract,date=>completed(date)&&date<=cutoff(ne
     const priceByDate=new Map(s.prices.map(r=>[r.time,r]));
     s.anchor.setData(s.axis.map(time=>({time})));s.priceSeries.applyOptions({visible:s.prefs.price});s.priceSeries.setData(s.axis.map(time=>priceByDate.get(time)||{time}));
     const addLines=(segments,options,pane)=>{const added=[];for(const data of segments){const series=s.chart.addSeries(L.LineSeries,{priceLineVisible:false,lastValueVisible:false,...options},pane);series.setData(data);s.series.push(series);added.push(series);}return added;};
-    const scoreSeries=addLines(C.segments(s.axis,s.score.rows),{color:'#e8c367',lineWidth:2,pointMarkersVisible:true,pointMarkersRadius:2,visible:s.prefs.score},0);
+    const scoreSeries=addLines(C.segments(s.axis,s.score.rows),{color:'#e8c367',priceFormat:{type:'custom',formatter:scoreNum,minMove:.1},lineWidth:2,pointMarkersVisible:true,pointMarkersRadius:2,visible:s.prefs.score},0);
     s.scoreLines=scoreSeries;
     s.scoreMarkers=scoreSeries.map(series=>({api:L.createSeriesMarkers(series,[]),times:new Set(series.data().map(r=>r.time))}));
     if(s.prefs.thresholds&&s.prefs.score&&scoreSeries[0])for(const t of s.thresholds)scoreSeries[0].createPriceLine({price:t.value,title:t.label,color:'#786442',lineWidth:1,lineStyle:2,axisLabelVisible:true});

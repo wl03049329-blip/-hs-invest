@@ -27,7 +27,7 @@ assert.match(html,/今日與前次正式交易日/);
 // Execute the production summary helper: contribution direction and missing values remain protected.
 const vm=require("node:vm"),summaryStart=html.indexOf("function radarExplainNumber"),summaryEnd=html.indexOf("function radarWhyScoreHtml",summaryStart),summaryContext={};
 assert.ok(summaryStart>0&&summaryEnd>summaryStart);
-vm.runInNewContext(html.slice(summaryStart,summaryEnd),summaryContext);
+vm.runInNewContext(html.slice(summaryStart,summaryEnd),require("./c4-display-context")(summaryContext));
 assert.match(summaryContext.radarExplainSummary({rawDelta:4,deltas:[{key:"dd52",label:"52週回檔",value:4}]}),/提高 4\.0 分.*52週回檔貢獻增加/);
 assert.match(summaryContext.radarExplainSummary({rawDelta:-4,deltas:[{key:"weekly_j",label:"週 J 值",value:-4}]}),/下降 4\.0 分.*週 J 值貢獻減少/);
 assert.equal(summaryContext.radarExplainSummary(null),"暫無完整前次比較資料");

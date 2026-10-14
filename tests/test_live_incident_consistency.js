@@ -22,7 +22,7 @@ const sandbox = {window:{HSDecisionLayerV1:decision,HSCanonicalScoreResolver:res
   finalizedCoreScoreHistoryArtifact:history,taipeiToday:()=>date,esc:String,
   homepageFinalDecision:()=>({label:"一般持有"}),currentFrontendLiveRenderState:()=>"API_UNAVAILABLE",
   officialC4HistoryViewModel:()=>new Map(symbols.map((symbol,index)=>[symbol,{rows:[{score:20+index},{score:23+index}]}]))};
-vm.runInNewContext(html.slice(start,end),sandbox);
+vm.runInNewContext(html.slice(start,end),require("./c4-display-context")(sandbox));
 const longs=symbols.map(id=>({id,name:id}));
 const officialRows=symbols.map((symbol,index)=>({symbol,score:23+index,displayScore:23+index,date:"2026-10-08",tier:"一般持有"}));
 const view = (snapshots=[],time=now,tradingDayStatus="TRADING_DAY") => resolver.buildDualTrackView({

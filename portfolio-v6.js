@@ -379,7 +379,7 @@
     }
     output.innerHTML = attention.map(item => {
       const allocationText = item.allocationState === "under" ? `配置低於目標 ${number(Math.abs(item.gap), 1)}pt` : item.allocationState === "over" ? `配置高於目標 ${number(item.gap, 1)}pt` : "";
-      const scoreText = Number.isFinite(item.coreScore) ? `HS ${number(item.coreScore, 0)}｜${escapeHtml(item.coreLabel)}` : "";
+      const scoreText = Number.isFinite(item.coreScore) ? `HS ${window.HSC4Display.score(item.coreScore)}｜${escapeHtml(item.coreLabel)}` : "";
       return `<article class="portfolioAttentionItem priority-${item.priority}"><div><b>${escapeHtml(item.code)}</b><span>${escapeHtml(item.name || item.code)}</span></div><p>${[allocationText, scoreText].filter(Boolean).join("<br>")}</p></article>`;
     }).join("");
   }

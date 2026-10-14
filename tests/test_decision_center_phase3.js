@@ -9,7 +9,7 @@ const html=fs.readFileSync("index.html","utf8"),css=fs.readFileSync("formal-blac
 const symbols=["0050","00662","00757","00830","00935"],start=html.indexOf('const OFFICIAL_C4_CHANGE_KEYS='),end=html.indexOf("function longRankRow",start),source=html.slice(start,end);
 assert.ok(start>0&&end>start,"official C4 attribution helper must remain isolated and testable");
 const sandbox={LONG_RADAR_SCORED_CODES:new Set(symbols),LONG_TERM_CORE_SCORE_VERSION:"FINAL_CORE_WEIGHT_V1",isCompletedTradingDate:value=>/^\d{4}-\d{2}-\d{2}$/.test(String(value||"")),esc:String};
-vm.runInNewContext(source,sandbox);
+vm.runInNewContext(source,require("./c4-display-context")(sandbox));
 
 function row(symbol,score,contributions,version="FINAL_CORE_WEIGHT_V1"){return{symbol,final_core_score:score,core_score_version:version,data_as_of:"2026-09-04T13:30:00+08:00",factors:{weekly_j:{contribution:contributions[0]},dd52:{contribution:contributions[1]},crash:{contribution:contributions[2]}}};}
 function snapshot(date,item,type="FINALIZED_CLOSE",finalized=true){return{date,snapshot_type:type,finalized,rows:[{...item,data_as_of:`${date}T13:30:00+08:00`}]};}
