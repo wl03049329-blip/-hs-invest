@@ -1198,7 +1198,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 <script src="radar-history-core.js"></script>
 <script src="radar-history-source.js"></script>
 <script src="radar-history-view.js"></script>
-<link rel="stylesheet" href="radar-history.css">
+<link rel="stylesheet" href="radar-history.css?v=20261014-detail-flow-v1">
 <script src="market-ui-core.js"></script>
 <script src="market-v61-core.js?v=20260803b"></script>
 <script src="commodity-quotes-core.js?v=20260803b"></script>
@@ -4404,7 +4404,7 @@ function buildRadarV2Card({x,mode,decision,stage,score,longRank,longRankChange,l
   const cardClass=`card signalCard radarV2Card ${x.signal.className} strategy-${mode}`,scoreText=Number.isFinite(score)?score:"—";
   if(mode==="long_term_core"){
     const presentation=decision?.finalPresentation||radarDecisionLayerFor(x),bucketLabel=presentation?.decision_label_zh||"資料不足",badgeLabel=finalDecisionBadgeLabel(presentation),displayStage={key:presentation?.decision_stage||"unavailable",label:bucketLabel,recommendation:presentation?.explanation_text_zh||"等待資料更新"};
-  return`<details class="${cardClass}" data-etf-id="${esc(x.id)}" data-radar-ux-phase="8.5"><summary class="radarDetailSummary">${rankBadgeHtml(longRank)}<span><b>${esc(x.id)} ${esc(x.name)}</b><small>${esc(badgeLabel)}｜週 J ${fmt(x.j)}</small></span><strong>${scoreText}<small>分</small></strong></summary><div class="signalCardDetails"><div class="detailTabs" role="tablist"><button class="active" type="button" data-detail-view="score" aria-selected="true">決策資訊</button><button type="button" data-detail-view="drawdown" aria-selected="false">高點回落</button></div><div data-detail-panel="score">${radarDetailCoreStatusHtml(x,decision,score,dailyPair,presentation,longRank)}${radarScoreTrendHtml(x)}${radarMarketPositionHtml(x)}${radarDecisionSummaryHtml(x)}${radarWhyScoreHtml(x,decision)}${detailAdvancedHtml(x)}</div><div data-detail-panel="drawdown" hidden>${longTermDrawdownTableHtml(x)}<div class="drawdownConclusion"><span>目前跌幅</span><b>${Number.isFinite(x.fromHigh)?fmt(x.fromHigh)+"%":"—"}</b><p>${esc(uiMetricStatus("drawdown",x.fromHigh))}；亮金框標示目前所在區間。</p></div></div></div></details>`;
+  return`<article class="${cardClass} radarFlowCard" data-etf-id="${esc(x.id)}" data-radar-ux-phase="8.5" aria-label="${esc(x.id)} ${esc(x.name)} 詳細資訊"><div class="signalCardDetails"><div class="detailTabs" role="tablist"><button class="active" type="button" data-detail-view="score" aria-selected="true">決策資訊</button><button type="button" data-detail-view="drawdown" aria-selected="false">高點回落</button></div><div data-detail-panel="score">${radarDetailCoreStatusHtml(x,decision,score,dailyPair,presentation,longRank)}${radarScoreTrendHtml(x)}${radarMarketPositionHtml(x)}${radarDecisionSummaryHtml(x)}${radarWhyScoreHtml(x,decision)}${detailAdvancedHtml(x)}</div><div data-detail-panel="drawdown" hidden>${longTermDrawdownTableHtml(x)}<div class="drawdownConclusion"><span>目前跌幅</span><b>${Number.isFinite(x.fromHigh)?fmt(x.fromHigh)+"%":"—"}</b><p>${esc(uiMetricStatus("drawdown",x.fromHigh))}；亮金框標示目前所在區間。</p></div></div></div></article>`;
   }
   if(mode==="leveraged"){
     const leverage=leverageV1State(x),status=leverage.trigger?"V1 TRIGGER":leverage.available?"待命":"資料不足";

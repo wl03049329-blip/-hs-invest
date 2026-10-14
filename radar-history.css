@@ -26,3 +26,8 @@
 @media(max-width:430px){.radarHistoryV2{padding:12px}.radarHistoryExtrema{grid-template-columns:repeat(2,minmax(0,1fr))}.radarHistoryRanges button{padding:6px 2px;font-size:12px}.radarHistoryDetail dl{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .radarHistoryDiagnostics{margin-top:12px;font-size:11px;color:#b9aa90}
 .radarHistoryDiagnostics pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:320px;overflow:auto}
+/* Radar detail flow: the card is selected by the overview, not a native disclosure.
+   Keep tabs in normal flow across viewport and Safari address-bar changes. */
+.radarDetailDeck.is-open .radarFlowCard{border-color:#6c552b}
+.radarFlowCard>.signalCardDetails{padding:14px;margin:0;border-top:0;min-height:0}
+.radarFlowCard>.signalCardDetails>.detailTabs{position:static;top:auto;z-index:auto;margin:0 0 14px}

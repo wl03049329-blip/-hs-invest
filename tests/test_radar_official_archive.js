@@ -35,7 +35,9 @@ const sign=p=>{delete p.content_sha256;p.content_sha256=crypto.createHash('sha25
   for(const symbol of ['0050','00662','00757','00830','00935']){
     const a=new Source({savedFetcher:read,archiveFetcher:read,fetcher:()=>{throw Error('NETWORK_DISABLED');}});
     const cal=await a.savedSessions(symbol,[]),result=await a.year(symbol,2026,cal.dates,'2026-10-13');
-    const formal=official.snapshots.filter(s=>s.finalized&&s.rows.some(r=>r.symbol===symbol&&typeof r.final_core_score==='number')).map(s=>s.date);
+    // This archive contract covers the verified 10/13 release, while the live
+    // FINALIZED artifact legitimately grows on later trading days.
+    const formal=official.snapshots.filter(s=>s.date<='2026-10-13'&&s.finalized&&s.rows.some(r=>r.symbol===symbol&&typeof r.final_core_score==='number')).map(s=>s.date);
     assert.equal(formal.length,32);assert.equal(formal.filter(d=>result.rows.some(r=>r.time===d)).length,32);
     if(symbol==='00757'){
       const p=await a.archive(symbol);assert.equal(p.price.length,1906);assert.equal(p.price[0].date,'2018-12-06');assert.equal(p.evidence.length,95);
