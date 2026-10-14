@@ -1185,7 +1185,14 @@ footer{color:#746f67}
 @media(max-width:430px){#homeEtfBrief .longRankActions{gap:6px}#homeEtfBrief .longRankActions .miniBtn{font-size:9px;padding-inline:4px}.coreScoreHistoryList li{grid-template-columns:46px 44px minmax(0,1fr);gap:7px;padding:10px}.coreScoreHistoryList b{font-size:1.3rem}.coreScoreHistoryList small{grid-column:3;white-space:normal}}
 
 /* P4: long-form HS brand story — restrained black, gold and editorial spacing. */
-.hsStorySheet{width:min(920px,100%)}
+.hsStoryModal{height:100vh;height:100dvh;overflow:hidden;padding:18px 10px}
+.hsStorySheet{display:flex;flex-direction:column;width:min(920px,100%);height:100%;min-height:0;max-height:100%;padding:0;overflow:hidden}
+.hsStoryHeader{position:relative;flex:0 0 auto;padding:14px 18px;isolation:isolate}
+.hsStoryHeader .close{min-width:44px;min-height:44px;flex:0 0 auto;touch-action:manipulation}
+.hsStoryScroll{width:100%;min-height:0;flex:1 1 auto;overflow:auto;overscroll-behavior-y:contain;padding:0 18px 24px;-webkit-overflow-scrolling:touch}
+.hsStoryScroll .hsStoryNav{margin-inline:0}
+.hsStoryOpen,.hsStoryOpen body{overflow:hidden;overscroll-behavior:none}
+@media(max-width:620px){.hsStoryModal{padding:0}.hsStorySheet{border-radius:0;min-height:0;padding:0}.hsStoryHeader{padding:calc(10px + env(safe-area-inset-top)) 12px 10px}.hsStoryScroll{padding:0 12px calc(20px + env(safe-area-inset-bottom))}}
 .hsBrandStory{max-width:860px;margin:0 auto;color:#eee7da;overflow-wrap:anywhere}
 .hsBrandHero{padding:72px 24px 76px;text-align:center}
 .hsBrandHero .hsStoryHeroLogo{width:112px;height:112px;margin-bottom:24px}

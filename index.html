@@ -303,7 +303,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 </style>
 <link rel="stylesheet" href="portfolio-v6.css?v=20260925-portfolio-quote-freshness-v1" />
 <link rel="stylesheet" href="v62-tech.css?v=20260809b" />
-<link rel="stylesheet" href="formal-black-gold.css?v=20260928-score-jump-v1" />
+<link rel="stylesheet" href="formal-black-gold.css?v=20261015-story-scroll-v1" />
 <style id="radarPhase32CriticalLayout">
 /* Phase 3.2 structural fallback: the renderer is mobile-first even if external CSS is stale. */
 .radarFactorStackV32{display:flex;flex-direction:column;width:100%;min-width:0}
@@ -1129,7 +1129,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       </div>
       <button id="closeHsStory" class="close" type="button" aria-label="關閉 HS 品牌故事">關閉</button>
     </div>
-    <div class="hsBrandStory hsStoryHub">
+    <div id="hsStoryScroll" class="hsBrandStory hsStoryHub hsStoryScroll">
       <header class="hsBrandHero hsStoryHubHero"><img class="hsStoryHeroLogo" data-brand-logo alt="HS ETF股市雷達正式標誌" width="104" height="104"><p class="eyebrow">HS 的故事 <small>ABOUT HS</small></p><h1 id="hsStoryTitle">把相信的未來，<br><span class="hsStoryHeroLine">變成更有紀律的現在。</span></h1><h2>一套從個人投資困擾出發，持續研究、驗證與等待的 ETF 故事。</h2><div class="hsBrandLead"><p>市場每天都有很多聲音。漲的時候，怕錯過；跌的時候，又怕還會更低。</p><p>HS 想做的，不是預測明天漲跌，也不是告訴你哪一天就是最低點。</p><strong>當市場出現波動時，如何把複雜的資訊整理成一套自己看得懂、願意相信，也能長期執行的投資紀律。</strong></div></header>
 
       <nav class="hsStoryNav" aria-label="HS 故事章節導覽"><button class="is-active" type="button" data-story-target="hs-story-intention" aria-current="true"><b>01</b><span>我的初衷</span></button><button type="button" data-story-target="hs-story-etfs"><b>02</b><span>我選擇的 ETF</span></button><button type="button" data-story-target="hs-story-birth"><b>03</b><span>HS 的誕生</span></button><button type="button" data-story-target="hs-story-research"><b>04</b><span>研究與回測</span></button><button type="button" data-story-target="hs-story-leverage"><b>05</b><span>00631L 實驗室</span></button><button type="button" data-story-target="hs-story-future"><b>06</b><span>讓未來回答</span></button></nav>
@@ -4995,17 +4995,19 @@ function renderHsCanonicalScoreGuide(){
   target.innerHTML=labels.map((item,index)=>{const max=index<labels.length-1?labels[index+1].min-1:100;return`<div><span>${item.min}–${max}</span><b>${esc(item.label)}</b></div>`}).join("");
 }
 function setHsStoryActive(targetId){document.querySelectorAll("[data-story-target]").forEach(button=>{const active=button.dataset.storyTarget===targetId;button.classList.toggle("is-active",active);if(active)button.setAttribute("aria-current","true");else button.removeAttribute("aria-current")})}
-function syncHsStoryActive(){const modal=$("#hsStoryModal"),chapters=[...modal.querySelectorAll("[data-story-chapter]")];if(!chapters.length)return;const boundary=modal.getBoundingClientRect().top+120;let active=chapters[0];for(const chapter of chapters){if(chapter.getBoundingClientRect().top<=boundary)active=chapter}setHsStoryActive(active.id)}
-function openHsStory(event){lastHsStoryTrigger=event?.currentTarget||lastHsStoryTrigger;const modal=$("#hsStoryModal");renderHsCanonicalScoreGuide();modal.scrollTop=0;setHsStoryActive("hs-story-intention");modal.classList.add("show");modal.setAttribute("aria-hidden","false");setTimeout(()=>$("#closeHsStory").focus(),30)}
-function closeHsStory(){const modal=$("#hsStoryModal");modal.classList.remove("show");modal.setAttribute("aria-hidden","true");lastHsStoryTrigger?.focus()}
+function hsStoryScroller(){return $("#hsStoryScroll")}
+function syncHsStoryActive(){const scroller=hsStoryScroller(),chapters=[...scroller.querySelectorAll("[data-story-chapter]")];if(!chapters.length)return;const boundary=scroller.getBoundingClientRect().top+scroller.querySelector(".hsStoryNav").getBoundingClientRect().height+16;let active=chapters[0];for(const chapter of chapters){if(chapter.getBoundingClientRect().top<=boundary)active=chapter}setHsStoryActive(active.id)}
+function scrollHsStoryChapter(targetId){const scroller=hsStoryScroller(),target=document.getElementById(targetId);if(!target||!scroller.contains(target))return;const navHeight=scroller.querySelector(".hsStoryNav").getBoundingClientRect().height;setHsStoryActive(targetId);scroller.scrollTo({top:Math.max(0,scroller.scrollTop+target.getBoundingClientRect().top-scroller.getBoundingClientRect().top-navHeight-12),behavior:"smooth"})}
+function openHsStory(event){lastHsStoryTrigger=event?.currentTarget||lastHsStoryTrigger;const modal=$("#hsStoryModal");renderHsCanonicalScoreGuide();modal.classList.add("show");modal.setAttribute("aria-hidden","false");document.documentElement.classList.add("hsStoryOpen");hsStoryScroller().scrollTop=0;setHsStoryActive("hs-story-intention");setTimeout(()=>$("#closeHsStory").focus({preventScroll:true}),30)}
+function closeHsStory(){const modal=$("#hsStoryModal");modal.classList.remove("show");modal.setAttribute("aria-hidden","true");document.documentElement.classList.remove("hsStoryOpen");lastHsStoryTrigger?.focus({preventScroll:true})}
 $("#openHsStory").addEventListener("click",openHsStory);
 $("#openHsStoryHome")?.addEventListener("click",openHsStory);
 $("#closeHsStory").addEventListener("click",closeHsStory);
 $("#hsStoryModal").addEventListener("click",event=>{if(event.target===$("#hsStoryModal"))closeHsStory()});
-$("#hsStoryModal").addEventListener("scroll",syncHsStoryActive,{passive:true});
-document.addEventListener("click",event=>{const button=event.target.closest("[data-story-target]");if(!button)return;const target=$("#"+button.dataset.storyTarget);if(!target)return;event.preventDefault();setHsStoryActive(target.id);target.scrollIntoView({behavior:"smooth",block:"start"})});
+hsStoryScroller().addEventListener("scroll",syncHsStoryActive,{passive:true});
+document.addEventListener("click",event=>{const button=event.target.closest("[data-story-target]");if(!button||!$("#hsStoryModal").contains(button))return;event.preventDefault();scrollHsStoryChapter(button.dataset.storyTarget)});
 document.addEventListener("keydown",event=>{if(event.key==="Escape"&&$("#hsStoryModal").classList.contains("show"))closeHsStory()});
-$("#hsStoryTop").addEventListener("click",()=>$("#hsStoryModal").scrollTo({top:0,behavior:"smooth"}));
+$("#hsStoryTop").addEventListener("click",()=>hsStoryScroller().scrollTo({top:0,behavior:"smooth"}));
 $("#hsMethodologyLink").addEventListener("click",()=>{closeHsStory();switchTab("more",{scroll:false});const guide=$("#hsMethodologyGuide");guide.open=true;setTimeout(()=>guide.scrollIntoView({behavior:"smooth",block:"start"}),80)});
 
 function drawdownReferenceHigh(state){

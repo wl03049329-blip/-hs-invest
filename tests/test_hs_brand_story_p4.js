@@ -5,7 +5,7 @@ const path=require("path");
 const root=path.resolve(__dirname,"..");
 const html=fs.readFileSync(path.join(root,"index.html"),"utf8");
 const css=fs.readFileSync(path.join(root,"formal-black-gold.css"),"utf8");
-const start=html.indexOf('<div class="hsBrandStory hsStoryHub">');
+const start=html.indexOf('<div id="hsStoryScroll"');
 const end=html.indexOf('<script src="market-ui-core.js"');
 assert.ok(start>=0&&end>start,"brand story must exist");
 const story=html.slice(start,end);

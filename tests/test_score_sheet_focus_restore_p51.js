@@ -36,7 +36,7 @@ assert.strictEqual(document.activeElement,core0050);assert.notStrictEqual(docume
 const history009815=trigger("history-009815");context.openCoreScoreHistoryModal("009815",history009815);context.closeCoreScoreHistoryModal();
 assert.strictEqual(document.activeElement,history009815);assert.match(historyContent.innerHTML,/歷史分數尚未建立/);console.log("TEST 4 PASS: WAIT_NATIVE History Sheet restores the 009815 trigger");
 
-assert.match(html,/let lastHsStoryTrigger=/);assert.match(html,/lastHsStoryTrigger\?\.focus\(\)/);console.log("TEST 5 PASS: P4 About HS focus restore remains intact");
+assert.match(html,/let lastHsStoryTrigger=/);assert.match(html,/lastHsStoryTrigger\?\.focus\(\{preventScroll:true\}\)/);console.log("TEST 5 PASS: P4 About HS focus restore remains intact without scrolling the background page");
 assert.match(html,/openCoreScoreModal\(button\.dataset\.readCoreScore,button\)/);
 assert.match(html,/openCoreScoreHistoryModal\(button\.dataset\.coreScoreHistory,button\)/);
 console.log("P5.1 focus restore tests: 5\/5 PASS");
