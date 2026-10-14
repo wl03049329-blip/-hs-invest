@@ -3,25 +3,37 @@
   "system_state": "FAIL_CLOSED",
   "signal_status": "NO_SIGNAL",
   "reason": "BRIDGE_HISTORICAL_GAP_REVIEW_REQUIRED:2026-10-13",
-  "checked_at": "2026-10-13T20:48:28.895532+00:00",
+  "checked_at": "2026-10-14T13:00:33.462737+00:00",
   "latest_data_date": "2026-10-13",
-  "expected_completed_bar": "2026-10-13",
-  "freshness": "UNKNOWN",
+  "expected_completed_bar": "2026-10-14",
+  "freshness": "STALE",
   "data_integrity": "FAIL",
   "dry_run": false,
   "requires_integrity_review": true,
   "workflow_classification": "NEW_FAIL_CLOSED",
   "incident_identity": {
-    "target_completed_trading_date": "2026-10-13",
+    "target_completed_trading_date": "2026-10-14",
     "normalized_root_cause": "BRIDGE_HISTORICAL_GAP_REVIEW_REQUIRED",
     "latest_verified_anchor_date": "2026-10-13",
     "source_failure_class": "BRIDGE_HISTORICAL_GAP_REVIEW_REQUIRED",
     "policy_version": "HS_LEVERAGE_C_V1_FORWARD_POLICY_2026:V1:HS_LEVERAGE_C_V1_THRESHOLD_2026_TRAIN_END_2025-12-31"
   },
-  "incident_fingerprint": "3c2f5da7d16222839fa8e351ddc2137ae990621bcbdee48bb65c2b44626ca31a",
+  "incident_fingerprint": "993d4301b419f565b8afdc903a43f5b56ee6847fa57e2d30664c7a703dfc442a",
   "source_probe_evidence": {
-    "sessions": [],
-    "availability": "UNKNOWN"
+    "sessions": [
+      {
+        "date": "2026-10-14",
+        "missing": [],
+        "values": {
+          "open": 39.66999816894531,
+          "high": 40.29999923706055,
+          "low": 39.540000915527344,
+          "close": 39.779998779296875,
+          "volume": 121279796,
+          "adjclose": 39.779998779296875
+        }
+      }
+    ]
   },
   "forward_observations": 2,
   "eligible_observations": 0,
