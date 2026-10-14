@@ -1185,14 +1185,16 @@ footer{color:#746f67}
 @media(max-width:430px){#homeEtfBrief .longRankActions{gap:6px}#homeEtfBrief .longRankActions .miniBtn{font-size:9px;padding-inline:4px}.coreScoreHistoryList li{grid-template-columns:46px 44px minmax(0,1fr);gap:7px;padding:10px}.coreScoreHistoryList b{font-size:1.3rem}.coreScoreHistoryList small{grid-column:3;white-space:normal}}
 
 /* P4: long-form HS brand story — restrained black, gold and editorial spacing. */
-.hsStoryModal{height:100vh;height:100dvh;overflow:hidden;padding:18px 10px}
-.hsStorySheet{display:flex;flex-direction:column;width:min(920px,100%);height:100%;min-height:0;max-height:100%;padding:0;overflow:hidden}
-.hsStoryHeader{position:relative;flex:0 0 auto;padding:14px 18px;isolation:isolate}
-.hsStoryHeader .close{min-width:44px;min-height:44px;flex:0 0 auto;touch-action:manipulation}
+.hsStoryModal{position:fixed;inset:auto;top:var(--hs-story-view-top,0px);left:var(--hs-story-view-left,0px);width:var(--hs-story-view-width,100%);height:100vh;height:var(--hs-story-view-height,100dvh);z-index:150;isolation:isolate;overflow:hidden;padding:18px 10px;--hs-story-safe-top:env(safe-area-inset-top,0px);--hs-story-safe-right:env(safe-area-inset-right,0px)}
+.hsStorySheet{position:relative;z-index:0;display:flex;flex-direction:column;width:min(920px,100%);height:100%;min-height:0;max-height:100%;padding:0;overflow:hidden}
+.hsStoryHeader{position:relative;flex:0 0 auto;padding:14px 112px 14px 18px;isolation:isolate}
+#hsStoryModal>#closeHsStory{position:absolute;top:calc(var(--hs-story-safe-top) + 12px);right:calc(var(--hs-story-safe-right) + 12px);z-index:1;display:flex;align-items:center;justify-content:center;min-width:48px;min-height:48px;padding:10px 14px;border:1px solid #b59143;border-radius:12px;background:#151006;color:#f2d783;box-shadow:0 4px 16px #0008;font:800 16px/1.2 system-ui;white-space:nowrap;cursor:pointer;pointer-events:auto;touch-action:manipulation}
+#hsStoryModal>#closeHsStory:focus-visible{outline:2px solid #f2d783;outline-offset:3px}
+#hsStoryModal .hsStoryHeroLine{max-width:100%;white-space:normal}
 .hsStoryScroll{width:100%;min-height:0;flex:1 1 auto;overflow:auto;overscroll-behavior-y:contain;padding:0 18px 24px;-webkit-overflow-scrolling:touch}
 .hsStoryScroll .hsStoryNav{margin-inline:0}
 .hsStoryOpen,.hsStoryOpen body{overflow:hidden;overscroll-behavior:none}
-@media(max-width:620px){.hsStoryModal{padding:0}.hsStorySheet{border-radius:0;min-height:0;padding:0}.hsStoryHeader{padding:calc(10px + env(safe-area-inset-top)) 12px 10px}.hsStoryScroll{padding:0 12px calc(20px + env(safe-area-inset-bottom))}}
+@media(max-width:620px){.hsStoryModal{padding:0}.hsStorySheet{border-radius:0;min-height:0;padding:0}.hsStoryHeader{padding:calc(10px + env(safe-area-inset-top)) calc(112px + env(safe-area-inset-right)) 10px 12px}.hsStoryScroll{padding:0 12px calc(20px + env(safe-area-inset-bottom))}}
 .hsBrandStory{max-width:860px;margin:0 auto;color:#eee7da;overflow-wrap:anywhere}
 .hsBrandHero{padding:72px 24px 76px;text-align:center}
 .hsBrandHero .hsStoryHeroLogo{width:112px;height:112px;margin-bottom:24px}
