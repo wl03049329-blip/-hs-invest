@@ -16,10 +16,10 @@ for(const id of ["0050","00662","00757","00830","00935","009815"]){
   for(const piece of Object.values(pieces))assert.ok(result.includes(piece),`${id}: existing information and chart retained`);
   assert.ok(result.endsWith('</article>'));
 }
-const flow=css.slice(css.indexOf('/* Radar detail flow:'));
+const flow=(css.match(/[^{}]*\.radarFlowCard[^{}]*\{[^}]*\}/g)||[]).join('\n');
 assert.match(flow,/\.radarFlowCard>\.signalCardDetails\{[^}]*padding:14px/);
 assert.match(flow,/\.radarFlowCard>\.signalCardDetails>\.detailTabs\{[^}]*position:static/);
 assert.match(flow,/\.radarFlowCard>\.signalCardDetails>\.detailTabs\{[^}]*margin:0 0 14px/);
 assert.doesNotMatch(flow,/translate|margin[^;}:]*:-|overflow:hidden/);
-assert.match(html,/radar-history\.css\?v=20261014-detail-flow-v1/);
+assert.match(html,/radar-history\.css\?v=20261014-history-selection-v1/);
 console.log('PASS six ETF natural-flow cards, both panels, retained chart/data helpers, versioned layout CSS');

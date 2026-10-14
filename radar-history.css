@@ -31,3 +31,37 @@
 .radarDetailDeck.is-open .radarFlowCard{border-color:#6c552b}
 .radarFlowCard>.signalCardDetails{padding:14px;margin:0;border-top:0;min-height:0}
 .radarFlowCard>.signalCardDetails>.detailTabs{position:static;top:auto;z-index:auto;margin:0 0 14px}
+/* Historical selection stays in normal flow; the modal lives in the top layer. */
+.radarHistorySelection{position:static;margin:10px 0 12px;border:1px solid #584223;border-radius:10px;padding:10px}
+.radarHistorySelection .radarHistoryDetail{border:0;padding:0}
+.radarHistorySelection .radarHistoryDetail header{align-items:center}
+.radarHistorySelection .radarHistoryDetail header b{font-size:12px;color:#cbbb9d}
+.radarHistorySelection .radarHistoryDetail time{font-size:15px;font-weight:700}
+.radarHistorySummary,.radarHistoryPrice{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin:6px 0}
+.radarHistorySummary strong{font-size:22px;color:#f0d999}.radarHistorySummary span,.radarHistoryPrice{font-size:12px}
+.radarHistoryContributions,.radarHistoryOHLC{display:flex;gap:6px 12px;flex-wrap:wrap;font-size:11px;line-height:1.7}
+.radarHistoryContributions b,.radarHistoryOHLC b{color:#ecdaae;font-variant-numeric:tabular-nums}
+.radarHistorySelection>button{margin-top:8px;width:100%;min-height:36px}
+.radarHistorySourceState{font-size:10px;color:#a99d86}
+.radarHistorySheet{box-sizing:border-box;width:min(680px,100%);max-width:100%;height:78vh;height:78dvh;max-height:calc(100dvh - env(safe-area-inset-top,0px) - 16px);margin:auto auto 0;padding:0;color:#e4d7bc;background:#100e0a;border:1px solid #90703a;border-bottom:0;border-radius:20px 20px 0 0;overflow:hidden;box-shadow:0 -8px 40px #0009}
+.radarHistorySheet[open]{display:flex;flex-direction:column;animation:radarSheetEnter .18s ease-out}
+.radarHistorySheet::backdrop{background:#0009}
+@keyframes radarSheetEnter{from{translate:0 24px;opacity:.5}to{translate:0 0;opacity:1}}
+@media(prefers-reduced-motion:reduce){.radarHistorySheet[open]{animation:none}}
+.radarHistorySheetHandle{flex:0 0 24px;display:grid;place-items:center;touch-action:none;cursor:grab}
+.radarHistorySheetHandle span{height:4px;width:40px;border-radius:4px;background:#8d784f}
+.radarHistorySheetHeader{display:grid;grid-template-columns:40px minmax(0,1fr) 40px 40px;gap:6px;align-items:center;padding:0 12px 12px;border-bottom:1px solid #49391e;flex-shrink:0}
+.radarHistorySheet h2{font-size:15px;margin:0;text-align:center}.radarHistorySheet h2 time{display:block;font-size:11px;color:#cbbb9d;margin-top:6px;overflow-wrap:anywhere;line-height:1.5}
+.radarHistorySheet button{height:40px;border:1px solid #6b5330;border-radius:9px;background:#241b0d;color:#e9d29d;font:inherit;cursor:pointer}
+.radarHistorySheet button:disabled{opacity:.35;cursor:default}
+.radarHistorySheet button:focus-visible{outline:2px solid #f0ce80;outline-offset:2px}
+.radarHistorySheetBody{min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:4px 16px calc(24px + env(safe-area-inset-bottom,0px));overflow-wrap:anywhere}
+.radarHistorySheet h3{font-size:15px;color:#ebcd8a;margin:18px 0 10px}
+.radarHistorySheet dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:8px 0}
+.radarHistorySheet dt,.radarHistorySheet p,.radarHistorySheet small{font-size:12px;line-height:1.6;color:#bcae93}
+.radarHistorySheet dd{margin:3px 0 0;font-size:14px;font-variant-numeric:tabular-nums}
+.radarHistorySheet table{width:100%;min-width:0;max-width:100%;border-collapse:collapse;table-layout:fixed;font-size:12px}
+.radarHistorySheet th,.radarHistorySheet td{padding:10px 4px;border-bottom:1px solid #3f321d;text-align:right;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.radarHistorySheet th:first-child,.radarHistorySheet td:first-child{position:static;left:auto;background:transparent;box-shadow:none}
+.radarHistorySheet th,.radarHistorySheet td{white-space:normal}
+.radarHistorySheet th:first-child{text-align:left}.radarHistorySheet th small{display:block}

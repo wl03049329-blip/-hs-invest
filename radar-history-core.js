@@ -4,6 +4,9 @@
   const RANGES=['10D','20D','60D','120D','1Y','ALL'];
   const DEFAULTS={range:'20D',ma5:false,ma10:false,ma20:false,ma60:false,volume:false,thresholds:false,extrema:true,score:true,price:true};
   const finite=v=>typeof v==='number'&&Number.isFinite(v);
+  const FACTORS=[{key:'weekly_j',label:'Weekly J'},{key:'dd52',label:'DD52'},{key:'crash',label:'Crash'}];
+  // Copy saved outputs only. Never reconstruct a contribution from raw/weight.
+  function factors(saved){return FACTORS.map(({key,label})=>{const f=saved?.[key];return{key,label,raw:finite(f?.raw)?f.raw:null,weight:finite(f?.weight)&&f.weight>=0&&f.weight<=100?f.weight:null,contribution:finite(f?.contribution)?f.contribution:null};});}
   function dateOK(v){return typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v)&&Number.isFinite(Date.parse(v+'T00:00:00Z'))&&new Date(v+'T00:00:00Z').toISOString().slice(0,10)===v;}
   function preferences(value){const p={...DEFAULTS};if(RANGES.includes(value?.range))p.range=value.range;for(const key of Object.keys(p))if(key!=='range'&&typeof value?.[key]==='boolean')p[key]=value[key];return p;}
   function calendar(rows,cutoff){if(!dateOK(cutoff)||!Array.isArray(rows)||!rows.length||rows.some(r=>!dateOK(r.date)))throw Error('CALENDAR_INVALID');return [...new Set(rows.map(r=>r.date).filter(d=>d<=cutoff))].sort();}
@@ -16,10 +19,10 @@
       const matches=s.rows.filter(r=>r?.symbol===symbol);if(!matches.length)continue;
       const r=matches[0];if(r.status==='WAIT_NATIVE')continue;
       if(matches.length!==1||!finite(r.final_core_score)||r.final_core_score<0||r.final_core_score>100||r.core_score_version!==contract.LONG_TERM_CORE_SCORE_VERSION||!String(r.data_as_of||'').startsWith(s.date+'T')||s.source?.status!=='official_closing_data'||!s.source?.provider){invalid.push(s.date);continue;}
-      const row={time:s.date,value:r.final_core_score,tier:contract.labelFor(r.final_core_score).label,version:r.core_score_version,asOf:r.data_as_of,updatedAt:s.finalized_at||null,source:s.source.provider};
+      const row={time:s.date,value:r.final_core_score,tier:contract.labelFor(r.final_core_score).label,version:r.core_score_version,asOf:r.data_as_of,updatedAt:s.finalized_at||null,source:s.source.provider,factors:factors(r.factors)};
       if(seen.has(s.date)&&JSON.stringify(seen.get(s.date))!==JSON.stringify(row)){invalid.push(s.date);continue;}seen.set(s.date,row);
     }
-    for(const row of [...seen.values()].sort((a,b)=>a.time.localeCompare(b.time)))if(!invalid.includes(row.time))rows.push({...row,delta:rows.length?row.value-rows.at(-1).value:null});
+    for(const row of [...seen.values()].sort((a,b)=>a.time.localeCompare(b.time)))if(!invalid.includes(row.time)){const previous=rows.at(-1);rows.push({...row,delta:previous?row.value-previous.value:null,previousDate:previous?.time||null,previousValue:previous?.value??null});}
     return{rows,invalid};
   }
   function prices(input,symbol,dates,cutoff,fetchedAt){
@@ -61,6 +64,23 @@
     const pick=(rows,key,high)=>rows.reduce((a,b)=>!a||(high?b[key]>a[key]:b[key]<a[key])?b:a,null);
     return{sessions:selected.length,firstVisibleDate:selected[0]||null,lastVisibleDate:selected.at(-1)||null,scoreCount:s.length,priceCount:p.length,scoreHigh:pick(s,'value',true),scoreLow:pick(s,'value',false),priceHigh:pick(p,'high',true),priceLow:pick(p,'low',false)};
   }
-  function detail(time,dates,scoreRows,priceRows,events){const score=scoreRows.find(r=>r.time===time)||null,price=priceRows.find(r=>r.time===time)||null,previousDate=dates[dates.indexOf(time)-1],previous=priceRows.find(r=>r.time===previousDate),change=price&&previous?price.close-previous.close:null;return{time,score,price,change,returnPct:change===null?null:change/previous.close*100,dividends:events.filter(r=>r.time===time)};}
-  return{RANGES,DEFAULTS,finite,dateOK,preferences,calendar,scores,prices,dividends,axis,segments,movingAverage,range,extrema,detail};
+  function detail(time,dates,scoreRows,priceRows,events){
+    const score=scoreRows.find(r=>r.time===time)||null,price=priceRows.find(r=>r.time===time)||null;
+    const previous=priceRows.findLast(r=>r.time<time&&finite(r.close)&&r.close>0),change=price&&previous?price.close-previous.close:null;
+    return{time,score,price,previousPriceDate:price&&previous?previous.time:null,change,returnPct:change===null?null:change/previous.close*100,dividends:events.filter(r=>r.time===time)};
+  }
+  // Verified observations establish selectable sessions; no calendar-day filling.
+  // A real price day remains selectable even when its C4 record is absent.
+  function selectionDates(scoreRows,priceRows){return[...new Set([...scoreRows,...priceRows].map(r=>r.time).filter(dateOK))].sort();}
+  function adjacent(dates,time,step){const i=dates.indexOf(time);return i<0?null:dates[i+step]||null;}
+  function revealRange(visible,index,length){
+    if(!visible||!finite(visible.from)||!finite(visible.to)||!Number.isInteger(index)||index<0||index>=length)return visible;
+    const span=visible.to-visible.from;if(span<0)return visible;
+    const tolerance=Number.EPSILON*Math.max(1,length,Math.abs(visible.from),Math.abs(visible.to))*8;
+    if(index>=visible.from-tolerance&&index<=visible.to+tolerance)return visible;
+    const shift=index<visible.from?index-visible.from:index-visible.to;
+    // Translate, never zoom. A viewport wider than the history keeps its width.
+    return{from:visible.from+shift,to:visible.to+shift};
+  }
+  return{RANGES,DEFAULTS,FACTORS,finite,dateOK,preferences,calendar,scores,prices,dividends,axis,segments,movingAverage,range,extrema,detail,factors,selectionDates,adjacent,revealRange};
 });

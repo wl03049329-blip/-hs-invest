@@ -11,7 +11,7 @@ class Host{
   querySelectorAll(){return [];}
   addEventListener(key,fn){this.listeners.set(key,fn);}
   removeEventListener(key,fn){if(this.listeners.get(key)===fn)this.listeners.delete(key);}
-  click(dataset){return this.listeners.get("click")({target:{closest:()=>({dataset})}});}
+  click(dataset){return this.listeners.get("click")({target:{closest:()=>({dataset,focus(){}})}});}
   input(type='mousedown',values={}){return this.listeners.get(type)({type,target:{closest:()=>({})},...values});}
 }
 const bus=()=>({handlers:new Set(),addEventListener(k,f){this.handlers.add(f)},removeEventListener(k,f){this.handlers.delete(f)}});
@@ -32,10 +32,21 @@ function createChart(){
   c.addSeries=(type,options,pane)=>{const s={type,options,pane,rows:[],setData(rows){this.rows=rows;if(this===c.series[0])c.axis=rows.map(r=>r.time)},data(){return this.rows},applyOptions(o){Object.assign(this.options,o)},createPriceLine(){},priceScale(){return{applyOptions(){}}}};c.series.push(s);return s;};
   c.removeSeries=s=>c.series.splice(c.series.indexOf(s),1);
   c.clearCrosshairPosition=()=>{c.cleared++;c.crosshair?.({});};
+  c.setCrosshairPosition=(value,time,series)=>{c.cursor={value,time,series};c.crosshair?.({time});};
+  c.subscribeClick=fn=>c.onClick=fn;
   c.timeScale=()=>({getVisibleRange:()=>c.range&&{from:c.axis[Math.max(0,Math.ceil(c.range.from))],to:c.axis[Math.min(c.axis.length-1,Math.floor(c.range.to))]},getVisibleLogicalRange:()=>c.range,setVisibleLogicalRange:r=>{c.range=r;c.onRange?.(r)},setVisibleRange:r=>{c.range={from:c.axis.indexOf(r.from),to:c.axis.indexOf(r.to)};c.onRange?.(c.range)},subscribeVisibleLogicalRangeChange:fn=>c.onRange=fn});
   c.subscribeCrosshairMove=fn=>c.crosshair=fn;c.panes=()=>[{setHeight(){}},{setHeight(){}}];c.applyOptions=()=>{};c.remove=()=>{c.removed=true};charts.push(c);return c;
 }
-const document={...bus(),visibilityState:"visible"},window={...bus(),HSRadarHistory:C,HSRadarHistorySource:{Source},LightweightCharts:{createChart,LineSeries:"line",CandlestickSeries:"candle",HistogramSeries:"histogram",CrosshairMode:{Normal:0},TrackingModeExitMode:{OnNextTap:0},createSeriesMarkers:()=>({setMarkers(){},detach(){}})}};
+class SheetNode extends Host{
+  constructor(){super();this.open=false;this.removed=false;this.focused=false;this.innerHTML='';}
+  querySelector(key){if(!this.nodes.has(key))this.nodes.set(key,new SheetNode());return this.nodes.get(key);}
+  setAttribute(){}setPointerCapture(){}focus(){this.focused=true;}
+  showModal(){this.open=true;}close(){this.open=false;this.listeners.get('close')?.();}
+  remove(){this.removed=true;}
+  press(action){return this.listeners.get('click')({target:{closest:()=>({dataset:{sheetAction:action}})}});}
+}
+const sheets=[];
+const document={...bus(),visibilityState:"visible",documentElement:{style:{overflow:'auto'}},createElement:()=>new SheetNode(),body:{append:s=>sheets.push(s)}},window={...bus(),HSRadarHistory:C,HSRadarHistorySource:{Source},LightweightCharts:{createChart,LineSeries:"line",CandlestickSeries:"candle",HistogramSeries:"histogram",CrosshairMode:{Normal:0},TrackingModeExitMode:{OnNextTap:0},createSeriesMarkers:()=>({setMarkers(){},detach(){}})}};
 const storage=new Map(),context={window,document,console,AbortController,Intl,Date:class extends Date{constructor(...args){super(...(args.length?args:["2026-10-13T12:00:00Z"]))}static now(){return Date.parse("2026-10-13T12:00:00Z")}},ResizeObserver:class{observe(){}disconnect(){}},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)}};
 vm.runInNewContext(fs.readFileSync(require.resolve("../radar-history-view"),"utf8"),context);
 const V=window.HSRadarHistoryView,args=symbol=>({symbol,name:symbol,artifact,contract:P,thresholds:[],completed:()=>true,headers:()=>({})});
@@ -58,10 +69,31 @@ const V=window.HSRadarHistoryView,args=symbol=>({symbol,name:symbol,artifact,con
   await h.click({historyAction:"latest"});assert.match(h.querySelector(".radarHistoryDetail").innerHTML,/30.1 分/);
   charts[0].crosshair({time:"2026-10-12"});assert.match(h.querySelector(".radarHistoryDetail").innerHTML,/30.1 分/,"latest remains latest after asynchronous redraw");
   await V.mount(h,args("0050"));assert.equal(charts.length,1,"same mounted symbol cannot duplicate chart/listeners");
+  const sameChart=charts[0],sameRange={...sameChart.range};
+  await h.click({historyAction:'details'});const sheet=sheets.at(-1);
+  assert.equal(sheet.open,true);assert.equal(document.documentElement.style.overflow,'hidden');
+  assert.equal(charts[0],sameChart);assert.deepEqual(sameChart.range,sameRange);
+  assert.equal(sheet.querySelector('[data-sheet-action="next"]').disabled,true);
+  await sheet.press('previous');assert.match(sheet.querySelector('h2 time').textContent,/2026\/10\/12/);
+  assert.equal(sameChart.cursor.time,'2026-10-12');assert.deepEqual(sameChart.range,sameRange);
+  assert.equal(sheet.querySelector('[data-sheet-action="previous"]').disabled,true);
+  assert.match(sheet.querySelector('.radarHistorySheetBody').innerHTML,/該日未保存正式分項資料/);
+  for(let i=0;i<30;i++){await sheet.press('next');await sheet.press('previous');}
+  assert.equal(sameChart.cursor.time,'2026-10-12');assert.equal(sheet.open,true);
+  sheet.listeners.get('cancel')({preventDefault(){}});
+  assert.equal(sheet.open,false);assert.equal(document.documentElement.style.overflow,'auto');
+  assert.match(h.querySelector('.radarHistoryDetail').innerHTML,/2026\/10\/12/);
+  await h.click({historyAction:'details'});
+  const handle=sheet.querySelector('.radarHistorySheetHandle');
+  handle.listeners.get('pointerdown')({clientX:20,clientY:10,pointerId:1});
+  handle.listeners.get('pointerup')({clientX:25,clientY:120,pointerId:1});assert.equal(sheet.open,false);
+  await h.click({historyAction:'details'});
+  console.log('PASS modal open/close/swipe, 60 day arrows, boundaries, focus and chart/range preservation');
   await h.click({historyRange:"60D"});assert.match(storage.values().next().value,/"range":"60D"/);
   const h2=new Host();await V.mount(h2,args("00662"));assert.ok(charts[0].removed);assert.equal(h.listeners.size,0);assert.match(h2.querySelector(".radarHistoryDetail").innerHTML,/00662/);assert.doesNotMatch(h2.querySelector(".radarHistoryDetail").innerHTML,/0050/);
   charts.at(-1).crosshair({time:"2026-10-12"});assert.match(h2.querySelector(".radarHistoryDetail").innerHTML,/30.1 分/,"new ETF starts at latest despite inherited pointer position");
   V.unmount();assert.equal(document.handlers.size,0);assert.equal(window.handlers.size,0);assert.equal(h2.listeners.size,0);
+  assert.ok(sheet.removed);assert.equal(document.documentElement.style.overflow,'auto');
   console.log("PASS single instance, crosshair date, latest, preference, symbol and listener cleanup");
   sourceMode="DELAY";const stale=new Host(),late=V.mount(stale,args("0050"));
   await new Promise(resolve=>setImmediate(resolve));

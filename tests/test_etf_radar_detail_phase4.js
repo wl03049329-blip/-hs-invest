@@ -27,7 +27,9 @@ for(const period of ["10D","20D","60D","120D"]){
   assert.equal((rendered.match(/data-radar-history="00830"/g)||[]).length,1);
   assert.match(rendered,new RegExp(`data-history-range="${period}"`));
   assert.match(rendered,/radarHistoryExtrema/);
-  assert.ok(rendered.indexOf('radarHistoryExtrema')<rendered.indexOf('radarHistoryCanvas'));
+  assert.ok(rendered.indexOf('radarHistoryRanges')<rendered.indexOf('radarHistorySelection'));
+  assert.ok(rendered.indexOf('radarHistorySelection')<rendered.indexOf('radarHistoryCanvas'));
+  assert.ok(rendered.indexOf('radarHistoryCanvas')<rendered.indexOf('radarHistoryExtrema'));
   assert.doesNotMatch(rendered,/radarTrendP4Chart|<polyline/);
 }
 context.coreScoreTrendRanges.set("00830","10D");
