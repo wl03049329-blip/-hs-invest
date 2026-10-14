@@ -77,7 +77,7 @@
 
   function loadWorkflowValue(key, validator) { try { return validator(JSON.parse(localStorage.getItem(key) || "null")); } catch { return null; } }
   function saveWorkflowValue(key, value) { if (value) localStorage.setItem(key, JSON.stringify(value)); else localStorage.removeItem(key); }
-  function resilienceState(){return{holdings:holdings.map(({code,shares,averageCost,customName,name,strategyType,targetAllocation})=>({code,shares,averageCost,customName,name,strategyType,targetAllocation})),ledger,snapshots:portfolioHistory,rebalanceSettings,goal:portfolioGoal,monthlyPlan:portfolioMonthlyPlan,importState:portfolioImportState,importHistory:portfolioImportHistory,audit:portfolioAudit}}
+  function resilienceState(){return{holdings:holdings.map(({code,shares,averageCost,customName,name,strategyType,targetAllocation,positionCorrectedAt})=>({code,shares,averageCost,customName,name,strategyType,targetAllocation,positionCorrectedAt})),ledger,snapshots:portfolioHistory,rebalanceSettings,goal:portfolioGoal,monthlyPlan:portfolioMonthlyPlan,importState:portfolioImportState,importHistory:portfolioImportHistory,audit:portfolioAudit}}
   function createRecovery(reason){const point=resilienceCore.createRecoveryPoint({reason,state:resilienceState()});portfolioRecoveryPoints=resilienceCore.appendRecoveryPoint(portfolioRecoveryPoints,point);saveWorkflowValue(resilienceCore.RECOVERY_STORAGE_KEY,portfolioRecoveryPoints);return point}
 
   function loadPortfolioHistory() {
@@ -154,7 +154,7 @@
     for(const item of holdings)if(!nextCodes.has(item.code)&&Number.isFinite(item.targetAllocation))rebalanceSettings.targets[item.code]=item.targetAllocation;
     holdings = ledgerState.holdings.map(row => {
       const meta = previous.get(row.symbol) || {};
-      return core.validateHolding({code: row.symbol, shares: row.quantity, averageCost: row.averageCost, customName: meta.customName || "", name: meta.name || "", strategyType: meta.strategyType || "", targetAllocation: meta.targetAllocation ?? rebalanceSettings.targets[row.symbol]});
+      return core.validateHolding({code: row.symbol, shares: row.quantity, averageCost: row.averageCost, customName: meta.customName || "", name: meta.name || "", strategyType: meta.strategyType || "", targetAllocation: meta.targetAllocation ?? rebalanceSettings.targets[row.symbol], positionCorrectedAt: meta.positionCorrectedAt});
     });
     rebalanceSettings = {...rebalanceSettings, cash: ledgerState.cash};
     saveHoldings(); saveRebalanceSettings();
@@ -396,11 +396,11 @@
       const current=row.quoteStatus==="current",name=holdingName(row),score=radar?.score;
       const totalPnlRate=Number.isFinite(row.returnRate)?row.returnRate:null;
       return `<article class="portfolioHoldingRow" role="row" data-holding-code="${escapeHtml(row.code)}">
-        <button type="button" class="holdingColSymbol" role="cell" data-edit-holding="${escapeHtml(row.code)}" aria-label="開啟 ${escapeHtml(row.code)} 持股編輯"><b>${escapeHtml(name)}</b><span>${escapeHtml(row.code)}${radar?` <em>HS ${Number.isFinite(score)?number(score,0):"—"}</em>`:""}</span></button>
+        <button type="button" class="holdingColSymbol" role="cell" data-edit-holding="${escapeHtml(row.code)}" aria-label="開啟 ${escapeHtml(row.code)} 持股編輯"><b>${escapeHtml(name)}</b><small class="portfolioQuickEditLabel">編輯</small><span>${escapeHtml(row.code)}${radar?` <em>HS ${Number.isFinite(score)?number(score,0):"—"}</em>`:""}</span></button>
         <div role="cell"><b class="${valueClass(current?row.todayPnl:null)}">${current&&Number.isFinite(row.todayPnl)?money(row.todayPnl):"—"}</b></div>
         <div role="cell"><b class="${valueClass(current?row.changeRate:null)}">${current&&Number.isFinite(row.changeRate)?percent(row.changeRate):"—"}</b><small>${current&&Number.isFinite(row.quote?.price)?money(row.quote.price):"行情暫缺"}</small>${quoteSessionLagged(row)?`<small class="portfolioQuoteAge">${escapeHtml(quoteSessionLabel(row))}</small>`:""}</div>
         <div role="cell"><b class="${valueClass(current?row.totalPnl:null)}">${current&&Number.isFinite(row.totalPnl)?money(row.totalPnl):"—"}</b><small class="${valueClass(totalPnlRate)}">${current?percent(totalPnlRate):"—"}</small></div>
-        <div role="cell"><b>${number(row.shares,4)}</b></div>
+        <div role="cell"><b>${number(row.shares,4)}</b><small>${number(row.shares/1000,4)} 張</small></div>
         <div role="cell"><b>${cost(row.averageCost)}</b><small>${cost(row.totalCost)}</small></div>
         <div role="cell"><b>${current?plainPercent(row.weight):"—"}</b></div>
         <div role="cell" class="holdingTargetCell"><button type="button" class="holdingTargetButton ${Number.isFinite(row.targetAllocation)?"is-set":"is-unset"}" data-target-edit="${escapeHtml(row.code)}"><span>${dashboardCore.targetDisplay(row.targetAllocation)}</span><small>點擊編輯</small></button></div>
@@ -410,9 +410,9 @@
       </article>`;
     }).join("");
     const mobile=$v6("#portfolioMobileHoldings");
-    mobile.innerHTML=sortedRows().map(row=>{const current=row.quoteStatus==="current",name=holdingName(row),radar=radarFor(row.code);return `<article class="portfolioMobileHolding"><button type="button" data-mobile-holding="${escapeHtml(row.code)}" class="portfolioMobileHoldingHead"><span><b>${escapeHtml(name)}</b><small>${escapeHtml(row.code)}${radar?`｜HS ${Number.isFinite(radar.score)?number(radar.score,0):"—"}`:""}</small></span><span aria-hidden="true">›</span></button><div class="portfolioMobileHoldingValue"><span>持股市值</span><b>${current&&Number.isFinite(row.marketValue)?money(row.marketValue):"行情暫缺"}</b>${quoteSessionLagged(row)?`<small class="portfolioQuoteAge">${escapeHtml(quoteSessionLabel(row))}</small>`:""}<small>目前資產占比 ${current&&Number.isFinite(row.weight)?plainPercent(row.weight):"—"}</small></div><div class="portfolioMobileHoldingMetrics"><span>今日損益 <b class="${valueClass(current?row.todayPnl:null)}">${current&&Number.isFinite(row.todayPnl)?money(row.todayPnl):"—"}</b></span><span>未實現損益 <b class="${valueClass(current?row.totalPnl:null)}">${current&&Number.isFinite(row.totalPnl)?money(row.totalPnl):"—"}</b></span><span>股數 <b>${number(row.shares,4)}</b></span><span>平均成本 <b>${cost(row.averageCost)}</b></span></div></article>`}).join("");
-    mobile.querySelectorAll("[data-mobile-holding]").forEach(button=>button.addEventListener("click",()=>ledger?openLedger():openPortfolioModal(button.dataset.mobileHolding)));
-    list.querySelectorAll("[data-edit-holding]").forEach(button=>button.addEventListener("click",()=>ledger?openLedger():openPortfolioModal(button.dataset.editHolding)));
+    mobile.innerHTML=sortedRows().map(row=>{const current=row.quoteStatus==="current",name=holdingName(row),radar=radarFor(row.code);return `<article class="portfolioMobileHolding"><button type="button" data-mobile-holding="${escapeHtml(row.code)}" class="portfolioMobileHoldingHead"><span><b>${escapeHtml(name)}</b><small>${escapeHtml(row.code)}${radar?`｜HS ${Number.isFinite(radar.score)?number(radar.score,0):"—"}`:""}</small></span><span class="portfolioQuickEditLabel">編輯</span></button><div class="portfolioMobileHoldingValue"><span>持股市值</span><b>${current&&Number.isFinite(row.marketValue)?money(row.marketValue):"行情暫缺"}</b>${quoteSessionLagged(row)?`<small class="portfolioQuoteAge">${escapeHtml(quoteSessionLabel(row))}</small>`:""}<small>目前資產占比 ${current&&Number.isFinite(row.weight)?plainPercent(row.weight):"—"}</small></div><div class="portfolioMobileHoldingMetrics"><span>今日損益 <b class="${valueClass(current?row.todayPnl:null)}">${current&&Number.isFinite(row.todayPnl)?money(row.todayPnl):"—"}</b></span><span>未實現損益 <b class="${valueClass(current?row.totalPnl:null)}">${current&&Number.isFinite(row.totalPnl)?money(row.totalPnl):"—"}</b></span><span>股數 <b>${number(row.shares,4)}（${number(row.shares/1000,4)} 張）</b></span><span>平均成本 <b>${cost(row.averageCost)}</b></span></div></article>`}).join("");
+    mobile.querySelectorAll("[data-mobile-holding]").forEach(button=>button.addEventListener("click",()=>openPortfolioModal(button.dataset.mobileHolding)));
+    list.querySelectorAll("[data-edit-holding]").forEach(button=>button.addEventListener("click",()=>openPortfolioModal(button.dataset.editHolding)));
     list.querySelectorAll("[data-target-edit]").forEach(button=>button.addEventListener("click",openTargetModal));
   }
 
@@ -621,6 +621,13 @@
     const rows = performanceCore.selectPeriod(portfolioHistory, portfolioAnalysisPeriod), change = performanceCore.assetChange(rows), continuity = performanceCore.analyzePortfolioContinuity(rows, {tradingDates: benchmarkRows.map(row => row.date), invalidCount: portfolioHistoryInvalidCount}), rawComparison = performanceCore.alignBenchmark(rows, benchmarkRows), comparison = performanceCore.guardBenchmark(rawComparison, continuity), benchmarkVisible = $v6("#portfolioBenchmarkToggle").checked;
     const empty = $v6("#portfolioPerformanceEmpty"), metrics = $v6("#portfolioPerformanceMetrics"), coverage = $v6("#portfolioPerformanceCoverage"), integrity = $v6("#portfolioPerformanceIntegrity");
     $v6("#portfolioPerformancePeriods").querySelectorAll("[data-performance-period]").forEach(button => button.classList.toggle("active", button.dataset.performancePeriod === portfolioAnalysisPeriod));
+    if(positionPerformanceWarning()){
+      empty.innerHTML="<b>持股已手動校正</b><span>校正不是買賣或現金流，無法可靠還原資金來源；相關期間的 TWR、XIRR 與績效折線暫不提供。</span>";
+      metrics.innerHTML='<article class="portfolioPerformanceMetric"><span>投資報酬</span><b>資料不足</b><small>持股校正警告</small></article>';
+      coverage.textContent="POSITION_CORRECTION｜保留原快照，未推估歷史績效";
+      integrity.hidden=false;integrity.textContent="持股校正後，仍可查看目前市值與損益；不代表期間投資績效。";
+      drawPerformanceChart([],false);return;
+    }
     if (rows.length < 2) {
       const firstDate = portfolioHistory[0]?.date;
       empty.innerHTML = `<b>績效紀錄將從現在開始累積</b><span>目前歷史資料尚不足，HS 不會以目前持股反推過去績效。${firstDate ? `已開始記錄：${displayDate(firstDate)}` : "建立完整持股與有效行情後開始記錄。"}</span>`;
@@ -743,6 +750,7 @@
     const continuity = performanceCore.analyzePortfolioContinuity(rows, {tradingDates: benchmarkRows.map(row => row.date), invalidCount: portfolioHistoryInvalidCount});
     const concentration = performanceCore.calculateConcentration(computed.rows.filter(row => row.quoteStatus === "current").map(row => ({code: row.code, marketValue: row.marketValue, weight: row.weight})));
     const allocation = performanceCore.calculateAllocationDeviation(computed.rows.map(row => ({code: row.code, weight: row.weight, targetAllocation: row.targetAllocation})));
+    if(positionPerformanceWarning()){continuity.hasCapitalEvent=true;continuity.complete=false;}
     const drawdown = performanceCore.calculateMaxDrawdown(rows, {continuity});
     const volatility = performanceCore.calculateAnnualizedVolatility(rows, {continuity});
     const quality = portfolioHistoryInvalidCount ? "INVALID_DATA" : continuity.hasCapitalEvent ? "CAPITAL_EVENT" : rows.length < 10 || continuity.hasDataGap ? "INSUFFICIENT_HISTORY" : "COMPLETE";
@@ -787,10 +795,10 @@
     output.innerHTML=plan.rows.map(row=>`<article class="capitalPlanRow"><div class="capitalPlanIdentity"><b>${escapeHtml(row.symbol)}</b><small>目前 ${plainPercent(row.currentAllocation)} → 目標 ${plainPercent(row.target)}</small></div><div class="capitalPlanAmount"><b>${row.status==="OVERWEIGHT"?"目前已高於目標":plan.status==="NO_CASH"?"目前沒有可配置現金":row.allocationAmount>0?`本次建議投入 ${money(row.allocationAmount)}`:"本次暫不投入"}</b><small>${row.allocationAmount>0?`約可買 ${number(row.estimatedUnits,0)} 股｜僅供試算`:row.status==="OVERWEIGHT"?"本次不投入新資金":"等待下一筆可用現金"}</small></div></article>`).join("");
   }
 
-  const LEDGER_LABELS={OPENING_POSITION:"期初部位",OPENING_CASH:"期初現金",BUY:"買入",SELL:"賣出",DEPOSIT:"入金",WITHDRAWAL:"出金",DIVIDEND:"股息",FEE:"其他費用",TAX:"額外稅額",SPLIT:"股票分割",REVERSE_SPLIT:"反向分割",STOCK_DIVIDEND:"股票股利"};
-  function ledgerEventDetail(event){if(["OPENING_POSITION","BUY","SELL"].includes(event.type))return`${event.symbol}｜${number(event.quantity,4)} 股 × ${money(event.unitPrice)}`;if(event.type==="DIVIDEND")return`${event.symbol}｜現金股息`;if(ledgerCore.CORPORATE_ACTIONS.has(event.type))return`${event.symbol}｜${event.type==="STOCK_DIVIDEND"?`每股配 ${number(event.sharesPerShare,6)} 股`:`調整比率 ${number(event.ratio,6)}`}`;return event.note||LEDGER_LABELS[event.type]||event.type}
-  function ledgerEventAmount(event){if(event.type==="OPENING_POSITION")return money(event.grossAmount);const sign=event.cashImpact>0?"+":"";return`${sign}${money(event.cashImpact)}`}
-  function ledgerRow(event,actions=true){return`<article class="portfolioLedgerRow" data-ledger-event="${escapeHtml(event.id)}"><time>${escapeHtml(displayDate(event.tradeDate))}</time><b class="portfolioLedgerType">${escapeHtml(LEDGER_LABELS[event.type]||event.type)}</b><span class="portfolioLedgerDetail">${escapeHtml(ledgerEventDetail(event))}</span><strong class="portfolioLedgerAmount ${valueClass(event.cashImpact)}">${escapeHtml(ledgerEventAmount(event))}</strong>${actions?`<span class="portfolioLedgerActions"><button type="button" data-ledger-edit="${escapeHtml(event.id)}">編輯</button><button type="button" data-ledger-delete="${escapeHtml(event.id)}">刪除</button></span>`:""}</article>`}
+  const LEDGER_LABELS={OPENING_POSITION:"期初部位",POSITION_CORRECTION:"持股校正",OPENING_CASH:"期初現金",BUY:"買入",SELL:"賣出",DEPOSIT:"入金",WITHDRAWAL:"出金",DIVIDEND:"股息",FEE:"其他費用",TAX:"額外稅額",SPLIT:"股票分割",REVERSE_SPLIT:"反向分割",STOCK_DIVIDEND:"股票股利"};
+  function ledgerEventDetail(event){if(event.type==="POSITION_CORRECTION")return`${event.symbol}｜校正後 ${number(event.quantity,4)} 股｜平均成本 ${cost(event.unitPrice)}｜非交易、無現金流`;if(["OPENING_POSITION","BUY","SELL"].includes(event.type))return`${event.symbol}｜${number(event.quantity,4)} 股 × ${money(event.unitPrice)}`;if(event.type==="DIVIDEND")return`${event.symbol}｜現金股息`;if(ledgerCore.CORPORATE_ACTIONS.has(event.type))return`${event.symbol}｜${event.type==="STOCK_DIVIDEND"?`每股配 ${number(event.sharesPerShare,6)} 股`:`調整比率 ${number(event.ratio,6)}`}`;return event.note||LEDGER_LABELS[event.type]||event.type}
+  function ledgerEventAmount(event){if(event.type==="POSITION_CORRECTION")return"無現金流";if(event.type==="OPENING_POSITION")return money(event.grossAmount);const sign=event.cashImpact>0?"+":"";return`${sign}${money(event.cashImpact)}`}
+  function ledgerRow(event,actions=true){return`<article class="portfolioLedgerRow" data-ledger-event="${escapeHtml(event.id)}"><time>${escapeHtml(displayDate(event.tradeDate))}</time><b class="portfolioLedgerType">${escapeHtml(LEDGER_LABELS[event.type]||event.type)}</b><span class="portfolioLedgerDetail">${escapeHtml(ledgerEventDetail(event))}</span><strong class="portfolioLedgerAmount ${valueClass(event.cashImpact)}">${escapeHtml(ledgerEventAmount(event))}</strong>${actions&&event.type!=="POSITION_CORRECTION"?`<span class="portfolioLedgerActions"><button type="button" data-ledger-edit="${escapeHtml(event.id)}">編輯</button><button type="button" data-ledger-delete="${escapeHtml(event.id)}">刪除</button></span>`:""}</article>`}
   function renderLedger(){
     const content=$v6("#portfolioLedgerContent"),start=$v6("#portfolioLedgerStart"),reconciliation=$v6("#portfolioLedgerReconciliation");
     if(!ledger){start.textContent="交易帳本尚未建立";content.innerHTML='<div class="portfolioLedgerOnboarding"><b>建立可驗證的交易帳本</b><p>既有持股只會成為期初部位，不會被偽造成過去的買入紀錄。</p><button class="btn" type="button" data-ledger-migrate-open>建立交易帳本</button></div>';reconciliation.hidden=true;return}
@@ -994,11 +1002,28 @@
     }));
   }
 
+  let portfolioEditorFocus = null;
+  let portfolioEditBaseline = null;
+  function syncPortfolioEditorViewport() {
+    const modal=$v6("#portfolioModal");if(!modal.classList.contains("show"))return;
+    const v=window.visualViewport;
+    Object.assign(modal.style,{top:`${v?.offsetTop||0}px`,left:`${v?.offsetLeft||0}px`,width:`${v?.width||innerWidth}px`,height:`${v?.height||innerHeight}px`});
+  }
+  function previewHoldingEdit() {
+    const shares=Number($v6("#portfolioShares").value),average=Number($v6("#portfolioAverageCost").value);
+    $v6("#portfolioPositionPreview").textContent=Number.isFinite(shares)&&shares>0&&Number.isFinite(average)&&average>0&&Number.isFinite(shares*average)
+      ? `編輯後：${number(shares,4)} 股｜${number(shares/1000,4)} 張｜總成本 ${cost(shares*average)}` : "請輸入有效的正數股數與平均每股成本。";
+  }
+  function positionPerformanceWarning() {
+    return ledger ? ledgerCore.hasPositionCorrection(ledger.events) : holdings.some(row=>row.positionCorrectedAt);
+  }
   function openPortfolioModal(code = null) {
+    portfolioEditorFocus=document.activeElement;
+    portfolioEditBaseline={holdings:localStorage.getItem(HOLDINGS_KEY),ledger:localStorage.getItem(ledgerCore.STORAGE_KEY)};
     editingCode = code;
     pendingDuplicate = null;
     const item = code ? holdings.find(entry => entry.code === code) : null;
-    $v6("#portfolioModalTitle").textContent = item ? `修改 ${item.code}` : "新增持股";
+    $v6("#portfolioModalTitle").textContent = item ? `快速編輯 ${item.code}` : "新增持股";
     $v6("#portfolioCode").value = item?.code || "";
     $v6("#portfolioCode").readOnly = Boolean(item);
     $v6("#portfolioShares").value = item?.shares || "";
@@ -1011,13 +1036,22 @@
     $v6("#portfolioSearchResults").innerHTML = "";
     $v6("#portfolioDuplicateActions").hidden = true;
     $v6("#portfolioSaveBtn").hidden = false;
-    $v6("#portfolioModal").classList.add("show");
-    loadCatalog().then(() => searchCatalog($v6("#portfolioCode").value));
+    const modal=$v6("#portfolioModal");
+    modal.classList.toggle("isQuickEdit",Boolean(item));
+    $v6("#portfolioPositionCurrent").textContent=item?`${item.code}｜目前 ${number(item.shares,4)} 股（${number(item.shares/1000,4)} 張）｜平均每股成本 ${cost(item.averageCost)}｜總成本 ${cost(item.shares*item.averageCost)}`:"";
+    $v6("#portfolioPositionNote").textContent=item?(ledger?"將追加 POSITION_CORRECTION 持股校正，原交易不變、無現金流。校正後相關績效暫停計算。儲存前自動建立復原點，可在設定還原或匯出備份。":"只儲存在這個瀏覽器；平均成本請自行填寫。校正後相關績效暫停計算。儲存前自動建立復原點，可在設定還原或匯出備份。"):"只儲存在這個瀏覽器，不會跨裝置同步。";
+    previewHoldingEdit();modal.classList.add("show");modal.setAttribute("aria-hidden","false");
+    document.documentElement.classList.add("portfolioEditorOpen");
+    syncPortfolioEditorViewport();$v6("#portfolioForm").scrollTop=0;
+    if(!item)loadCatalog().then(() => searchCatalog($v6("#portfolioCode").value));
     setTimeout(() => (item ? $v6("#portfolioShares") : $v6("#portfolioCode")).focus(), 40);
   }
 
   function closePortfolioModal() {
     $v6("#portfolioModal").classList.remove("show");
+    $v6("#portfolioModal").setAttribute("aria-hidden","true");
+    document.documentElement.classList.remove("portfolioEditorOpen");
+    if(portfolioEditorFocus?.isConnected)portfolioEditorFocus.focus({preventScroll:true});
     editingCode = null;
     pendingDuplicate = null;
   }
@@ -1058,16 +1092,45 @@
     const sharedQuotes = window.HSLiveMarket?.latestQuotes?.();
     if (sharedQuotes instanceof Map && sharedQuotes.size) applySharedQuotes({detail: {quotes: sharedQuotes, sourceUpdatedAt: "", source: "shared_cache"}});
     else refreshPortfolio();
-    updateQuotes({force: true});
+    // Editing an existing position only changes shares/cost. Reuse verified
+    // quotes and the existing refresh schedule; do not cancel an active fetch.
+    if(mode!=="edit")updateQuotes({force: true});
   }
 
   async function submitPortfolio(event) {
     event.preventDefault();
     try {
-      await loadCatalog();
+      if(!editingCode)await loadCatalog();
       const item = formHolding();
       if (editingCode) {
-        commitHolding(item, "edit");
+        if(localStorage.getItem(HOLDINGS_KEY)!==portfolioEditBaseline.holdings||localStorage.getItem(ledgerCore.STORAGE_KEY)!==portfolioEditBaseline.ledger)throw new Error("持股或帳本已在其他視窗變更；請重新整理後再編輯，未覆寫資料。");
+        const storedLedger=localStorage.getItem(ledgerCore.STORAGE_KEY);
+        if(!ledger&&storedLedger!==null&&storedLedger!=="null")throw new Error("既有交易帳本無法驗證；請先在設定檢查或還原備份，未修改持股。");
+        const previous=holdings.find(row=>row.code===editingCode);
+        if(previous.shares===item.shares&&previous.averageCost===item.averageCost){closePortfolioModal();return;}
+        const corrected=core.updateHoldingPosition(previous,item.shares,item.averageCost);
+        // Save a reversible point before either storage mode. Restore all touched
+        // keys and in-memory state if quota/security errors interrupt persistence.
+        const keys=[HOLDINGS_KEY,ledgerCore.STORAGE_KEY,resilienceCore.RECOVERY_STORAGE_KEY,REBALANCE_SETTINGS_KEY];
+        const before=new Map(keys.map(key=>[key,localStorage.getItem(key)]));
+        const memory={holdings,ledger,ledgerState,rebalanceSettings,portfolioRecoveryPoints};
+        try{
+          if(ledger){
+            const now=new Date().toISOString();
+            if(ledger.events.some(row=>row.timestamp>now||row.tradeDate>taipeiToday()))throw new Error("帳本含未來日期，請先檢查紀錄；未儲存校正。");
+            const result=ledgerCore.mutateLedger(ledger,{type:"ADD",event:{type:"POSITION_CORRECTION",symbol:editingCode,quantity:corrected.shares,unitPrice:corrected.averageCost,tradeDate:taipeiToday(),timestamp:now,createdAt:now,source:"MANUAL_POSITION_CORRECTION",note:"使用者快速編輯持股；非交易、無現金流"}});
+            if(!result.ok)throw new Error(result.error||"持股校正未通過帳本驗證。");
+            createRecovery("BEFORE_POSITION_CORRECTION");
+            persistLedger(result.ledger);closePortfolioModal();refreshPortfolio();
+          }else{
+            createRecovery("BEFORE_POSITION_CORRECTION");
+            commitHolding(corrected,"edit");
+          }
+        }catch(error){
+          ({holdings,ledger,ledgerState,rebalanceSettings,portfolioRecoveryPoints}=memory);
+          for(const [key,value]of before)if(localStorage.getItem(key)!==value)value===null?localStorage.removeItem(key):localStorage.setItem(key,value);
+          throw error;
+        }
         return;
       }
       const existing = holdings.some(entry => entry.code === item.code);
@@ -1149,7 +1212,7 @@
   function rollbackCsvImport(){if(!portfolioImportState?.preImportLedger)return;if(!confirm("確定要恢復最近一次 CSV 匯入前的交易帳本？"))return;if(!confirm("再次確認：目前匯入後的交易變更將由匯入前狀態取代。"))return;const restored=ledgerCore.validateLedger(portfolioImportState.preImportLedger);if(!restored){alert("匯入前備份驗證失敗，未變更任何資料。");return}persistLedger(restored);portfolioImportState={...portfolioImportState,preImportLedger:null,rollbackAt:new Date().toISOString()};saveWorkflowValue(workflowCore.IMPORT_STORAGE_KEY,portfolioImportState);refreshPortfolio()}
   async function selectBrokerCsv(file){if(!file)return;try{if(!ledger)throw new Error("請先建立交易帳本");if(file.size>1024*1024)throw new Error("CSV 不可超過 1 MB");const preview=resilienceCore.buildBrokerPreview(await file.text(),ledger,{fileName:file.name});if(!preview.ok)throw new Error("目前只支援 Phase 7 通用券商 CSV fixture");openCsvPreview(preview,file.name)}catch(error){alert(`券商 CSV 讀取失敗：${error.message}`)}finally{$v6("#portfolioBrokerImportFile").value=""}}
   function rollbackImportBatch(batchId){const record=portfolioImportHistory.find(row=>row.importBatchId===batchId);if(!record||record.rolledBackAt||!confirm("只移除此券商匯入批次，保留後續手動交易？"))return;createRecovery("BEFORE_IMPORT_BATCH_ROLLBACK");const result=resilienceCore.rollbackImportBatch(ledger,batchId);if(!result.ok){alert(result.error||`批次回滾失敗：${result.status}`);return}persistLedger(result.ledger);record.rolledBackAt=new Date().toISOString();saveWorkflowValue(resilienceCore.IMPORT_HISTORY_STORAGE_KEY,portfolioImportHistory);refreshPortfolio()}
-  function restoreRecoveryPoint(id){const point=portfolioRecoveryPoints.find(row=>row.id===id),preview=point?resilienceCore.previewBackup(point.backup):null;if(!preview?.ok){alert("復原點無法通過完整性驗證。");return}if(!confirm(`復原預覽：${preview.counts.events} 筆 Ledger、${preview.counts.snapshots} 筆 snapshots。確定原子還原？`))return;const restored=resilienceCore.restoreBackup(point.backup);if(!restored.ok){alert("還原失敗，目前資料未變更。");return}createRecovery("BEFORE_RECOVERY_RESTORE");holdings=core.validateImportPayload(restored.holdings);ledger=restored.ledger;portfolioHistory=restored.snapshots.map(performanceCore.validateSnapshot).filter(Boolean);rebalanceSettings={...rebalanceSettings,...restored.rebalanceSettings};portfolioGoal=restored.goal;portfolioMonthlyPlan=restored.monthlyPlan;portfolioImportState=restored.importState;portfolioImportHistory=restored.importHistory||[];persistLedger(ledger);savePortfolioHistory();saveRebalanceSettings();saveWorkflowValue(workflowCore.GOAL_STORAGE_KEY,portfolioGoal);saveWorkflowValue(workflowCore.PLAN_STORAGE_KEY,portfolioMonthlyPlan);saveWorkflowValue(workflowCore.IMPORT_STORAGE_KEY,portfolioImportState);saveWorkflowValue(resilienceCore.IMPORT_HISTORY_STORAGE_KEY,portfolioImportHistory);refreshPortfolio()}
+  function restoreRecoveryPoint(id){const point=portfolioRecoveryPoints.find(row=>row.id===id),preview=point?resilienceCore.previewBackup(point.backup):null;if(!preview?.ok){alert("復原點無法通過完整性驗證。");return}if(!confirm(`復原預覽：${preview.counts.events} 筆 Ledger、${preview.counts.snapshots} 筆 snapshots。確定原子還原？`))return;const restored=resilienceCore.restoreBackup(point.backup);if(!restored.ok){alert("還原失敗，目前資料未變更。");return}createRecovery("BEFORE_RECOVERY_RESTORE");holdings=core.validateImportPayload(restored.holdings);ledger=restored.ledger;portfolioHistory=restored.snapshots.map(performanceCore.validateSnapshot).filter(Boolean);rebalanceSettings={...rebalanceSettings,...restored.rebalanceSettings};portfolioGoal=restored.goal;portfolioMonthlyPlan=restored.monthlyPlan;portfolioImportState=restored.importState;portfolioImportHistory=restored.importHistory||[];if(ledger)persistLedger(ledger);else{localStorage.removeItem(ledgerCore.STORAGE_KEY);saveHoldings();}savePortfolioHistory();saveRebalanceSettings();saveWorkflowValue(workflowCore.GOAL_STORAGE_KEY,portfolioGoal);saveWorkflowValue(workflowCore.PLAN_STORAGE_KEY,portfolioMonthlyPlan);saveWorkflowValue(workflowCore.IMPORT_STORAGE_KEY,portfolioImportState);saveWorkflowValue(resilienceCore.IMPORT_HISTORY_STORAGE_KEY,portfolioImportHistory);refreshPortfolio()}
   function openGoal(){const modal=$v6("#portfolioGoalModal");$v6("#portfolioGoalValue").value=portfolioGoal?.targetValue||"";$v6("#portfolioGoalDate").value=portfolioGoal?.targetDate||"";$v6("#portfolioGoalError").textContent="";modal.classList.add("show");modal.setAttribute("aria-hidden","false")}
   function closeGoal(){const modal=$v6("#portfolioGoalModal");modal.classList.remove("show");modal.setAttribute("aria-hidden","true")}
 
@@ -1464,6 +1527,17 @@
     $v6("#portfolioModalClose").addEventListener("click", closePortfolioModal);
     $v6("#portfolioModal").addEventListener("click", event => { if (event.target === $v6("#portfolioModal")) closePortfolioModal(); });
     $v6("#portfolioForm").addEventListener("submit", submitPortfolio);
+    $v6("#portfolioCancelBtn").addEventListener("click",closePortfolioModal);
+    for(const id of ["#portfolioShares","#portfolioAverageCost"])$v6(id).addEventListener("input",previewHoldingEdit);
+    $v6("#portfolioShareShortcuts").addEventListener("click",event=>{
+      const button=event.target.closest("[data-add-shares]");if(!button)return;
+      const input=$v6("#portfolioShares"),value=Number(input.value);
+      if(!Number.isFinite(value)||value<0)return;
+      input.value=value+Number(button.dataset.addShares);previewHoldingEdit();
+    });
+    window.visualViewport?.addEventListener("resize",syncPortfolioEditorViewport);
+    window.visualViewport?.addEventListener("scroll",syncPortfolioEditorViewport);
+    window.addEventListener("resize",syncPortfolioEditorViewport);
     $v6("#portfolioTargetEditorOpen").addEventListener("click",openTargetModal);
     $v6("#portfolioTargetModalClose").addEventListener("click",closeTargetModal);
     $v6("#portfolioTargetModal").addEventListener("click",event=>{if(event.target===$v6("#portfolioTargetModal"))closeTargetModal()});

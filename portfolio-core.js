@@ -41,6 +41,7 @@
     if (!CODE_PATTERN.test(code)) throw new Error("股票代號需為 4～10 碼英數字。");
     if (shares === null) throw new Error("股數必須大於 0，且不可超過 1 兆股。");
     if (averageCost === null) throw new Error("平均成本必須大於 0，且不可超過 10 億元。");
+    if(input.positionCorrectedAt!==undefined&&input.positionCorrectedAt!==null&&input.positionCorrectedAt!==""&&!Number.isFinite(Date.parse(input.positionCorrectedAt)))throw new Error("持股校正時間無法驗證。");
     const strategyType = STRATEGY_TYPES.has(String(input.strategyType || "")) ? String(input.strategyType || "") : "";
     const rawTarget = input.targetAllocation;
     const targetAllocation = rawTarget === null || rawTarget === undefined || String(rawTarget).trim() === ""
@@ -57,8 +58,15 @@
       name: sanitizeName(input.name),
       strategyType,
       targetAllocation,
+      ...(input.positionCorrectedAt && Number.isFinite(Date.parse(input.positionCorrectedAt)) ? {positionCorrectedAt: new Date(input.positionCorrectedAt).toISOString()} : {}),
       updatedAt: new Date().toISOString()
     };
+  }
+
+  // Quick editing changes the position, not its metadata or transaction history.
+  function updateHoldingPosition(holding, shares, averageCost, correctedAt = new Date().toISOString()) {
+    const validated = validateHolding({...holding, shares, averageCost, positionCorrectedAt: correctedAt});
+    return {...holding, ...validated};
   }
 
   function validateImportPayload(payload) {
@@ -681,6 +689,7 @@
     MAX_HOLDINGS,
     QUOTE_MAX_AGE_MS,
     validateHolding,
+    updateHoldingPosition,
     validateImportPayload,
     mergeHolding,
     validateTargetAllocations,

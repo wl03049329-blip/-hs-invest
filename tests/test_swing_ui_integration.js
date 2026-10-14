@@ -33,7 +33,9 @@ assert.strictEqual(state.cooldownRemaining,5);
 assert.strictEqual(swing.transitionTradeState(state,{action:"OPEN",cooldownRemaining:5}).error,"cooldown_active");
 assert.match(portfolio,/HSPortfolioLedgerCore/);
 assert.match(portfolio,/derivePortfolioStateFromLedger\(ledger\.events\)/);
-assert.match(portfolio,/ledger\?openLedger\(\):openPortfolioModal/);
+assert.match(portfolio,/openPortfolioModal\(button\.dataset\.mobileHolding\)/);
+assert.match(portfolio,/openPortfolioModal\(button\.dataset\.editHolding\)/);
+assert.doesNotMatch(portfolio,/ledger\?openLedger\(\):openPortfolioModal/);
 
 const visibleHomeOrder = ["hsDecisionRoom","homeSentiment","homeEtfBrief","homeLeverageBrief"];
 let cursor = -1;

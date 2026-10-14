@@ -15,6 +15,7 @@
       }
     }
     const replay=ledgerCore.derivePortfolioStateFromLedger(ledger.events);if(!replay.valid)issues.push(issue(replay.status||"REPLAY_FAILED","ERROR",replay.error||"交易重播失敗",{eventId:replay.eventId||null}));
+    if(ledgerCore.hasPositionCorrection(ledger.events))issues.push(issue("POSITION_CORRECTION","WARNING","持股曾手動校正；無現金流，相關期間績效暫不計算"));
     if(!validDate(ledger.performanceStartDate))issues.push(issue("INVALID_PERFORMANCE_START","ERROR","績效起始日期無效"));
     const targetRows=Object.entries(targets||{}),targetTotal=targetRows.reduce((sum,[,value])=>sum+(finite(value)||0),0);for(const [symbol,value] of targetRows)if(finite(value)===null||Number(value)<0||Number(value)>100)issues.push(issue("INVALID_TARGET","ERROR","目標配置無效",{symbol}));if(targetRows.length&&Math.abs(targetTotal-100)>.01)issues.push(issue("TARGET_TOTAL","WARNING","目標配置合計不是 100%",{total:targetTotal}));
     const known=new Set(knownSymbols.map(ledgerCore.normalizeSymbol));for(const event of replay.events||[])if(event.symbol&&known.size&&!known.has(event.symbol))issues.push(issue("UNKNOWN_SYMBOL","WARNING","交易帳本含未識別代號",{symbol:event.symbol,eventId:event.id}));

@@ -273,6 +273,21 @@
 @keyframes portfolioFlash{from{opacity:.72}to{opacity:1}}
 
 .portfolioModal{z-index:2000}
+/* The editor header and close control never belong to the scrolling form. */
+html.portfolioEditorOpen,html.portfolioEditorOpen body{overflow:hidden}
+#portfolioModal{inset:auto;position:fixed;isolation:isolate;box-sizing:border-box;padding-top:max(72px,calc(env(safe-area-inset-top) + 64px))}
+#portfolioModalClose{position:absolute;top:max(12px,env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right));z-index:1;min-width:88px;min-height:48px;background:#211b0e;color:#f5dda0;border:1px solid #ad8c46;pointer-events:auto}
+#portfolioModal .portfolioSheet{display:flex;flex-direction:column;min-height:0;max-height:100%;overflow:visible;box-sizing:border-box}
+#portfolioModal .sheetHead{flex:none}
+#portfolioForm{min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-bottom:8px;touch-action:pan-y}
+#portfolioModal.isQuickEdit #portfolioCodeHelp,#portfolioModal.isQuickEdit #portfolioSearchResults,
+#portfolioModal.isQuickEdit label:has(#portfolioCustomName),#portfolioModal.isQuickEdit .portfolioFieldGrid:has(#portfolioStrategyType){display:none}
+.portfolioPositionSummary{margin:0;color:#cdbb95;font-size:12px;line-height:1.6;overflow-wrap:anywhere}
+#portfolioPositionPreview{color:#f5dda0}
+#portfolioShareShortcuts{display:flex;flex-wrap:wrap;gap:8px}
+#portfolioShareShortcuts button,#portfolioCancelBtn{min-height:44px}
+.portfolioQuickEditLabel{display:inline-block;color:#e7cb87;font-size:12px!important;border:1px solid #8a713c;border-radius:6px;padding:5px 9px}
+.portfolioMobileHoldingHead{min-height:48px}
 .portfolioModal .portfolioSheet{
   max-height:calc(100vh - 24px);
   max-height:calc(100dvh - 24px);

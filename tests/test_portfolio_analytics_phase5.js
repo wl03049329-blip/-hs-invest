@@ -91,7 +91,7 @@ check("57 snapshots restored",()=>assert.equal(JSON.parse(JSON.stringify(snapsho
 check("58 targets restored",()=>assert.deepEqual(JSON.parse(JSON.stringify({targets:{"0050":100}})).targets,{"0050":100}));
 check("59 performanceStartDate restored",()=>assert.equal(JSON.parse(JSON.stringify(ledger)).performanceStartDate,"2026-01-01"));
 check("60 analytics core is read-only",()=>{const before=JSON.stringify(ledger);analytics.calculateProfitBreakdown({ledger,marketRows:[{code:"0050",marketValue:2100}]});assert.equal(JSON.stringify(ledger),before)});
-check("61 UI loads analytics core",()=>assert.match(html,/portfolio-analytics-core\.js\?v=20260920-portfolio-analytics-p5/));
+check("61 UI loads correction-aware analytics core",()=>assert.match(html,/portfolio-analytics-core\.js\?v=20261015-position-correction-v1/));
 check("62 shared period state",()=>assert.match(ui,/portfolioAnalysisPeriod/));
 check("63 analytics information architecture",()=>assert.ok(html.indexOf("portfolioPerformancePanel")<html.indexOf("portfolioAnalyticsCenter")&&html.indexOf("portfolioAnalyticsCenter")<html.indexOf("portfolioRiskCenter")));
 check("64 mobile 2 by 2 summary",()=>assert.match(css,/portfolioAnalyticsSummary\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/));
