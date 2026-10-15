@@ -1,26 +1,24 @@
 {
   "version": 2,
-  "updated_at": "2026-10-15T13:30:44.187035+08:00",
+  "updated_at": "2026-10-15T13:36:41.417604Z",
   "source_dates": {
     "TWSE": "2026-10-15",
-    "TPEx": "2026-10-14"
+    "TPEx": "2026-10-15"
   },
   "source_status": {
-    "TWSE": "official_closing_data",
-    "TPEx": "official_closing_data",
-    "TWSE_MIS": "cached_after_error: No module named 'backend'",
-    "RAILWAY_PRIMARY": "ok"
+    "TWSE": "official_closing_data_daily_report",
+    "TPEx": "official_closing_data"
   },
-  "official_last_checked_at": "2026-10-15T05:23:32.953445Z",
+  "official_last_checked_at": "2026-10-15T13:36:41.417604Z",
   "official_source_dates": {
-    "TWSE": "2026-10-14",
-    "TPEx": "2026-10-14"
+    "TWSE": "2026-10-15",
+    "TPEx": "2026-10-15"
   },
   "official_last_success_at": {
-    "TWSE": "2026-10-15T05:23:32.953445Z",
-    "TPEx": "2026-10-15T05:23:32.953445Z"
+    "TWSE": "2026-10-15T13:36:41.417604Z",
+    "TPEx": "2026-10-15T13:36:41.417604Z"
   },
-  "item_count": 2404,
+  "item_count": 2405,
   "github_fallback_last_run": "2026-10-15T05:25:49.576573Z",
   "github_fallback_gap_detected": false,
   "primary_trigger_source": "RAILWAY_PRIMARY",
@@ -98092,97 +98090,5 @@
       }
     }
   },
-  "official_eod_snapshot": {
-    "snapshot_type": "OFFICIAL_CLOSE_INPUT",
-    "date": "2026-10-15",
-    "observed_at": "2026-10-15T05:23:32.953445Z",
-    "source_status": "official_closing_data",
-    "items": {
-      "0050": {
-        "code": "0050",
-        "name": "0050",
-        "price": 109,
-        "previous_close": 113,
-        "date": "2026-10-15",
-        "market": "TWSE",
-        "quote_mode": "delayed",
-        "quote_time": "13:21:10",
-        "high": 110.15,
-        "low": 108.55,
-        "open": 110.15,
-        "price_field": "lastTrade.price",
-        "quote_source": "FUGLE_LAST_TRADE",
-        "source": "https://api.fugle.tw/marketdata/v1.0/stock/intraday/quote",
-        "volume": 370422000
-      },
-      "00662": {
-        "code": "00662",
-        "name": "00662",
-        "price": 123.4,
-        "previous_close": 126.55,
-        "date": "2026-10-15",
-        "market": "TWSE",
-        "quote_mode": "delayed",
-        "quote_time": "13:20:40",
-        "high": 123.55,
-        "low": 122.85,
-        "open": 123.05,
-        "price_field": "lastTrade.price",
-        "quote_source": "FUGLE_LAST_TRADE",
-        "source": "https://api.fugle.tw/marketdata/v1.0/stock/intraday/quote",
-        "volume": 8731000
-      },
-      "00757": {
-        "code": "00757",
-        "name": "00757",
-        "price": 144.3,
-        "previous_close": 148.4,
-        "date": "2026-10-15",
-        "market": "TWSE",
-        "quote_mode": "delayed",
-        "quote_time": "13:20:58",
-        "high": 144.45,
-        "low": 143.55,
-        "open": 144,
-        "price_field": "lastTrade.price",
-        "quote_source": "FUGLE_LAST_TRADE",
-        "source": "https://api.fugle.tw/marketdata/v1.0/stock/intraday/quote",
-        "volume": 1272000
-      },
-      "00830": {
-        "code": "00830",
-        "name": "00830",
-        "price": 83.35,
-        "previous_close": 87.1,
-        "date": "2026-10-15",
-        "market": "TWSE",
-        "quote_mode": "delayed",
-        "quote_time": "13:21:10",
-        "high": 83.45,
-        "low": 82.5,
-        "open": 83,
-        "price_field": "lastTrade.price",
-        "quote_source": "FUGLE_LAST_TRADE",
-        "source": "https://api.fugle.tw/marketdata/v1.0/stock/intraday/quote",
-        "volume": 18366000
-      },
-      "00935": {
-        "code": "00935",
-        "name": "00935",
-        "price": 57.05,
-        "previous_close": 60.5,
-        "date": "2026-10-15",
-        "market": "TWSE",
-        "quote_mode": "delayed",
-        "quote_time": "13:21:10",
-        "high": 58,
-        "low": 56.65,
-        "open": 57.75,
-        "price_field": "lastTrade.price",
-        "quote_source": "FUGLE_LAST_TRADE",
-        "source": "https://api.fugle.tw/marketdata/v1.0/stock/intraday/quote",
-        "volume": 32716000
-      }
-    }
-  }
+  "official_eod_snapshot": null
 }
