@@ -3,26 +3,38 @@
   "system_state": "FAIL_CLOSED",
   "signal_status": "NO_SIGNAL",
   "reason": "BRIDGE_HISTORICAL_GAP_REVIEW_REQUIRED:2026-10-13",
-  "checked_at": "2026-10-15T18:31:50.976799+00:00",
+  "checked_at": "2026-10-16T12:39:47.468729+00:00",
   "latest_data_date": "2026-10-13",
-  "expected_completed_bar": "2026-10-15",
+  "expected_completed_bar": "2026-10-16",
   "freshness": "STALE",
   "data_integrity": "FAIL",
   "dry_run": false,
   "requires_integrity_review": true,
   "workflow_classification": "RECOVERY_EVIDENCE_AVAILABLE",
   "incident_identity": {
-    "target_completed_trading_date": "2026-10-15",
+    "target_completed_trading_date": "2026-10-16",
     "normalized_root_cause": "BRIDGE_HISTORICAL_GAP_REVIEW_REQUIRED",
     "latest_verified_anchor_date": "2026-10-13",
     "source_failure_class": "BRIDGE_HISTORICAL_GAP_REVIEW_REQUIRED",
     "policy_version": "HS_LEVERAGE_C_V1_FORWARD_POLICY_2026:V1:HS_LEVERAGE_C_V1_THRESHOLD_2026_TRAIN_END_2025-12-31"
   },
-  "incident_fingerprint": "dca73b480a1542bb079db04b15aef1681f317c4093a4dc752aaf485f0fbdb204",
+  "incident_fingerprint": "ad0a1c9c0975a399eaf12a3621e9d9af35d806ca2c805a79643f89586aa693a5",
   "source_probe_evidence": {
     "sessions": [
       {
         "date": "2026-10-14",
+        "missing": [],
+        "values": {
+          "open": 39.66999816894531,
+          "high": 40.29999923706055,
+          "low": 39.540000915527344,
+          "close": 39.779998779296875,
+          "volume": 121150338,
+          "adjclose": 39.779998779296875
+        }
+      },
+      {
+        "date": "2026-10-15",
         "missing": [
           "open",
           "high",
@@ -34,21 +46,20 @@
         "values": {}
       },
       {
-        "date": "2026-10-15",
-        "missing": [
-          "close",
-          "adjclose"
-        ],
+        "date": "2026-10-16",
+        "missing": [],
         "values": {
-          "open": 37.77000045776367,
-          "high": 37.880001068115234,
-          "low": 37.13999938964844,
-          "volume": 649490522
+          "open": 37.36000061035156,
+          "high": 37.65999984741211,
+          "low": 37.099998474121094,
+          "close": 37.150001525878906,
+          "volume": 174782559,
+          "adjclose": 37.150001525878906
         }
       }
     ],
     "validation": "PASS",
-    "data_version": "adjusted_daily_v1:90fad8a0399455624ca9eff364aa80ff69c6573b7c2935e51b359d6282a7c95c"
+    "data_version": "adjusted_daily_v1:ff6519bc07736732366e488da90481bf9bf963b0a5746f99f7914005e340bb5d"
   },
   "forward_observations": 2,
   "eligible_observations": 0,
