@@ -295,10 +295,24 @@ def run(root, client, now, as_of=None, repair_from=None):
     result = dict(schema_version=1, price_type="RAW_UNADJUSTED", price_cutoff=cutoff,
                   expected_completed_bar=target, next_expected_trading_day=next_session, cutoff_policy="18:00 Asia/Taipei; official completed sessions only",
                   symbols={})
+    previous_status = None
+    if (root / PUBLIC_STATUS).exists():
+        try:
+            previous_status = json.loads((root / PUBLIC_STATUS).read_text(encoding="utf-8"))
+            content = {k:v for k,v in previous_status.items() if k != "content_sha256"}
+            if previous_status.get("schema_version") != 1 or digest(content) != previous_status.get("content_sha256"): raise ValueError("STATUS_INTEGRITY")
+        except Exception:
+            previous_status = {}
+            log("STATUS_UNTRUSTED_REVALIDATE")
     failed = False
     for symbol in SYMBOLS:
         try:
-            archive, changed, operation = update_symbol(root, client, symbol, target, holiday_ref, repair_from)
+            # A cached CURRENT bar cannot clear a failed probe. Retry the fresh
+            # monthly overlap/actions even when the completed date is unchanged.
+            symbol_repair = repair_from
+            if previous_status is not None and previous_status.get("symbols",{}).get(symbol,{}).get("status") != "CURRENT":
+                symbol_repair = symbol_repair or target[:7] + "-01"
+            archive, changed, operation = update_symbol(root, client, symbol, target, holiday_ref, symbol_repair)
             row = dict(status="CURRENT", reason=None, provider=archive["provider"], latest_verified_date=archive["price"][-1]["date"],
                        verified_at=archive["fetched_at"], archive_sha256=archive["content_sha256"])
             log("SYMBOL_VERIFIED", symbol=symbol, operation=operation, changed=changed, **row)

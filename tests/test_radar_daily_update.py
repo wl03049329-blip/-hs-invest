@@ -216,4 +216,16 @@ class RadarDailyTests(unittest.TestCase):
                 with self.assertRaises((json.JSONDecodeError,HTTPError)):client.get("https://fixture.invalid/official")
                 self.assertEqual(opener.call_count,1);self.assertEqual(client.entries,{})
 
+    def test_failed_same_day_revalidation_requires_fresh_probe_before_clearing_warning(self):
+        self.run_update()
+        class Down(FixtureClient):
+            def get(self,url):
+                if "STOCK_DAY" in url and "stockNo=00830" in url:raise OSError("TEST_SOURCE_OUTAGE")
+                return super().get(url)
+        failed,ok=self.run_update(Down(),repair_from="LATEST_MONTH");self.assertFalse(ok)
+        self.assertEqual(failed["symbols"]["00830"]["status"],"STALE")
+        client=FixtureClient();result,ok=self.run_update(client);self.assertTrue(ok)
+        self.assertEqual(result["symbols"]["00830"]["status"],"CURRENT")
+        self.assertTrue(any("STOCK_DAY" in url and "stockNo=00830" in url for url in client.calls))
+
 if __name__=="__main__":unittest.main()
