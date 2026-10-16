@@ -3,7 +3,7 @@
   "system_state": "FAIL_CLOSED",
   "signal_status": "NO_SIGNAL",
   "reason": "BRIDGE_HISTORICAL_GAP_REVIEW_REQUIRED:2026-10-13",
-  "checked_at": "2026-10-16T14:32:44.064216+00:00",
+  "checked_at": "2026-10-16T18:17:33.903535+00:00",
   "latest_data_date": "2026-10-13",
   "expected_completed_bar": "2026-10-16",
   "freshness": "STALE",
@@ -18,7 +18,7 @@
     "source_failure_class": "BRIDGE_HISTORICAL_GAP_REVIEW_REQUIRED",
     "policy_version": "HS_LEVERAGE_C_V1_FORWARD_POLICY_2026:V1:HS_LEVERAGE_C_V1_THRESHOLD_2026_TRAIN_END_2025-12-31"
   },
-  "incident_fingerprint": "ad0a1c9c0975a399eaf12a3621e9d9af35d806ca2c805a79643f89586aa693a5",
+  "incident_fingerprint": "a4b94a8477187e08e718c4d87c1c7f6d592df0d7638cae07c2cd8247f6797379",
   "source_probe_evidence": {
     "sessions": [
       {
@@ -47,19 +47,20 @@
       },
       {
         "date": "2026-10-16",
-        "missing": [],
+        "missing": [
+          "close",
+          "adjclose"
+        ],
         "values": {
           "open": 37.36000061035156,
           "high": 37.65999984741211,
           "low": 37.099998474121094,
-          "close": 37.150001525878906,
-          "volume": 174782559,
-          "adjclose": 37.150001525878906
+          "volume": 174782559
         }
       }
     ],
     "validation": "PASS",
-    "data_version": "adjusted_daily_v1:ff6519bc07736732366e488da90481bf9bf963b0a5746f99f7914005e340bb5d"
+    "data_version": "adjusted_daily_v1:2a83c864461cfa11c0b28e551b926806edd3313e089e14c4b985ee491eaa7270"
   },
   "forward_observations": 2,
   "eligible_observations": 0,
