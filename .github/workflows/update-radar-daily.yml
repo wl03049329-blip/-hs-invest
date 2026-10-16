@@ -1,0 +1,137 @@
+name: Update verified ETF radar daily OHLC
+
+on:
+  schedule:
+    # Taipei 18:15 / 20:15 / 22:15, strictly after the unchanged 18:00 gate.
+    # GitHub schedules can be delayed; no intraday candles or synthetic backfill.
+    - cron: "15 10,12,14 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      as_of:
+        description: Optional completed YYYY-MM-DD (price history only)
+        required: false
+        type: string
+      revalidate:
+        description: Fresh official overlap/action audit even if already current
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  pages: write
+  issues: write
+
+concurrency:
+  group: hs-radar-raw-daily
+  cancel-in-progress: false
+
+env:
+  PYTHONDONTWRITEBYTECODE: "1"
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Regression and data-safety contracts
+        run: |
+          python -m unittest discover -s tests -p 'test_radar_daily*.py'
+          python -m unittest discover -s tests -p 'test_radar_twse.py'
+          python -m unittest discover -s tests -p 'test_radar_data_audit.py'
+          node tests/test_radar_daily_refresh.js
+          node tests/test_radar_daily_workflow.js
+          node tests/test_radar_official_independence.js
+      - name: Synchronize production base without overwriting data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --ff-only origin main
+      - name: Collect verified raw daily increments
+        id: collect
+        continue-on-error: true
+        env:
+          REQUESTED_AS_OF: ${{ inputs.as_of }}
+          REVALIDATE: ${{ inputs.revalidate }}
+        shell: bash
+        run: |
+          set -o pipefail
+          args=(--evidence-dir "$RUNNER_TEMP/radar-daily-evidence")
+          if [ -n "$REQUESTED_AS_OF" ]; then args+=(--as-of "$REQUESTED_AS_OF"); fi
+          if [ "$REVALIDATE" = "true" ]; then args+=(--revalidate); fi
+          python -m scripts.update_radar_daily "${args[@]}" 2>&1 | tee "$RUNNER_TEMP/radar-daily.log"
+      - name: Commit only independently validated candles and status
+        id: publish
+        run: |
+          git add -- data/radar-history/twse/0050.json data/radar-history/twse/00662.json data/radar-history/twse/00757.json data/radar-history/twse/00830.json data/radar-history/twse/00935.json data/radar-history/tpex/009815.json data/radar-history/status-v1.json
+          if git diff --cached --quiet; then
+            echo "NOOP_ALREADY_VERIFIED"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git commit -m "Update verified ETF radar raw daily OHLC"
+          for attempt in 1 2 3; do
+            git pull --rebase origin main
+            if git push origin HEAD:main; then
+              echo "changed=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            sleep $((attempt * 3))
+          done
+          echo "::error::RADAR_ARCHIVE_PUSH_FAILED"
+          exit 1
+      - name: Request existing branch-based Pages build after bot publication
+        if: steps.publish.outputs.changed == 'true' || inputs.revalidate == true
+        # GITHUB_TOKEN pushes do not trigger the existing legacy Pages build.
+        # No publishing-source, domain or Pages configuration is changed.
+        run: gh api --method POST "repos/$GITHUB_REPOSITORY/pages/builds"
+      - name: Verify actual Pages build and public JSON, not dispatch acceptance
+        run: python -m scripts.update_radar_daily --verify-public "https://wl03049329-blip.github.io/-hs-invest/"
+      - name: Fail closed on incomplete collection
+        if: steps.collect.outcome != 'success'
+        run: |
+          echo "::error::Official daily OHLC incomplete; previous verified prices retained. See evidence and status-v1.json."
+          exit 1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: radar-daily-source-evidence-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/radar-daily-evidence/
+            ${{ runner.temp }}/radar-daily.log
+          retention-days: 30
+      - name: Deduplicated operational alert (never a trading signal)
+        if: always()
+        uses: actions/github-script@v7
+        env:
+          PREVIOUS_STATUS: ${{ job.status }}
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- hs-radar-raw-daily-monitor-v1 -->';
+            let status;
+            try { status = JSON.parse(fs.readFileSync('data/radar-history/status-v1.json','utf8')); }
+            catch { status = {expected_completed_bar:null,symbols:{}}; }
+            const healthy = process.env.PREVIOUS_STATUS === 'success'
+              && Object.keys(status.symbols).length === 6
+              && Object.values(status.symbols).every(row=>row.status === 'CURRENT');
+            const issues = await github.paginate(github.rest.issues.listForRepo,{...context.repo,state:'open',per_page:100});
+            const existing = issues.find(i=>!i.pull_request && i.user?.login==='github-actions[bot]' && i.body?.includes(marker));
+            if (!healthy) {
+              const body = marker+'\n原始日 K 更新或公開發布未完成（不是 C4／交易訊號）。\n\n預期完成日：'+status.expected_completed_bar
+                +'\n\n'+Object.entries(status.symbols).map(([s,r])=>s+' '+r.status+'｜'+r.latest_verified_date+'｜'+(r.reason||'來源已驗證；請查發布步驟')).join('\n')
+                +'\n\nRun: https://github.com/'+context.repo.owner+'/'+context.repo.repo+'/actions/runs/'+context.runId;
+              if (!existing) await github.rest.issues.create({...context.repo,title:'ETF radar daily OHLC: update requires attention',body});
+              else if (existing.body !== body) await github.rest.issues.update({...context.repo,issue_number:existing.number,body});
+            } else if (existing) await github.rest.issues.update({...context.repo,issue_number:existing.number,state:'closed'});
+            await core.summary.addHeading('Raw daily OHLC / publication evidence').addCodeBlock(JSON.stringify({event:context.eventName,healthy,status},null,2),'json').write();

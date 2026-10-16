@@ -21,7 +21,7 @@ STATIC_ALLOWED = {'/' + urlsplit(p).path for p in re.findall(r'(?:src|href)="([^
                   if not urlsplit(p).scheme and Path(urlsplit(p).path).suffix in ('.js', '.css', '.png', '.svg', '.webmanifest')}
 STATIC_ALLOWED |= {'/assets/icon-192-v3.png', '/assets/hs-etf-radar-final.png'}
 STATIC_ALLOWED |= {'/' + p for p in (
-    'build-info.json', 'etf-universe.json', 'etf-valuation.json',
+    'build-info.json', 'etf-universe.json', 'etf-valuation.json', 'data/radar-history/status-v1.json',
     'finalized-core-score-snapshots-v1.json', 'intraday-core-snapshots-v1.json',
     'market-quotes.json', 'market-quotes-meta.json', 'cnn-fear-greed.json',
     'margin-data.json', 'futures-position.json', 'market-events.json', 'trump-news.json')}

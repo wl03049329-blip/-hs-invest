@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),crypto=require('node:crypto');
 const {Source}=require('../radar-history-source');
 const response=p=>({ok:true,status:200,json:async()=>structuredClone(p)});
-const read=async path=>fs.existsSync(path)?response(JSON.parse(fs.readFileSync(path))):{status:404};
+const read=async url=>{const path=url.split('?')[0];return fs.existsSync(path)?response(JSON.parse(fs.readFileSync(path))):{status:404};};
 const canonical=v=>Array.isArray(v)?v.map(canonical):v&&typeof v==='object'?Object.fromEntries(Object.keys(v).sort().map(k=>[k,canonical(v[k])])):v;
 const sign=p=>{delete p.content_sha256;p.content_sha256=crypto.createHash('sha256').update(JSON.stringify(canonical(p))).digest('hex');return p;};
 (async()=>{
@@ -16,7 +16,11 @@ const sign=p=>{delete p.content_sha256;p.content_sha256=crypto.createHash('sha25
     assert.equal(result.rows.find(r=>r.time==='2026-09-18').source,'FinMind/TaiwanStockPrice');
     assert.equal(result.rows.find(r=>r.time==='2026-09-18').close,seed.price.at(-1).close);
     assert.equal(cal.observedOnly,true); // Not a fabricated official trading calendar.
-    const stale=await a.year(symbol,2026,cal.dates,'2026-10-14');assert.equal(stale.sourceWarning,'TWSE_ARCHIVE_STALE');
+    // Fixed stale-server fixture; the production archive legitimately advances.
+    const staleArchive=structuredClone(await a.archive(symbol));
+    staleArchive.price=staleArchive.price.filter(r=>r.date<='2026-10-13');staleArchive.requested_end='2026-10-13';staleArchive.action_coverage.end='2026-10-13';sign(staleArchive);
+    const staleSource=new Source({savedFetcher:read,archiveFetcher:async url=>url.includes('status-v1')?read(url):response(staleArchive)});
+    const stale=await staleSource.year(symbol,2026,cal.dates,'2026-10-14');assert.equal(stale.sourceWarning,'TWSE_ARCHIVE_STALE');
   }
   assert.equal(calls,0);
   const otc=new Source({savedFetcher:read,archiveFetcher:read,fetcher:()=>{throw Error('NETWORK_DISABLED');}});
@@ -40,8 +44,8 @@ const sign=p=>{delete p.content_sha256;p.content_sha256=crypto.createHash('sha25
     const formal=official.snapshots.filter(s=>s.date<='2026-10-13'&&s.finalized&&s.rows.some(r=>r.symbol===symbol&&typeof r.final_core_score==='number')).map(s=>s.date);
     assert.equal(formal.length,32);assert.equal(formal.filter(d=>result.rows.some(r=>r.time===d)).length,32);
     if(symbol==='00757'){
-      const p=await a.archive(symbol);assert.equal(p.price.length,1906);assert.equal(p.price[0].date,'2018-12-06');assert.equal(p.evidence.length,95);
-      assert.equal(p.dividends.length,0);assert.equal(p.action_evidence.length,9);
+      const p=await a.archive(symbol);assert.equal(p.price.filter(r=>r.date<='2026-10-13').length,1906);assert.equal(p.price[0].date,'2018-12-06');assert.equal(p.evidence.filter(r=>r.file?.endsWith('-2026-10-13.json')).length,95);
+      assert.equal(p.dividends.length,0);assert.equal(p.action_evidence.filter(r=>(new URL(r.url).searchParams.get('endDate')||'')<='20261013').length,9);
     }
   }
   const original=JSON.parse(fs.readFileSync('data/radar-history/twse/0050.json'));
