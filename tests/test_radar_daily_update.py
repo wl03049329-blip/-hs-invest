@@ -7,12 +7,14 @@ import copy
 import datetime as dt
 import json
 import io
+from http.client import IncompleteRead
+from urllib.error import HTTPError
 from pathlib import Path
 import shutil
 import tempfile
 import unittest
 from urllib.parse import urlsplit, parse_qs
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 from scripts import update_radar_daily as u
 from scripts.collect_radar_twse import FIELDS, digest
 from scripts.audit_radar_calendar import FIELDS as CALENDAR_FIELDS
@@ -186,5 +188,32 @@ class RadarDailyTests(unittest.TestCase):
             return io.BytesIO(b'{"schema_version":1,"status":"OLD_TEST_ONLY"}')
         with patch.dict(u.os.environ,{"GITHUB_REPOSITORY":"owner/test"}),patch.object(u,"log"),patch.object(u.subprocess,"check_output",return_value='{"status":"built"}'):
             self.assertFalse(u.verify_publication(self.root,"https://fixture.invalid/-hs-invest/",attempts=1,fetcher=stale))
+
+    def test_transport_retry_discards_partial_payload_then_keeps_one_complete_response(self):
+        class Response(io.BytesIO): status=200
+        with patch.object(u.time,"sleep"),patch.object(u,"log"):
+            opener=Mock(side_effect=[IncompleteRead(b"PARTIAL_TEST_ONLY"),TimeoutError("TEST_ONLY"),Response(b'{"complete":true}')])
+            client=u.Client(self.root/"evidence",root=self.root/"checkout",opener=opener)
+            entry=client.get("https://fixture.invalid/official")
+            self.assertEqual(entry["payload"],{"complete":True});self.assertEqual(opener.call_count,3)
+            self.assertEqual(len(list((self.root/"evidence").glob("*.json"))),1)
+            self.assertEqual(client.get(entry["url"]),entry);self.assertEqual(opener.call_count,3)
+
+    def test_transport_retry_is_bounded_and_never_caches_partial_body(self):
+        opener=Mock(side_effect=IncompleteRead(b"PARTIAL_TEST_ONLY"))
+        with patch.object(u.time,"sleep"),patch.object(u,"log"):
+            client=u.Client(self.root/"evidence",root=self.root/"checkout",opener=opener)
+            with self.assertRaises(IncompleteRead):client.get("https://fixture.invalid/official")
+        self.assertEqual(opener.call_count,3);self.assertEqual(client.entries,{})
+        self.assertEqual(list((self.root/"evidence").glob("*.json")),[])
+
+    def test_semantic_invalid_json_and_quota_error_are_not_retried(self):
+        class Response(io.BytesIO): status=200
+        for index,error in enumerate([Response(b'{"incomplete":'),HTTPError("https://fixture.invalid",402,"TEST_QUOTA",{},None)]):
+            with self.subTest(index=index),patch.object(u.time,"sleep"):
+                opener=Mock(return_value=error) if isinstance(error,Response) else Mock(side_effect=error)
+                client=u.Client(self.root/("evidence"+str(index)),root=self.root/"checkout",opener=opener)
+                with self.assertRaises((json.JSONDecodeError,HTTPError)):client.get("https://fixture.invalid/official")
+                self.assertEqual(opener.call_count,1);self.assertEqual(client.entries,{})
 
 if __name__=="__main__":unittest.main()

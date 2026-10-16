@@ -14,6 +14,8 @@ import os
 from pathlib import Path
 import subprocess
 import time
+from http.client import IncompleteRead, RemoteDisconnected
+from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from backend.trading_calendar import TradingCalendar
@@ -50,7 +52,11 @@ def atomic_json(path, payload):
     return True
 
 class Client:
-    """One request per URL/run, paced, no semantic retries or alternate provider."""
+    """One complete response per URL/run; at most 3 transport attempts, paced.
+
+    Partial bodies are discarded, never combined or cached. Semantic validation
+    and quota errors are not retried; no alternate provider is introduced.
+    """
     def __init__(self, evidence_dir, root=ROOT, delay=3, opener=urlopen):
         self.directory = Path(evidence_dir).resolve()
         root = Path(root).resolve()
@@ -70,12 +76,19 @@ class Client:
 
     def get(self, url):
         if url in self.entries: return self.entries[url]
-        if self.requests >= 120: raise ValueError("BOUNDED_REQUEST_BUDGET_EXCEEDED")
-        self.requests += 1
-        time.sleep(self.delay)
-        with self.opener(Request(url, headers={"User-Agent": "HS-Radar-Official-Daily/1", "Accept": "application/json"}), timeout=30) as response:
-            if response.status != 200: raise ValueError("SOURCE_HTTP_" + str(response.status))
-            payload = json.loads(response.read().decode("utf-8-sig"))
+        for attempt in range(1, 4):
+            if self.requests >= 120: raise ValueError("BOUNDED_REQUEST_BUDGET_EXCEEDED")
+            self.requests += 1
+            time.sleep(self.delay * attempt)
+            try:
+                with self.opener(Request(url, headers={"User-Agent": "HS-Radar-Official-Daily/1", "Accept": "application/json"}), timeout=30) as response:
+                    if response.status != 200: raise ValueError("SOURCE_HTTP_" + str(response.status))
+                    payload = json.loads(response.read().decode("utf-8-sig"))
+                break
+            except (IncompleteRead, RemoteDisconnected, TimeoutError, URLError, ConnectionError) as exc:
+                if isinstance(exc, HTTPError) and exc.code not in (500, 502, 503, 504): raise
+                log("SOURCE_TRANSPORT_FAILURE", url=url, attempt=attempt, maximum=3, reason=str(exc))
+                if attempt == 3: raise
         e = dict(url=url, fetched_at=dt.datetime.now(dt.timezone.utc).isoformat(), payload=payload, sha256=digest(payload))
         atomic_json(self.directory / (digest(url) + ".json"), e)
         self.entries[url] = e
