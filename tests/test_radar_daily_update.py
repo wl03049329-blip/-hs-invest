@@ -56,7 +56,7 @@ class RadarDailyTests(unittest.TestCase):
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory();self.root=Path(self.temp.name)
         for symbol in u.SYMBOLS:
-            p=copy.deepcopy(ACTUAL[symbol]);p["price"]=[r for r in p["price"] if r["date"]<="2026-10-13"];p["requested_end"]="2026-10-13";p["action_coverage"]["end"]="2026-10-13";p.pop("incremental_verification",None)
+            p=copy.deepcopy(ACTUAL[symbol]);p["price"]=[r for r in p["price"] if r["date"]<="2026-10-13"];p["dividends"]=[r for r in p["dividends"] if r["date"]<="2026-10-13"];p["requested_end"]="2026-10-13";p["action_coverage"]["end"]="2026-10-13";p.pop("incremental_verification",None)
             p.pop("content_sha256");p["content_sha256"]=digest(p);u.atomic_json(u.path_for(self.root,symbol),p)
             for folder in ("research/c4_historical/source","research/c4_historical"):
                 source=u.ROOT/folder/(symbol+".json")

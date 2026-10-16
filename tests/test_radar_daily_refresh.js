@@ -10,9 +10,9 @@ let groups=0;
 for(const symbol of symbols){
  const file="data/radar-history/"+(symbol==="009815"?"tpex":"twse")+"/"+symbol+".json",current=JSON.parse(fs.readFileSync(file));
  // Pin the genuine 10/14–16 evidence window, not the rolling production end.
- current.price=current.price.filter(r=>r.date<="2026-10-16");current.requested_end="2026-10-16";current.action_coverage.end="2026-10-16";sign(current);
+ current.price=current.price.filter(r=>r.date<="2026-10-16");current.dividends=current.dividends.filter(r=>r.date<="2026-10-16");current.requested_end="2026-10-16";current.action_coverage.end="2026-10-16";sign(current);
  assert.equal(current.requested_end,"2026-10-16");assert.deepEqual(current.price.slice(-3).map(r=>r.date),["2026-10-14","2026-10-15","2026-10-16"]);
- const old=structuredClone(current);old.price=old.price.filter(r=>r.date<="2026-10-13");old.requested_end="2026-10-13";old.action_coverage.end="2026-10-13";sign(old);
+ const old=structuredClone(current);old.price=old.price.filter(r=>r.date<="2026-10-13");old.dividends=old.dividends.filter(r=>r.date<="2026-10-13");old.requested_end="2026-10-13";old.action_coverage.end="2026-10-13";sign(old);
  let published=old,fail=false,clock=Date.parse("2026-10-16T12:00:00Z"),requests=0,providerCalls=0;
  const source=new Source({now:()=>new Date(clock),savedFetcher:disk,fetcher:()=>{providerCalls++;throw Error("NO_FINMIND_OR_INTRADAY")},archiveFetcher:async(url,options)=>{
   assert.equal(options.cache,"no-store");assert.ok(url.includes("verified_at="));
