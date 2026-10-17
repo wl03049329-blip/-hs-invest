@@ -2378,3 +2378,79 @@ footer{color:#746f67}
 #watchPanel .watchDiagnosticCard>p{min-height:0;font-size:11px}
 #watchPanel .watchDiagnosticCard>footer span{font-size:10px}
 @media(max-width:430px){#watchPanel .watchDiagnosticMetrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* CNN black/gold V1. Scoped presentation only; the six-card grid is unchanged. */
+#homeSentiment.hsCommandSentiment .homeSentimentConclusion>span{font-size:11px!important;line-height:1.5}
+#cnnFearGreedPanel{scroll-margin-top:calc(72px + env(safe-area-inset-top));min-width:0}
+#cnnFearGreedPanel:focus{outline:none}
+#cnnFearGreedPanel:focus-visible{outline:2px solid #d6b466;outline-offset:3px}
+.cnnDashboard{min-width:0;color:#e9dec7;font-variant-numeric:tabular-nums}
+.cnnDashboardHead{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:2px 0 14px;border-bottom:1px solid #ac85482b}
+.cnnDashboardHead>span{color:#a79b83;font-size:11px;letter-spacing:.06em}
+.cnnDashboardHead>button{flex:none;min-height:44px;padding:8px 13px;border:1px solid #a782424d;border-radius:9px;background:#18140c;color:#e7c577;font:inherit;font-size:12px;cursor:pointer}
+.cnnDashboardHead>button:disabled{opacity:.55;cursor:wait}
+.cnnDashboardHead>button:focus-visible{outline:2px solid #ebce86;outline-offset:3px}
+.cnnDashboardLayout{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);align-items:center;gap:30px;padding-top:18px}
+.cnnDashboardLayout>div{min-width:0}
+.cnnGauge{display:block;width:100%;max-width:480px;min-width:0;margin:0 auto}
+.cnnGauge svg{display:block;width:100%;height:auto;overflow:visible}
+.cnnGaugeTrack{fill:none;stroke:#171612;stroke-width:23}
+.cnnGaugeBand{fill:none;stroke-width:17;stroke-linecap:butt}
+.cnnGaugeBand[data-active="true"]{stroke:#f1d99c}
+.cnnGaugeTick{fill:none;stroke:#bda571;stroke-width:1}
+.cnnGaugeTickLabel{fill:#d7c8a5;font-family:inherit;font-size:14px;font-weight:650}
+.cnnGaugeNeedle{transform-box:view-box;transform-origin:180px 170px;transition:transform .65s cubic-bezier(.2,.8,.2,1)}
+.cnnGaugeNeedle path{fill:#f4d47c;stroke:#e3bf65;stroke-width:1;filter:drop-shadow(0 0 4px #d5a94066)}
+.cnnGaugeHubRim{fill:#15110a;stroke:#d3ad56;stroke-width:1.5}
+.cnnGaugeHub{fill:#e7c579}
+.cnnGauge[data-empty="true"] .cnnGaugeBand{opacity:.3}
+.cnnGaugeReadout{display:grid;justify-items:center;gap:4px;margin:4px 0 18px}
+.cnnGaugeReadout>div{display:flex;align-items:baseline;gap:8px}
+.cnnGaugeReadout output{color:#f1d58c;font-size:56px;font-weight:900;line-height:1;letter-spacing:-.04em}
+.cnnGaugeReadout small{color:#877c65;font-size:12px}
+.cnnGaugeReadout>strong{color:#d6bd82;font-size:18px;letter-spacing:.1em}
+.cnnGaugeLegend{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;margin:0;padding:0;list-style:none}
+.cnnGaugeLegend li{display:grid;justify-items:center;gap:5px;min-width:0;padding:9px 1px;border:1px solid transparent;border-radius:8px;color:#9f947e;text-align:center}
+.cnnGaugeLegend li[data-active="true"]{border-color:#b4934e66;background:#bc964617;color:#efcf84}
+.cnnGaugeLegend i{display:block;width:18px;height:3px;border-radius:3px;background:var(--cnn-zone)}
+.cnnGaugeLegend li[data-active="true"] i{background:#f1d99c}
+.cnnGaugeLegend span{font-size:11px;line-height:1.3;white-space:nowrap}
+.cnnGaugeLegend small{color:#b6aa92;font-size:10px}
+.cnnGaugeStatus{display:inline-block;margin:0 0 7px;padding:5px 10px;border:1px solid #b2934d50;border-radius:7px;color:#e0c47f;background:#ac823916;font-size:12px;font-weight:750;line-height:1.5}
+.cnnDashboard[data-state="stale"] .cnnGaugeStatus,.cnnDashboard[data-state="failed"] .cnnGaugeStatus,.cnnDashboard[data-state="expired"] .cnnGaugeStatus,.cnnDashboard[data-state="unavailable"] .cnnGaugeStatus{border-style:dashed;color:#e1bc83;background:#a46e2118}
+.cnnGaugeNotice{min-height:1.4em;margin:0 0 12px;color:#c0b49e;font-size:12px;line-height:1.55;overflow-wrap:anywhere}
+.cnnGaugeNotice:empty{display:none}
+.cnnGaugeTimes{display:grid;gap:9px;margin:0 0 16px;padding:12px 0;border-block:1px solid #a4814226}
+.cnnGaugeTimes>div{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.cnnGaugeTimes dt{color:#b3a790;font-size:12px}
+.cnnGaugeTimes dd{margin:0;color:#ded2b8;font-size:12px;text-align:right;overflow-wrap:anywhere}
+.cnnGaugeComparisons{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.cnnGaugeComparisons>div{display:grid;gap:6px;min-width:0;padding:11px 8px;border:1px solid #b28a402b;border-radius:9px;background:#0a0906}
+.cnnGaugeComparisons span{color:#ab9e84;font-size:11px}
+.cnnGaugeComparisons b{color:#e4d4ac;font-size:22px;line-height:1}
+.cnnGaugeComparisons small{color:#b4a58a;font-size:11px;white-space:nowrap}
+.cnnGaugeComparisons em{color:#c8b27c;font-style:normal}
+.cnnGaugeInterpretation{margin:16px 0 12px!important;color:#c4b89f!important;font-size:13px!important;line-height:1.75!important}
+.cnnGaugeFootnote{margin:0 0 10px;color:#b7ac96;font-size:12px;line-height:1.7}
+.cnnGaugeContext .sourceLink{display:inline-flex;align-items:center;min-height:44px;box-sizing:border-box;max-width:100%;padding-block:8px;color:#cdb174;font-size:11px;overflow-wrap:anywhere}
+#homeSentiment.hsCommandSentiment #homeCnnCard{grid-template-columns:minmax(0,1fr)!important;grid-template-rows:14px 32px 23px 15px 12px!important;gap:2px!important;min-height:116px!important;padding:8px 4px!important}
+#homeCnnCard:before{display:none!important}
+#homeSentiment.hsCommandSentiment #homeCnnCard>span:first-child{grid-column:1!important;grid-row:1!important;min-height:0!important;width:100%;font-size:8px!important;line-height:1.15!important;text-align:center!important}
+#homeSentiment.hsCommandSentiment #homeCnnCard>.cnnMiniGauge{display:block!important;grid-column:1!important;grid-row:2!important;min-height:0!important;width:62px;height:32px;max-width:100%;padding:0!important;margin:0!important}
+#homeCnnCard .cnnGaugeCompact{display:block!important;min-height:0!important;width:100%;height:100%;margin:0;padding:0}
+#homeCnnCard .cnnGaugeCompact svg{width:100%;height:100%}
+#homeSentiment.hsCommandSentiment #homeCnnCard>b{grid-column:1!important;grid-row:3!important;align-self:center!important;margin:0!important;font-size:20px!important;line-height:1!important}
+#homeSentiment.hsCommandSentiment #homeCnnCard>em{grid-column:1!important;grid-row:4!important;align-self:center!important;min-height:0!important;margin:0!important;font-size:10px!important;line-height:1.15!important}
+#homeSentiment.hsCommandSentiment #homeCnnCard>small{display:block!important;grid-column:1!important;grid-row:5!important;min-height:0!important;color:#b8aa8f!important;font-size:9px!important;line-height:1.2!important}
+#homeCnnCard[data-cnn-state="stale"]>small,#homeCnnCard[data-cnn-state="failed"]>small,#homeCnnCard[data-cnn-state="expired"]>small{color:#deb67c!important}
+@media(max-width:700px){
+  .cnnDashboardLayout{grid-template-columns:minmax(0,1fr);gap:22px}
+  .cnnGauge{max-width:400px}
+  .cnnGaugeReadout output{font-size:48px}
+  .cnnGaugeLegend li{padding:7px 1px}
+  .cnnGaugeLegend span{font-size:11px}
+  .cnnGaugeLegend small{font-size:10px}
+  .cnnGaugeTimes dd{font-size:12px}
+  .cnnGaugeComparisons b{font-size:21px}
+}
+@media(prefers-reduced-motion:reduce){.cnnGaugeNeedle{transition:none}}

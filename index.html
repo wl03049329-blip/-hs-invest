@@ -303,7 +303,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 </style>
 <link rel="stylesheet" href="portfolio-v6.css?v=20261015-position-correction-v1" />
 <link rel="stylesheet" href="v62-tech.css?v=20260809b" />
-<link rel="stylesheet" href="formal-black-gold.css?v=20261015-story-floating-close-v2" />
+<link rel="stylesheet" href="formal-black-gold.css?v=20261017-cnn-gauge-v11" />
 <style id="radarPhase32CriticalLayout">
 /* Phase 3.2 structural fallback: the renderer is mobile-first even if external CSS is stale. */
 .radarFactorStackV32{display:flex;flex-direction:column;width:100%;min-width:0}
@@ -393,7 +393,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
     <div id="homeSentimentCards" class="homeSentimentCards">
       <button id="homeMarginBalanceCard" class="homeSentimentCard" type="button" data-home-chip="margin"><svg aria-hidden="true"><use href="#i-fund"/></svg><span>台股融資餘額</span><b>—</b><em>載入中</em><small>盤後資料</small></button>
       <button id="homeMaintenanceCard" class="homeSentimentCard" type="button" data-home-chip="margin"><svg aria-hidden="true"><use href="#i-risk-shield"/></svg><span>融資維持率</span><b>—</b><em>載入中</em><small>盤後資料</small></button>
-      <button id="homeCnnCard" class="homeSentimentCard" type="button" data-home-chip="mood"><svg aria-hidden="true"><use href="#i-gauge"/></svg><span>Fear &amp; Greed</span><b>—</b><em>載入中</em><small>更新中</small></button>
+      <button id="homeCnnCard" class="homeSentimentCard" type="button" data-home-chip="mood" aria-controls="cnnFearGreedPanel" aria-label="美股 CNN 恐懼貪婪；查看完整儀表盤"><span>美股 CNN 情緒</span><span class="cnnMiniGauge" data-cnn-mini aria-hidden="true"></span><b>—</b><em>載入中</em><small>更新中</small></button>
       <button id="homeForeignFuturesCard" class="homeSentimentCard" type="button" data-home-chip="futures"><svg aria-hidden="true"><use href="#i-globe"/></svg><span>外資台指期</span><b>—</b><em>載入中</em><small>盤後資料</small></button>
       <button id="homeTmfRatioCard" class="homeSentimentCard" type="button" data-home-chip="futures"><svg aria-hidden="true"><use href="#i-users"/></svg><span>散戶多空比</span><b>—</b><em>載入中</em><small>非三大法人部位推估</small></button>
       <button id="homeSentimentOverviewCard" class="homeSentimentCard" type="button" data-home-chip="overview"><svg aria-hidden="true"><use href="#i-market"/></svg><span>市場總覽</span><b>—</b><em>情緒資料彙整中</em><small>綜合市場判讀</small></button>
@@ -700,8 +700,8 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       <div class="panelTitle"><div><p class="eyebrow">SENTIMENT SUMMARY</p><h2>綜合情緒結論</h2></div><small>台股＋美股</small></div>
       <div id="sentimentSummaryContent"><div class="skeleton">彙整情緒資料中…</div></div>
     </article>
-    <article class="panel">
-      <div class="panelTitle"><div><p class="eyebrow">CNN FEAR &amp; GREED</p><h2>美股恐懼貪婪</h2></div><small>本地 JSON 定時更新</small></div>
+    <article id="cnnFearGreedPanel" class="panel cnnFearGreedPanel chipWide" tabindex="-1" aria-labelledby="cnnGaugeTitle">
+      <div class="panelTitle"><div><p class="eyebrow">CNN FEAR &amp; GREED</p><h2 id="cnnGaugeTitle">美股恐懼貪婪</h2></div><small>市場情緒 · 非交易訊號</small></div>
       <div id="cnnFearGreedContent"><div class="skeleton">載入 CNN 情緒資料中…</div></div>
     </article>
     </div>
@@ -1234,6 +1234,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 <script src="institutional-flow-core.js"></script>
 <script src="market-events-core.js"></script>
 <script src="data-freshness-core.js"></script>
+<script src="cnn-gauge.js?v=20261017-cnn-gauge-v11"></script>
 <script src="personal-capital-input-core.js?v=20260824-phase2"></script>
 <script src="personal-capital-policy-core.js?v=20260824-phase3"></script>
 <script src="personal-capital-ui-core.js?v=20260824-phase4"></script>
@@ -1364,6 +1365,7 @@ let cnnPollTimer=null;
 let cnnPollInFlight=null;
 let cnnLastAttemptAt=0;
 const CNN_POLL_INTERVAL=20*60*1000;
+let cnnGaugeLoadState={phase:"loading",reason:"",kind:"",sourceUpdatedAt:"",updatedAt:""};
 const LIVE_QUOTE_PROXY_KEY=HSStorage.keys.liveQuoteProxy;
 const LONG_RADAR_CODES=new Set(["0050","00662","00757","00830","00935","009815"]);
 const LONG_RADAR_SCORED_CODES=new Set(["0050","00662","00757","00830","00935"]);
@@ -1952,6 +1954,7 @@ function renderTrump(){
   $("#trumpContent").innerHTML=`<div class="trumpList">${safeNews.slice(0,4).map(n=>`<a class="trumpItem" href="${esc(safeTrumpUrl(n.url))}" target="_blank" rel="noopener"><div class="trumpDate">${esc(n.date||"近期")}<br>${esc(n.source||"")}</div><div class="trumpBody"><b>${esc(n.title)}</b><small>${esc(n.market_view||"可能提高市場不確定性，需觀察政策細節與資產實際反應。")}</small><div class="impactTags"><span class="impactTag ${n.risk==="高"?"high":"mid"}">${esc(n.category||"政策")}</span><span class="impactTag">${esc(n.risk||"中")}影響</span></div></div></a>`).join("")}</div>`;
 }
 function validSentimentScore(value){
+  if(value===null||value===undefined||typeof value==="boolean"||(typeof value!=="number"&&typeof value!=="string")||typeof value==="string"&&!value.trim())return null;
   const score=Number(value);
   return Number.isFinite(score)&&score>=0&&score<=100?score:null;
 }
@@ -2002,15 +2005,23 @@ function validateCnnFearGreed(json){
 }
 async function loadCnnFearGreed({preserveOnFailure=false}={}){
   const previous=cnnFearGreed;
+  let metadata={sourceUpdatedAt:"",updatedAt:""},kind="";
   try{
     const response=await fetch("cnn-fear-greed.json?ts="+Date.now(),{cache:"no-store"});
-    if(!response.ok)throw new Error("not found");
-    const next=validateCnnFearGreed(await response.json());
-    if(!next)throw new Error("invalid data");
+    if(!response.ok)throw new Error("CNN 本地資料讀取失敗（HTTP "+response.status+"）");
+    const payload=await response.json();
+    metadata={sourceUpdatedAt:Number.isFinite(Date.parse(payload?.source_updated_at))?String(payload.source_updated_at):"",updatedAt:Number.isFinite(Date.parse(payload?.updated_at))?String(payload.updated_at):""};
+    const next=validateCnnFearGreed(payload);
+    if(!next){
+      kind=Date.now()-Date.parse(metadata.updatedAt)>7*86400000||Date.now()-Date.parse(metadata.sourceUpdatedAt)>10*86400000?"expired":"unavailable";
+      throw new Error(kind==="expired"?"資料已超過既有驗證期限":"分數、比較值、來源或日期未通過既有驗證");
+    }
     cnnFearGreed=next;
+    cnnGaugeLoadState={phase:"ready",reason:"",kind:"",...metadata};
     return true;
-  }catch{
+  }catch(error){
     cnnFearGreed=preserveOnFailure?previous:null;
+    cnnGaugeLoadState={phase:"failed",kind,reason:error instanceof SyntaxError?"CNN 本地資料格式不正確":error.message,...metadata};
     return false;
   }
 }
@@ -2018,10 +2029,15 @@ function scheduleCnnPoll(delay=CNN_POLL_INTERVAL){
   clearTimeout(cnnPollTimer);
   cnnPollTimer=null;
   if(document.hidden)return;
+  // Reuse the one poll timer to invalidate a displayed cache at its hard deadline.
+  const deadline=cnnFearGreed?Math.min(Date.parse(cnnFearGreed.updatedAt)+7*86400000,Date.parse(cnnFearGreed.sourceUpdatedAt)+10*86400000)+1:null;
+  const remaining=deadline-Date.now();
+  if(deadline!==null&&remaining>0)delay=Math.min(delay,remaining);
   cnnPollTimer=setTimeout(()=>refreshCnnFearGreed(),delay);
 }
 async function refreshCnnFearGreed({force=false}={}){
   if(document.hidden)return false;
+  renderCnnPresentationViews();
   if(cnnPollInFlight)return cnnPollInFlight;
   const now=Date.now(),elapsed=now-cnnLastAttemptAt;
   if(!force&&elapsed<CNN_POLL_INTERVAL){
@@ -2030,8 +2046,11 @@ async function refreshCnnFearGreed({force=false}={}){
   }
   cnnLastAttemptAt=now;
   cnnPollInFlight=(async()=>{
+    cnnGaugeLoadState={...cnnGaugeLoadState,phase:"loading"};
+    renderCnnPresentationViews();
     const success=await loadCnnFearGreed({preserveOnFailure:true});
     renderSentiment();
+    renderCnnPresentationViews();
     scheduleCnnPoll();
     return success;
   })().finally(()=>{cnnPollInFlight=null});
@@ -2243,10 +2262,10 @@ function homeMovingAverageStates(x){
 }
 function updateHomeFastFacts(){
   const target=$("#homeFastFacts");if(!target)return;
-  const risk=marketChip.marginRisk,marginValues=HSMarginRiskCore.displayValues(risk);
+  const cnnView=cnnGaugePresentation(),risk=marketChip.marginRisk,marginValues=HSMarginRiskCore.displayValues(risk);
   const featured=[...all].filter(x=>DEFAULT_WATCHLIST.some(item=>item.id===x.id)).sort((a,b)=>(displayScore(b,strategyModeFor(b,"featured"))??-1)-(displayScore(a,strategyModeFor(a,"featured"))??-1));
   const best=featured[0],bestMode=best?strategyModeFor(best,"featured"):null;
-  target.innerHTML=`<span><b>CNN</b>${cnnFearGreed?`${fmt(cnnFearGreed.score)}｜${esc(cnnFearGreed.label)}`:"資料暫缺"}</span><span><b>🏦 推估融資本金</b>${Number.isFinite(marginValues.financingPrincipal)?formatYi(marginValues.financingPrincipal):"資料暫缺"}</span><span><b>🛡️ 推估維持率</b>${Number.isFinite(marginValues.maintenanceRatio)?`${fmt(marginValues.maintenanceRatio)}%｜${esc(HSMarginRiskCore.ratioBand(marginValues.maintenanceRatio).label)}`:"資料暫無可靠來源"}<small>盤後 ${esc(marginValues.dataDate||"—")}</small></span><span><b>精選買點</b>${best?`${esc(best.id)}｜${c4DecisionScoreText(best,bestMode)}分`:"載入中"}</span>`;
+  target.innerHTML=`<span><b>CNN</b><span data-cnn-readout>${cnnInlinePresentation(cnnView)}</span></span><span><b>🏦 推估融資本金</b>${Number.isFinite(marginValues.financingPrincipal)?formatYi(marginValues.financingPrincipal):"資料暫缺"}</span><span><b>🛡️ 推估維持率</b>${Number.isFinite(marginValues.maintenanceRatio)?`${fmt(marginValues.maintenanceRatio)}%｜${esc(HSMarginRiskCore.ratioBand(marginValues.maintenanceRatio).label)}`:"資料暫無可靠來源"}<small>盤後 ${esc(marginValues.dataDate||"—")}</small></span><span><b>精選買點</b>${best?`${esc(best.id)}｜${c4DecisionScoreText(best,bestMode)}分`:"載入中"}</span>`;
   $("#todayBuyDecisionText").textContent=todayBuyDecisionText();
 }
 function todayBuyDecisionText(){
@@ -2256,7 +2275,8 @@ function todayBuyDecisionText(){
   const swings=all.filter(x=>swingIds.has(x.id)).map(x=>({x,d:strategyDecisionFor(x,"swing")})).filter(row=>Number.isFinite(row.d?.score)).sort((a,b)=>b.d.score-a.d.score);
   const longReady=longs.filter(row=>row.d.score>=60).slice(0,2),swingReady=swings.filter(row=>["first","confirmed"].includes(row.d.stage?.key));
   const fear=cnnFearGreed?.score<=44||marketFearMetric()>=60;
-  const opening=fear?"市場情緒偏恐懼":"市場情緒未進入極端恐慌";
+  const cnnView=cnnGaugePresentation();
+  const opening=cnnView.cnn?`美股 CNN ${cnnView.cnn.label}（${cnnView.status}）`:`美股 CNN ${cnnView.status}，不作市場情緒推論`;
   const longText=longReady.length?`${longReady.map(row=>row.x.id).join("、")}進入長期${longReady[0].d.stage?.label||"正式訊號區"}`:"長期核心 ETF 尚未進入明顯加碼區";
   const swingText=swingReady.length?`${swingReady.map(row=>row.x.id).join("、")}出現波段初步確認`:`波段 ETF 仍等待站回短期均線與動能轉強`;
   return `${opening}，${longText}；${swingText}。資料為延遲行情與最近盤後估值的客觀試算。`;
@@ -3606,7 +3626,7 @@ function decisionCenterSystemHealth({dualTrack,officialRows,historyBySymbol,leve
   return{level,label:DECISION_CENTER_HEALTH_LEVELS[level].label,marketState,officialDate,items};
 }
 function decisionCenterHealthHtml(health){
-  const rows=health.items.map(item=>`<article class="hsSystemHealthRow is-${item.level.toLowerCase()}"><span><b>${esc(item.title)}</b><small>${esc(item.detail)}</small></span><strong>${esc(item.status)}</strong>${item.impact?`<p>影響：${esc(item.impact)}${item.unaffected?`<em>不影響：${esc(item.unaffected)}</em>`:""}</p>`:""}</article>`).join("");
+  const rows=health.items.map(item=>`<article data-health-key="${esc(item.key)}" class="hsSystemHealthRow is-${item.level.toLowerCase()}"><span><b>${esc(item.title)}</b><small>${esc(item.detail)}</small></span><strong>${esc(item.status)}</strong>${item.impact?`<p>影響：${esc(item.impact)}${item.unaffected?`<em>不影響：${esc(item.unaffected)}</em>`:""}</p>`:""}</article>`).join("");
   return`<details class="hsHomeSystemDetails is-${health.level.toLowerCase()}"><summary>查看資料健康細節</summary><div class="hsSystemHealthDetail"><header><span>資料健康 <small>SYSTEM HEALTH</small></span><b>${esc(health.label)}</b></header>${rows}<p>資料健康只讀取、驗證與顯示，不會重算或改寫任何正式分數。</p></div></details>`;
 }
 function decisionCenterDistanceText(value){
@@ -3617,13 +3637,13 @@ function renderDecisionCenter(longs,dualTrack,leverageState){
   const host=$("#hsDecisionRoomGrid");if(!host)return;
   const officialRows=decisionCenterOfficialRows(dualTrack,longs),dashboardSymbols=new Set(HS_DASHBOARD_C4_SYMBOLS),dashboardOfficialRows=officialRows.filter(row=>dashboardSymbols.has(row.symbol)),highest=selectDecisionCenterHighest(dashboardOfficialRows),liveMove=selectDecisionCenterLiveMove(dualTrack),marketState=dualTrack?.market_state||"STALE";
   let forwardRecords=null;try{forwardRecords=window.HSPersistenceCore?.listForwardRecords?.()}catch{forwardRecords=null}
-  const health=decisionCenterSystemHealth({dualTrack,officialRows,historyBySymbol:officialC4HistoryViewModel(finalizedCoreScoreHistoryArtifact),leverageState,cnnSnapshot:cnnFearGreed?.snapshot||null,forwardState:{available:Array.isArray(forwardRecords),status:Array.isArray(forwardRecords)?"READY":"FAIL_CLOSED",detail:Array.isArray(forwardRecords)?`${forwardRecords.length} 筆驗證紀錄｜功能可用`:"驗證資料無法讀取"},adHocState:{available:typeof window.HSFinalCoreProduction?.buildAdHocScore==="function"},targetDate:dualTrack?.target_date||taipeiToday(),now:new Date()});
+  const health=decisionCenterSystemHealth({dualTrack,officialRows,historyBySymbol:officialC4HistoryViewModel(finalizedCoreScoreHistoryArtifact),leverageState,cnnSnapshot:cnnGaugePresentation().snapshot,forwardState:{available:Array.isArray(forwardRecords),status:Array.isArray(forwardRecords)?"READY":"FAIL_CLOSED",detail:Array.isArray(forwardRecords)?`${forwardRecords.length} 筆驗證紀錄｜功能可用`:"驗證資料無法讀取"},adHocState:{available:typeof window.HSFinalCoreProduction?.buildAdHocScore==="function"},targetDate:dualTrack?.target_date||taipeiToday(),now:new Date()});
   const live=liveMove.item?.live,liveReady=marketState==="OPEN"&&liveMove.status==="READY",liveLabel=liveReady?"LIVE":marketState==="CLOSED"?"收盤":marketState==="PREMARKET"?"盤前":marketState==="HOLIDAY"?"休市":"UNAVAILABLE",liveTone=liveReady?"is-live":liveLabel==="UNAVAILABLE"?"is-warning":"is-neutral";
   const latestLive=[...LONG_RADAR_SCORED_CODES].map(symbol=>dualTrack?.items?.[symbol]?.live?.market_as_of).filter(Boolean).sort().at(-1);
   const focusRows=sortDecisionCenterC4Rows(decisionCenterC4Rows(dashboardOfficialRows,longs,dualTrack),"score"),focus=focusRows[0],focusNext=focus?.next,focusDistance=focusNext?.highest?"最高決策區":Number.isFinite(focusNext?.distance)?`${decisionCenterDistanceText(focusNext.distance)} 分`:"—",focusStatus=!Number.isFinite(focus?.score)?"UNAVAILABLE":focus?.useLive?"LIVE":health.marketState==="PREMARKET"?"前日 FINAL":"FINAL",focusThreshold=focusNext?.highest?"已在最高決策區":Number.isFinite(focusNext?.distance)?`距${focusNext.nextLabel||"下一級"}僅 ${focusDistance}`:"門檻資料暫缺",focusThresholdDetail=focusNext?.highest?"維持紀律，等待布局":Number.isFinite(focusNext?.distance)?`再增加 ${focusDistance}即進入下一級`:focus?.unavailableReason||"維持觀察 · 等待時機";
   const lastUpdate=liveReady?(formatHomeQuoteTime(latestLive)||"—"):Number.isFinite(focus?.score)?(formatHomeQuoteTime(highest?.asOf)||highest?.date||"—"):"尚無今日有效盤中資料";
-  const leverage=decisionCenterLeverageSummary(leverageState),cnnLabel=cnnFearGreed?.label||"資料待更新",healthTone=health.level==="HEALTHY"?"is-ok":"is-warning";
-host.innerHTML=`<div class="hsCoreDecisionHero"><div class="hsCoreIdentity"><span>${esc(focus?.symbol||highest?.symbol||"—")}</span><b>${esc(focus?.name||"正式資料暫不可用")}</b><small>${esc(focus?.tier||highest?.tier||"資料更新中")} ｜ 長期趨勢</small></div><div class="hsCoreHeroScore"><span>目前分數 <i>${focusStatus}</i></span><b>${Number.isFinite(focus?.score)?focus.score:"—"}<small>分</small></b><strong>${esc(focus?.tier||highest?.tier||"UNAVAILABLE")}</strong></div><div class="hsCoreThreshold"><span>距下一級門檻</span><b>${esc(focusThreshold)}</b><small>${esc(focusThresholdDetail)}</small></div></div><div class="hsDecisionStatusRail"><article><svg aria-hidden="true"><use href="#i-market"/></svg><span>市場狀態<b>${esc(decisionCenterMarketLabel(health.marketState))}</b><small>${esc(liveReady?`LIVE ${lastUpdate}`:health.marketState==="PREMARKET"?`前一交易日 FINAL ${highest?.date||"—"}`:`FINAL ${highest?.date||"—"}`)}</small></span></article><article><svg aria-hidden="true"><use href="#i-fund"/></svg><span>資料狀態<b class="${healthTone}">${esc(health.label)}</b><small>${esc(health.officialDate||"系統確認中")}</small></span></article><article><svg aria-hidden="true"><use href="#i-gauge"/></svg><span>市場情緒<b>${esc(cnnLabel)}</b><small>${Number.isFinite(cnnFearGreed?.score)?`Fear & Greed ${fmt(cnnFearGreed.score)}`:"不以缺值補算"}</small></span></article><article><svg aria-hidden="true"><use href="#i-chip"/></svg><span>00631L 狀態<b>${esc(leverage.label)}</b><small>${esc(leverage.detail)}</small></span></article></div>${decisionCenterHealthHtml(health)}`;
+  const leverage=decisionCenterLeverageSummary(leverageState),cnnView=cnnGaugePresentation(),healthTone=health.level==="HEALTHY"?"is-ok":"is-warning";
+host.innerHTML=`<div class="hsCoreDecisionHero"><div class="hsCoreIdentity"><span>${esc(focus?.symbol||highest?.symbol||"—")}</span><b>${esc(focus?.name||"正式資料暫不可用")}</b><small>${esc(focus?.tier||highest?.tier||"資料更新中")} ｜ 長期趨勢</small></div><div class="hsCoreHeroScore"><span>目前分數 <i>${focusStatus}</i></span><b>${Number.isFinite(focus?.score)?focus.score:"—"}<small>分</small></b><strong>${esc(focus?.tier||highest?.tier||"UNAVAILABLE")}</strong></div><div class="hsCoreThreshold"><span>距下一級門檻</span><b>${esc(focusThreshold)}</b><small>${esc(focusThresholdDetail)}</small></div></div><div class="hsDecisionStatusRail"><article><svg aria-hidden="true"><use href="#i-market"/></svg><span>市場狀態<b>${esc(decisionCenterMarketLabel(health.marketState))}</b><small>${esc(liveReady?`LIVE ${lastUpdate}`:health.marketState==="PREMARKET"?`前一交易日 FINAL ${highest?.date||"—"}`:`FINAL ${highest?.date||"—"}`)}</small></span></article><article><svg aria-hidden="true"><use href="#i-fund"/></svg><span>資料狀態<b data-health-overall class="${healthTone}">${esc(health.label)}</b><small>${esc(health.officialDate||"系統確認中")}</small></span></article><article><svg aria-hidden="true"><use href="#i-gauge"/></svg><span>美股情緒<span data-cnn-readout>${cnnInlinePresentation(cnnView)}</span></span></article><article><svg aria-hidden="true"><use href="#i-chip"/></svg><span>00631L 狀態<b>${esc(leverage.label)}</b><small>${esc(leverage.detail)}</small></span></article></div>${decisionCenterHealthHtml(health)}`;
   const caption=$("#hsDecisionMarketCaption");if(caption)caption.textContent=health.marketState==="PREMARKET"?"目前顯示前一交易日收盤資料":`${decisionCenterMarketLabel(health.marketState)} · 掌握下一步佈局`;
   const headerState=$("#homeHeaderMarketState"),headerUpdate=$("#homeHeaderLastUpdate");if(headerState)headerState.textContent=decisionCenterMarketLabel(health.marketState);if(headerUpdate)headerUpdate.textContent=`最後更新 ${lastUpdate}`;
   const c4Grid=$("#hsDashboardC4Grid");if(c4Grid)c4Grid.innerHTML=decisionCenterC4Cards(dashboardOfficialRows,longs,dualTrack)||'<div class="newsEmpty">正式 C4 資料暫不可用。</div>';
@@ -4540,37 +4560,114 @@ function setHomeSentimentCard(selector,{value,status,date,snapshot}){
   if(dateNode)dateNode.textContent=`${date||"資料日期待更新"}｜${HSDataFreshnessCore.label(snapshot?.status)}`;
   card.dataset.freshness=String(snapshot?.status||HSDataFreshnessCore.STATUS.WAITING).toLowerCase();
 }
+function cnnGaugePresentation(){
+  const original=cnnFearGreed,load=cnnGaugeLoadState;
+  const expired=original&&(!isReasonableTimestamp(original.updatedAt,7)||!isReasonableTimestamp(original.sourceUpdatedAt,10));
+  const cnn=expired?null:original;
+  const snapshot=cnn?HSDataFreshnessCore.normalize({value:cnn.score,data_date:cnn.sourceUpdatedAt.slice(0,10),updated_at:cnn.updatedAt,source:"CNN Fear & Greed Index"},{maxTradingDayAge:3}):null;
+  let state="current",status="最新資料",reason="";
+  if(expired||!cnn&&load.kind==="expired"){state="expired";status="資料已過期";reason="沒有符合既有驗證期限的分數；未以 0 代替。";}
+  else if(load.phase==="loading"){state="loading";status=cnn?"更新中｜顯示最後有效資料":"載入中";reason="每 20 分鐘檢查本地 CNN JSON；不向 CNN 額外請求。";}
+  else if(load.phase==="failed"){state=cnn?"failed":"unavailable";status=cnn?"更新失敗｜保留最後資料":"資料暫缺";reason=load.reason;}
+  else if(!cnn){state="unavailable";status="資料暫缺";reason="尚無通過驗證的分數，不以 0 代替。";}
+  else if(snapshot.status!=="LATEST"){state="stale";status="資料可能過期｜待更新";reason="以下為最後有效資料，不代表目前最新市場情緒。";}
+  return{cnn,state,status,reason,snapshot:cnn?{...snapshot,status:state==="failed"?"FAILED":state==="loading"?"WAITING":snapshot.status}:null,sourceUpdatedAt:original?.sourceUpdatedAt||load.sourceUpdatedAt,updatedAt:original?.updatedAt||load.updatedAt};
+}
+function cnnPresentationCaption(view=cnnGaugePresentation()){
+  return `${view.status}｜來源 ${formatTaipeiDateTime(view.sourceUpdatedAt)}｜取得 ${formatTaipeiDateTime(view.updatedAt)}`;
+}
+function cnnInlinePresentation(view=cnnGaugePresentation()){
+  return `<b>${HSCnnGauge.format(view.cnn?.score)}</b><em>${esc(view.cnn?.label||"資料暫缺")}</em><small>${esc(cnnPresentationCaption(view))}</small>`;
+}
+function renderCnnPresentationViews(){
+  const view=cnnGaugePresentation();
+  renderCnnDashboard();renderHomeCnnGauge();renderChipOverview();renderMarketSentimentSummary();
+  document.querySelectorAll("[data-cnn-readout]").forEach(node=>{node.innerHTML=cnnInlinePresentation(view);node.dataset.cnnState=view.state;});
+  const summary=$("#sentimentSummaryContent");if(summary)summary.innerHTML=`<p class="interpretation">${esc(combinedSentimentConclusion())}</p>`;
+  const radar=$("#radarSentimentText");if(radar)radar.textContent=combinedSentimentConclusion();
+  const decision=$("#todayBuyDecisionText");if(decision)decision.textContent=todayBuyDecisionText();
+  const health=document.querySelector('[data-health-key="cnn"]');
+  if(health){
+    const ready=view.state==="current";
+    health.className="hsSystemHealthRow "+(ready?"is-healthy":"is-warning");
+    health.querySelector("strong").textContent=view.status;
+    health.querySelector("small").textContent=cnnPresentationCaption(view);
+    const detail=health.closest(".hsHomeSystemDetails"),rows=[...detail.querySelectorAll(".hsSystemHealthRow")];
+    const level=rows.some(row=>row.classList.contains("is-error"))?"ERROR":rows.some(row=>row.classList.contains("is-warning"))?"WARNING":"HEALTHY";
+    detail.className="hsHomeSystemDetails is-"+level.toLowerCase();
+    detail.querySelector("header>b").textContent=DECISION_CENTER_HEALTH_LEVELS[level].label;
+    const overall=document.querySelector("[data-health-overall]");if(overall){overall.textContent=DECISION_CENTER_HEALTH_LEVELS[level].label;overall.className=level==="HEALTHY"?"is-ok":"is-warning";}
+  }
+}
+function renderHomeCnnGauge(){
+  const card=$("#homeCnnCard");if(!card)return;
+  const view=cnnGaugePresentation();
+  HSCnnGauge.update(card.querySelector("[data-cnn-mini]"),view.cnn,{compact:true});
+  card.querySelector("b").textContent=HSCnnGauge.format(view.cnn?.score);
+  card.querySelector("em").textContent=view.cnn?.label||"資料暫缺";
+  card.querySelector("small").textContent=view.state==="current"?"最新資料":view.state==="failed"?"更新失敗":view.state==="stale"?"資料可能過期":view.status;
+  card.dataset.cnnState=view.state;
+  card.dataset.freshness=view.state==="current"?"latest":view.state;
+  card.querySelector("span").textContent="美股 CNN 情緒";
+  card.setAttribute("aria-label","美股 CNN 恐懼貪婪 "+HSCnnGauge.format(view.cnn?.score)+(view.cnn?" 分，"+view.cnn.label:"")+"；"+view.status+"；查看完整儀表盤");
+  card.title=cnnPresentationCaption(view);
+}
+function renderCnnDashboard(){
+  const target=$("#cnnFearGreedContent");if(!target)return;
+  if(!target.querySelector(".cnnDashboard"))target.innerHTML='<section class="cnnDashboard"><header class="cnnDashboardHead"><span>美股市場情緒 · 0–100</span><button type="button" data-cnn-refresh>重新取得</button></header><div class="cnnDashboardLayout"><div data-cnn-dial></div><div class="cnnGaugeContext"><p class="cnnGaugeStatus" role="status" aria-live="polite"></p><p class="cnnGaugeNotice"></p><dl class="cnnGaugeTimes"><div><dt>來源資料時間（台北）</dt><dd data-cnn-time="source"></dd></div><div><dt>本站取得時間（台北）</dt><dd data-cnn-time="local"></dd></div></dl><div class="cnnGaugeComparisons" aria-label="真實歷史情緒比較">'+[["day","前一日"],["week","一週前"],["month","一個月前"]].map(([key,label])=>'<div data-cnn-compare="'+key+'"><span>'+label+'</span><b>—</b><small>較當時 <em>—</em></small></div>').join("")+'</div><p class="interpretation cnnGaugeInterpretation"></p><p class="cnnGaugeFootnote">此為美股市場情緒指數，不代表台股籌碼或完整市場結論，亦非買賣訊號。本站沿用 CNN 結構化 JSON 與既有驗證；缺值不補 0。</p><a class="sourceLink" data-cnn-source href="https://www.cnn.com/markets/fear-and-greed" target="_blank" rel="noopener">資料來源：CNN Fear &amp; Greed Index ↗</a></div></div></section>';
+  const view=cnnGaugePresentation(),dashboard=target.querySelector(".cnnDashboard");
+  dashboard.dataset.state=view.state;
+  HSCnnGauge.update(target.querySelector("[data-cnn-dial]"),view.cnn);
+  target.querySelector(".cnnGaugeStatus").textContent=view.status;
+  target.querySelector(".cnnGaugeNotice").textContent=view.reason;
+  target.querySelector('[data-cnn-time="source"]').textContent=formatTaipeiDateTime(view.sourceUpdatedAt);
+  target.querySelector('[data-cnn-time="local"]').textContent=formatTaipeiDateTime(view.updatedAt);
+  target.querySelector("[data-cnn-refresh]").disabled=view.state==="loading";
+  target.querySelector(".cnnGaugeInterpretation").textContent=view.cnn?.summary||"資料暫時無法取得；不以單一情緒指數判定進出場。";
+  target.querySelector("[data-cnn-source]").href=view.cnn?.sourceUrl||"https://www.cnn.com/markets/fear-and-greed";
+  for(const key of ["day","week","month"]){
+    const row=target.querySelector('[data-cnn-compare="'+key+'"]');
+    row.querySelector("b").textContent=HSCnnGauge.format(view.cnn?.[key]);
+    row.querySelector("em").textContent=HSCnnGauge.comparison(view.cnn?.score,view.cnn?.[key]);
+  }
+}
+function openCnnGauge(event){
+  event?.stopPropagation();
+  switchTab("sentiment",{scroll:false});switchChipTab("mood",{scroll:false});
+  requestAnimationFrame(()=>{const panel=$("#cnnFearGreedPanel");panel?.focus({preventScroll:true});panel?.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"});});
+}
 function renderHomeSentimentCards(){
-  const risk=marketChip.marginRisk,values=HSMarginRiskCore.displayValues(risk),cnn=cnnFearGreed,foreign=futuresPosition?.foreign_tx,tmf=futuresPosition?.estimated_non_institutional_tmf;
+  const risk=marketChip.marginRisk,values=HSMarginRiskCore.displayValues(risk),foreign=futuresPosition?.foreign_tx,tmf=futuresPosition?.estimated_non_institutional_tmf;
   const marginSnapshot=risk?.snapshot||HSDataFreshnessCore.normalize({});
-  const cnnSnapshot=cnn?.snapshot||HSDataFreshnessCore.normalize({});
+
   const futuresSnapshot=futuresPosition?.snapshot||HSDataFreshnessCore.normalize({});
-  setHomeSentimentCard("#homeMarginBalanceCard",{value:Number.isFinite(values.financingPrincipal)?formatYi(values.financingPrincipal):"—",status:risk?.interpretation?.label||"資料尚未更新",date:values.dataDate,snapshot:marginSnapshot});
+  setHomeSentimentCard("#homeMarginBalanceCard",{value:Number.isFinite(values.financingPrincipal)?formatYi(values.financingPrincipal):"—",status:Number.isFinite(values.financingPrincipal)?risk?.interpretation?.label||"待判讀":"資料尚未更新",date:values.dataDate,snapshot:marginSnapshot});
   setHomeSentimentCard("#homeMaintenanceCard",{value:Number.isFinite(values.maintenanceRatio)?`${fmt(values.maintenanceRatio)}%`:"—",status:maintenanceDisplayLabel(values.maintenanceRatio),date:values.dataDate,snapshot:marginSnapshot});
-  setHomeSentimentCard("#homeCnnCard",{value:Number.isFinite(cnn?.score)?fmt(cnn.score):"—",status:cnn?.label||"資料尚未更新",date:cnnSnapshot.data_date,snapshot:cnnSnapshot});
+
+  renderHomeCnnGauge();
   const futuresFreshness=futuresFreshnessLabel(futuresPosition);
-  setHomeSentimentCard("#homeForeignFuturesCard",{value:Number.isFinite(foreign?.net)?`${foreign.net<0?"淨空":"淨多"} ${fmt(Math.abs(foreign.net))} 口`:"—",status:Number.isFinite(foreign?.net)?`${foreign.net>0?"偏多":"偏空"}｜${futuresFreshness}`:"資料尚未更新",date:futuresPosition?.dataDate,snapshot:futuresSnapshot});
-  const ratio=Number.isFinite(tmf?.long)&&Number.isFinite(tmf?.short)&&tmf.short>0?tmf.long/tmf.short:null;
+  setHomeSentimentCard("#homeForeignFuturesCard",{value:Number.isFinite(foreign?.net)?`${foreign.net<0?"淨空":"淨多"} ${fmt(Math.abs(foreign.net))} 口`:"—",status:Number.isFinite(foreign?.net)?`${foreign.net>0?"偏多":foreign.net<0?"偏空":"淨部位為零"}｜${futuresFreshness}`:"資料尚未更新",date:futuresPosition?.dataDate,snapshot:futuresSnapshot});
+  const ratio=Number.isFinite(tmf?.long)&&tmf.long>=0&&Number.isFinite(tmf?.short)&&tmf.short>0?tmf.long/tmf.short:null;
   setHomeSentimentCard("#homeTmfRatioCard",{value:Number.isFinite(ratio)?ratio.toFixed(2):"—",status:Number.isFinite(ratio)?`${ratio>1.1?"偏多":ratio<.9?"偏空":"中性"}｜${futuresFreshness}`:"資料尚未更新",date:futuresPosition?.dataDate,snapshot:futuresSnapshot});
-  const overviewValue=cnn?.label||risk?.interpretation?.label||"資料更新中";
-  const overviewHint=/貪婪|偏熱/.test(overviewValue)?"避免追高":/恐懼|偏冷|壓力/.test(overviewValue)?"分批觀察":"等待回檔";
-  setHomeSentimentCard("#homeSentimentOverviewCard",{value:overviewValue,status:overviewHint,date:values.dataDate||futuresPosition?.dataDate||cnnSnapshot.data_date,snapshot:marginSnapshot});
-  const summary=$("#homeSentimentConclusion");if(summary)summary.innerHTML=`<b>市場情緒：${esc(overviewValue)}</b><span>${esc(combinedSentimentConclusion())}</span>`;
+  renderMarketSentimentSummary();
+}
+function marketSentimentPresentation(){
+  const risk=marketChip.marginRisk,values=HSMarginRiskCore.displayValues(risk);
+  const current=(snapshot,date)=>{
+    if(!snapshot||snapshot.status!=="LATEST")return snapshot?.status||"WAITING";
+    return HSDataFreshnessCore.normalize({data_date:date||snapshot.data_date,updated_at:snapshot.updated_at}).status;
+  };
+  return HSCnnGauge.marketCoverage({values,marginStatus:current(risk?.snapshot,values.dataDate),futures:futuresPosition,futuresStatus:current(futuresPosition?.snapshot,futuresPosition?.dataDate),cnnView:cnnGaugePresentation()});
+}
+function renderMarketSentimentSummary(){
+  const view=marketSentimentPresentation();
+  const snapshot=HSDataFreshnessCore.normalize({});
+  setHomeSentimentCard("#homeSentimentOverviewCard",{value:view.value,status:view.hint,date:"各來源獨立日期",snapshot});
+  const card=$("#homeSentimentOverviewCard");if(card){card.dataset.freshness=view.missing.length?"waiting":view.outdated.length?"stale":"latest";card.querySelector("small").textContent=`台股 ${4-view.missing.length}/4 項｜各來源獨立日期`;}
+  const summary=$("#homeSentimentConclusion");if(summary)summary.innerHTML=`<b>市場總覽：${esc(view.value)}</b><span>${esc(view.text)}</span>`;
 }
 function combinedSentimentConclusion(){
-  const margin=marketChip.margin,cnn=cnnFearGreed,risk=marketChip.marginRisk,ratio=risk?.maintenance_ratio;
-  if(!margin&&!cnn)return"台股融資與美股情緒資料尚未更新，暫不做綜合判斷。";
-  if(cnn&&Number.isFinite(ratio?.value)&&cnn.score<=44&&ratio.percentile_60d<=30)return"CNN 處於恐懼區、融資維持率位於偏低區，市場壓力較大；長期核心 ETF 可觀察分批規劃，但波段 ETF 仍需等待止跌。";
-  if(cnn&&Number.isFinite(ratio?.value)&&cnn.score>=56&&margin?.daily>0&&ratio.percentile_60d>=50)return"市場情緒偏貪婪、融資餘額增加且維持率仍高，尚未出現恐慌型買點。";
-  if(!margin)return`美股目前為${cnn.label}，但台股融資資料尚未更新，先不要下綜合結論。`;
-  if(!cnn)return`台股融資為${margin.label}，但 CNN 情緒資料暫時無法取得，先以價格止跌與法人動向為主。`;
-  if(cnn.score<=24&&margin.daily>.05)return"美股極度恐懼，但台股融資仍增加，需防散戶逆勢接刀。";
-  if(cnn.score>=56&&margin.score>=65)return"海外情緒貪婪且台股融資升溫，追價風險提高。";
-  if(cnn.score<=44&&margin.score<40)return"恐慌偏高、台股正在去槓桿，開始進入觀察區，但尚未確認止跌。";
-  if(cnn.score<=24)return"美股極度恐懼，台股融資尚未同步明顯退場；可觀察，但不能直接視為進場訊號。";
-  if(cnn.score>=75)return"美股情緒極度貪婪，台股融資尚未過熱，但仍應避免追高並控管部位。";
-  if(margin.score>=65)return`台股融資${margin.label}、美股情緒${cnn.label}，短線追價風險正在增加。`;
-  return`美股情緒${cnn.label}、台股融資${margin.label}，目前沒有一致的極端訊號，維持分批與趨勢確認。`;
+  return marketSentimentPresentation().text;
 }
 function renderSentiment(){
   const margin=marketChip.margin,risk=marketChip.marginRisk;
@@ -4580,8 +4677,8 @@ function renderSentiment(){
   const marketBreakdown=risk?Object.entries(risk.markets||{}).filter(([key])=>key!=="combined").map(([key,row])=>`<p class="footnote"><b>${key.toUpperCase()}</b>｜擔保品 ${formatYi(row.collateral_market_value)}｜推估本金 ${formatYi(row.estimated_financing_principal)}｜維持率 ${fmt(row.maintenance_ratio)}%</p>`).join(""):"";
   const coverage=risk?.coverage||{};
   $("#fomoContent").innerHTML=risk?`${marginRiskCompactHtml(risk)}<details class="sentimentDetails"><summary>查看 FOMO、推估方法、缺漏與資料來源</summary><div class="sentimentDetailsBody">${fomoDetail}<p class="footnote">配對 ${fmt(coverage.matched_count||0)} 檔｜缺漏 ${fmt(coverage.missing_count||0)} 檔｜股數覆蓋 ${Number.isFinite(coverage.coverage_ratio)?fmt(coverage.coverage_ratio)+"%":"—"}｜沿用近期收盤 ${fmt(coverage.stale_price_count||0)} 檔</p>${marketBreakdown}<p class="footnote">暖機 ${fmt(risk.model?.warmup_trading_days||0)} 個交易日。市場推估融資維持率僅用於觀察整體融資戶壓力，不代表個人帳戶維持率或追繳狀態。${esc(risk.disclaimer||"")}</p><p class="footnote">${esc(risk.methodology||"")}</p>${missingDetail}<div class="marginSources"><a class="sourceLink" href="${esc(risk.source_url)}" target="_blank" rel="noopener">TWSE 官方融資與收盤資料</a><a class="sourceLink" href="${esc(risk.secondary_source_url)}" target="_blank" rel="noopener">TPEx 官方融資與收盤資料</a><a class="sourceLink" href="${esc(risk.rule_url)}" target="_blank" rel="noopener">法規參考</a></div></div></details>`:'<div class="newsEmpty sentimentUnavailable">台股融資風險資料尚未更新；不會以 0 代替缺值。</div>';
-  const cnn=cnnFearGreed;
-  $("#cnnFearGreedContent").innerHTML=cnn?`<div class="fomoHero"><div><div class="fomoScore ${cnn.score<=44?"moodDown":cnn.score>=56?"moodUp":"moodFlat"}">${fmt(cnn.score)}</div><span>${cnn.label}</span></div></div><p class="interpretation">${esc(cnn.summary)}</p><details class="sentimentDetails"><summary>查看歷史分數與資料來源</summary><div class="sentimentDetailsBody"><div class="detailMeta"><b>CNN 指數</b><small>資料更新<br>${esc(formatTaipeiDateTime(cnn.sourceUpdatedAt))}（台北）</small></div><div class="miniStats"><div><span>前一日</span><b>${fmt(cnn.day)}</b></div><div><span>1 週前</span><b>${fmt(cnn.week)}</b></div><div><span>1 月前</span><b>${fmt(cnn.month)}</b></div></div><div class="scoreBar fomoBar"><i style="width:${cnn.score}%"></i></div><p class="footnote">指數衡量市場情緒，不是買賣訊號；本站透過 GitHub Actions 讀取 CNN 結構化 JSON 後寫入本地檔案。</p><a class="sourceLink" href="${esc(cnn.sourceUrl)}" target="_blank" rel="noopener">資料來源：CNN Fear &amp; Greed Index</a></div></details>`:'<div class="newsEmpty sentimentUnavailable">資料暫時無法取得</div>';
+
+  renderCnnDashboard();
   $("#sentimentSummaryContent").innerHTML=`<p class="interpretation">${esc(combinedSentimentConclusion())}</p>`;
   const inst=marketChip.institutional;
   if(inst){
@@ -4593,10 +4690,11 @@ function renderSentiment(){
 }
 function renderChipOverview(){
   const target=$("#chipOverviewContent");if(!target)return;
-  const cnn=cnnFearGreed,foreign=futuresPosition?.foreign_tx,tmf=futuresPosition?.estimated_non_institutional_tmf;
+  const cnnView=cnnGaugePresentation(),cnn=cnnView.cnn,foreign=futuresPosition?.foreign_tx,tmf=futuresPosition?.estimated_non_institutional_tmf;
   const card=(tab,title,value,status)=>`<button class="chipOverviewCard" type="button" data-chip-jump="${tab}" aria-label="查看${esc(title)}詳細資料"><span>${esc(title)}</span><b>${esc(value)}</b><small>${esc(status)}</small></button>`;
-  const risk=marketChip.marginRisk,values=HSMarginRiskCore.displayValues(risk),tmfRatio=Number.isFinite(tmf?.long)&&Number.isFinite(tmf?.short)&&tmf.short>0?tmf.long/tmf.short:null;
-  target.innerHTML=`<div class="chipOverviewGrid">${card("margin","台股融資餘額",Number.isFinite(values.financingPrincipal)?formatYi(values.financingPrincipal):"資料暫缺",risk?`盤後 ${values.dataDate}`:"不以 0 代替")}${card("margin","市場推估融資維持率",Number.isFinite(values.maintenanceRatio)?`${fmt(values.maintenanceRatio)}%`:"資料暫缺",`${maintenanceDisplayLabel(values.maintenanceRatio)}｜${values.dataDate||"待更新"}`)}${card("mood","CNN Fear & Greed",cnn?`${fmt(cnn.score)} 分`:"資料暫缺",cnn?.label||"不以 0 代替")}${card("futures","外資台指期淨空單",Number.isFinite(foreign?.net)?`${foreign.net<0?"淨空":"淨多"} ${fmt(Math.abs(foreign.net))} 口`:"資料暫缺",futuresPosition?`資料日期 ${futuresPosition.dataDate}`:"盤後更新")}${card("futures","微台散戶多空比",Number.isFinite(tmfRatio)?tmfRatio.toFixed(2):"資料暫缺",Number.isFinite(tmfRatio)?`${tmfRatio>1.1?"偏多":tmfRatio<.9?"偏空":"中性"}｜${futuresPosition?.dataDate||"待更新"}`:"不以 0 代替")}</div><p class="chipOverviewConclusion">${esc(combinedSentimentConclusion())}</p><div class="freshnessLegend" aria-label="資料狀態圖例"><span><i class="latest"></i>最新</span><span><i class="stale"></i>沿用舊資料</span><span><i class="waiting"></i>待更新</span><span><i class="failed"></i>更新失敗</span></div>`;
+  const risk=marketChip.marginRisk,values=HSMarginRiskCore.displayValues(risk),tmfRatio=Number.isFinite(tmf?.long)&&tmf.long>=0&&Number.isFinite(tmf?.short)&&tmf.short>0?tmf.long/tmf.short:null;
+  target.innerHTML=`<div class="chipOverviewGrid">${card("margin","台股融資餘額",Number.isFinite(values.financingPrincipal)?formatYi(values.financingPrincipal):"資料暫缺",risk?`盤後 ${values.dataDate}`:"不以 0 代替")}${card("margin","市場推估融資維持率",Number.isFinite(values.maintenanceRatio)?`${fmt(values.maintenanceRatio)}%`:"資料暫缺",`${maintenanceDisplayLabel(values.maintenanceRatio)}｜${values.dataDate||"待更新"}`)}${card("mood","美股 CNN 情緒",HSCnnGauge.format(cnn?.score),`${cnn?.label||"資料暫缺"}｜${cnnPresentationCaption(cnnView)}`)}${card("futures","外資台指期淨空單",Number.isFinite(foreign?.net)?`${foreign.net<0?"淨空":"淨多"} ${fmt(Math.abs(foreign.net))} 口`:"資料暫缺",futuresPosition?`資料日期 ${futuresPosition.dataDate}`:"盤後更新")}${card("futures","微台散戶多空比",Number.isFinite(tmfRatio)?tmfRatio.toFixed(2):"資料暫缺",Number.isFinite(tmfRatio)?`${tmfRatio>1.1?"偏多":tmfRatio<.9?"偏空":"中性"}｜${futuresPosition?.dataDate||"待更新"}`:"不以 0 代替")}</div><p class="chipOverviewConclusion">${esc(combinedSentimentConclusion())}</p><div class="freshnessLegend" aria-label="資料狀態圖例"><span><i class="latest"></i>最新</span><span><i class="stale"></i>沿用舊資料</span><span><i class="waiting"></i>待更新</span><span><i class="failed"></i>更新失敗</span></div>`;
+  const cnnCard=target.querySelector('[data-chip-jump="mood"]');if(cnnCard){cnnCard.dataset.cnnState=cnnView.state;cnnCard.title=cnnPresentationCaption(cnnView);}
   document.querySelectorAll("[data-chip-jump]").forEach(button=>button.addEventListener("click",()=>switchChipTab(button.dataset.chipJump)));
 }
 function switchChipTab(name,{scroll=true}={}){
@@ -4606,6 +4704,7 @@ function switchChipTab(name,{scroll=true}={}){
     const selected=button.dataset.chipTab===active;button.classList.toggle("active",selected);button.setAttribute("aria-selected",String(selected));
   });
   localStorage.setItem(CHIP_TAB_STORAGE_KEY,active);
+  renderCnnPresentationViews();
   if(scroll)$("#chipPageTop")?.scrollIntoView({behavior:"smooth",block:"start"});
 }
 async function loadMarketEvents(){
@@ -5098,6 +5197,7 @@ function switchTab(name,{scroll=true}={}){
   document.querySelectorAll(".appNavButton").forEach(btn=>{const active=btn.dataset.tab===name;btn.classList.toggle("active",active);btn.setAttribute("aria-current",active?"page":"false")});
   document.querySelectorAll("[data-tab-intro]").forEach(el=>el.classList.toggle("active",el.dataset.tabIntro===name));
   sessionStorage.setItem("hsRadar.activeTab",name);
+  renderCnnPresentationViews();
   if(name==="signals")mountRadarHistoryChart($("#cards .signalCard.is-selected"));
   if(scroll)document.querySelector(".topTabs")?.scrollIntoView({behavior:"smooth",block:"start"});
 }
@@ -5132,6 +5232,8 @@ document.querySelectorAll("[data-radar-mode]").forEach(button=>button.addEventLi
   refreshAllDecisionModels();renderWatchlist();renderTop();renderCards();
 }));
 document.querySelectorAll("[data-chip-tab]").forEach(button=>button.addEventListener("click",()=>switchChipTab(button.dataset.chipTab)));
+$("#homeCnnCard").addEventListener("click",openCnnGauge);
+$("#cnnFearGreedContent").addEventListener("click",event=>{if(event.target.closest("[data-cnn-refresh]"))refreshCnnFearGreed({force:true});});
 document.querySelectorAll("[data-radar-view]").forEach(button=>button.addEventListener("click",()=>switchRadarOverviewView(button.dataset.radarView)));
 document.addEventListener("click",event=>{const button=event.target.closest("[data-home-c4-sort]");if(!button)return;homeC4SortMode=["score","change","threshold"].includes(button.dataset.homeC4Sort)?button.dataset.homeC4Sort:"score";renderTop()});
 $("#hsDashboardC4Grid").addEventListener("click",event=>{const card=event.target.closest(".hsDashboardC4Card[data-c4-symbol]");if(card)openHomeC4RadarDetail(card.dataset.c4Symbol)});
@@ -5221,6 +5323,8 @@ window.HSLiveMarket=Object.freeze({
   state:()=>Object.freeze({rankTimerCount:longRankTimer===null?0:1,inFlight:Boolean(liveQuoteInFlight),failures:liveQuoteFailures,lastAttemptAt:liveQuoteLastAttemptAt,liveSource:liveCoreSourceState.source,liveSourceStatus:liveCoreSourceState.status,renderState:currentFrontendLiveRenderState()}),
   diagnostics:()=>liveTelemetry?.snapshot()
 });
+// CNN's local artifact is independent of upstream ETF-price availability.
+refreshCnnFearGreed({force:true});
 initLiveDebugPanel();liveDiagnosticRecord("initial_page_load",{render_state_before:"FRONTEND_STATE_PENDING",render_state_after:"FRONTEND_STATE_PENDING"});loadFrontendBuildMetadata();loadAlerts();renderWatchlist();renderEvents();renderTrump();switchChipTab(localStorage.getItem(CHIP_TAB_STORAGE_KEY)||"overview",{scroll:false});switchTab(sessionStorage.getItem("hsRadar.activeTab")||"today",{scroll:false});scheduleCnnPoll();refreshLiveQuotes({force:true});scheduleLongRankRefresh();ensureStockCatalog().finally(async()=>{await ensureRadarPushRulesSync();await load();const pushedEtf=new URLSearchParams(location.search).get("radarEtf");if(/^\d{4,6}$/.test(pushedEtf||"")){switchTab("signals",{scroll:false});showRadarDetail(pushedEtf)}});
 
 </script>
@@ -5233,7 +5337,7 @@ initLiveDebugPanel();liveDiagnosticRecord("initial_page_load",{render_state_befo
 <script src="portfolio-dashboard-core.js?v=20260920-portfolio-dashboard-v1"></script>
 <script src="portfolio-full-backup-core.js?v=20260924-portfolio-ux-cash-v1"></script>
 <script src="portfolio-etf-catalog.js?v=20260924-etf-universe-v1"></script>
-<script src="portfolio-v6.js?v=20261015-position-correction-v1"></script>
+<script src="portfolio-v6.js?v=20261017-cnn-gauge-v11"></script>
 <script src="personal-capital-ui.js?v=20260824-phase4"></script>
 <script src="app-version.js"></script>
 <script src="beginner-guide.js"></script>

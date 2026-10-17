@@ -1395,7 +1395,7 @@
     {
       const risk=typeof marketChip!=="undefined"?marketChip?.marginRisk:null;
       const values=risk&&typeof HSMarginRiskCore!=="undefined"?HSMarginRiskCore.displayValues(risk):null;
-      const cnn=typeof cnnFearGreed!=="undefined"?cnnFearGreed:null;
+      const cnnView=typeof cnnGaugePresentation==="function"?cnnGaugePresentation():null,cnn=cnnView?.cnn;
       const futures=typeof futuresPosition!=="undefined"?futuresPosition:null;
       const foreign=futures?.foreign_tx,tmf=futures?.estimated_non_institutional_tmf;
       const waitingSnapshot=typeof HSDataFreshnessCore!=="undefined"?HSDataFreshnessCore.normalize({}):{status:"WAITING"};
@@ -1412,19 +1412,17 @@
       const marginDate=values?.dataDate||risk?.data_date||"—",futuresDate=futures?.dataDate||"—";
       card("#homeMarginBalanceCard","台股融資餘額",Number.isFinite(values?.financingPrincipal)?`${number(values.financingPrincipal/1e8,2)}億`:"—",risk?.interpretation?.label||risk?.risk_state||"資料暫缺",marginDate,risk?.snapshot);
       card("#homeMaintenanceCard","市場推估融資維持率",Number.isFinite(values?.maintenanceRatio)?`${number(values.maintenanceRatio,2)}%`:"—",Number.isFinite(values?.maintenanceRatio)?HSMarginRiskCore.ratioBand(values.maintenanceRatio).label:"資料暫缺",marginDate,risk?.snapshot);
-      card("#homeCnnCard","CNN Fear & Greed",Number.isFinite(cnn?.score)?number(cnn.score,0):"—",cnn?.label||"資料暫缺",cnn?.snapshot?.data_date||"—",cnn?.snapshot);
-      card("#homeForeignFuturesCard","外資台指期",Number.isFinite(foreign?.net)?`${foreign.net<0?"淨空":"淨多"} ${number(Math.abs(foreign.net),0)}口`:"—",Number.isFinite(foreign?.net)?(foreign.net<0?"偏空":"偏多"):"資料暫缺",futuresDate,futures?.snapshot);
-      const tmfRatio=Number.isFinite(tmf?.long)&&Number.isFinite(tmf?.short)&&tmf.short>0?tmf.long/tmf.short:null;
+      // CNN has one presentation owner; do not round over or replace its dial.
+      if(typeof renderHomeCnnGauge==="function")renderHomeCnnGauge();
+      else card("#homeCnnCard","美股 CNN 情緒",Number.isFinite(cnn?.score)?number(cnn.score,2):"—",cnn?.label||"資料暫缺",cnn?.snapshot?.data_date||"—",cnn?.snapshot);
+      card("#homeForeignFuturesCard","外資台指期",Number.isFinite(foreign?.net)?`${foreign.net<0?"淨空":"淨多"} ${number(Math.abs(foreign.net),0)}口`:"—",Number.isFinite(foreign?.net)?(foreign.net<0?"偏空":foreign.net>0?"偏多":"淨部位為零"):"資料暫缺",futuresDate,futures?.snapshot);
+      const tmfRatio=Number.isFinite(tmf?.long)&&tmf.long>=0&&Number.isFinite(tmf?.short)&&tmf.short>0?tmf.long/tmf.short:null;
       const tmfState=Number.isFinite(tmfRatio)?(tmfRatio>1.1?"偏多":tmfRatio<.9?"偏空":"中性"):"資料暫缺";
       card("#homeTmfRatioCard","散戶微台多空比",Number.isFinite(tmfRatio)?number(tmfRatio,2):"—",tmfState,futuresDate,futures?.snapshot);
-      let conclusion="市場情緒資料仍在更新，長期 ETF 維持分批原則。";
-      if(Number.isFinite(cnn?.score)){
-        if(cnn.score>=56&&tmfState==="偏多")conclusion="市場情緒偏熱且散戶偏多，避免追高，等待週線回檔。";
-        else if(cnn.score<=44)conclusion=`市場情緒偏恐懼，融資壓力${values?.maintenanceRatio<140?"偏高":"中性"}，長期 ETF 可留意低檔分批。`;
-        else conclusion=`市場情緒中性，融資壓力${values?.maintenanceRatio<140?"偏高":"中性"}，依長期加碼排名分批評估。`;
-      }
-      const conclusionNode=$v6("#homeSentimentConclusion");if(conclusionNode)conclusionNode.textContent=conclusion;
-      const details=$v6("#homeSentimentDetails");if(details)details.innerHTML=`<summary>展開資料方法與日期</summary><div><p>融資餘額與推估維持率：最近交易日盤後資料 ${escapeHtml(marginDate)}。</p><p>外資台指期與微台非三大法人部位：期交所盤後資料 ${escapeHtml(futuresDate)}；微台多空比＝推估多單÷推估空單，不等同官方純自然人持倉。</p><p>CNN：${escapeHtml(cnn?.sourceUpdatedAt||"資料暫缺")}。</p></div>`;
+      // Shared coverage-aware UI; absent maintenance data must never mean neutral.
+      if(typeof renderMarketSentimentSummary==="function")renderMarketSentimentSummary();
+      else {const node=$v6("#homeSentimentConclusion");if(node)node.textContent="資料不足，暫不提供綜合判讀。";}
+      const details=$v6("#homeSentimentDetails");if(details)details.innerHTML=`<summary>展開資料方法與日期</summary><div><p>融資餘額與推估維持率：最近交易日盤後資料 ${escapeHtml(marginDate)}。</p><p>外資台指期與微台非三大法人部位：期交所盤後資料 ${escapeHtml(futuresDate)}；微台多空比＝推估多單÷推估空單，不等同官方純自然人持倉。</p><p>CNN：${escapeHtml(cnnView?.sourceUpdatedAt||"資料暫缺")}。</p></div>`;
       return;
     }
     let margin = null;
@@ -1433,7 +1431,7 @@
     try {
       margin = marketChip?.margin || null;
       marginRisk = marketChip?.marginRisk || null;
-      cnn = cnnFearGreed || null;
+      cnn = typeof cnnGaugePresentation==="function"?cnnGaugePresentation().cnn:null;
     } catch {
       // Sentiment data is still loading.
     }
@@ -1467,7 +1465,7 @@
     }
     if (cnn && Number.isFinite(cnn.score)) {
       const cnnTime = Number.isFinite(Date.parse(cnn.sourceUpdatedAt)) ? new Intl.DateTimeFormat("zh-TW", {timeZone: "Asia/Taipei", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false}).format(new Date(cnn.sourceUpdatedAt)) : "—";
-      cnnCard.innerHTML = `<span>CNN Fear &amp; Greed</span><b class="${cnn.score >= 56 ? "twUp" : cnn.score <= 44 ? "twDown" : "twFlat"}">${number(cnn.score, 0)}</b><em>${escapeHtml(cnn.label)}</em><small>${escapeHtml(cnn.summary)}<i class="sentimentFreshness">更新 ${escapeHtml(cnnTime)}</i></small>`;
+      cnnCard.innerHTML = `<span>CNN Fear &amp; Greed</span><b class="${cnn.score >= 56 ? "twUp" : cnn.score <= 44 ? "twDown" : "twFlat"}">${number(cnn.score, 2)}</b><em>${escapeHtml(cnn.label)}</em><small>${escapeHtml(cnn.summary)}<i class="sentimentFreshness">更新 ${escapeHtml(cnnTime)}</i></small>`;
     } else {
       cnnCard.innerHTML = "<span>CNN Fear &amp; Greed</span><b>—</b><em>資料暫時無法取得</em><small>不會以 0 分代替失敗資料</small>";
     }
