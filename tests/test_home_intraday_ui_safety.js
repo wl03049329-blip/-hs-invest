@@ -82,7 +82,7 @@ console.log("PASS: FINAL display remains canonical 31 while archived raw high is
 for(const width of [375,390,393,430])assert.match(css,new RegExp(`@media\\(max-width:480px\\)[\\s\\S]*?min-width:4\\.5ch`),`${width}px safety styles present`);
 assert.match(css,/#homeEtfBrief \.hsC4SparklineMeta>time\{[^}]*overflow:hidden/);
 assert.match(css,/#homeEtfBrief \.hsDashboardC4Card\{[^}]*overflow:hidden/);
-const summary=html.match(/\$\("#homeEtfBriefSummary"\)\.textContent=rankedLongs\.length>=2\?`([^`]+)`/);
+const summary=html.match(/\$\("#homeEtfBriefSummary"\)\.textContent=homeOfficialRows\.length>=2\?`([^`]+)`/);
 assert.ok(summary);
 assert.match(summary[1],/正式最高：/);
 assert.match(summary[1],/次順位：/);
