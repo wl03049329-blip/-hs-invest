@@ -233,11 +233,14 @@ class BridgeTests(unittest.TestCase):
         self.incident()
         self.incident("FALLBACK_PREVIOUS_ANCHOR_NOT_ADJACENT", "OTHER:anchor")
         self.incident("HISTORICAL_DATE_REMOVED", "OTHER:historical")
+        ledger = self.root / self.policy["paths"]["forward_ledger"]
+        before = ledger.read_bytes()
         status = self.tick(flag=True)
         self.assertEqual(status["status"], "FAIL_CLOSED")
         records = shadow.read_jsonl(self.root / self.policy["paths"]["forward_ledger"])
         self.assertEqual([r["incident_id"] for r in records if r["record_type"] == "CORPORATE_ACTION_RECOVERY"],
-                         ["GAP:fixture"])
+                         [])  # A pending historical conflict forbids even partial recovery.
+        self.assertEqual(ledger.read_bytes(), before)
         self.assertTrue(status["requires_integrity_review"])
 
     def test_legacy_false_review_flags_do_not_block_or_receive_recovery(self):
