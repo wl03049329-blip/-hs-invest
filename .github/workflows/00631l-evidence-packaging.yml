@@ -1,0 +1,91 @@
+name: 00631L Evidence Packaging (manual read-only)
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        type: choice
+        options: [capture, package]
+        default: capture
+        required: true
+      source_run_id:
+        description: Required for package; independently reviewed capture Run ID
+        type: string
+        required: false
+
+permissions:
+  contents: read
+  actions: read
+  issues: read
+
+concurrency:
+  group: hs-00631l-evidence-packaging
+  cancel-in-progress: false
+
+jobs:
+  packaging:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    environment: 00631l-evidence-packaging
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Capture public fresh evidence; no approvals generated
+        if: inputs.operation == 'capture'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXACT_PACKAGING_POLICY_JSON: ${{ secrets.EXACT_PACKAGING_POLICY_JSON }}
+        run: >-
+          python research/hs_leverage/phase_l7_packaging.py
+          --operation capture --output "$RUNNER_TEMP/exact-packaging-output"
+      - name: Validate independently pinned source Run and Artifact before download
+        if: inputs.operation == 'package'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXACT_PACKAGING_POLICY_JSON: ${{ secrets.EXACT_PACKAGING_POLICY_JSON }}
+          EXACT_PACKAGING_TRUST_JSON: ${{ secrets.EXACT_PACKAGING_TRUST_JSON }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+        run: >-
+          python research/hs_leverage/phase_l7_packaging.py
+          --operation source-check --source-run-id "$SOURCE_RUN_ID"
+      - uses: actions/download-artifact@v4
+        if: inputs.operation == 'package'
+        with:
+          name: exact-recovery-review-input
+          run-id: ${{ inputs.source_run_id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/exact-packaging-source
+      - name: Validate Owner approval and external pins; package only
+        if: inputs.operation == 'package'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXACT_PACKAGING_POLICY_JSON: ${{ secrets.EXACT_PACKAGING_POLICY_JSON }}
+          EXACT_PACKAGING_TRUST_JSON: ${{ secrets.EXACT_PACKAGING_TRUST_JSON }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+        run: >-
+          python research/hs_leverage/phase_l7_packaging.py
+          --operation package --source-run-id "$SOURCE_RUN_ID"
+          --input "$RUNNER_TEMP/exact-packaging-source/bundle.json"
+          --output "$RUNNER_TEMP/exact-packaging-output"
+      - uses: actions/upload-artifact@v4
+        id: upload
+        with:
+          name: ${{ inputs.operation == 'capture' && 'exact-recovery-review-input' || 'exact-recovery-input' }}
+          path: |
+            ${{ runner.temp }}/exact-packaging-output/bundle.json
+            ${{ runner.temp }}/exact-packaging-output/packaging-receipt.json
+          if-no-files-found: error
+          retention-days: 1
+      - name: Descriptive artifact identity; never installs trust
+        env:
+          ARTIFACT_ID: ${{ steps.upload.outputs.artifact-id }}
+          ARTIFACT_DIGEST: ${{ steps.upload.outputs.artifact-digest }}
+        run: |
+          printf 'Artifact ID: %s\nArtifact digest: %s\nRun ID: %s\n' "$ARTIFACT_ID" "$ARTIFACT_DIGEST" "$GITHUB_RUN_ID" >> "$GITHUB_STEP_SUMMARY"
