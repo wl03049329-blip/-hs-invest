@@ -471,7 +471,9 @@ def latest_twse_fallback(yahoo, historical, prior, official, expected, now, fetc
 
 
 def collect(historical, prior, policy, now, fetcher=fetch_json, root=shadow.ROOT,
-            allow_official_bridge=False, bridge_review_required=False):
+            allow_official_bridge=False, bridge_review_required=False, progress=None):
+    progress = progress if progress is not None else {}
+    progress["SOURCE_COLLECTION"] = "FAILED"  # Incomplete until required payloads arrive.
     local = now.astimezone(TAIPEI)
     holidays_payload = fetcher(CALENDAR_URL)
     holidays = calendar_days(holidays_payload, local.year)
@@ -490,15 +492,29 @@ def collect(historical, prior, policy, now, fetcher=fetch_json, root=shadow.ROOT
         payload = fetcher(f"{DAILY_URL}?response=json&date={month}01&stockNo=00631L")
         receipts["twse_" + month] = digest(payload)
         official.extend(r for r in parse_official(payload, month) if r["date"] <= expected)
+    progress["SOURCE_COLLECTION"] = "SUCCESS"
     validate_rows(official)
     bridge_rows, bridge_review = {}, None
     if allow_official_bridge:
         import phase_l7_bridge as bridge
-        if bridge_review_required or (prior and bridge.needed(yahoo, prior, official, expected)):
+        needs_bridge = prior and bridge.needed(yahoo, prior, official, expected)
+        adjacent = prior and len(official) >= 2 and prior["item"]["rows"][-1]["date"] == official[-2]["date"]
+        if adjacent:
+            anchor = prior["item"]["rows"][-1]
+            import phase_l7_recovery_reader as reader
+            reviewed_records, _ = validate_ledgers(root / policy["paths"]["forward_ledger"],
+                                                   root / policy["paths"]["outcomes_ledger"], policy)
+            adjacent = (not anchor.get("source_provenance", {}).get("fallback_used")
+                        and bridge.bridge_origin(prior, anchor) == anchor["date"]
+                        and bool(reader.reviewed_ids(root, reviewed_records)))
+        if bridge_review_required or (needs_bridge and not adjacent):
+            progress["SOURCE_COLLECTION"] = "FAILED"  # Four action sources are also required.
             bridge_rows, bridge_review = bridge.prepare(
-                root, prior, policy, yahoo, official, expected, holidays, now, fetcher, receipts)
-        elif prior:
+                root, prior, policy, yahoo, official, expected, holidays, now, fetcher, receipts, progress)
+        elif prior and not needs_bridge:
             bridge.verify_primary_factor_one(yahoo, prior, official, expected)
+        # An adjacent new session uses the original independently validated
+        # single-session fallback, never a widened old multi-day recovery grant.
     previous_anchor = None
     if prior and len(official) >= 2:
         previous = official[-2]["date"]
@@ -513,8 +529,10 @@ def collect(historical, prior, policy, now, fetcher=fetch_json, root=shadow.ROOT
         # Do not turn any historical/schema/action failure into a fallback.
         require(str(exc) in ("MISSING_SOURCE_OHLC:" + expected,
                             "MISSING_ADJUSTED_CLOSE:" + expected, "STALE_ADJUSTED_OHLC"), str(exc))
+        progress["SOURCE_COLLECTION"] = "FAILED"
         fallback = latest_twse_fallback(yahoo, historical, prior, official, expected, now, fetcher,
                                         receipts, previous_anchor)
+        progress["SOURCE_COLLECTION"] = "SUCCESS"
         rows = parse_yahoo(yahoo, historical, expected, latest_fallback=fallback,
                            previous_anchor=previous_anchor)
     if prior:
@@ -586,17 +604,70 @@ def validate_ledgers(ledger, outcomes, policy):
     return records, realized
 
 
-def require_incident_review(root, records):
+def pending_integrity_reviews(root, records):
     path = root / INCIDENTS
     require(shadow.validate_hash_chain(path)["status"] == "PASS", "INCIDENT_HASH_CHAIN_INVALID")
     reviewed = {r.get("incident_id") for r in records
                 if r.get("record_type") == "CORPORATE_ACTION_RECOVERY"
+                and not r.get("test_only")
+                and r.get("recovery_mode") != "EXACT_SCOPE_RECOVERY_V1"
                 and r.get("integrity_review_status") == "PASS"
                 and r.get("approved_by") and r.get("new_data_version")
                 and len(r.get("recovery_steps_completed", [])) >= 8}
-    for incident in shadow.read_jsonl(path):
-        require(not incident.get("requires_integrity_review") or incident["record_id"] in reviewed,
-                "EXPLICIT_INTEGRITY_REVIEW_REQUIRED:" + incident["record_id"])
+    # Exact reviews require an external, individually pinned completed-publication
+    # receipt. Merely appending an exact record (especially TEST_ONLY) grants nothing.
+    import phase_l7_recovery_reader as recovery_reader
+    reviewed.update(recovery_reader.reviewed_ids(root, records))
+    return [incident for incident in shadow.read_jsonl(path)
+            if incident.get("requires_integrity_review") and incident["record_id"] not in reviewed]
+
+
+def require_incident_review(root, records):
+    for incident in pending_integrity_reviews(root, records):
+        raise Error("EXPLICIT_INTEGRITY_REVIEW_REQUIRED:" + incident["record_id"])
+
+
+def diagnostic_state(progress, pending, reason=None):
+    import phase_l7_bridge as bridge
+    blocked = (any(bridge.integrity_conflict(r["reason"]) for r in pending)
+               or progress.get("CANDIDATE_VALIDATION") != "PASS"
+               or reason == "BRIDGE_PUBLICATION_OUTSIDE_AUTHORIZED_SCOPE")
+    return {"SOURCE_COLLECTION": progress.get("SOURCE_COLLECTION", "FAILED"),
+            "CANDIDATE_VALIDATION": progress.get("CANDIDATE_VALIDATION", "FAIL"),
+            "INTEGRITY_REVIEW": "BLOCKED" if blocked else "PENDING" if pending else "PASS",
+            # Collector cannot attest the later Git push or Pages deployment.
+            "PUBLICATION": "FAILED" if progress.get("LOCAL_WRITE_FAILED") else "NOT_PUBLISHED"}
+
+
+def prepare_review(root=shadow.ROOT):
+    """Pure local inventory, no fetch, lock, writes, approval or recovery."""
+    import phase_l7_bridge as bridge
+    policy, _ = shadow.load_context(root)
+    records, _ = validate_ledgers(root / policy["paths"]["forward_ledger"],
+                                  root / policy["paths"]["outcomes_ledger"], policy)
+    pending = pending_integrity_reviews(root, records)
+    rows = []
+    for incident in pending:
+        reason = incident["reason"]
+        conflict = bridge.integrity_conflict(reason)
+        rows.append({"incident_id": incident["record_id"], "original_reason": reason,
+            "incident_record_hash": incident["record_hash"],
+            "previous_record_hash": incident.get("previous_record_hash"),
+            "checked_at": incident.get("checked_at"),
+            "anchor_date": incident.get("latest_data_date"),
+            "target_date": incident.get("expected_completed_bar"),
+            "source_evidence": incident.get("source_probe_evidence"),
+            "source_evidence_sha256": digest(incident.get("source_probe_evidence")),
+            "corporate_actions": {k: "FRESH_VERIFICATION_REQUIRED" for k in bridge.ACTION_DATASETS},
+            "p0": incidents.p0_reason(reason), "integrity_conflict": conflict,
+            "can_submit_for_review": not conflict,
+            "legacy_reason_whitelisted": reason.split(":", 1)[0] in bridge.SOURCE_GAP_REASONS,
+            "fresh_evidence_complete": False, "authorized": False,
+            "recovery_eligibility": "BLOCKED_INTEGRITY_CONFLICT" if conflict
+                else "NEW_EXPLICIT_AUTHORIZATION_AND_FRESH_EVIDENCE_REQUIRED"})
+    return {"read_only": True, "authorizes_recovery": False,
+            "existing_authorization_target": bridge.AUTHORIZED_TARGET,
+            "existing_approved_by": bridge.APPROVED_BY, "incidents": rows}
 
 
 def summarize(records, realized):
@@ -712,8 +783,13 @@ def run(root=shadow.ROOT, now=None, fetcher=fetch_json, dry_run=False,
     records, realized = validate_ledgers(ledger, outcomes, policy)
     prior = shadow.read_json(root / SNAPSHOT) if (root / SNAPSHOT).exists() else None
     probe = {}
+    progress = {"SOURCE_COLLECTION": "FAILED", "CANDIDATE_VALIDATION": "FAIL"}
     def read_source(url):
-        payload = fetcher(url)
+        try:
+            payload = fetcher(url)
+        except Exception:
+            progress["SOURCE_COLLECTION"] = "FAILED"
+            raise
         if url == CALENDAR_URL:
             probe["holidays"] = calendar_days(payload, now.astimezone(TAIPEI).year)
             probe["target"] = expected_day(now, probe["holidays"])
@@ -740,18 +816,23 @@ def run(root=shadow.ROOT, now=None, fetcher=fetch_json, dry_run=False,
         # Review latch blocks publication, not a read-only recovery probe.
         import phase_l7_bridge as bridge
         allow_bridge = review_source_gap_recovery or bridge.approved(records)
-        collect_options = {"allow_official_bridge": True} if allow_bridge else {}
+        collect_options = {"progress": progress}
+        if allow_bridge:
+            collect_options["allow_official_bridge"] = True
         if review_source_gap_recovery:
             collect_options["bridge_review_required"] = True
         data, holidays = collect(historical, prior, policy, now, read_source, root=root, **collect_options)
+        progress.update(SOURCE_COLLECTION="SUCCESS", CANDIDATE_VALIDATION="PASS")
         if review_source_gap_recovery:
             bridge.review(root, policy, records, data, now, holidays)
             records, realized = validate_ledgers(ledger, outcomes, policy)
             # Approval does not reuse a cached price payload for publication.
             # Run normal collection again with a new three-request budget.
             probe.clear()
+            progress.update(SOURCE_COLLECTION="FAILED", CANDIDATE_VALIDATION="FAIL")
             data, holidays = collect(historical, prior, policy, now, read_source, root=root,
-                                     allow_official_bridge=True)
+                                     allow_official_bridge=True, progress=progress)
+            progress.update(SOURCE_COLLECTION="SUCCESS", CANDIDATE_VALIDATION="PASS")
             try:
                 require_incident_review(root, records)
                 awaiting_review = False
@@ -763,7 +844,8 @@ def run(root=shadow.ROOT, now=None, fetcher=fetch_json, dry_run=False,
                      data_version=data["metadata"]["data_version"])
         if awaiting_review:
             return operational_failure(root, policy, prior, historical, records, realized, now,
-                                       dry_run, probe, "RECOVERY_EVIDENCE_AVAILABLE", True)
+                                       dry_run, probe, "RECOVERY_EVIDENCE_AVAILABLE", True, progress)
+        require(bridge.publication_authorized(records, data, root), "BRIDGE_PUBLICATION_OUTSIDE_AUTHORIZED_SCOPE")
         if live_clock:
             finished = datetime.now(timezone.utc)
             require(finished.astimezone(TAIPEI).date() == now.astimezone(TAIPEI).date(), "CAPTURE_WINDOW_CLOSED")
@@ -785,8 +867,11 @@ def run(root=shadow.ROOT, now=None, fetcher=fetch_json, dry_run=False,
                            "requires_integrity_review": False,
                            "data_version": data["metadata"]["data_version"],
                            "workflow_run_id": os.environ.get("GITHUB_RUN_ID"),
-                           "threshold_valid_through": policy["threshold"]["threshold_effective_to"]})
+                           "threshold_valid_through": policy["threshold"]["threshold_effective_to"],
+                           "diagnostics": diagnostic_state(progress, []),
+                           "publication_scope": "GIT_PUSH_AND_PAGES_NOT_OBSERVED"})
             if not dry_run:
+                progress["LOCAL_WRITE_STARTED"] = True
                 atomic_json(root / SNAPSHOT, data)
                 for relative in policy["paths"].values():
                     target = root / relative
@@ -800,19 +885,23 @@ def run(root=shadow.ROOT, now=None, fetcher=fetch_json, dry_run=False,
                 atomic_json(root / STATUS, status)
             return status
     except Exception as exc:
-        reason = (str(exc) if isinstance(exc, Error) else "SOURCE_TRANSPORT_ERROR"
+        if progress.get("LOCAL_WRITE_STARTED"):
+            progress["LOCAL_WRITE_FAILED"] = True
+        reason = (str(exc) if isinstance(exc, Error) else "LOCAL_PUBLICATION_FAILED"
+                  if progress.get("LOCAL_WRITE_FAILED") else "SOURCE_TRANSPORT_ERROR"
                   if isinstance(exc, OSError) else "UNEXPECTED_VALIDATION_ERROR")
         # Corrupt incident chains cannot be appended to or notification-deduped.
         if shadow.validate_hash_chain(root / INCIDENTS)["status"] != "PASS":
             return {"status": "FAIL_CLOSED", "reason": "INCIDENT_HASH_CHAIN_INVALID",
                     "data_integrity": "FAIL", "requires_integrity_review": True,
+                    "diagnostics": diagnostic_state(progress, [], "INCIDENT_HASH_CHAIN_INVALID"),
                     "workflow_classification": "NEW_FAIL_CLOSED"}
         return operational_failure(root, policy, prior, historical, records, realized, now,
-                                   dry_run, probe, reason, awaiting_review)
+                                   dry_run, probe, reason, awaiting_review, progress)
 
 
 def operational_failure(root, policy, prior, historical, records, realized, now,
-                        dry_run, probe, reason, awaiting_review):
+                        dry_run, probe, reason, awaiting_review, progress=None):
     anchor = (prior or historical)["item"]["rows"][-1]["date"]
     target = probe.get("target")
     recovery = reason == "RECOVERY_EVIDENCE_AVAILABLE"
@@ -836,6 +925,11 @@ def operational_failure(root, policy, prior, historical, records, realized, now,
         classification = "NEW_FAIL_CLOSED"  # A pending P0 review is never a green known failure.
     status = {"status": "FAIL_CLOSED", "system_state": "FAIL_CLOSED", "signal_status": "NO_SIGNAL",
               "reason": root_reason, "checked_at": now.isoformat(), "latest_data_date": anchor,
+              "current_failure_reason": reason,
+              "blocking_incidents": [{"incident_id": r["record_id"], "reason": r["reason"],
+                                       "record_hash": r["record_hash"]} for r in unresolved],
+              "diagnostics": diagnostic_state(progress or {}, unresolved, reason),
+              "publication_scope": "GIT_PUSH_AND_PAGES_NOT_OBSERVED",
               "expected_completed_bar": target, "freshness": "STALE" if target and anchor < target else "UNKNOWN",
               "data_integrity": "FAIL", "dry_run": dry_run,
               "requires_integrity_review": awaiting_review or recovery or reason != "SOURCE_TRANSPORT_ERROR",
@@ -881,7 +975,14 @@ def main():
     parser.add_argument("--dry-run", action="store_true", help="Validate live sources without writing any operational state.")
     parser.add_argument("--review-source-gap-recovery", action="store_true",
                         help="One authorized workflow_dispatch review; never enabled by a schedule.")
+    parser.add_argument("--prepare-review", action="store_true",
+                        help="Read-only incident inventory to stdout; no source calls or approval.")
     args = parser.parse_args()
+    if args.prepare_review:
+        if args.dry_run or args.review_source_gap_recovery:
+            parser.error("--prepare-review cannot be combined with collection/recovery")
+        print(json.dumps(prepare_review(), ensure_ascii=False, indent=2))
+        return 0  # Before lock creation or any workflow output/state write.
     lock = shadow.ROOT / FORWARD / ".daily.lock"
     lock.parent.mkdir(parents=True, exist_ok=True)
     try:
@@ -898,6 +999,7 @@ def main():
                       "reason": str(exc) if isinstance(exc, Error) else "UNEXPECTED_VALIDATION_ERROR",
                       "data_integrity": "FAIL", "requires_integrity_review": True,
                       "workflow_classification": "NEW_FAIL_CLOSED",
+                      "diagnostics": diagnostic_state({}, [], str(exc)),
                       "live_capital": False, "production_signal": False}
         print(json.dumps(status, ensure_ascii=False, indent=2))
         classification = status.get("workflow_classification", "VALIDATED" if status["status"] != "FAIL_CLOSED" else "NEW_FAIL_CLOSED")

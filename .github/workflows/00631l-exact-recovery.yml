@@ -1,0 +1,94 @@
+name: 00631L Exact Recovery (manual gated)
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        type: choice
+        options: [validate, publish, verify]
+        default: validate
+        required: true
+      confirm_recovery:
+        type: boolean
+        default: false
+        required: true
+      contract_sha256:
+        type: string
+        required: true
+      evidence_run_id:
+        type: string
+        required: true
+      publish_run_id:
+        description: Required only for read-only verify of a previous publish
+        type: string
+        required: false
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: hs-00631l-forward-shadow
+  cancel-in-progress: false
+
+jobs:
+  recovery:
+    if: >-
+      github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' &&
+      vars.HS_EXACT_RECOVERY_ENABLED == 'true' && inputs.confirm_recovery == true
+    environment: 00631l-exact-recovery
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      actions: read
+      pages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m unittest discover -s research/hs_leverage -p 'test_phase_l7*.py'
+      - run: python -m unittest discover -s research/hs_leverage -p 'test_frontend_status.py'
+      - uses: actions/download-artifact@v4
+        with:
+          name: exact-recovery-input
+          run-id: ${{ inputs.evidence_run_id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/exact-recovery-input
+      - uses: actions/download-artifact@v4
+        if: inputs.operation == 'verify'
+        with:
+          name: exact-recovery-publish-receipt
+          run-id: ${{ inputs.publish_run_id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/exact-recovery-input
+      - name: Guarded operation (never a schedule)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HS_EXACT_RECOVERY_ENABLED: ${{ vars.HS_EXACT_RECOVERY_ENABLED }}
+          CONFIRM_EXACT_RECOVERY: ${{ inputs.confirm_recovery }}
+          EXPECTED_CONTRACT_SHA: ${{ inputs.contract_sha256 }}
+          EVIDENCE_RUN_ID: ${{ inputs.evidence_run_id }}
+          EXACT_RECOVERY_PINS_JSON: ${{ secrets.EXACT_RECOVERY_PINS_JSON }}
+          EXACT_RECOVERY_REGISTRY_JSON: ${{ secrets.EXACT_RECOVERY_REGISTRY_JSON }}
+          OPERATION: ${{ inputs.operation }}
+        run: >-
+          python research/hs_leverage/phase_l7_recovery_workflow.py
+          --operation "$OPERATION"
+          --bundle "$RUNNER_TEMP/exact-recovery-input/bundle.json"
+          --output "$RUNNER_TEMP/exact-recovery-output"
+      - uses: actions/upload-artifact@v4
+        if: always() && inputs.operation == 'publish'
+        with:
+          name: exact-recovery-publish-receipt
+          path: ${{ runner.temp }}/exact-recovery-output/publish-receipt.json
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
+        if: success() && inputs.operation == 'verify'
+        with:
+          name: exact-recovery-verified-receipt-UNTRUSTED-UNTIL-OWNER-PINNED
+          path: ${{ runner.temp }}/exact-recovery-output/verified-receipt.json

@@ -1,6 +1,7 @@
 """Bounded official factor-one continuity proof, never a V1 signal or score."""
 from __future__ import annotations
 
+import copy
 import math
 from datetime import date, timedelta
 
@@ -29,21 +30,63 @@ REVIEW_STEPS = (
 )
 
 
-def prepare(root, prior, policy, yahoo, official, expected, holidays, now, fetcher, receipts):
+def integrity_conflict(reason):
+    """A source gap is reviewable; a proven price/action/P0 conflict is not."""
+    import phase_l7_incidents as incidents
+    return incidents.p0_reason(reason) or reason.split(":", 1)[0] in {
+        "HISTORICAL_REVISION_REVIEW_REQUIRED", "HISTORICAL_DATE_REMOVED",
+        "FALLBACK_ADJUSTMENT_REVISION_REVIEW_REQUIRED", "PRICE_DISCONTINUITY_REVIEW_REQUIRED",
+        "CORPORATE_ACTION_REVIEW_REQUIRED", "OFFICIAL_OHLC_CONFLICT",
+        "BRIDGE_PRIMARY_CONFLICT", "BRIDGE_NON_ONE_ADJUSTMENT", "ENTRY_BASIS_REVISION",
+        "BRIDGE_ANCHOR_OHLC_CONFLICT", "FALLBACK_PREVIOUS_ANCHOR_CONFLICT",
+        "LEGACY_ADJUSTMENT_REVIEW_REQUIRED", "BRIDGE_ANCHOR_FACTOR_NOT_ONE",
+        "BRIDGE_ORIGIN_UNVERIFIED", "SYMBOL_MISMATCH", "OFFICIAL_SYMBOL_MISMATCH",
+        "INSTRUMENT_MISMATCH", "EXCHANGE_TIMEZONE_MISMATCH", "DAILY_FREQUENCY_REQUIRED",
+    }
+
+
+def bridge_origin(prior, anchor):
+    """Only complete primary reconciliation can end an existing bridge span."""
+    import phase_l7_daily as daily
+    origins = [anchor["date"]]
+    for row in [anchor, *prior["item"]["rows"]]:
+        provenance = row.get("source_provenance", {})
+        origin = provenance.get("bridge_anchor_date")
+        if origin and (row is anchor
+                       or provenance.get("effective_source") == "TWSE_FACTOR_ONE_BRIDGE"):
+            try:
+                valid = date.fromisoformat(origin).isoformat() == origin and origin <= row["date"] <= anchor["date"]
+            except (TypeError, ValueError):
+                valid = False
+            daily.require(valid, "BRIDGE_ORIGIN_UNVERIFIED")
+            origins.append(origin)
+    return min(origins)
+
+
+def prepare(root, prior, policy, yahoo, official, expected, holidays, now, fetcher, receipts,
+            progress=None):
     import phase_l7_daily as daily
     daily.require(prior is not None, "BRIDGE_PUBLISHED_ANCHOR_REQUIRED")
     anchor = daily.verified_previous_bar(root, prior, policy, official, expected, allow_gap=True)
+    records, _ = daily.validate_ledgers(root / policy["paths"]["forward_ledger"],
+                                       root / policy["paths"]["outcomes_ledger"], policy)
+    for incident in daily.pending_integrity_reviews(root, records):
+        daily.require(not integrity_conflict(incident["reason"]),
+                      "BRIDGE_PENDING_INTEGRITY_CONFLICT:" + incident["record_id"])
     day = anchor["date"]
     daily.require(not isinstance(anchor["adjustment_factor"], bool) and anchor["adjustment_factor"] == 1,
                   "BRIDGE_ANCHOR_FACTOR_NOT_ONE")
     daily.require(anchor["source_provenance"]["integrity_status"] == "PASS", "BRIDGE_ANCHOR_UNVERIFIED")
+    daily.require(not isinstance(anchor["source_provenance"].get("adjustment_factor"), bool)
+                  and anchor["source_provenance"].get("adjustment_factor") == 1,
+                  "BRIDGE_ANCHOR_FACTOR_NOT_ONE")
     official_by_day = {r["date"]: r for r in official}
     daily.require(expected in official_by_day and day in official_by_day, "BRIDGE_OFFICIAL_SESSION_MISSING")
     daily.require(all(abs(anchor[k] - official_by_day[day][k]) <= .011 for k in daily.FIELDS),
                   "BRIDGE_ANCHOR_OHLC_CONFLICT")
     # A series of bridge-based anchors cannot silently reset the ten-session
     # limit each day. Only a fresh Yahoo reconciliation ends this bridge span.
-    origin = anchor["source_provenance"].get("bridge_anchor_date", day)
+    origin = bridge_origin(prior, anchor)
     sessions, cursor = [], date.fromisoformat(origin) + timedelta(days=1)
     while cursor.isoformat() <= expected:
         if cursor.weekday() < 5 and cursor.isoformat() not in holidays:
@@ -66,6 +109,8 @@ def prepare(root, prior, policy, yahoo, official, expected, holidays, now, fetch
                           "CORPORATE_ACTION_SCHEMA_REVIEW_REQUIRED")
             daily.require(event["stock_id"] != "00631L", "CORPORATE_ACTION_REVIEW_REQUIRED")
         actions[dataset] = receipts[dataset] = daily.digest(payload)
+    if progress is not None:
+        progress["SOURCE_COLLECTION"] = "SUCCESS"
     daily.yahoo_candidate_key(yahoo, expected)  # Same instrument/action validation as primary.
     result = yahoo["chart"]["result"][0]
     quote = result["indicators"]["quote"][0]
@@ -92,10 +137,19 @@ def prepare(root, prior, policy, yahoo, official, expected, holidays, now, fetch
         if values["close"] is not None and values["adjclose"] is not None:
             daily.require(math.isclose(values["adjclose"] / values["close"], 1, rel_tol=2e-5, abs_tol=2e-6),
                           "BRIDGE_NON_ONE_ADJUSTMENT:" + session)
+        if session == day:
+            # Git attestation above validates every original byte/provenance.
+            # Reuse that exact record, not the attestation's augmented copy or
+            # fresh raw TWSE prices. Source labels alone grant no authority.
+            published = published_rows[session]
+            bridge[session] = copy.deepcopy(published)
+            checked.append({"date": session, "missing_primary_fields": missing,
+                            "effective_source": "PUBLISHED_VERIFIED_ANCHOR"})
+            continue
         if missing:
             daily.require(index is None or values["close"] is None or values["adjclose"] is None,
                           "BRIDGE_UNSUPPORTED_PRIMARY_GAP:" + session)
-            if session <= day:
+            if session < day:
                 # Re-read exact already-published bridge bytes, never rebuild
                 # a historical price from a new source or extend its authority.
                 published = published_rows.get(session)
@@ -106,7 +160,7 @@ def prepare(root, prior, policy, yahoo, official, expected, holidays, now, fetch
                               and provenance.get("bridge_anchor_date") == origin
                               and all(abs(published[k] - raw[k]) <= .011 for k in daily.FIELDS),
                               "BRIDGE_HISTORICAL_GAP_REVIEW_REQUIRED:" + session)
-                bridge[session] = published
+                bridge[session] = copy.deepcopy(published)
                 checked.append({"date": session, "missing_primary_fields": missing,
                                 "effective_source": "PUBLISHED_VERIFIED_BRIDGE"})
                 continue
@@ -127,8 +181,6 @@ def prepare(root, prior, policy, yahoo, official, expected, holidays, now, fetch
                                           if values["volume"] is not None else None),
                     "corporate_action_receipts_sha256": actions, "collected_at": now.isoformat(),
                     "integrity_status": "PASS"}}
-        if session == day:
-            continue  # Persisted anchor is evidence, never a replacement price.
         checked.append({"date": session, "missing_primary_fields": missing,
                         "effective_source": "TWSE_FACTOR_ONE_BRIDGE" if missing else "YAHOO"})
     proof = {"mode": "OFFICIAL_FACTOR_ONE_BRIDGE", "anchor_date": day,
@@ -136,15 +188,38 @@ def prepare(root, prior, policy, yahoo, official, expected, holidays, now, fetch
              "verified_anchor_commit": anchor["source_provenance"]["verified_commit"],
              "verified_anchor_workflow_run_id": anchor["source_provenance"]["verified_workflow_run_id"],
              "corporate_action_receipts_sha256": actions, "sessions": checked,
-             "bridge_sessions": sorted(bridge), "fresh_validation_at": now.isoformat()}
+             "bridge_sessions": sorted(d for d in bridge if d > day),
+             "reused_anchor_dates": [day], "fresh_validation_at": now.isoformat()}
     return bridge, proof
 
 
 def approved(records):
     return any(r.get("record_type") == "CORPORATE_ACTION_RECOVERY"
+               and not r.get("test_only")
                and r.get("approved_by") == APPROVED_BY and r.get("recovery_mode") == "OFFICIAL_FACTOR_ONE_BRIDGE"
                and r.get("integrity_review_status") == "PASS" and r.get("new_data_version")
                and len(r.get("recovery_steps_completed", [])) >= 8 for r in records)
+
+
+def publication_authorized(records, data, root=None):
+    """Deny-only scope guard; never creates approval or expands the old grant."""
+    proof = data["metadata"].get("official_factor_one_bridge")
+    if not proof:
+        return True  # Ordinary fully validated primary data uses no bridge grant.
+    target = data["metadata"].get("expected_completed_bar")
+    if target == AUTHORIZED_TARGET and proof.get("target_date") == target and approved(records):
+        return True
+    if root is not None:
+        import phase_l7_daily as daily
+        import phase_l7_recovery_reader as reader
+        prior = shadow.read_json(root / daily.SNAPSHOT)
+        # Historical review resolves only its seven immutable incidents. It may
+        # permit a same-price NOOP, NEVER a new recovery price/date or version.
+        if (target == "2026-10-16" == prior["item"]["rows"][-1]["date"]
+                and data["metadata"]["data_version"] == prior["metadata"]["data_version"]
+                and reader.reviewed_ids(root, records)):
+            return True
+    return False
 
 
 def needed(yahoo, prior, official, expected):
@@ -197,6 +272,7 @@ def review(root, policy, records, data, now, holidays):
     daily.require(shadow.validate_hash_chain(root / daily.INCIDENTS)["status"] == "PASS", "INCIDENT_HASH_CHAIN_INVALID")
     daily.validate_ledgers(root / policy["paths"]["forward_ledger"], root / policy["paths"]["outcomes_ledger"], policy)
     reviewed = {r.get("incident_id") for r in records if r.get("record_type") == "CORPORATE_ACTION_RECOVERY"
+                and not r.get("test_only") and r.get("recovery_mode") != "EXACT_SCOPE_RECOVERY_V1"
                 and r.get("integrity_review_status") == "PASS" and r.get("approved_by")
                 and r.get("new_data_version") and len(r.get("recovery_steps_completed", [])) >= 8}
     history = shadow.read_jsonl(root / daily.INCIDENTS)

@@ -29,6 +29,9 @@ on:
       - 'research/hs_leverage/phase_l7_bridge.py'
       - 'research/hs_leverage/test_phase_l7_bridge.py'
       - 'research/hs_leverage/test_phase_l7_yahoo_selection.py'
+      - 'research/hs_leverage/phase_l7_*recovery*.py'
+      - 'research/hs_leverage/test_phase_l7_*recovery*.py'
+      - '.github/workflows/00631l-exact-recovery.yml'
       - 'research/hs_leverage/phase_l7_forward_policy.json'
       - '.github/workflows/00631l-forward-shadow.yml'
 
@@ -65,6 +68,10 @@ jobs:
         github.event.workflow_run.conclusion == 'success'))
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      # Empty by default. Only a separately owner-pinned COMPLETED exact review
+      # can resolve its original seven incident IDs; this cannot start Recovery.
+      HS_EXACT_REVIEWED_AUTHORIZATIONS_JSON: ${{ secrets.HS_EXACT_REVIEWED_AUTHORIZATIONS_JSON }}
     permissions:
       contents: write
     steps:
