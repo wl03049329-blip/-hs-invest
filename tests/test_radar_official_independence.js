@@ -26,9 +26,10 @@ const original={id:'0050',price:100};context.all=[original];assert.equal(context
 context.canonicalScoreProductionInvariant=()=>false;assert.ok(context.display().filter(r=>r.id!=='0050').every(r=>r.score===null));
 const body=html.slice(html.indexOf('async function load(){'),html.indexOf('$("#token").value='));
 assert.ok(body.indexOf('renderCards();')<body.indexOf('ids.map(one)'),'radar renders without waiting for price requests');
-assert.ok(body.indexOf('renderTop();')>body.indexOf('ids.map(one)'),'home C4 render timing is unchanged');
+assert.ok(body.indexOf('renderTop();')<body.indexOf('ids.map(one)'),'home C4 must render validated official sources before price requests, too');
 assert.doesNotMatch(html.slice(start,end),/applyAssetModel|refreshDecisionModel|recordForward|\.push\(x\).*all|localStorage\.setItem/);
-assert.match(body,/if\(!all.length\)throw/,'shared failure behavior is retained after radar has rendered');
+assert.match(body,/if\(!all.length\)\{\s*renderTop\(\);renderCards\(\);renderWatchDiagnostics\(\);/,'empty price results rerender independent C4 and price diagnostics');
+assert.match(body,/歷史行情暫不可用/,'unavailable historical prices remain explicitly unavailable');
 assert.match(body,/await Promise\.all\(\[loadFinalizedCoreScoreHistory\(\),loadResearchC4History\(\)\]\)/,'shared request ordering is unchanged');
 assert.match(html,/const longs=all\.filter\(x=>longIds\.has\(x\.id\)\)/,'home renderer does not consume radar-only records');
-console.log('PASS real FINALIZED survives price failure in radar, WAIT_NATIVE stays null, home C4/load contract unchanged');
+console.log('PASS real FINALIZED survives price failure in radar and home, WAIT_NATIVE stays null, price-derived records remain separate');
