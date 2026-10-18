@@ -34,6 +34,10 @@ def json_bytes(value):
     return daily.shadow.canonical(value).encode("utf8")
 
 
+def utc_now():
+    return datetime.now(timezone.utc)
+
+
 def receipt_names():
     # Exact October scope: preserve all three whole Yahoo payloads, never splice.
     return {"twse-calendar", *("twse-2026%02d" % m for m in range(1, 11)),
@@ -158,24 +162,32 @@ def capture(root, now):
     return json_bytes({"envelope": result["draft"], "evidence": encode_evidence(result["evidence"])})
 
 
-def package(root, review_raw, comment, trust, now):
+def package(root, review_raw, comment, trust, now=None):
+    # Entry time is only a rollback guard, never the Planner's validation clock.
+    entered = utc_now() if now is None else now
     require(exact.sha(review_raw) == trust.get("source_bundle_sha256"), "SOURCE_BUNDLE_NOT_PINNED")
     review = json.loads(review_raw)
     require(set(review) == {"envelope", "evidence"} and review["envelope"].get("approvals") == []
             and review["envelope"].get("authorization_id") is None
             and review["envelope"].get("status") == "UNSIGNED_NON_EXECUTABLE", "UNSIGNED_REVIEW_REQUIRED")
     evidence = decode_evidence(review["evidence"])
-    body, candidate, *_ = exact.context(root, evidence, now)
-    require(review["envelope"]["contract"] == body and body["base_git_sha"] == trust.get("base_git_sha")
+    body = review["envelope"]["contract"]
+    require(body["base_git_sha"] == trust.get("base_git_sha")
             and daily.digest(body) == trust.get("contract_sha256"), "CONTRACT_OR_BASE_MISMATCH")
-    envelope = owner_envelope(comment, trust, now)
+    # Refresh AFTER API/input work. Owner and real Planner use the same instant;
+    # Planner replays context and verifies actual evidence/code/base independently.
+    checked = utc_now()
+    require(entered.tzinfo is not None and checked.tzinfo is not None and
+            checked >= entered, "CLOCK_ROLLBACK_OR_NAIVE")
+    envelope = owner_envelope(comment, trust, checked)
     require(envelope["contract"] == body, "OWNER_CONTRACT_MISMATCH")
     # Pure validation/planning only: no adapter commit, publish, registry writes or latch changes.
-    exact.production_plan(root, envelope, evidence, now, trust["pins"])
+    exact.production_plan(root, envelope, evidence, checked, trust["pins"])
     raw = json_bytes({"envelope": envelope, "evidence": review["evidence"]})
     # Public output is built from allowlisted source/envelope schemas, never from trust JSON.
-    return raw, {"candidate_sha256": daily.digest(candidate), "data_version": body["candidate_data_version"],
-                 "contract_sha256": daily.digest(body), "expires_at": body["expires_at"]}
+    return raw, {"candidate_sha256": body["candidate_sha256"], "data_version": body["candidate_data_version"],
+                 "contract_sha256": daily.digest(body), "expires_at": body["expires_at"],
+                 "validated_at": checked.astimezone(timezone.utc).isoformat()}
 
 
 def write_output(root, output, raw, receipt):
@@ -196,13 +208,13 @@ def main():
     parser.add_argument("--output", default="")
     args = parser.parse_args()
     try:
-        now = datetime.now(timezone.utc)
+        now = utc_now()
         environment = dict(os.environ)
         policy = json.loads(environment.get("EXACT_PACKAGING_POLICY_JSON", "{}"))
         execution = guard(Path.cwd(), environment, policy)
         trust = json.loads(environment.get("EXACT_PACKAGING_TRUST_JSON", "{}"))
         if args.operation == "capture":
-            raw = capture(Path.cwd(), now)
+            raw = capture(Path.cwd(), utc_now())
             receipt = {**execution, "operation": "capture", "formal_approvals": 0, "raw_response_count": 18}
         else:
             require(trust.get("base_git_sha") == policy.get("base_git_sha") and
@@ -219,9 +231,10 @@ def main():
                        "source_artifact_id": artifact["id"], "source_artifact_digest": artifact["digest"],
                        "raw_response_count": 18, "owner_comment_id": comment_id}
         body = json.loads(raw)["envelope"]["contract"]
-        completed = datetime.now(timezone.utc)
+        completed = utc_now()
         captured = exact.stamp(body["captured_at"])
-        require(completed < exact.stamp(body["expires_at"]) and
+        validated = exact.stamp(receipt.get("validated_at", body["captured_at"]))
+        require(completed.tzinfo is not None and captured <= validated <= completed < exact.stamp(body["expires_at"]) and
                 completed.astimezone(daily.TAIPEI).date() == captured.astimezone(daily.TAIPEI).date(),
                 "EXPIRED_BEFORE_ARTIFACT_OUTPUT")
         write_output(Path.cwd(), args.output, raw, receipt)

@@ -121,9 +121,41 @@ a new contract/digest and seven new exact approvals. No target auto-extension.
 
 Run only `python -m unittest discover -s research/hs_leverage -p test_phase_l7_packaging.py -v`.
 Tests use isolated fixtures, never actual approvals or market recovery. The
-positive production-planner boundary is explicitly mocked; other code performs
-real context replay and production-validator refusal is tested. No TEST_ONLY
-success is called formal approval success.
+original positive boundary unit test remains explicitly mocked. Additional
+integration tests invoke the **unmodified real production_plan and _plan** with
+an isolated Git/data fixture and a controlled datetime clock, not a mocked
+Planner. Production-shaped synthetic approval objects and test pins exist only
+in test memory/temporary outputs, never in real Production inputs or Secrets.
+They verify positive planning, each of seven missing approvals, a wrong pin,
+expired evidence, same-Taipei-day cutoff within six hours, and TEST_ONLY refusal.
+Every case checks unchanged isolated formal files. No fixture result grants
+formal authorization.
+
+### P2 clock correction
+
+Owner API/source-run lookups may take more than 30 seconds. Package entry time
+now serves only as a rollback guard. After input work, a new real UTC instant
+is read immediately before the pure Owner checks and real production Planner;
+both use that same instant. The Planner is the single authoritative context
+replay (the redundant pre-Planner replay was removed). Its original 30-second
+wall-clock guard and six-hour/same-Taipei-day rules are unchanged. Main rechecks
+expiry at output. A 45-second simulated API delay test calls the real Planner
+successfully, while passing the pre-API timestamp to that same Planner still
+fails its 30-second guard. Naive, rollback and >30-second skew tests fail closed.
+
+### Official Action commit pins
+
+Verified on 2026/10/18 using each official repository's Git refs and commit API;
+all four returned the specified commit and `verification.verified=true`.
+The workflow uses the full immutable SHA, not the moving reference listed here
+as provenance. A regression test rejects tag-based/unknown Action replacements.
+
+| Official repository / checked reference | Fixed commit |
+| --- | --- |
+| actions/checkout / v4 | [11d5960a326750d5838078e36cf38b85af677262](https://github.com/actions/checkout/commit/11d5960a326750d5838078e36cf38b85af677262) |
+| actions/setup-python / v5 | [a26af69be951a213d495a4c3e4e4022e16d87065](https://github.com/actions/setup-python/commit/a26af69be951a213d495a4c3e4e4022e16d87065) |
+| actions/download-artifact / v4 | [d3f86a106a0bac45b974a628896c90dbdf5c8093](https://github.com/actions/download-artifact/commit/d3f86a106a0bac45b974a628896c90dbdf5c8093) |
+| actions/upload-artifact / v4 | [ea165f8d65b6e75b540449e92b4886f43607fa02](https://github.com/actions/upload-artifact/commit/ea165f8d65b6e75b540449e92b4886f43607fa02) |
 
 The HTTP ZIP test actually uploads/downloads bytes through a loopback server,
 checks ZIP root paths/hashes and invokes the existing Recovery bundle loader.

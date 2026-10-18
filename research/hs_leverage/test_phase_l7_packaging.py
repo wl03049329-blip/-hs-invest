@@ -1,17 +1,21 @@
 """Packaging-only fixtures. No real Owner grant, GitHub dispatch or publication.
 
 The local HTTP ZIP roundtrip is real I/O, NOT GitHub Actions artifact attestation.
-Production-plan positive acceptance is mocked only in the marked boundary test;
-TEST_ONLY credentials remain rejected by the deployed production planner.
+The original boundary test is explicitly mocked; added integration tests call the
+UNMOCKED production planner with a controlled clock and production-shaped unit
+fixtures in temporary repos only. No real approval/pin/secret is created.
 """
 import copy
 import io
 import json
+import os
+import re
+import sys
 import tempfile
 import threading
 import unittest
 import zipfile
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from unittest.mock import patch
@@ -21,10 +25,27 @@ import phase_l7_packaging as p
 import phase_l7_recovery_workflow as consumer
 import test_phase_l7_exact_recovery as fixtures
 
+REAL_PRODUCTION_PLAN = p.exact.production_plan
+
 
 class PackagingTests(unittest.TestCase):
-    setUp = fixtures.ExactRecoveryTests.setUp
     unchanged = fixtures.ExactRecoveryTests.unchanged
+
+    def setUp(self):
+        fixtures.ExactRecoveryTests.setUp(self)
+        self.wall = self.now
+        owner = self
+
+        class FixtureWallClock(datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return owner.wall.astimezone(tz) if tz else owner.wall.replace(tzinfo=None)
+
+        # Control time, not Planner logic. There are no live sources or grants.
+        clock_patch = patch.object(p, 'utc_now', side_effect=lambda: self.wall)
+        planner_clock_patch = patch.object(p.exact, 'datetime', FixtureWallClock)
+        clock_patch.start(); planner_clock_patch.start()
+        self.addCleanup(clock_patch.stop); self.addCleanup(planner_clock_patch.stop)
 
     def evidence18(self):
         def request(url):
@@ -128,6 +149,7 @@ class PackagingTests(unittest.TestCase):
             elif kind=='version':trust['base_git_sha']='0'*40
             elif kind=='bundle':trust['source_bundle_sha256']='0'*64
             else:trust['contract_sha256']='0'*64
+            self.wall=now
             with self.subTest(kind=kind),self.assertRaises(p.daily.Error):p.package(self.root,raw,c,trust,now)
         self.unchanged()
 
@@ -199,8 +221,116 @@ class PackagingTests(unittest.TestCase):
         with self.assertRaises(p.daily.Error):p.write_output(self.root,self.output/'one',b'{}',{})
         self.unchanged()
 
+    def test_real_production_planner_positive_is_read_only(self):
+        raw,c,t,e=self.inputs()
+        evidence=p.decode_evidence(json.loads(raw)['evidence'])
+        self.assertIs(p.exact.production_plan,REAL_PRODUCTION_PLAN)
+        plan=REAL_PRODUCTION_PLAN(self.root,e,evidence,self.wall,t['pins'])
+        self.assertEqual(len(plan['recovery_records']),7)
+        self.assertEqual(plan['contract'],e['contract'])
+        output,receipt=p.package(self.root,raw,c,t,self.now)
+        self.assertEqual(json.loads(output)['envelope'],e)
+        self.assertEqual(receipt['candidate_sha256'],e['contract']['candidate_sha256'])
+        self.unchanged()
+
+    def test_real_planner_rejects_each_missing_approval_and_wrong_pin(self):
+        raw,_,t,e=self.inputs()
+        evidence=p.decode_evidence(json.loads(raw)['evidence'])
+        for n in range(7):
+            bad=copy.deepcopy(e);bad['approvals'].pop(n)
+            with self.subTest(missing=n),self.assertRaisesRegex(p.daily.Error,'EXACT_SEVEN_UNIQUE_APPROVALS_REQUIRED'):
+                REAL_PRODUCTION_PLAN(self.root,bad,evidence,self.wall,fixtures.pins(bad))
+        pins=copy.deepcopy(t['pins'])
+        pins['individual'][e['approvals'][0]['approval_id']]='0'*64
+        with self.assertRaisesRegex(p.daily.Error,'EXACT_INDIVIDUAL_APPROVAL_PIN_MISMATCH'):
+            REAL_PRODUCTION_PLAN(self.root,e,evidence,self.wall,pins)
+        self.unchanged()
+
+    def test_real_planner_rejects_expired_evidence_and_test_credentials(self):
+        raw,_,t,e=self.inputs()
+        evidence=p.decode_evidence(json.loads(raw)['evidence'])
+        self.wall=self.now+timedelta(hours=6,seconds=1)
+        with self.assertRaisesRegex(p.daily.Error,'EXACT_EVIDENCE_EXPIRED'):
+            REAL_PRODUCTION_PLAN(self.root,e,evidence,self.wall,t['pins'])
+        self.wall=self.now
+        test_only=fixtures.fixture_approvals({'contract':e['contract']},self.now)
+        with self.assertRaisesRegex(p.daily.Error,'EXACT_TEST_APPROVAL_FORBIDDEN'):
+            REAL_PRODUCTION_PLAN(self.root,test_only,evidence,self.wall,fixtures.pins(test_only))
+        self.unchanged()
+
+    def test_real_planner_cross_taipei_day_within_six_hours_is_rejected(self):
+        self.now=self.now.replace(hour=23,minute=59)
+        self.wall=self.now
+        raw,c,t,e=self.inputs()
+        self.wall+=timedelta(minutes=2)
+        evidence=p.decode_evidence(json.loads(raw)['evidence'])
+        self.assertLess(self.wall-self.now,timedelta(hours=6))
+        with self.assertRaisesRegex(p.daily.Error,'EXACT_EVIDENCE_EXPIRED'):
+            REAL_PRODUCTION_PLAN(self.root,e,evidence,self.wall,t['pins'])
+        with self.assertRaisesRegex(p.daily.Error,'EXACT_EVIDENCE_EXPIRED'):
+            p.package(self.root,raw,c,t,self.now)
+        self.unchanged()
+
+    def test_api_delay_45_seconds_refreshes_clock_with_real_planner(self):
+        raw,c,t,e=self.inputs()
+        source=self.output/'TEST_ONLY-review.json';source.write_bytes(raw)
+        destination=self.output/'TEST_ONLY-api-delay-package'
+        t['github_actors']={'unit-fixture-not-real-executor':99}
+        policy={'base_git_sha':t['base_git_sha'],'github_actors':t['github_actors']}
+        # Keep OS executable lookup only; do not inherit real tokens or trust.
+        environment={k:v for k,v in os.environ.items() if k.upper() in
+                     {'PATH','SYSTEMROOT','WINDIR','COMSPEC','SYSTEMDRIVE','TEMP','TMP'}}
+        environment.update(EXACT_PACKAGING_POLICY_JSON=json.dumps(policy),EXACT_PACKAGING_TRUST_JSON=json.dumps(t))
+        observed=[]
+        def delayed_api(path):
+            self.assertIn('/issues/comments/',path)
+            self.wall+=timedelta(seconds=45)
+            observed.append(self.wall)
+            return c
+        args=['packaging','--operation','package','--source-run-id','4',
+              '--input',str(source),'--output',str(destination)]
+        # Simulate external API latency; DO NOT replace production_plan or _plan.
+        with patch.object(sys,'argv',args),patch.dict(os.environ,environment,clear=True), \
+             patch.object(p.Path,'cwd',return_value=self.root), \
+             patch.object(p,'guard',return_value={'workflow_run_id':9}), \
+             patch.object(p,'source_artifact',return_value={'id':5,'digest':'sha256:unit-fixture'}), \
+             patch.object(p,'api',side_effect=delayed_api):
+            self.assertIs(p.exact.production_plan,REAL_PRODUCTION_PLAN)
+            self.assertEqual(p.main(),0)
+        self.assertEqual(observed,[self.now+timedelta(seconds=45)])
+        self.assertEqual(json.loads((destination/'bundle.json').read_bytes())['envelope'],e)
+        receipt=json.loads((destination/'packaging-receipt.json').read_bytes())
+        self.assertEqual(receipt['validated_at'],self.wall.astimezone(timezone.utc).isoformat())
+        evidence=p.decode_evidence(json.loads(raw)['evidence'])
+        # The unchanged 30-second rule STILL rejects the pre-API clock.
+        with self.assertRaisesRegex(p.daily.Error,'EXACT_PRODUCTION_WALL_CLOCK_REQUIRED'):
+            REAL_PRODUCTION_PLAN(self.root,e,evidence,self.now,t['pins'])
+        self.unchanged()
+
+    def test_clock_rollback_naive_or_wall_clock_skew_rejected(self):
+        raw,c,t,_=self.inputs()
+        for value,reason in [(self.now-timedelta(seconds=1),'PACKAGING_CLOCK_ROLLBACK_OR_NAIVE'),
+                             (self.now.replace(tzinfo=None),'PACKAGING_CLOCK_ROLLBACK_OR_NAIVE'),
+                             (self.now+timedelta(seconds=31),'EXACT_PRODUCTION_WALL_CLOCK_REQUIRED')]:
+            with self.subTest(clock=value),patch.object(p,'utc_now',return_value=value),self.assertRaisesRegex(p.daily.Error,reason):
+                p.package(self.root,raw,c,t,self.now)
+        self.unchanged()
+
 
 class WorkflowContractTests(unittest.TestCase):
+    def test_four_actions_are_exact_official_commit_pins(self):
+        root=Path(__file__).resolve().parents[2]
+        workflow=(root/p.WORKFLOW).read_text(encoding='utf8')
+        uses=re.findall(r'uses:\s+(\S+)',workflow)
+        expected={
+            'actions/checkout':'11d5960a326750d5838078e36cf38b85af677262',
+            'actions/setup-python':'a26af69be951a213d495a4c3e4e4022e16d87065',
+            'actions/download-artifact':'d3f86a106a0bac45b974a628896c90dbdf5c8093',
+            'actions/upload-artifact':'ea165f8d65b6e75b540449e92b4886f43607fa02'}
+        self.assertEqual(len(uses),4)
+        self.assertEqual(dict(u.split('@') for u in uses),expected)
+        self.assertTrue(all(re.fullmatch(r'actions/[a-z-]+@[a-f0-9]{40}',u) for u in uses))
+
     def test_manual_only_permissions_root_bundle_path_and_unchanged_daily(self):
         root=Path(__file__).resolve().parents[2]
         workflow=(root/p.WORKFLOW).read_text(encoding='utf8')
