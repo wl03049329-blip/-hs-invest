@@ -50,6 +50,8 @@ def refresh(root, now, *, request=transport, clock=None):
     try:
         holidays = daily.calendar_days(calendar, now.astimezone(daily.TAIPEI).year)
         expected = daily.expected_day(now, holidays)
+        daily.require(expected[:4] == exact.TARGET[:4] == str(now.astimezone(daily.TAIPEI).year),
+                      "EXACT_CROSS_YEAR_REVIEW_REQUIRED")
     except Exception as exc:
         return {"status": "EVIDENCE_INCOMPLETE", "errors": [{"source": "calendar", "reason": str(exc)}],
                 "evidence": evidence, "draft": None}
@@ -91,36 +93,26 @@ def refresh(root, now, *, request=transport, clock=None):
     errors = []
     for dataset in bridge.ACTION_DATASETS:
         symbol = "" if dataset == "TaiwanStockParValueChange" else "&data_id=00631L"
-        url = f"{daily.ACTION_URL}?dataset={dataset}{symbol}&start_date={exact.ANCHOR}&end_date={expected}"
-        payload = capture(dataset, url, {"start": exact.ANCHOR, "end": expected, "symbol": "00631L"})
+        url = f"{daily.ACTION_URL}?dataset={dataset}{symbol}&start_date={exact.ANCHOR}&end_date={exact.TARGET}"
+        payload = capture(dataset, url, {"start": exact.ANCHOR, "end": exact.TARGET, "symbol": "00631L"})
         if payload is None or payload.get("status") != 200 or payload.get("msg") != "success" or not isinstance(payload.get("data"), list):
             errors.append({"source": dataset, "reason": "CORPORATE_ACTION_SOURCE_UNAVAILABLE"})
             break  # Never loop/retry 402 or fake an empty action response.
     if errors:
         return {"status": "EVIDENCE_INCOMPLETE", "errors": errors, "evidence": evidence, "draft": None}
-    if expected != exact.TARGET:
-        # Read-only normal collector probe for later dates, not a recovery grant.
-        cache = {}
-        for entry in evidence["receipts"]:
-            if not entry["name"].startswith("yahoo-") or entry["name"] == evidence["selected_yahoo_payload"]:
-                cache[entry["source_url"]] = json.loads(entry["raw"].decode("utf-8-sig"))
-        def replay(url):
-            daily.require(url in cache, "FOLLOW_ON_FRESH_SOURCE_MISSING")
-            return cache[url]
-        try:
-            from pathlib import Path
-            policy, historical = daily.shadow.load_context(root)
-            prior = daily.shadow.read_json(Path(root) / daily.SNAPSHOT)
-            data, _ = daily.collect(historical, prior, policy, now, fetcher=replay, root=root, allow_official_bridge=True)
-            follow_on = {"status": "CANDIDATE_ONLY_PASS", "date": data["item"]["rows"][-1]["date"],
-                         "data_version": data["metadata"]["data_version"], "publication": "NOT_AUTHORIZED"}
-        except Exception as exc:
-            follow_on = {"status": "FAIL_CLOSED", "reason": str(exc)}
-        return {"status": "NEW_COMPLETED_DAY_OUTSIDE_RECOVERY_SCOPE", "latest_completed_day": expected,
-                "recovery_target": exact.TARGET, "follow_on_probe": follow_on, "evidence": evidence, "draft": None}
+    if expected > exact.TARGET:
+        for dataset in bridge.ACTION_DATASETS:
+            url = exact.scope.action_url(dataset,exact.ANCHOR,expected)
+            payload = capture('post-'+dataset,url,{"start":exact.ANCHOR,"end":expected,"symbol":"00631L"})
+            if payload is None or payload.get('status') != 200 or payload.get('msg') != 'success' or not isinstance(payload.get('data'),list):
+                errors.append({'source':'post-'+dataset,'reason':'CORPORATE_ACTION_SOURCE_UNAVAILABLE'})
+                break
+        if errors:
+            return {'status':'EVIDENCE_INCOMPLETE','errors':errors,'evidence':evidence,'draft':None}
     try:
         unsigned = exact.draft(root, evidence, clock())
     except Exception as exc:
         return {"status": "EVIDENCE_INCOMPLETE", "errors": [{"reason": str(exc)}], "evidence": evidence, "draft": None}
     return {"status": "FRESH_VALIDATED_UNSIGNED", "latest_completed_day": expected,
+            "actual_latest_completed_session":expected,"recovery_target":exact.TARGET,
             "evidence": evidence, "draft": unsigned, "errors": []}
