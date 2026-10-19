@@ -3,22 +3,67 @@
   "system_state": "FAIL_CLOSED",
   "signal_status": "NO_SIGNAL",
   "reason": "BRIDGE_HISTORICAL_GAP_REVIEW_REQUIRED:2026-10-13",
-  "checked_at": "2026-10-16T18:17:33.903535+00:00",
+  "checked_at": "2026-10-19T14:54:43.672686+00:00",
   "latest_data_date": "2026-10-13",
-  "expected_completed_bar": "2026-10-16",
+  "current_failure_reason": "RECOVERY_EVIDENCE_AVAILABLE",
+  "blocking_incidents": [
+    {
+      "incident_id": "OPERATIONAL:3c2f5da7d16222839fa8e351ddc2137ae990621bcbdee48bb65c2b44626ca31a",
+      "reason": "BRIDGE_HISTORICAL_GAP_REVIEW_REQUIRED:2026-10-13",
+      "record_hash": "fbab6afaa833233b12057634e8edd81f574c4b7b9db30035b3e3fdf3dbf6a5e8"
+    },
+    {
+      "incident_id": "OPERATIONAL:993d4301b419f565b8afdc903a43f5b56ee6847fa57e2d30664c7a703dfc442a",
+      "reason": "BRIDGE_HISTORICAL_GAP_REVIEW_REQUIRED:2026-10-13",
+      "record_hash": "ed41485ba1e9c87fce7810f1aa16c0890960d27720ceeadec2e1bf20cf5fdc4e"
+    },
+    {
+      "incident_id": "OPERATIONAL:a32c948d20b6c500e029cc8bd7e66a26d940fcccb35ecaf972f2d97459c82058",
+      "reason": "BRIDGE_HISTORICAL_GAP_REVIEW_REQUIRED:2026-10-13",
+      "record_hash": "cb52da11e4eb2b957b354bc05c79d12c7cf4fa48ef57262cdb834a364a225d0a"
+    },
+    {
+      "incident_id": "OPERATIONAL:b280f088a767be28f0685b0e8cb77934227e903754316c089929c971dbc058e6",
+      "reason": "BRIDGE_HISTORICAL_GAP_REVIEW_REQUIRED:2026-10-13",
+      "record_hash": "8a8bfed695e2b2f562984e42df96ca252343a5ffdfd2bcce1968305ee098d01a"
+    },
+    {
+      "incident_id": "OPERATIONAL:dca73b480a1542bb079db04b15aef1681f317c4093a4dc752aaf485f0fbdb204",
+      "reason": "BRIDGE_HISTORICAL_GAP_REVIEW_REQUIRED:2026-10-13",
+      "record_hash": "c502420a8b6bc7a46144d66e98f9698d99c8790a532010d9f46045f666a32eda"
+    },
+    {
+      "incident_id": "OPERATIONAL:ad0a1c9c0975a399eaf12a3621e9d9af35d806ca2c805a79643f89586aa693a5",
+      "reason": "BRIDGE_HISTORICAL_GAP_REVIEW_REQUIRED:2026-10-13",
+      "record_hash": "2ffdab48c65abc92c897b612f9e94f8362adc87880ef79c852b51cc10c5752f7"
+    },
+    {
+      "incident_id": "OPERATIONAL:a4b94a8477187e08e718c4d87c1c7f6d592df0d7638cae07c2cd8247f6797379",
+      "reason": "BRIDGE_HISTORICAL_GAP_REVIEW_REQUIRED:2026-10-13",
+      "record_hash": "4b902e5ff203dd034067b9e96ff7c969183d2271b24ad4a6d0e5600efb082b83"
+    }
+  ],
+  "diagnostics": {
+    "SOURCE_COLLECTION": "SUCCESS",
+    "CANDIDATE_VALIDATION": "PASS",
+    "INTEGRITY_REVIEW": "PENDING",
+    "PUBLICATION": "NOT_PUBLISHED"
+  },
+  "publication_scope": "GIT_PUSH_AND_PAGES_NOT_OBSERVED",
+  "expected_completed_bar": "2026-10-19",
   "freshness": "STALE",
   "data_integrity": "FAIL",
   "dry_run": false,
   "requires_integrity_review": true,
   "workflow_classification": "RECOVERY_EVIDENCE_AVAILABLE",
   "incident_identity": {
-    "target_completed_trading_date": "2026-10-16",
+    "target_completed_trading_date": "2026-10-19",
     "normalized_root_cause": "BRIDGE_HISTORICAL_GAP_REVIEW_REQUIRED",
     "latest_verified_anchor_date": "2026-10-13",
     "source_failure_class": "BRIDGE_HISTORICAL_GAP_REVIEW_REQUIRED",
     "policy_version": "HS_LEVERAGE_C_V1_FORWARD_POLICY_2026:V1:HS_LEVERAGE_C_V1_THRESHOLD_2026_TRAIN_END_2025-12-31"
   },
-  "incident_fingerprint": "a4b94a8477187e08e718c4d87c1c7f6d592df0d7638cae07c2cd8247f6797379",
+  "incident_fingerprint": "935667816c0686fe4b7e2949cfcc63b1ed0747ad7f2a6fe4d48c76a32a6746a6",
   "source_probe_evidence": {
     "sessions": [
       {
@@ -35,32 +80,43 @@
       },
       {
         "date": "2026-10-15",
-        "missing": [
-          "open",
-          "high",
-          "low",
-          "close",
-          "volume",
-          "adjclose"
-        ],
-        "values": {}
+        "missing": [],
+        "values": {
+          "open": 37.77000045776367,
+          "high": 37.880001068115234,
+          "low": 37.13999938964844,
+          "close": 37.13999938964844,
+          "volume": 641516618,
+          "adjclose": 37.13999938964844
+        }
       },
       {
         "date": "2026-10-16",
-        "missing": [
-          "close",
-          "adjclose"
-        ],
+        "missing": [],
         "values": {
           "open": 37.36000061035156,
           "high": 37.65999984741211,
           "low": 37.099998474121094,
-          "volume": 174782559
+          "close": 37.150001525878906,
+          "volume": 173098565,
+          "adjclose": 37.150001525878906
+        }
+      },
+      {
+        "date": "2026-10-19",
+        "missing": [],
+        "values": {
+          "open": 36.08000183105469,
+          "high": 36.599998474121094,
+          "low": 35.91999816894531,
+          "close": 36.5099983215332,
+          "volume": 304319202,
+          "adjclose": 36.5099983215332
         }
       }
     ],
     "validation": "PASS",
-    "data_version": "adjusted_daily_v1:2a83c864461cfa11c0b28e551b926806edd3313e089e14c4b985ee491eaa7270"
+    "data_version": "adjusted_daily_v1:9292c3db3db6ddf595f39a91fb08a5af4665ec5f8637fabf7f57fc5d3f795e62"
   },
   "forward_observations": 2,
   "eligible_observations": 0,
