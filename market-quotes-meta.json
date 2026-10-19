@@ -1,26 +1,26 @@
 {
   "version": 2,
-  "updated_at": "2026-10-19T13:25:50.551360+08:00",
+  "updated_at": "2026-10-19T05:27:43.158864Z",
   "source_dates": {
-    "TWSE": "2026-10-16",
+    "TWSE": "2026-10-19",
     "TPEx": "2026-10-16"
   },
   "source_status": {
-    "TWSE": "official_closing_data_daily_report",
+    "TWSE": "official_closing_data",
     "TPEx": "official_closing_data",
-    "RAILWAY_PRIMARY": "ok"
+    "TWSE_MIS": "cached_after_error: No module named 'backend'"
   },
-  "official_last_checked_at": "2026-10-19T04:59:52.059962Z",
+  "official_last_checked_at": "2026-10-19T05:27:43.158864Z",
   "official_source_dates": {
     "TWSE": "2026-10-16",
     "TPEx": "2026-10-16"
   },
   "official_last_success_at": {
-    "TWSE": "2026-10-19T04:59:52.059962Z",
-    "TPEx": "2026-10-19T04:59:52.059962Z"
+    "TWSE": "2026-10-19T05:27:43.158864Z",
+    "TPEx": "2026-10-19T05:27:43.158864Z"
   },
   "item_count": 2406,
-  "github_fallback_last_run": "2026-10-16T05:17:56.574950Z",
+  "github_fallback_last_run": "2026-10-19T05:27:58.484668Z",
   "github_fallback_gap_detected": false,
   "primary_trigger_source": "RAILWAY_PRIMARY",
   "last_primary_tick_at": "2026-10-19T13:25:50.551360+08:00",
@@ -55,21 +55,102 @@
     }
   },
   "radar_refresh_attempt": {
-    "verified": true,
-    "status": "success",
+    "verified": false,
+    "status": "failed",
     "trading_date": "2026-10-19",
-    "slot": "13:25",
-    "captured_at": "2026-10-19T13:25:50.541379+08:00",
-    "verified_at": "2026-10-19T13:25:50.551360+08:00",
-    "market_as_of": "2026-10-19T13:24:59+08:00",
-    "completeness": "5/5",
-    "trigger_source": "RAILWAY_PRIMARY",
-    "quote_sources": {
-      "0050": "FUGLE_LAST_TRADE",
-      "00662": "FUGLE_LAST_TRADE",
-      "00757": "FUGLE_LAST_TRADE",
-      "00830": "MIS_Z",
-      "00935": "FUGLE_LAST_TRADE"
+    "slot": "13:27",
+    "attempted_at": "2026-10-19T05:27:58.484668Z",
+    "error": "No module named 'backend'",
+    "failure_class": "OPERATIONAL_SOURCE",
+    "trigger_source": "GITHUB_FALLBACK",
+    "required_symbol_diagnostics": {
+      "required_symbols": [
+        "0050",
+        "00662",
+        "00757",
+        "00830",
+        "00935"
+      ],
+      "initial_missing": [],
+      "initial_parse_rejected": {},
+      "retried_batches": [],
+      "retry_strategy": "required_symbol_single_request",
+      "targeted_retry_attempts": {},
+      "retry_errors": {},
+      "retry_recovered": [],
+      "final_missing": [],
+      "final_parse_rejected": {},
+      "symbols": {
+        "0050": {
+          "batch": 3,
+          "request_key": "tse_0050.tw",
+          "raw_present": true,
+          "parsed": true,
+          "price_field": "pz",
+          "rejection_reason": null,
+          "raw_fields": null
+        },
+        "00662": {
+          "batch": 4,
+          "request_key": "tse_00662.tw",
+          "raw_present": true,
+          "parsed": true,
+          "price_field": "z",
+          "rejection_reason": null,
+          "raw_fields": null
+        },
+        "00757": {
+          "batch": 5,
+          "request_key": "tse_00757.tw",
+          "raw_present": true,
+          "parsed": true,
+          "price_field": "pz",
+          "rejection_reason": null,
+          "raw_fields": null
+        },
+        "00830": {
+          "batch": 5,
+          "request_key": "tse_00830.tw",
+          "raw_present": true,
+          "parsed": true,
+          "price_field": "z",
+          "rejection_reason": null,
+          "raw_fields": null
+        },
+        "00935": {
+          "batch": 6,
+          "request_key": "tse_00935.tw",
+          "raw_present": true,
+          "parsed": true,
+          "price_field": "pz",
+          "rejection_reason": null,
+          "raw_fields": null
+        }
+      }
+    },
+    "slot_diagnostic": {
+      "schema_version": 3,
+      "contract": "HS_LIVE_INTRADAY_SLOT_V4",
+      "trading_date": "2026-10-19",
+      "classified_slot": "13:27",
+      "actual_run_time": "2026-10-19T05:27:58.484695Z",
+      "market_fetch": "PASS",
+      "required_symbols": {
+        "0050": "PASS",
+        "00662": "PASS",
+        "00757": "PASS",
+        "00830": "PASS",
+        "00935": "PASS"
+      },
+      "market_as_of": null,
+      "core_input": "NOT_RUN",
+      "score": "NOT_RUN",
+      "snapshot_append": "NOT_RUN",
+      "existing_slot_success": false,
+      "retry_number": null,
+      "failure_class": "OPERATIONAL_SOURCE",
+      "reason": "No module named 'backend'",
+      "source_attempts": {}
     }
   },
   "intraday_completeness": {
@@ -109005,5 +109086,97 @@
       }
     }
   },
-  "official_eod_snapshot": null
+  "official_eod_snapshot": {
+    "snapshot_type": "OFFICIAL_CLOSE_INPUT",
+    "date": "2026-10-19",
+    "observed_at": "2026-10-19T05:27:43.158864Z",
+    "source_status": "official_closing_data",
+    "items": {
+      "0050": {
+        "code": "0050",
+        "name": "0050",
+        "price": 107.95,
+        "previous_close": 109,
+        "date": "2026-10-19",
+        "market": "TWSE",
+        "quote_mode": "delayed",
+        "quote_time": "13:24:59",
+        "high": 108.3,
+        "low": 107.1,
+        "open": 107.45,
+        "price_field": "lastTrade.price",
+        "quote_source": "FUGLE_LAST_TRADE",
+        "source": "https://api.fugle.tw/marketdata/v1.0/stock/intraday/quote",
+        "volume": 140969000
+      },
+      "00662": {
+        "code": "00662",
+        "name": "00662",
+        "price": 123.4,
+        "previous_close": 124.95,
+        "date": "2026-10-19",
+        "market": "TWSE",
+        "quote_mode": "delayed",
+        "quote_time": "13:24:44",
+        "high": 123.6,
+        "low": 122.75,
+        "open": 123,
+        "price_field": "lastTrade.price",
+        "quote_source": "FUGLE_LAST_TRADE",
+        "source": "https://api.fugle.tw/marketdata/v1.0/stock/intraday/quote",
+        "volume": 3736000
+      },
+      "00757": {
+        "code": "00757",
+        "name": "00757",
+        "price": 144,
+        "previous_close": 146.3,
+        "date": "2026-10-19",
+        "market": "TWSE",
+        "quote_mode": "delayed",
+        "quote_time": "13:24:41",
+        "high": 144.15,
+        "low": 142.6,
+        "open": 142.6,
+        "price_field": "lastTrade.price",
+        "quote_source": "FUGLE_LAST_TRADE",
+        "source": "https://api.fugle.tw/marketdata/v1.0/stock/intraday/quote",
+        "volume": 1146000
+      },
+      "00830": {
+        "code": "00830",
+        "name": "國泰費城半導體",
+        "price": 82.35,
+        "previous_close": 83.95,
+        "date": "2026-10-19",
+        "market": "TWSE",
+        "quote_mode": "delayed",
+        "quote_time": "13:24:24",
+        "high": 82.4,
+        "low": 81.4,
+        "open": 81.65,
+        "price_field": "z",
+        "quote_source": "MIS_Z",
+        "source": "https://mis.twse.com.tw/stock/api/getStockInfo.jsp",
+        "volume": 11828000
+      },
+      "00935": {
+        "code": "00935",
+        "name": "00935",
+        "price": 56.6,
+        "previous_close": 57,
+        "date": "2026-10-19",
+        "market": "TWSE",
+        "quote_mode": "delayed",
+        "quote_time": "13:24:59",
+        "high": 56.7,
+        "low": 55.5,
+        "open": 55.75,
+        "price_field": "lastTrade.price",
+        "quote_source": "FUGLE_LAST_TRADE",
+        "source": "https://api.fugle.tw/marketdata/v1.0/stock/intraday/quote",
+        "volume": 14303000
+      }
+    }
+  }
 }
