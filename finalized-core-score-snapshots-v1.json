@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "core_score_version": "FINAL_CORE_WEIGHT_V1",
-  "generated_at": "2026-10-19T13:30:00+08:00",
+  "generated_at": "2026-10-20T13:30:00+08:00",
   "snapshots": [
     {
       "date": "2026-08-26",
@@ -5751,6 +5751,166 @@
               "score": 24.37450826121161,
               "weight": 15,
               "contribution": 3.6561762391817414
+            }
+          }
+        },
+        {
+          "symbol": "009815",
+          "status": "WAIT_NATIVE",
+          "final_core_score": null,
+          "finalized": true,
+          "reason": "Native Core Score history is not mature; no proxy or synthetic score is published."
+        }
+      ]
+    },
+    {
+      "date": "2026-10-20",
+      "snapshot_type": "FINALIZED_CLOSE",
+      "finalized": true,
+      "finalized_at": "2026-10-20T13:30:00+08:00",
+      "source": {
+        "status": "official_closing_data",
+        "provider": "TWSE_EXCHANGE_REPORT_OPEN_DATA",
+        "source_type": "TWSE_OFFICIAL_RAW_DAILY_OHLC",
+        "source_date": "2026-10-20",
+        "fetched_at": "2026-10-20T06:45:27.120624Z",
+        "fallback_used": true,
+        "data_as_of": "2026-10-20T13:30:00+08:00",
+        "generated_at": "2026-10-20T13:30:00+08:00"
+      },
+      "rows": [
+        {
+          "symbol": "0050",
+          "final_core_score": 22.91394849785408,
+          "tier": "一般持有",
+          "core_score_version": "FINAL_CORE_WEIGHT_V1",
+          "data_as_of": "2026-10-20T13:30:00+08:00",
+          "factors": {
+            "weekly_j": {
+              "raw": 31.731109148919415,
+              "score": 21,
+              "weight": 30,
+              "contribution": 6.3
+            },
+            "dd52": {
+              "raw": -8.018867924528294,
+              "score": 27,
+              "weight": 55,
+              "contribution": 14.850000000000001
+            },
+            "crash": {
+              "raw": -7.939914163090133,
+              "score": 11.759656652360533,
+              "weight": 15,
+              "contribution": 1.76394849785408
+            }
+          }
+        },
+        {
+          "symbol": "00662",
+          "final_core_score": 6.6,
+          "tier": "一般持有",
+          "core_score_version": "FINAL_CORE_WEIGHT_V1",
+          "data_as_of": "2026-10-20T13:30:00+08:00",
+          "factors": {
+            "weekly_j": {
+              "raw": 57.73539824104131,
+              "score": 0,
+              "weight": 30,
+              "contribution": 0
+            },
+            "dd52": {
+              "raw": -3.5238841033672696,
+              "score": 12,
+              "weight": 55,
+              "contribution": 6.6000000000000005
+            },
+            "crash": {
+              "raw": -3.258735767569687,
+              "score": 0,
+              "weight": 15,
+              "contribution": 0
+            }
+          }
+        },
+        {
+          "symbol": "00757",
+          "final_core_score": 5.5,
+          "tier": "一般持有",
+          "core_score_version": "FINAL_CORE_WEIGHT_V1",
+          "data_as_of": "2026-10-20T13:30:00+08:00",
+          "factors": {
+            "weekly_j": {
+              "raw": 63.2465714141224,
+              "score": 0,
+              "weight": 30,
+              "contribution": 0
+            },
+            "dd52": {
+              "raw": -2.9956243688993744,
+              "score": 10,
+              "weight": 55,
+              "contribution": 5.5
+            },
+            "crash": {
+              "raw": -2.8975741239892217,
+              "score": 0,
+              "weight": 15,
+              "contribution": 0
+            }
+          }
+        },
+        {
+          "symbol": "00830",
+          "final_core_score": 59.435683530678155,
+          "tier": "正式加碼訊號",
+          "core_score_version": "FINAL_CORE_WEIGHT_V1",
+          "data_as_of": "2026-10-20T13:30:00+08:00",
+          "factors": {
+            "weekly_j": {
+              "raw": 19.45402125274039,
+              "score": 56,
+              "weight": 30,
+              "contribution": 16.8
+            },
+            "dd52": {
+              "raw": -20.743639921722114,
+              "score": 69,
+              "weight": 55,
+              "contribution": 37.95
+            },
+            "crash": {
+              "raw": -12.809472551130252,
+              "score": 31.23789020452101,
+              "weight": 15,
+              "contribution": 4.685683530678151
+            }
+          }
+        },
+        {
+          "symbol": "00935",
+          "final_core_score": 35.658693941778125,
+          "tier": "回檔訊號出現",
+          "core_score_version": "FINAL_CORE_WEIGHT_V1",
+          "data_as_of": "2026-10-20T13:30:00+08:00",
+          "factors": {
+            "weekly_j": {
+              "raw": 26.953411231938304,
+              "score": 27,
+              "weight": 30,
+              "contribution": 8.1
+            },
+            "dd52": {
+              "raw": -12.705882352941178,
+              "score": 42,
+              "weight": 55,
+              "contribution": 23.1
+            },
+            "crash": {
+              "raw": -12.431156569630208,
+              "score": 29.724626278520834,
+              "weight": 15,
+              "contribution": 4.458693941778125
             }
           }
         },
