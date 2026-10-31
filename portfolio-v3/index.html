@@ -1,9 +1,17 @@
 <!doctype html>
-<html lang="zh-Hant" data-build-sha="PENDING" data-radar-phase="3.2-mobile-stack-v32">
+<html lang="zh-Hant" data-build-sha="PENDING" data-radar-phase="3.2-mobile-stack-v32" data-hs-v3-page="3.1">
 <head>
-<base href="../">
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<base href="../">
+<style id="hs-v3-critical">
+html[data-hs-v3-page]:not([data-hs-v3-boot="ready"]) [data-tab-section],html[data-hs-v3-page]:not([data-hs-v3-boot="ready"]) #hpv2{display:none!important}
+html[data-hs-v3-page]:not([data-hs-v3-boot="ready"]) .appNavButton{pointer-events:none}
+#hs-v3-boot-panel{max-width:620px;margin:18px auto;padding:20px;border:1px solid #766035;border-radius:14px;background:#131416;color:#eee}
+#hs-v3-boot-panel h2{font-size:20px;color:#e8c67a}#hs-v3-boot-panel p{line-height:1.6}#hs-v3-boot-panel pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}#hs-v3-boot-panel button,#hs-v3-boot-panel a{display:inline-block;margin:8px;padding:10px;color:#e8c67a}
+html[data-hs-v3-boot="ready"] #hs-v3-boot-panel{display:none!important}
+</style>
+<script src="portfolio-v3/entry.js?v=001cc8dd2d6d7a82"></script>
 <meta name="theme-color" content="#050505" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -321,10 +329,16 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
   display:none !important;
 }
 </style><link rel="stylesheet" href="personal-v2/personal-v2.css?v=83a05caebf86a72c">
-<link rel="stylesheet" href="portfolio-v3/v3.css?v=2dfd7b776721d88d">
-<script defer src="portfolio-v3/entry.js?v=207ae68bfad08ba5"></script>
+<link rel="stylesheet" href="portfolio-v3/v3.css?v=41ea71ca4f0a6f8d">
 </head>
 <body>
+<section id="hs-v3-boot-panel" role="status" aria-live="polite">
+<h2 id="hs-v3-boot-title">正在啟動個人持股 V3</h2>
+<p id="hs-v3-boot-message">新版完成載入後才會顯示。若此訊息持續，請重新載入新版；不需要清除網站資料或重設持股。</p>
+<button type="button" id="hs-v3-retry">重新載入新版</button><a href="./">回到保留的 V2</a>
+<p><code id="hs-v3-boot-code">V3_STARTING</code></p><details><summary>啟動診斷（不含持股或金額）</summary><pre id="hs-v3-boot-detail"></pre></details>
+<noscript>目前未啟用 JavaScript，V3 無法啟動。請啟用 JavaScript 後重新開啟，不需清除持股資料。</noscript>
+</section>
 <svg class="iconSprite" aria-hidden="true" width="0" height="0">
   <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5v8a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
   <symbol id="i-radar" viewBox="0 0 24 24"><path d="M4 16a8 8 0 0 1 16 0M7 16a5 5 0 0 1 10 0M12 16l6-7M5 20h14"/><circle cx="12" cy="16" r="1.8"/></symbol>
