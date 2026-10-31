@@ -31,7 +31,14 @@ def _ids(root, records, config, *, test_only=False):
             "REVIEW_READER_TEST_CREDENTIALS_FORBIDDEN")
     require(envelope.get("status") == ("TEST_ONLY_APPROVED" if test_only else "APPROVED"), "REVIEW_READER_UNSIGNED")
     require(body.get("schema") == exact.SCHEMA and body.get("recovery_target") == exact.TARGET
-            and body.get("anchor_date") == exact.ANCHOR, "REVIEW_READER_SCOPE_MISMATCH")
+            and body.get("anchor_date") == exact.ANCHOR and body.get("contract_revision") == exact.CONTRACT_REVISION,
+            "REVIEW_READER_SCOPE_MISMATCH")
+    latest = body.get('actual_latest_completed_session')
+    proof = body.get('post_target_validation', {})
+    require(isinstance(latest,str) and latest >= exact.TARGET and proof.get('actual_latest_completed_session') == latest
+            and proof.get('recovery_target') == exact.TARGET and proof.get('publication') == 'NOT_AUTHORIZED'
+            and proof.get('status') == ('NOT_REQUIRED' if latest == exact.TARGET else 'PASS'),
+            'REVIEW_READER_POST_TARGET_PROOF_REQUIRED')
     require(pins.get("envelope_sha256") == daily.digest(envelope)
             and pins.get("authorization_id") == registry.get("authorization_id") == envelope.get("authorization_id")
             and registry.get("approved_contract_sha256") == daily.digest(body), "REVIEW_READER_PINS_INVALID")
@@ -121,7 +128,8 @@ def _ids(root, records, config, *, test_only=False):
     published_status = json.loads(git("show", commit + ":" + daily.STATUS))
     require(str(published_status.get("workflow_run_id")) == str(registry.get("execution", {}).get("workflow_run_id"))
             and published_status.get("data_integrity") == "PASS"
-            and published_status.get("latest_data_date") == exact.TARGET, "REVIEW_READER_RUN_RECEIPT_MISMATCH")
+            and published_status.get("latest_data_date") == exact.TARGET
+            and published_status.get('expected_completed_bar') == latest, "REVIEW_READER_RUN_RECEIPT_MISMATCH")
     published_records = [json.loads(line) for line in git("show", commit + ":" + policy["paths"]["forward_ledger"]).splitlines()]
     require(all(r in published_records for r in selected), "REVIEW_READER_RECORD_NOT_PUBLISHED")
     return ids
