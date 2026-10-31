@@ -51,7 +51,7 @@ check("27 volatility needs 20 returns", () => assert.equal(core.calculateAnnuali
 check("28 capital event disables volatility", () => assert.equal(core.calculateAnnualizedVolatility(history(Array(21).fill(100)),{continuity:{hasCapitalEvent:true}}).status,"CAPITAL_EVENT"));
 check("29 invalid values fail soft", () => assert.equal(core.calculateAnnualizedVolatility([...history(Array(20).fill(100)),{date:"bad"}],{continuity:{}}).status,"INVALID_DATA"));
 
-check("30 overlap feature is explicitly unavailable", () => assert.match(html,/ETF 重疊分析尚無可靠成分股資料/));
+check("30 personal V2 only claims holdings value allocation, not constituent overlap", () => {assert.match(html,/以股票與ETF參考市值計算，不包含現金/);assert.doesNotMatch(html,/<script[^>]+src="portfolio-v6\.js/);assert.doesNotMatch(html,/重疊分析已完成|成分股重疊率/);});
 check("31 no production overlap calculator is claimed", () => assert.equal(typeof core.calculateEtfOverlap,"undefined"));
 check("32 portfolio signature ignores prices", () => assert.equal(core.portfolioSignature(snap("2026-09-17",100000)),core.portfolioSignature(snap("2026-09-18",110000))));
 check("33 portfolio signature changes on quantity", () => assert.notEqual(core.portfolioSignature(snap("2026-09-17")),core.portfolioSignature(snap("2026-09-18",110000,{holdings:{"0050":{quantity:110,marketPrice:909.09,marketValue:100000}}}))));
