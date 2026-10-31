@@ -93,7 +93,7 @@ check("59 performanceStartDate restored",()=>assert.equal(JSON.parse(JSON.string
 check("60 analytics core is read-only",()=>{const before=JSON.stringify(ledger);analytics.calculateProfitBreakdown({ledger,marketRows:[{code:"0050",marketValue:2100}]});assert.equal(JSON.stringify(ledger),before)});
 check("61 UI loads correction-aware analytics core",()=>assert.match(html,/portfolio-analytics-core\.js\?v=20261015-position-correction-v1/));
 check("62 shared period state",()=>assert.match(ui,/portfolioAnalysisPeriod/));
-check("63 analytics information architecture",()=>assert.ok(html.indexOf("portfolioPerformancePanel")<html.indexOf("portfolioAnalyticsCenter")&&html.indexOf("portfolioAnalyticsCenter")<html.indexOf("portfolioRiskCenter")));
+check("63 personal V2 read-only estimates do not activate historical analytics writer",()=>{assert.match(html,/id="hpv2-estimatedTotalPnl"/);assert.match(html,/id="hpv2-donut"/);assert.doesNotMatch(html,/<script[^>]+src="portfolio-v6\.js/);assert.match(ui,/recordPortfolioSnapshot/)});
 check("64 mobile 2 by 2 summary",()=>assert.match(css,/portfolioAnalyticsSummary\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/));
 check("65 no forbidden advanced models",()=>["Sharpe","Sortino","Monte Carlo","VaR","Risk Score"].forEach(term=>assert.equal(`${html}${ui}`.includes(term),false)));
 console.log(`Portfolio Analytics Phase 5: ${passed}/${passed} PASS`);
