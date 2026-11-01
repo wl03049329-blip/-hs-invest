@@ -96,3 +96,16 @@ html[data-hs-v3-page] .app{padding-top:calc(var(--pv3-safe-top) + 8px)}
    The native control remains focusable; focused hex entry does not reflow rows. */
 #hpv2 .pv3legend input[type=color]{background:var(--color)!important;color:transparent!important;font-size:0;caret-color:transparent}
 #hpv2 .pv3legend input[type=color]:focus{width:90px;position:relative;z-index:3;font-size:12px;color:#fff!important;caret-color:#fff;text-shadow:0 1px 2px #000;outline:2px solid #e9c76e}
+#hpv2 .groupModes{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+#hpv2 .groupModes button,#hpv2 .groupCard button,#hpv2 #pv3-group-dialog button{min-height:44px;min-width:44px}
+#hpv2 .groupModes [aria-pressed=true]{background:#d9bd7c;color:#16130c}
+#hpv2 .groupCard{border-top:1px solid #39342a;padding:12px 0;overflow-wrap:anywhere}
+#hpv2 .groupCard summary{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;list-style:none}
+#hpv2 .groupCard summary>strong{font-size:26px;color:#e6cc91;grid-row:2;grid-column:1}
+#hpv2 .groupCard summary>progress,#hpv2 .groupCard summary>p,#hpv2 .groupCard summary>small:last-child{grid-column:1/-1;width:100%;margin:2px 0}
+#hpv2 .groupCard progress{height:5px;accent-color:#d9bd7c}
+#hpv2 .groupCard summary>p{font-size:13px}
+#hpv2 #pv3-group-dialog fieldset{border:1px solid #665538;border-radius:12px;min-width:0}
+#hpv2 #pv3-group-dialog [data-members] label{display:flex;gap:10px;align-items:center;min-height:44px;margin:5px 0}
+#hpv2 #pv3-group-dialog input[type=checkbox]{flex:0 0 22px;width:22px;height:22px}
+#hpv2 .groupButtons{display:flex;gap:8px;flex-wrap:wrap}
