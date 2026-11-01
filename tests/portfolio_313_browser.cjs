@@ -1,6 +1,6 @@
 'use strict';
 const{chromium,webkit}=require('playwright-core'),fs=require('fs'),path=require('path'),http=require('http'),assert=require('assert/strict'),{build}=require('../scripts/build_stable_app.cjs');
-const out=process.env.HS_313_OUT;if(!out)throw Error('OUT_REQUIRED');fs.mkdirSync(out,{recursive:true});const remote=process.env.HS_313_URL,site=remote?null:build({out:path.join(out,'site'),commit:'b'.repeat(40)}).out,results=[];
+const out=process.env.HS_313_OUT;if(!out)throw Error('OUT_REQUIRED');fs.mkdirSync(out,{recursive:true});const remote=process.env.HS_313_URL,site=remote?null:build({out:path.join(out,'site')}).out,results=[];
 const server=http.createServer((q,r)=>{const n=decodeURIComponent(new URL(q.url,'http://local').pathname.slice('/-hs-invest/'.length))||'index.html',f=path.join(site,n);if(n.includes('..')||!fs.existsSync(f)||!fs.statSync(f).isFile())return r.writeHead(404).end();r.writeHead(200,{'Content-Type':({'.html':'text/html','.js':'text/javascript','.css':'text/css','.json':'application/json','.webmanifest':'application/manifest+json','.png':'image/png','.svg':'image/svg+xml','.ico':'image/x-icon'})[path.extname(n)]||'application/octet-stream','Cache-Control':'no-store'}).end(fs.readFileSync(f));});
 const ready=p=>p.waitForFunction(()=>document.documentElement.dataset.hsV3Boot==='ready'&&document.getElementById('hpv2-start').onclick);
 const idle=p=>p.waitForFunction(()=>document.getElementById('hpv2').dataset.saving!=='true'&&!document.getElementById('hpv2-add').disabled);

@@ -52,6 +52,44 @@ class EtfUniverseTests(unittest.TestCase):
         self.assertEqual(roc_date("1150730"), "2026-07-30")
         self.assertEqual(roc_date("19208157"), "")
 
+    def test_one_market_timeout_cannot_be_hidden_by_other_market_count(self):
+        import scripts.update_etf_universe as u
+        def isin(exchange, url, at):
+            if exchange == "TPEx":
+                raise TimeoutError("SYNTHETIC source outage")
+            return [{}] * 300
+        with patch.object(u, "fetch_json", return_value=[]), patch.object(u, "parse_isin", side_effect=isin):
+            with self.assertRaisesRegex(ValueError, "Incomplete official ETF coverage: TPEx"):
+                u.build_universe()
+
+    def test_complete_market_coverage_and_traceable_catalog(self):
+        self.assertGreater(self.payload["counts"]["TPEx"], 0)
+        self.assertEqual(self.by_code["009815"]["exchange"], "TPEx")
+        self.assertTrue(self.payload["source_status"]["isin_tpex"].startswith("ok:"))
+        evidence = self.payload["source_evidence"]
+        self.assertTrue(any("strMode=4" in x["url"] for x in evidence))
+        for row in evidence:
+            self.assertRegex(row["sha256"], r"^[a-f0-9]{64}$")
+
+    def test_raw_response_receipt_is_computed_not_asserted_by_source(self):
+        import hashlib
+        import scripts.update_etf_universe as u
+        from unittest.mock import MagicMock
+        response = MagicMock()
+        response.read.return_value = b"SYNTHETIC official response"
+        response.status = 200
+        response.headers.get_content_charset.return_value = "utf-8"
+        response.__enter__.return_value = response
+        u.SOURCE_EVIDENCE.clear()
+        with patch.object(u, "urlopen", return_value=response):
+            body, charset = u.fetch_bytes("https://isin.twse.com.tw/isin/C_public.jsp?strMode=4")
+        receipt = u.SOURCE_EVIDENCE[-1]
+        self.assertEqual(receipt["sha256"], hashlib.sha256(body).hexdigest())
+        self.assertEqual(receipt["bytes"], len(body))
+        self.assertEqual(receipt["http_status"], 200)
+        self.assertIsNotNone(datetime.fromisoformat(receipt["at"]).tzinfo)
+        self.assertEqual(charset, "utf-8")
+
     def test_fomc_parser(self):
         html = "<p>The Committee decided to maintain the target range for the federal funds rate at 3-1/2 to 3-3/4 percent.</p>"
         self.assertEqual(parse_fomc_statement(html), (3.5, 3.75))

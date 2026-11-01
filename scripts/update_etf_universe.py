@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import html
+import hashlib
 import json
 import os
 import re
@@ -26,6 +27,7 @@ ISIN_URLS = {
 FINMIND_URL = "https://api.finmindtrade.com/api/v4/data"
 TAIPEI = ZoneInfo("Asia/Taipei")
 CODE_RE = re.compile(r"^[0-9A-Z]{4,10}$")
+SOURCE_EVIDENCE: list[dict[str, Any]] = []
 
 ISSUER_BRANDS = {
     "元大": "元大投信",
@@ -60,7 +62,11 @@ def fetch_bytes(url: str, timeout: int = 25) -> tuple[bytes, str]:
         },
     )
     with urlopen(request, timeout=timeout) as response:  # noqa: S310 - fixed official URLs
-        return response.read(), response.headers.get_content_charset() or ""
+        body = response.read()
+        SOURCE_EVIDENCE.append({"url": url, "at": datetime.now(timezone.utc).isoformat(),
+                                "http_status": response.status, "bytes": len(body),
+                                "sha256": hashlib.sha256(body).hexdigest()})
+        return body, response.headers.get_content_charset() or ""
 
 
 def fetch_json(url: str, timeout: int = 25) -> Any:
@@ -419,6 +425,7 @@ def write_atomic(path: Path, payload: dict[str, Any]) -> None:
 
 
 def build_universe(now: datetime | None = None) -> dict[str, Any]:
+    SOURCE_EVIDENCE.clear()
     now = now or datetime.now(TAIPEI)
     updated_at = now.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
     source_status: dict[str, str] = {}
@@ -451,6 +458,13 @@ def build_universe(now: datetime | None = None) -> dict[str, Any]:
         except Exception as exc:  # noqa: BLE001
             source_status[f"isin_{exchange.lower()}"] = f"error:{clean(exc, 100)}"
 
+    # A large TWSE response is not evidence of complete TPEx coverage. Never
+    # publish a one-market catalog when either official ISIN supplement failed.
+    for exchange in ISIN_URLS:
+        status = source_status.get(f"isin_{exchange.lower()}", "")
+        if not status.startswith("ok:") or int(status.split(":")[1]) == 0:
+            raise ValueError(f"Incomplete official ETF coverage: {exchange}: {status}")
+
     if len(rows) < 100:
         try:
             fallback = finmind_fallback(updated_at)
@@ -474,6 +488,11 @@ def build_universe(now: datetime | None = None) -> dict[str, Any]:
         key=lambda item: item["code"],
     )
     validate_items(items)
+    if OUTPUT.exists():
+        previous = json.loads(OUTPUT.read_text(encoding="utf-8"))
+        removed = {x["code"] for x in previous["items"]} - {x["code"] for x in items}
+        if removed:
+            raise ValueError(f"Official catalog removals require review: {sorted(removed)}")
     counts = {
         "TWSE": sum(item["exchange"] == "TWSE" for item in items),
         "TPEx": sum(item["exchange"] == "TPEx" for item in items),
@@ -491,6 +510,7 @@ def build_universe(now: datetime | None = None) -> dict[str, Any]:
             {"name": "FinMind TaiwanStockInfo（僅失敗備援）", "url": FINMIND_URL},
         ],
         "source_status": source_status,
+        "source_evidence": list(SOURCE_EVIDENCE),
         "items": items,
     }
 

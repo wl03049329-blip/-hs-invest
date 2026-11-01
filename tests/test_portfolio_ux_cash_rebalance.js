@@ -6,7 +6,7 @@ const performance=require("../portfolio-performance-core.js");
 const backup=require("../portfolio-full-backup-core.js");
 const dashboard=require("../portfolio-dashboard-core.js");
 const root=path.resolve(__dirname,"..");
-const html=fs.readFileSync(path.join(root,"index.html"),"utf8");
+const html=require("./helpers/portfolio-contract-migration").legacyPortfolioHTML();
 const ui=fs.readFileSync(path.join(root,"portfolio-v6.js"),"utf8");
 const css=fs.readFileSync(path.join(root,"portfolio-v6.css"),"utf8");
 const date="2026-09-24",time="2026-09-24T09:30:00+08:00";
