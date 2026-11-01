@@ -70,7 +70,7 @@ html[data-hs-v3-page] #hpv2 dialog>header{
 html[data-hs-v3-page] #hpv2 dialog>header h2{margin:0;overflow-wrap:anywhere}
 html[data-hs-v3-page] #hpv2 dialog>header button{flex:none;min-width:44px;min-height:44px;padding:8px 12px}
 @media(max-width:760px),(max-width:950px) and (pointer:coarse){
-  html[data-hs-v3-page] .app:has(>#portfolio:not(.tabHidden)){
+  html[data-hs-v3-page] .app{
     width:100%;max-width:100%;padding-left:max(12px,var(--pv3-safe-left));padding-right:max(12px,var(--pv3-safe-right));
   }
   html[data-hs-v3-page] #portfolio,
@@ -78,10 +78,17 @@ html[data-hs-v3-page] #hpv2 dialog>header button{flex:none;min-width:44px;min-he
   html[data-hs-v3-page] #portfolio #hpv2>.pv3{
     width:100%;max-width:none;margin-left:0;margin-right:0;padding-left:0;padding-right:0;min-width:0;
   }
-  html[data-hs-v3-page] body:has(#portfolio:not(.tabHidden)) #home{grid-template-columns:minmax(0,1fr);gap:8px;padding:10px 0}
-  html[data-hs-v3-page] body:has(#portfolio:not(.tabHidden)) #home .brandLogo{max-width:100%;gap:10px}
-  html[data-hs-v3-page] body:has(#portfolio:not(.tabHidden)) #home .app-brand-title{font-size:20px;white-space:nowrap;overflow:visible;text-overflow:clip}
-  html[data-hs-v3-page] body:has(#portfolio:not(.tabHidden)) #home .hsHeaderActions{justify-content:space-between;gap:8px}
-  html[data-hs-v3-page] body:has(#portfolio:not(.tabHidden)) #home .hsHeaderState{flex:1;min-width:0}
-  html[data-hs-v3-page] body:has(#portfolio:not(.tabHidden)) #home .hsHeaderActions button{width:44px;min-width:44px;min-height:44px;height:44px}
+  html[data-hs-v3-page] #home{grid-template-columns:minmax(0,1fr);gap:6px;padding:8px 0}
+  html[data-hs-v3-page] #home .brandLogo{max-width:100%;gap:8px}
+  html[data-hs-v3-page] #home .app-brand-title{font-size:18px;white-space:nowrap;overflow:visible;text-overflow:clip}
+  html[data-hs-v3-page] #home .hsHeaderActions{justify-content:space-between;gap:8px}
+  html[data-hs-v3-page] #home .hsHeaderState{flex:1;min-width:0}
+  html[data-hs-v3-page] #home .hsHeaderActions button{width:44px;min-width:44px;min-height:44px;height:44px}
 }
+/* Count the device inset exactly once, plus a modest 8px breathing space. */
+html[data-hs-v3-page] .app{padding-top:calc(var(--pv3-safe-top) + 8px)}
+#hpv2 .pv3legend{display:grid;grid-template-columns:32px minmax(0,1fr) auto auto;align-items:center;gap:5px}
+#hpv2 .pv3legend>span:before{display:none}
+#hpv2 .pv3legend input[type=color]{width:30px;height:32px;margin:0;padding:2px;border:1px solid #655735;border-radius:6px;background:#111;cursor:pointer}
+#hpv2 .pv3legend .pv3colorReset{min-width:28px;min-height:32px;padding:2px;font-size:14px}
+@media(max-width:360px){#hpv2 .pv3donutrow{grid-template-columns:1fr}#hpv2 .pv3donutrow svg{margin:auto}}

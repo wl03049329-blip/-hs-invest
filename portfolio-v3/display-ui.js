@@ -1,0 +1,10 @@
+(function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.HSPortfolioDisplayUI=api;})(typeof globalThis!=='undefined'?globalThis:this,function(){
+ 'use strict';
+ const KEY='hsPortfolioUI.colors.v1',valid=c=>typeof c==='string'&&/^#[0-9a-f]{6}$/i.test(c),symbol=s=>typeof s==='string'&&/^[0-9A-Z]{4,10}$/.test(s);
+ function defaultColor(s){let h=2166136261;for(const c of s)h=Math.imul(h^c.charCodeAt(0),16777619);const n=(h>>>0)%360,c=.58,x=c*(1-Math.abs((n/60)%2-1)),m=.22;const rgb=n<60?[c,x,0]:n<120?[x,c,0]:n<180?[0,c,x]:n<240?[0,x,c]:n<300?[x,0,c]:[c,0,x];return'#'+rgb.map(v=>Math.round((v+m)*255).toString(16).padStart(2,'0')).join('');}
+ function displayRows(v){const rows=v.rows.slice();if(!v.complete||!rows.every(r=>Number.isSafeInteger(r.market_value_minor)&&r.market_value_minor>=0))return rows;return rows.sort((a,b)=>b.market_value_minor-a.market_value_minor||(a.symbol<b.symbol?-1:a.symbol>b.symbol?1:0));}
+ function colors(storage){function load(){try{const p=JSON.parse(storage.getItem(KEY)||'{}');return p&&typeof p==='object'&&!Array.isArray(p)?Object.fromEntries(Object.entries(p).filter(([s,c])=>symbol(s)&&valid(c))):{};}catch{return{};}}
+  return{get:s=>load()[s]||defaultColor(s),set(s,c){if(!symbol(s)||c!==null&&!valid(c))return false;try{const p=load();if(c===null)delete p[s];else p[s]=c.toLowerCase();storage.setItem(KEY,JSON.stringify(p));return true;}catch{return false;}}};}
+ function reorder(container,rows){const rank=new Map(rows.map((r,i)=>[r.symbol,i])),shells=[...container.children];if(shells.some(n=>!rank.has((n.matches('.holding')?n:n.querySelector('.holding'))?.dataset.symbol)))return;const sorted=shells.slice().sort((a,b)=>rank.get((a.matches('.holding')?a:a.querySelector('.holding')).dataset.symbol)-rank.get((b.matches('.holding')?b:b.querySelector('.holding')).dataset.symbol));if(sorted.some((n,i)=>n!==shells[i]))container.append(...sorted);}
+ return Object.freeze({KEY,valid,defaultColor,displayRows,colors,reorder});
+});
