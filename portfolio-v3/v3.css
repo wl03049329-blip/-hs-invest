@@ -92,3 +92,7 @@ html[data-hs-v3-page] .app{padding-top:calc(var(--pv3-safe-top) + 8px)}
 #hpv2 .pv3legend input[type=color]{width:30px;height:32px;margin:0;padding:2px;border:1px solid #655735;border-radius:6px;background:#111;cursor:pointer}
 #hpv2 .pv3legend .pv3colorReset{min-width:28px;min-height:32px;padding:2px;font-size:14px}
 @media(max-width:360px){#hpv2 .pv3donutrow{grid-template-columns:1fr}#hpv2 .pv3donutrow svg{margin:auto}}
+/* Keep a visible swatch even in engines with a text fallback for type=color.
+   The native control remains focusable; focused hex entry does not reflow rows. */
+#hpv2 .pv3legend input[type=color]{background:var(--color)!important;color:transparent!important;font-size:0;caret-color:transparent}
+#hpv2 .pv3legend input[type=color]:focus{width:90px;position:relative;z-index:3;font-size:12px;color:#fff!important;caret-color:#fff;text-shadow:0 1px 2px #000;outline:2px solid #e9c76e}
