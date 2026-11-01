@@ -1,0 +1,12 @@
+'use strict';
+const fs=require('fs'),path=require('path'),cp=require('child_process'),assert=require('assert/strict');
+const root=path.resolve(__dirname,'..'),css=fs.readFileSync(path.join(root,'portfolio-v3/v3.css'),'utf8');let pass=0;const test=(n,f)=>{f();pass++;console.log('PASS '+n);};
+for(const side of['top','bottom','left','right'])test('device safe area '+side,()=>assert.ok(css.includes('env(safe-area-inset-'+side+',0px)')));
+test('dialog dynamic and fallback heights keep both safe areas',()=>{assert.match(css,/max-height:calc\(100vh - var\(--pv3-safe-top\) - var\(--pv3-safe-bottom\) - 24px\)/);assert.match(css,/max-height:calc\(100dvh - var\(--pv3-safe-top\) - var\(--pv3-safe-bottom\) - 24px\)/);});
+test('header no longer sticks above safe frame',()=>assert.match(css,/#hpv2 dialog>header\{\s*position:sticky;top:0;/));
+test('44px close target and independently scrollable dialog',()=>{assert.match(css,/dialog>header button\{[^}]*min-width:44px;min-height:44px/);assert.match(css,/overflow:auto;overscroll-behavior:contain/);});
+test('portfolio-only responsive full width and safe horizontal gutters',()=>{assert.match(css,/\.app:has\(>#portfolio:not\(\.tabHidden\)\)\{/);assert.match(css,/padding-left:max\(12px,var\(--pv3-safe-left\)\)/);assert.match(css,/padding-right:max\(12px,var\(--pv3-safe-right\)\)/);});
+test('phone header full title and desktop media boundary',()=>{assert.match(css,/@media\(max-width:760px\),\(max-width:950px\) and \(pointer:coarse\)/);assert.match(css,/font-size:20px;white-space:nowrap;overflow:visible;text-overflow:clip/);});
+test('viewport and App identity unchanged',()=>{for(const n of['index.html','site.webmanifest','app-update.js','app-update-worker.js','push-service-worker.js'])assert.deepEqual(fs.readFileSync(path.join(root,n)),cp.execFileSync('git',['show','4f27b03a1d14ea01fcefcbbe66e3e7346f099fb5:'+n],{cwd:root,maxBuffer:8e6}));});
+test('all financial and backup product modules unchanged',()=>{for(const n of['portfolio-v3/personal-v3.js','personal-v2/personal-v2.js','personal-v2/sealed-inputs.json','portfolio-ledger-core.js','portfolio-full-backup-core.js','portfolio-resilience-core.js','final-core-production.js'])assert.deepEqual(fs.readFileSync(path.join(root,n)),cp.execFileSync('git',['show','4f27b03a1d14ea01fcefcbbe66e3e7346f099fb5:'+n],{cwd:root,maxBuffer:8e6}));});
+console.log(JSON.stringify({pass,fail:0,skip:0}));
