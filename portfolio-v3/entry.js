@@ -10,7 +10,7 @@
  window.HSPersonalV3Boot={status:status};
  function text(id,value){var n=document.getElementById(id);if(n)n.textContent=value;}
  function notice(code){var title=document.getElementById('hs-v3-boot-title');if(state.phase==='error'&&state.code===code&&title&&title.getAttribute('data-error-code')===code)return;state.phase='error';state.code=code;html.setAttribute('data-hs-v3-boot','error');text('hs-v3-boot-title','V3 暫時無法啟動');if(title)title.setAttribute('data-error-code',code);text('hs-v3-boot-message','新版尚未完整載入，因此不顯示舊版畫面。您的持股、現金與帳本沒有被重設；不需要清除 Safari 網站資料。');text('hs-v3-boot-code',code);var n=document.getElementById('hs-v3-boot-detail');if(n)n.textContent=JSON.stringify(status(),null,2);}
- function portfolio(){if(typeof window.switchTab==='function')window.switchTab('portfolio',{scroll:false});}
+ function portfolio(){if(html.getAttribute('data-hs-stable-app')!=='true'&&typeof window.switchTab==='function')window.switchTab('portfolio',{scroll:false});}
  function finish(root){
   var container=document.getElementById('hpv2'),children=container.children,i,n;
   for(i=0;i<children.length;i++){n=children[i];if(n===root||n.id==='hpv2-welcome'||n.id==='hpv2-status'||n.tagName==='DIALOG'||n.classList.contains('pv3upgrade'))continue;if(/^(HEADER|SECTION|DETAILS|FOOTER)$/.test(n.tagName)){n.hidden=true;n.setAttribute('data-hs-v3-legacy','true');}}
@@ -28,7 +28,7 @@
  }
  function check(){
   if(settled)return;
-  var root=document.querySelector('#hpv2 > .pv3');state.root=!!root;state.api=!!(window.HSPersonalV3&&window.HSPersonalV3.mode==='LOCAL_ONLY_V3');state.css=!!(root&&window.getComputedStyle(root).getPropertyValue('--hs-v3-layout-version').replace(/\s/g,'')==='3.1');
+  var root=document.querySelector('#hpv2 > .pv3'),startButton=document.getElementById('hpv2-start');state.root=!!root;state.api=!!(window.HSPersonalV3&&window.HSPersonalV3.mode==='LOCAL_ONLY_V3'&&startButton&&typeof startButton.onclick==='function');state.css=!!(root&&window.getComputedStyle(root).getPropertyValue('--hs-v3-layout-version').replace(/\s/g,'')==='3.1');
   if(runtimeError){notice('V3_JS_RUNTIME_ERROR');return;}
   if(resourceError){notice(resourceError);return;}
   if(root&&state.api&&state.css){var sections=root.querySelectorAll(':scope > section'),expected=['pv3assets','pv3allocation','pv3rebalance','pv3positions'],valid=sections.length===4;for(var i=0;i<expected.length&&valid;i++)valid=sections[i].classList.contains(expected[i]);if(!valid||!root.querySelector('.pv3positions #hpv2-holdings')){notice('V3_DOM_LAYOUT_MISMATCH');return;}finish(root);}

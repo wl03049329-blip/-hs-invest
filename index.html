@@ -1,8 +1,20 @@
 <!doctype html>
-<html lang="zh-Hant" data-build-sha="PENDING" data-radar-phase="3.2-mobile-stack-v32">
+<html lang="zh-Hant" data-build-sha="PENDING" data-radar-phase="3.2-mobile-stack-v32" data-hs-v3-page="3.1" data-hs-stable-app="true">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<meta name="hs-app-version" content="BUILD_PENDING" />
+<meta name="hs-app-commit" content="BUILD_PENDING" />
+<meta name="hs-app-worker-sha" content="BUILD_PENDING" />
+<script src="app-launch.js"></script>
+<style id="hs-v3-critical">
+html[data-hs-v3-page]:not([data-hs-v3-boot="ready"]) #hpv2{display:none!important}
+#hs-v3-boot-panel{margin:12px auto;padding:16px;border:1px solid #766035;border-radius:14px;background:#131416;color:#eee}#hs-v3-boot-panel h2{font-size:18px;color:#e8c67a}#hs-v3-boot-panel p{line-height:1.6}#hs-v3-boot-panel pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}#hs-v3-boot-panel button{padding:10px;color:#e8c67a}
+html[data-hs-v3-boot="ready"] #hs-v3-boot-panel{display:none!important}
+</style>
+<script src="portfolio-v3/entry.js"></script>
+<link rel="stylesheet" href="portfolio-v3/v3.css">
+<link rel="stylesheet" href="app-update.css">
 <meta name="theme-color" content="#050505" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -460,7 +472,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
     <p>自選、持股、策略狀態與 Forward Test 只儲存在此瀏覽器；不會上傳股數、成本或交易狀態。</p>
   </section>
 
-  <section id="portfolio" class="section portfolioPage tabHidden" data-tab-section="portfolio" aria-labelledby="portfolioTitle"><div id="hpv2" class="hpv2">
+  <section id="portfolio" class="section portfolioPage tabHidden" data-tab-section="portfolio" aria-labelledby="portfolioTitle"><section id="hs-v3-boot-panel" role="status" aria-live="polite"><h2 id="hs-v3-boot-title">正在啟動新版個人持股</h2><p id="hs-v3-boot-message">完成驗證後才會顯示新版。持股資料不會被重設，不需要清除網站資料。</p><button type="button" id="hs-v3-retry">重新載入</button><p><code id="hs-v3-boot-code">V3_STARTING</code></p><details><summary>啟動診斷（不含持股或金額）</summary><pre id="hs-v3-boot-detail"></pre></details><noscript>請啟用JavaScript，不需要清除持股。</noscript></section><div id="hpv2" class="hpv2">
 <header class="pvHeading"><p>HS · 個人持股</p><h2 id="portfolioTitle">我的投資組合</h2><p>持股與現金一眼掌握，資料只保存在這台裝置。</p></header>
 <section class="hsCpDashboard" id="hpv2-welcome">
 <h2>開始使用本機記錄</h2>
@@ -509,6 +521,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 <label>匯入前先輸入備份密碼，再選檔案<input id="hpv2-import" type="file" accept=".json,application/json" disabled>
 </label>
 <p>備份在你的裝置，不會上傳。保留原有完整備份相容性，不自動搬移資料。忘記密碼無法解密。</p>
+<p>持股資料只儲存在此裝置，不會上傳或公開。換手機、清除瀏覽器資料或使用無痕模式時，可能無法保留資料，請先下載加密備份。正常更新不需要清除網站資料。</p>
 <button id="hpv2-recover" disabled>恢復未完成的本機儲存</button>
 </section>
 <details class="hsCpDashboard" id="hpv2-diagnosticPanel"><summary>進階資訊／問題診斷</summary><p>下列訊息供排查問題使用；不代表操作已成功，也不會自動修復或清除資料。</p><pre id="hpv2-diagnostics">目前沒有錯誤訊息。</pre></details>
@@ -5236,9 +5249,10 @@ initLiveDebugPanel();liveDiagnosticRecord("initial_page_load",{render_state_befo
 <script src="portfolio-full-backup-core.js?v=20260924-portfolio-ux-cash-v1"></script>
 <script src="portfolio-etf-catalog.js?v=20260924-etf-universe-v1"></script>
 <script defer src="personal-v2/legacy-home-view.js?v=81dca9de461d2ac7"></script>
-<script defer src="personal-v2/personal-v2.js?v=bc99b351890bcb48"></script>
+<script defer src="portfolio-v3/personal-v3.js"></script>
 <script src="personal-capital-ui.js?v=20260824-phase4"></script>
 <script src="app-version.js"></script>
+<script defer src="app-update.js"></script>
 <script src="beginner-guide.js"></script>
 </body>
 </html>

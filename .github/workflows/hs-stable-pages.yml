@@ -1,0 +1,72 @@
+name: HS Stable App Pages
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+  workflow_run:
+    workflows:
+      - Update delayed market quotes
+      - Finalize official EOD Core Score history
+      - Publish Railway live artifacts
+      - Update CNN Fear and Greed
+      - Update delayed commodity quotes
+      - Update Taiwan ETF universe
+      - Update ETF valuation
+      - Update futures positioning
+      - Update margin risk data
+      - Update market events
+      - Update Trump market watch
+      - 00631L Daily Forward Shadow
+    types: [completed]
+permissions:
+  contents: read
+concurrency:
+  group: hs-stable-pages-${{ github.event_name == 'pull_request' && github.event.pull_request.number || 'production' }}
+  cancel-in-progress: false
+jobs:
+  build:
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # official v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Validate stable update and data contracts
+        run: node tests/test_stable_app_updates.js
+      - name: Build exact-commit static release
+        run: node scripts/build_stable_app.cjs "$RUNNER_TEMP/hs-site"
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # official v3
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        with:
+          path: ${{ runner.temp }}/hs-site
+  deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+      contents: read
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Withhold superseded artifact
+        id: current
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          head=$(gh api "repos/$GITHUB_REPOSITORY/branches/main" --jq '.commit.sha')
+          if [ "$head" = "$GITHUB_SHA" ]; then echo 'deploy=true' >> "$GITHUB_OUTPUT"; else echo 'deploy=false' >> "$GITHUB_OUTPUT"; fi
+      - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # official v5
+        if: steps.current.outputs.deploy == 'true'
+      - name: Deploy verified artifact
+        id: deployment
+        if: steps.current.outputs.deploy == 'true'
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # official v4

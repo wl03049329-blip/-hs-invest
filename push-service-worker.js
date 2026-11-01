@@ -6,8 +6,10 @@ const HS_ALERT_PAYLOAD_VERSION = "HS_ETF_ALERT_PUSH_V1";
 const TEST_TITLE = "HS ETF 雷達";
 const TEST_BODY = "背景通知測試成功";
 
-self.addEventListener("install", () => self.skipWaiting());
-self.addEventListener("activate", event => event.waitUntil(self.clients.claim()));
+// The Pages build appends app-update-worker.js; installation must finish the
+// verified shell before activation. Existing push payload/identity is unchanged.
+self.addEventListener("install", event => event.waitUntil(hsStableInstall()));
+self.addEventListener("activate", event => event.waitUntil(hsStableActivate()));
 
 self.addEventListener("message", event => {
   if (event.data?.type === "HS_PUSH_SW_VERSION") {
