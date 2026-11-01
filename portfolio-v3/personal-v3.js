@@ -3974,7 +3974,10 @@ async function safeWorker(){
  const expected=new URL('push-service-worker.js',base).href;
  if(navigator.serviceWorker?.controller&&navigator.serviceWorker.controller.scriptURL!==expected)return false;
  for(const r of relevant){const worker=r.active||r.waiting||r.installing;if(!worker||worker.scriptURL!==expected)return false;}
- try{const response=await host.fetch(expected,{cache:'no-store'});if(!response.ok)return false;const bytes=await response.arrayBuffer(),hash=[...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(x=>x.toString(16).padStart(2,'0')).join('');return hash==='cfec8b1973d2e37aaeab3ff3de8f84cc69611ef5f8a96ec5efbc95bcdf962311';}catch{return false;}
+ // The HTTPS build pins the exact Worker bytes. No data or financial guard is bypassed.
+ const pin=document.querySelector('meta[name="hs-app-worker-sha"]')?.content;
+ if(pin!==undefined&&!/^[a-f0-9]{64}$/.test(pin))return false;
+ try{const response=await host.fetch(expected+(pin?'?v='+pin:''),{cache:'no-store'});if(!response.ok)return false;const bytes=await response.arrayBuffer(),hash=[...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(x=>x.toString(16).padStart(2,'0')).join('');return hash===(pin||'cfec8b1973d2e37aaeab3ff3de8f84cc69611ef5f8a96ec5efbc95bcdf962311');}catch{return false;}
 }
 async function fetch(input,options){
  if(!String(input).startsWith('hpv2:quotes'))return host.fetch(input,options);

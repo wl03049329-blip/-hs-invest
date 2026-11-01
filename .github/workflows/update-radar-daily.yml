@@ -20,6 +20,7 @@ permissions:
   contents: write
   pages: write
   issues: write
+  actions: write
 
 concurrency:
   group: hs-radar-raw-daily
@@ -90,13 +91,34 @@ jobs:
           done
           echo "::error::RADAR_ARCHIVE_PUSH_FAILED"
           exit 1
-      - name: Request existing branch-based Pages build after bot publication
+      - name: Request and await the configured Pages publisher after bot publication
         if: steps.publish.outputs.changed == 'true' || inputs.revalidate == true
-        # GITHUB_TOKEN pushes do not trigger the existing legacy Pages build.
-        # No publishing-source, domain or Pages configuration is changed.
-        run: gh api --method POST "repos/$GITHUB_REPOSITORY/pages/builds"
+        # GITHUB_TOKEN pushes do not trigger a second push workflow. Dispatch is
+        # the site publisher only, never a collector or a financial Recovery.
+        run: |
+          type=$(gh api "repos/$GITHUB_REPOSITORY/pages" --jq '.build_type')
+          if [ "$type" = workflow ]; then
+            previous=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/hs-stable-pages.yml/runs?event=workflow_dispatch&per_page=1" --jq '.workflow_runs[0].id // 0')
+            gh workflow run hs-stable-pages.yml --ref main
+            found=''
+            for attempt in $(seq 1 12); do
+              id=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/hs-stable-pages.yml/runs?event=workflow_dispatch&per_page=1" --jq '.workflow_runs[0].id // 0')
+              if [ "$id" -gt "$previous" ]; then found="$id"; break; fi
+              sleep 5
+            done
+            test -n "$found" || { echo '::error::PAGES_RUN_NOT_CREATED'; exit 1; }
+            gh run watch "$found" --interval 5 --exit-status
+          else
+            gh api --method POST "repos/$GITHUB_REPOSITORY/pages/builds"
+          fi
       - name: Verify actual Pages build and public JSON, not dispatch acceptance
-        run: python -m scripts.update_radar_daily --verify-public "https://wl03049329-blip.github.io/-hs-invest/"
+        run: |
+          type=$(gh api "repos/$GITHUB_REPOSITORY/pages" --jq '.build_type')
+          if [ "$type" = workflow ]; then
+            python -m scripts.verify_stable_pages --base-url "https://wl03049329-blip.github.io/-hs-invest/"
+          else
+            python -m scripts.update_radar_daily --verify-public "https://wl03049329-blip.github.io/-hs-invest/"
+          fi
       - name: Fail closed on incomplete collection
         if: steps.collect.outcome != 'success'
         run: |

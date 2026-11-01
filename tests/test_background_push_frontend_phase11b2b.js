@@ -1,6 +1,6 @@
 const test=require("node:test"),assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path"),vm=require("node:vm");
 const root=path.resolve(__dirname,".."),client=require(path.join(root,"radar-push-subscription-v1.js")),dispatch=require(path.join(root,"radar-notification-dispatch-v1.js"));
-const html=fs.readFileSync(path.join(root,"index.html"),"utf8"),sw=fs.readFileSync(path.join(root,"push-service-worker.js"),"utf8");
+const html=fs.readFileSync(path.join(root,"index.html"),"utf8"),sw=fs.readFileSync(path.join(root,"push-service-worker.js"),"utf8")+'\n'+fs.readFileSync(path.join(root,'app-update-worker.js'),'utf8');
 const storage=value=>{const m=new Map(value?[[client.PREFERENCES_KEY,JSON.stringify(value)]]:[]);return{getItem:k=>m.get(k)||null,setItem:(k,v)=>m.set(k,v)}};
 const doc={baseURI:"https://example.test/app/",querySelector:s=>s.includes("hs-live-railway-url")?{content:"https://api.test/api/live-scores"}:null};
 const response=data=>Promise.resolve({ok:true,status:200,json:async()=>data});
@@ -15,8 +15,8 @@ test("08 fixed simulation endpoint",async()=>{const s=storage({enabled:true,subs
 test("09 no arbitrary test payload UI",()=>assert.doesNotMatch(html,/radarPush(Message|Body|Title)/));
 test("10 background active suppresses B1",()=>{const alert={alert_id:"a",etf:"00830",trigger_date:"2026-09-19"},state={...dispatch.defaultState(),baseline_initialized:true};const result=dispatch.dispatchRadarNotifications({pendingAlerts:[alert],bundleAlerts:a=>[{bundle_id:"b",alerts:a}],state,preferences:{version:dispatch.VERSION,enabled:true},backgroundActive:true});assert.equal(result.suppressed,"BACKGROUND_PUSH")});
 test("11 background inactive keeps B1 fallback",()=>{const alert={alert_id:"a",etf:"00830",trigger_date:"2026-09-19"},state={...dispatch.defaultState(),baseline_initialized:true};const result=dispatch.dispatchRadarNotifications({pendingAlerts:[alert],bundleAlerts:a=>[{bundle_id:"b",alerts:a}],state,preferences:{version:dispatch.VERSION,enabled:false},backgroundActive:false,visibilityState:"hidden"});assert.equal(result.blocked,"APP_DISABLED")});
-test("12 SW has no fetch handler",()=>assert.doesNotMatch(sw,/addEventListener\s*\(\s*["']fetch/));
-test("13 SW has no cache API",()=>assert.doesNotMatch(sw,/\bcaches\b|precache|workbox/i));
+test("12 stable SW intercepts only same-project GET shell requests",()=>{assert.match(sw,/r\.method!=='GET'\|\|u\.origin!==hsBase\.origin/);assert.match(sw,/u\.pathname\.startsWith\(hsBase\.pathname\)/);assert.match(sw,/hsIsNavigation\(u\)/)});
+test("13 stable SW never erases financial stores and restricts code-cache cleanup",()=>{assert.doesNotMatch(sw,/localStorage|deleteDatabase/);assert.match(sw,/HS_SHELL_PREFIX='hs-app-shell-v1-'/);assert.match(sw,/active\.previous_commit/);assert.match(sw,/if\(!name\.startsWith\(HS_SHELL_PREFIX\)/)});
 test("14 SW accepts formal bundle and route",()=>{assert.match(sw,/ETF_ALERT_BUNDLE/);assert.match(sw,/radarEtf/);assert.match(sw,/clients\.openWindow/)});
 test("15 VAPID private material absent",()=>assert.doesNotMatch(html+sw+fs.readFileSync(path.join(root,"radar-push-subscription-v1.js"),"utf8"),/VAPID_PRIVATE_KEY|private_key/));
 test("16 existing active subscription loads production status before alert evaluation",()=>{assert.match(html,/function ensureRadarPushRulesSync/);assert.match(html,/await ensureRadarPushRulesSync\(\);await load\(\)/)});
