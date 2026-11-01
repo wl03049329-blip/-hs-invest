@@ -109,3 +109,25 @@ html[data-hs-v3-page] .app{padding-top:calc(var(--pv3-safe-top) + 8px)}
 #hpv2 #pv3-group-dialog [data-members] label{display:flex;gap:10px;align-items:center;min-height:44px;margin:5px 0}
 #hpv2 #pv3-group-dialog input[type=checkbox]{flex:0 0 22px;width:22px;height:22px}
 #hpv2 .groupButtons{display:flex;gap:8px;flex-wrap:wrap}
+#hpv2 .pv3assetWeights span{display:block;color:#bbb29f;font-size:13px;margin-top:4px}
+#hpv2 .gs-controls{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+#hpv2 .gs-controls button{min-height:44px;padding:7px 12px;font-size:13px}
+#hpv2 .gs-controls button[aria-pressed=true]{background:#d7bb79;color:#181715}
+#hpv2 .gs-compact summary{grid-template-columns:minmax(0,1fr) auto;gap:3px 10px;padding:12px}
+#hpv2 .gs-compact summary>b{font-size:15px;overflow-wrap:anywhere;grid-column:1;grid-row:1}
+#hpv2 .gs-compact summary>strong{grid-row:1;grid-column:2;font-size:20px}
+#hpv2 .gs-compact summary>small:not(:last-child){grid-row:2;grid-column:2;font-size:12px}
+#hpv2 .gs-compact summary>p{grid-row:2;grid-column:1;font-size:12px}
+#hpv2 .gs-compact summary>small:last-child{grid-row:4;line-height:1.4;font-size:12px;overflow-wrap:anywhere}
+#hpv2 .gs-track{position:relative;height:4px;background:#333;grid-column:1/-1;grid-row:3;margin:6px 0;width:100%}
+#hpv2 .gs-track span{height:100%;display:block;background:#cab47d;max-width:100%}
+#hpv2 .gs-track i{position:absolute;top:-3px;height:10px;width:2px;background:#fff;transform:translateX(-1px)}
+#hpv2 .gs-members{padding:0 12px 12px;overflow-wrap:anywhere}#hpv2 .gs-members p{margin-bottom:3px}#hpv2 .gs-members small{display:block;color:#bcb6a9}
+#hpv2 .gs-dialog{box-sizing:border-box;position:fixed;inset:calc(var(--pv3-safe-top,env(safe-area-inset-top)) + 12px) 0 calc(var(--pv3-safe-bottom,env(safe-area-inset-bottom)) + 12px) 0;height:fit-content;width:min(720px,calc(100% - 24px));max-height:calc(100dvh - var(--pv3-safe-top,env(safe-area-inset-top)) - var(--pv3-safe-bottom,env(safe-area-inset-bottom)) - 32px);margin:auto;padding:16px;border:1px solid #64563c;border-radius:18px;background:#151617;color:#eee;overflow-y:auto;overscroll-behavior:contain}
+#hpv2 .gs-dialog header{position:sticky;top:-16px;background:#151617;z-index:3;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 0}
+#hpv2 .gs-dialog h2{font-size:19px}#hpv2 .gs-dialog button{min-width:44px;min-height:44px}#hpv2 .gs-dialog label{display:block;margin:10px 0}
+#hpv2 .gs-dialog input,#hpv2 .gs-dialog select{box-sizing:border-box;max-width:100%;font-size:16px}#hpv2 .gs-dialog input[type=range]{width:calc(100% - 100px);margin-right:10px}#hpv2 .gs-dialog input[type=number]{width:88px}
+#hpv2 .gs-dialog fieldset{min-width:0;border:1px solid #39372f;border-radius:12px;padding:10px;margin:12px 0}#hpv2 .gs-dialog legend{color:#ddc88e}#hpv2 .gs-dialog [role=alert]{color:#f0bc80}
+#hpv2 .gs-sort-row{display:flex;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #333}#hpv2 .gs-sort-row b{flex:1;min-width:0;overflow-wrap:anywhere}#hpv2 .gs-handle{touch-action:none;cursor:grab}#hpv2 .gs-sort-row.dragging{background:#373225;box-shadow:0 8px 20px #0009;opacity:.92}
+#hpv2 .gs-plan-row{padding:10px 0;border-top:1px solid #39372f}#hpv2 .gs-plan-row p{font-size:13px;line-height:1.6}#hpv2 .gs-plan-row label{display:flex;gap:10px;align-items:center;min-height:44px}#hpv2 .gs-plan-row input[type=checkbox]{width:22px;height:22px}
+#hpv2 .gs-status{font-size:13px;color:#cfc5ae;overflow-wrap:anywhere}

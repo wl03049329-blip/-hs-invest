@@ -41,6 +41,9 @@ jobs:
           node tests/test_stable_app_updates.js
           node tests/test_portfolio_custom_positions.js
           node tests/test_portfolio_custom_positions_storage.js
+          node tests/test_portfolio_group_strategy.js
+          node tests/test_portfolio_group_strategy_plan.js
+          node tests/test_portfolio_group_strategy_storage.js
           node tests/test_personal_v2_namespace.js
           node tests/test_portfolio_display_ui.js
       - name: Build exact-commit static release
