@@ -37,7 +37,12 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
       - name: Validate stable update and data contracts
-        run: node tests/test_stable_app_updates.js
+        run: |
+          node tests/test_stable_app_updates.js
+          node tests/test_portfolio_custom_positions.js
+          node tests/test_portfolio_custom_positions_storage.js
+          node tests/test_personal_v2_namespace.js
+          node tests/test_portfolio_display_ui.js
       - name: Build exact-commit static release
         run: node scripts/build_stable_app.cjs "$RUNNER_TEMP/hs-site"
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # official v3

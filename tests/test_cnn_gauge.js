@@ -14,6 +14,9 @@ let now=Date.parse("2026-10-17T04:00:00Z"),calls=0,timers=[],renders=0;
 class FixedDate extends Date{constructor(...args){super(...(args.length?args:[now]));}static now(){return now;}}
 const sandbox={Date:FixedDate,Intl,URL,Number,console,HSDataFreshnessCore:freshness,document:{hidden:false},fetch:async()=>{calls++;return{ok:true,json:async()=>structuredClone(fixture)};},setTimeout:(fn,delay)=>{timers.push({fn,delay});return timers.length;},clearTimeout(){},renderCnnPresentationViews(){},renderCnnDashboard(){},renderHomeCnnGauge(){},renderSentiment(){renders++;}};
 vm.createContext(sandbox);
+// Load the real freshness implementation in the SAME clock realm as the page.
+// No global clock mutation and no change to production freshness thresholds.
+vm.runInContext(fs.readFileSync('data-freshness-core.js','utf8'),sandbox);
 vm.runInContext('let cnnFearGreed=null,cnnGaugeLoadState={phase:"loading",reason:"",kind:""},cnnPollTimer=null,cnnPollInFlight=null,cnnLastAttemptAt=0;const CNN_POLL_INTERVAL=20*60*1000;'+["validSentimentScore","isReasonableTimestamp","formatTaipeiDateTime","cnnSentimentLabel","cnnInterpretation","validateCnnFearGreed","loadCnnFearGreed","scheduleCnnPoll","refreshCnnFearGreed","cnnGaugePresentation"].map(extract).join("\n")+'\nfunction safeTrumpUrl(value){try{const u=new URL(value);return /^https?:$/.test(u.protocol)?u.href:"";}catch{return"";}}',sandbox);
 check("gold SVG is native, has five continuous bands and 0–100 major ticks",()=>{
  assert.deepEqual(G.BANDS.map(b=>b.end),[24,44,55,74,100]);

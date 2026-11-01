@@ -5,7 +5,7 @@ const dashboard = require("../portfolio-dashboard-core.js");
 const core = require("../portfolio-core.js");
 
 const root = path.resolve(__dirname, "..");
-const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
+const html = require("./helpers/portfolio-contract-migration").legacyPortfolioHTML();
 const ui = fs.readFileSync(path.join(root, "portfolio-v6.js"), "utf8");
 const css = fs.readFileSync(path.join(root, "portfolio-v6.css"), "utf8");
 let passed = 0;

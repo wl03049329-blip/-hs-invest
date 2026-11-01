@@ -26,7 +26,12 @@ const multi=card(51,39);assert.equal(event(multi,"CROSS_LEVEL").note,"本次跨�
 const rendered=context.api.html({cards:[merged,waitNative,{...merged,symbol:"0050"}],latestDate:"2026-09-18"});assert.equal((rendered.match(/class="radarTodayFocusCard"/g)||[]).length,3);assert.match(rendered,/查看詳情/);assert.match(html,/function radarTodayFocusState[\s\S]*?\.slice\(0,3\)/);
 assert.match(context.api.html({cards:[],latestDate:"2026-09-18"}),/目前沒有新的重要狀態變化[。\s\S]*2026-09-18/);
 assert.match(html,/data-radar-focus-phase="9"/);assert.match(html,/20260920-live-archive-resilience-v1/);assert.match(html,/依最新正式盤後資料/);
-for(const forbidden of ["最佳 ETF","Top Pick","最值得買","買進建議","預測報酬","勝率排序"])assert(!html.includes(forbidden));
+// Enforce the same prohibition on the actual Radar renderer and its output.
+// Portfolio's warning "歷史分數不是今日買進建議" is not a Radar recommendation.
+for(const forbidden of ["最佳 ETF","Top Pick","最值得買","買進建議","預測報酬","勝率排序"]){
+ assert(!html.slice(start,end).includes(forbidden),forbidden);
+ assert(!rendered.includes(forbidden),forbidden);
+}
 assert.match(css,/\.radarTodayFocusCards\{[^}]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);assert.match(css,/@media\(max-width:700px\)\{\.radarTodayFocusCards\{grid-template-columns:1fr\}/);assert.match(css,/\.radarTodayFocusCard footer\{[^}]*font-size:10px/);
 const artifact=JSON.parse(fs.readFileSync(path.join(root,"finalized-core-score-snapshots-v1.json"),"utf8")),names={"0050":"元大台灣50","00662":"富邦NASDAQ","00757":"統一FANG+","00830":"國泰費城半導體","00935":"野村臺灣新科技50","009815":"大華美國MAG7+"};
 const actual=Object.keys(names).map(symbol=>{const history=artifact.snapshots.filter(snapshot=>snapshot.snapshot_type==="FINALIZED_CLOSE"&&snapshot.finalized===true).sort((a,b)=>String(b.date).localeCompare(String(a.date))).map(snapshot=>{const item=(snapshot.rows||[]).find(row=>row.symbol===symbol);return item&&Number.isFinite(item.final_core_score)?{symbol,displayScore:Math.floor(item.final_core_score),finalCoreScore:item.final_core_score,tradingDate:snapshot.date}:null}).filter(Boolean).slice(0,6);let percentile=null,researchPath=path.join(root,"research","c4_historical",`${symbol}.json`);if(fs.existsSync(researchPath)&&history[0]){const research=JSON.parse(fs.readFileSync(researchPath,"utf8")),values=(research.records||[]).map(row=>Number(row.display_score)).filter(Number.isFinite);if(values.length)percentile=Math.round(values.filter(value=>value<=history[0].displayScore).length/values.length*100)}return context.api.card({symbol,name:names[symbol],rows:history,percentile},contract)}).filter(Boolean).sort((a,b)=>a.priority-b.priority||a.symbol.localeCompare(b.symbol)).slice(0,3);

@@ -3,7 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const read = name => fs.readFileSync(path.join(root, name), "utf8");
-const html = read("index.html");
+const html = require("./helpers/portfolio-contract-migration").legacyPortfolioHTML();
 const tech = read("v62-tech.css");
 const strategy = read("strategy-mode-core.js");
 const valuation = JSON.parse(read("etf-valuation.json"));
