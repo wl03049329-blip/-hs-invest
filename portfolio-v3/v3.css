@@ -46,3 +46,42 @@ html[data-hs-v3-page] #hpv2{padding-bottom:12px}
 #hpv2 .pv3upgrade{padding:8px 10px;margin:8px 0}
 #hpv2 .pv3upgrade p{margin:5px 0;line-height:1.4}
 @media(min-width:800px){#hpv2 .pv3donutrow{grid-template-columns:150px minmax(0,1fr)}#hpv2 .pv3donutrow svg{width:150px}#hpv2 .pv3row>summary{grid-template-columns:2fr 1fr 1fr}#hpv2 .pv3row>summary>b{grid-column:auto}}
+
+/* Shared iOS Safari/PWA geometry. Device env() values, never model heights. */
+html[data-hs-v3-page]{
+  --pv3-safe-top:env(safe-area-inset-top,0px);
+  --pv3-safe-bottom:env(safe-area-inset-bottom,0px);
+  --pv3-safe-left:env(safe-area-inset-left,0px);
+  --pv3-safe-right:env(safe-area-inset-right,0px);
+}
+html[data-hs-v3-page] #hpv2 dialog{
+  inset:calc(var(--pv3-safe-top) + 12px) max(12px,var(--pv3-safe-right)) calc(var(--pv3-safe-bottom) + 12px) max(12px,var(--pv3-safe-left));
+  box-sizing:border-box;
+  width:min(540px,calc(100vw - max(12px,var(--pv3-safe-left)) - max(12px,var(--pv3-safe-right))));
+  max-width:calc(100vw - max(12px,var(--pv3-safe-left)) - max(12px,var(--pv3-safe-right)));
+  max-height:calc(100vh - var(--pv3-safe-top) - var(--pv3-safe-bottom) - 24px);
+  max-height:calc(100dvh - var(--pv3-safe-top) - var(--pv3-safe-bottom) - 24px);
+  margin:auto;padding:16px;overflow:auto;overscroll-behavior:contain;scroll-padding-block:12px;
+}
+html[data-hs-v3-page] #hpv2 dialog>header{
+  position:sticky;top:0;align-items:center;padding:8px 0;
+  gap:12px;background:#171612;box-shadow:0 -16px 0 #171612;z-index:2;
+}
+html[data-hs-v3-page] #hpv2 dialog>header h2{margin:0;overflow-wrap:anywhere}
+html[data-hs-v3-page] #hpv2 dialog>header button{flex:none;min-width:44px;min-height:44px;padding:8px 12px}
+@media(max-width:760px),(max-width:950px) and (pointer:coarse){
+  html[data-hs-v3-page] .app:has(>#portfolio:not(.tabHidden)){
+    width:100%;max-width:100%;padding-left:max(12px,var(--pv3-safe-left));padding-right:max(12px,var(--pv3-safe-right));
+  }
+  html[data-hs-v3-page] #portfolio,
+  html[data-hs-v3-page] #portfolio #hpv2,
+  html[data-hs-v3-page] #portfolio #hpv2>.pv3{
+    width:100%;max-width:none;margin-left:0;margin-right:0;padding-left:0;padding-right:0;min-width:0;
+  }
+  html[data-hs-v3-page] body:has(#portfolio:not(.tabHidden)) #home{grid-template-columns:minmax(0,1fr);gap:8px;padding:10px 0}
+  html[data-hs-v3-page] body:has(#portfolio:not(.tabHidden)) #home .brandLogo{max-width:100%;gap:10px}
+  html[data-hs-v3-page] body:has(#portfolio:not(.tabHidden)) #home .app-brand-title{font-size:20px;white-space:nowrap;overflow:visible;text-overflow:clip}
+  html[data-hs-v3-page] body:has(#portfolio:not(.tabHidden)) #home .hsHeaderActions{justify-content:space-between;gap:8px}
+  html[data-hs-v3-page] body:has(#portfolio:not(.tabHidden)) #home .hsHeaderState{flex:1;min-width:0}
+  html[data-hs-v3-page] body:has(#portfolio:not(.tabHidden)) #home .hsHeaderActions button{width:44px;min-width:44px;min-height:44px;height:44px}
+}

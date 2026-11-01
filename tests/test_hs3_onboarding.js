@@ -9,7 +9,7 @@ const versionScript = fs.readFileSync(path.join(root, "app-version.js"), "utf8")
 const guideScript = fs.readFileSync(path.join(root, "beginner-guide.js"), "utf8");
 const css = fs.readFileSync(path.join(root, "formal-black-gold.css"), "utf8");
 
-assert.equal(version.version, "3.1.1", "stable root release version has one SemVer source");
+assert.equal(version.version, "3.1.2", "stable root release version has one SemVer source");
 assert.match(versionScript, /version\.json/);
 assert.match(versionScript, /document\.title\s*=/);
 assert.match(versionScript, /data-hs-version-full/);
