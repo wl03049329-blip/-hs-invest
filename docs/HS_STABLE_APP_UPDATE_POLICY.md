@@ -59,6 +59,17 @@ to the actual activated Controller. CURRENT requires its build, selected active
 commit and loaded code to agree. Follow both controllerchange and the new
 Controller's statechange: claim can happen during activate. Until complete use
 WORKER_HANDOFF; never substitute Registration object identity for a build reply.
+Registration initialization must not await one captured installing/waiting object
+becoming activated. A verified installed Worker can legitimately wait for old
+extended events even after skipWaiting resolves. Observe live registration,
+updatefound, pending statechange and actual Controller changes; after the unchanged
+25-second observation bound show an explicit waiting status, not installation
+failure, and do not latch off subsequent Controller verification. Query only local
+HS_APP_STATUS on an older Controller, not another network-staging HS_APP_CHECK.
+CURRENT still requires the actual activated Controller build, selected active
+commit, loaded UI and verified release to agree. Native failure/redundancy without
+a usable replacement remains rejected. Never force-close a client, discard input,
+clear financial stores or skip validation to resolve waiting.
 Existing editing/saving/recovery prevents automatic reload; an update prompt is
 shown. Reload has a per-target session bound and a mismatched-build diagnostic.
 Offline uses the saved code version, not fabricated quotes or current scores.
@@ -88,6 +99,9 @@ Unknown/incomplete updates remain incomplete; do not label them current.
    Record a new Document timeOrigin and actual UI/data/controlling-Worker state;
    API existence or DCL alone is not sufficient during a Worker handoff. Include
    headers-only body stalls and cross-Worker failed-staging interleavings.
+   Include an actual V3.2 old extendable message event whose headers arrive while
+   its body is held: prove installed/waiting is not install rejection; release it
+   after the old25s bound and require event-driven CURRENT with exact data bytes.
    Use synchronous waitForFunction predicates and separately await Worker replies.
    The validated local Playwright1.62.1 accepts an async-false Promise as truthy
    (returns a false handle without polling); it is not a readiness wait.
