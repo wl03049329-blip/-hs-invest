@@ -48,7 +48,17 @@ already-decoded transport encoding/length headers are not reapplied.
 Evicted/damaged installed code is repaired only against that exact recorded
 release's bytes/SHA, under the same code lock; unavailable/mismatched bytes
 remain an explicit503. Financial stores are not a repair target.
+Code-metadata reads settle on transaction completion and reject transaction
+abort/error even if a request succeeded. Navigation, checks/status and
+activation/CAS read the actual database; a code-pointer memory-hint attempt was
+not retained because stale routing is not the update authority. An older code
+shell cannot claim CURRENT without matching selected code and Controller reply.
 App startup, foreground/pageshow and online transitions check for updates.
+Installed `registration.active` is not proof of document control. Send check/status
+to the actual activated Controller. CURRENT requires its build, selected active
+commit and loaded code to agree. Follow both controllerchange and the new
+Controller's statechange: claim can happen during activate. Until complete use
+WORKER_HANDOFF; never substitute Registration object identity for a build reply.
 Existing editing/saving/recovery prevents automatic reload; an update prompt is
 shown. Reload has a per-target session bound and a mismatched-build diagnostic.
 Offline uses the saved code version, not fabricated quotes or current scores.
@@ -78,6 +88,9 @@ Unknown/incomplete updates remain incomplete; do not label them current.
    Record a new Document timeOrigin and actual UI/data/controlling-Worker state;
    API existence or DCL alone is not sufficient during a Worker handoff. Include
    headers-only body stalls and cross-Worker failed-staging interleavings.
+   Use synchronous waitForFunction predicates and separately await Worker replies.
+   The validated local Playwright1.62.1 accepts an async-false Promise as truthy
+   (returns a false handle without polling); it is not a readiness wait.
 5. Public browser verification must match artifact SHA/commit/version, actual
    script/CSS pins and rendered root UI. A Pages SUCCESS alone is insufficient.
 6. Test real existing iPhone home-screen icon, full close/reopen and foreground
