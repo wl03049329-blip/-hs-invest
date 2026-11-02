@@ -66,6 +66,10 @@ updatefound, pending statechange and actual Controller changes; after the unchan
 25-second observation bound show an explicit waiting status, not installation
 failure, and do not latch off subsequent Controller verification. Query only local
 HS_APP_STATUS on an older Controller, not another network-staging HS_APP_CHECK.
+STATUS identifies the bounded-network handoff Worker as HS_STABLE_HANDOFF_V2.
+An already activated newer V2 Controller with no pending replacement may check
+and offer its verified newer code to an older document; it must not be mistaken
+for an older Controller blocking a newer document. No unselected code is CURRENT.
 CURRENT still requires the actual activated Controller build, selected active
 commit, loaded UI and verified release to agree. Native failure/redundancy without
 a usable replacement remains rejected. Never force-close a client, discard input,
