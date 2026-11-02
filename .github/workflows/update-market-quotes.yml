@@ -78,9 +78,16 @@ jobs:
           python scripts/fetch_official_eod_market.py \
             --expected-date "$expected_date" \
             --output "${RUNNER_TEMP}/official-eod-market.json"
-          node scripts/finalize_core_score_history.js \
+          # Bound the whole response/body lifetime, not just connection setup.
+          # An unavailable optional history source cannot indefinitely hold EOD.
+          set -o pipefail
+          timeout --signal=TERM 120s node scripts/finalize_core_score_history.js \
             --eod "${RUNNER_TEMP}/official-eod-market.json" \
-            --expected-date "$expected_date"
+            --expected-date "$expected_date" | tee "${RUNNER_TEMP}/finalized-core-result.log"
+          if grep -q 'FINALIZED_CORE_HISTORY_SOURCE_NOT_READY' "${RUNNER_TEMP}/finalized-core-result.log"; then
+            echo "::error::Official Core history unavailable; old finalized data retained."
+            exit 1
+          fi
       - name: Commit finalized EOD Core Score history
         run: |
           git add finalized-core-score-snapshots-v1.json
@@ -93,6 +100,11 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: write
+      actions: write
+    env:
+      GH_TOKEN: ${{ github.token }}
     concurrency:
       # Same files as Railway / intraday publication: one writer at a time.
       group: hs-live-intraday-slot-v4
@@ -117,6 +129,7 @@ jobs:
               f.write("allowed=" + str(hour < 9 or hour >= 16).lower() + "\n")
           PY
       - name: Refresh official TWSE and TPEx closing quotes
+        id: quotes
         if: steps.window.outputs.allowed == 'true'
         run: |
           git config user.name "github-actions[bot]"
@@ -128,4 +141,21 @@ jobs:
             git commit -m "Update official Portfolio quote cache"
             git pull --rebase origin main
             git push origin main
+            echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
+      - name: Independently publish and verify the official quote commit
+        if: steps.quotes.outputs.changed == 'true'
+        # GITHUB_TOKEN pushes do not trigger push workflows. Do not wait for
+        # unrelated Core history success to publish verified official prices.
+        run: |
+          previous=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/hs-stable-pages.yml/runs?event=workflow_dispatch&per_page=1" --jq '.workflow_runs[0].id // 0')
+          gh workflow run hs-stable-pages.yml --ref main
+          found=''
+          for attempt in $(seq 1 12); do
+            id=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/hs-stable-pages.yml/runs?event=workflow_dispatch&per_page=1" --jq '.workflow_runs[0].id // 0')
+            if [ "$id" -gt "$previous" ]; then found="$id"; break; fi
+            sleep 5
+          done
+          test -n "$found" || { echo '::error::PAGES_RUN_NOT_CREATED'; exit 1; }
+          gh run watch "$found" --interval 5 --exit-status
+          python -m scripts.verify_stable_pages --base-url "https://wl03049329-blip.github.io/-hs-invest/"

@@ -1,0 +1,18 @@
+'use strict';
+const assert=require('assert/strict'),fs=require('fs');
+const q=fs.readFileSync('.github/workflows/update-market-quotes.yml','utf8'),m=fs.readFileSync('.github/workflows/completed-market-watchdog.yml','utf8');
+const start=q.indexOf('  official_quote_cache:'),cache=q.slice(start);
+assert(start>0);
+assert(!cache.includes('needs: intraday'),'official closes do not depend on intraday success');
+assert(cache.includes('group: hs-live-intraday-slot-v4'),'shared files serialized with primary publisher');
+assert(cache.includes('hour < 9 or hour >= 16'),'actual runtime, not scheduled label');
+assert(q.includes('scripts.check_completed_market --expected-only'),'same official-calendar18:00 gate');
+assert(q.includes('timeout --signal=TERM 120s node scripts/finalize_core_score_history.js'));
+assert(q.includes("grep -q 'FINALIZED_CORE_HISTORY_SOURCE_NOT_READY'"),'no fake success on source absence');
+assert(cache.includes('gh workflow run hs-stable-pages.yml --ref main'));
+assert(cache.includes('gh run watch "$found" --interval 5 --exit-status'));
+assert(cache.includes('python -m scripts.verify_stable_pages'));
+assert(!/gh workflow run.*(?:recovery|packaging)/i.test(q+m));
+assert(m.includes('--repair')&&m.includes("if: github.ref == 'refs/heads/main'"));
+assert(m.includes("if: steps.audit.outcome != 'success'"),'failed public dates remain failure');
+console.log('PASS 12 completed-market workflow / isolated publication / bounded source contracts');
