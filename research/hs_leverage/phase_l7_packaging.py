@@ -38,16 +38,23 @@ def utc_now():
     return datetime.now(timezone.utc)
 
 
-def receipt_names():
-    # Exact October scope: preserve all three whole Yahoo payloads, never splice.
-    return {"twse-calendar", *("twse-2026%02d" % m for m in range(1, 11)),
-            "yahoo-1", "yahoo-2", "yahoo-3", *bridge.ACTION_DATASETS}
+def receipt_names(actual=exact.TARGET):
+    # Preserve the original 18; extend only READ-ONLY follow-on evidence.
+    months = daily.months_between(exact.TARGET[:4]+'-01-01',actual)
+    return {"twse-calendar", *("twse-"+month for month in months),
+            "yahoo-1", "yahoo-2", "yahoo-3", *bridge.ACTION_DATASETS,
+            *('post-'+d for d in bridge.ACTION_DATASETS if actual > exact.TARGET)}
 
 
 def encode_evidence(evidence):
     result = copy.deepcopy(evidence)
-    require(len(result["receipts"]) == 18 and
-            {r["name"] for r in result["receipts"]} == receipt_names(), "ALL_18_RECEIPTS_REQUIRED")
+    calendar = next(r for r in result['receipts'] if r['name'] == 'twse-calendar')
+    require(exact.sha(calendar['raw']) == calendar['sha256'],'RAW_SHA_MISMATCH')
+    captured = exact.stamp(evidence['captured_at'])
+    actual,_ = exact.scope.actual_session(captured,captured,json.loads(calendar['raw']),exact.ANCHOR,exact.TARGET)
+    required = receipt_names(actual)
+    require(len(result["receipts"]) == len(required) and
+            {r["name"] for r in result["receipts"]} == required, "ALL_SCOPE_RECEIPTS_REQUIRED")
     for entry in result["receipts"]:
         captured = exact.stamp(evidence["captured_at"])
         name = entry["name"]
@@ -59,6 +66,8 @@ def encode_evidence(evidence):
             start = int(datetime(2014, 10, 23, tzinfo=daily.TAIPEI).timestamp())
             expected_url = (f"https://query1.finance.yahoo.com/v8/finance/chart/00631L.TW?period1={start}"
                             f"&period2={int(captured.timestamp())}&interval=1d&events=div%2Csplits")
+        elif name.startswith('post-'):
+            expected_url = exact.scope.action_url(name[5:],exact.ANCHOR,actual)
         else:
             symbol = "" if name == "TaiwanStockParValueChange" else "&data_id=00631L"
             expected_url = f"{daily.ACTION_URL}?dataset={name}{symbol}&start_date={exact.ANCHOR}&end_date={exact.TARGET}"
@@ -215,7 +224,8 @@ def main():
         trust = json.loads(environment.get("EXACT_PACKAGING_TRUST_JSON", "{}"))
         if args.operation == "capture":
             raw = capture(Path.cwd(), utc_now())
-            receipt = {**execution, "operation": "capture", "formal_approvals": 0, "raw_response_count": 18}
+            receipt = {**execution, "operation": "capture", "formal_approvals": 0,
+                       "raw_response_count":len(json.loads(raw)['evidence']['receipts'])}
         else:
             require(trust.get("base_git_sha") == policy.get("base_git_sha") and
                     trust.get("github_actors") == policy.get("github_actors"), "TRUST_POLICY_MISMATCH")
@@ -229,7 +239,7 @@ def main():
             raw, details = package(Path.cwd(), Path(args.input).read_bytes(), comment, trust, now)
             receipt = {**execution, **details, "operation": "package", "source_run_id": int(args.source_run_id),
                        "source_artifact_id": artifact["id"], "source_artifact_digest": artifact["digest"],
-                       "raw_response_count": 18, "owner_comment_id": comment_id}
+                       "raw_response_count":len(json.loads(raw)['evidence']['receipts']), "owner_comment_id": comment_id}
         body = json.loads(raw)["envelope"]["contract"]
         completed = utc_now()
         captured = exact.stamp(body["captured_at"])
