@@ -365,7 +365,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       <p class="subtitle">打開先看懂今天市場，再決定要不要加碼。週 KD 每日試算；0050、00631L 歷史價格已還原分割。</p>
     </div>
     <div class="hsHeaderActions">
-      <div class="hsHeaderState"><b id="homeHeaderMarketState">資料載入中</b><small id="homeHeaderLastUpdate">最後更新 —</small></div>
+      <div class="hsHeaderState" data-state="pending"><b id="homeHeaderMarketState">資料載入中</b><small id="homeHeaderLastUpdate" aria-label="有效資料時間待確認">更新待確認</small></div>
       <button class="hsHelpButton" id="hsOnboardingOpenHeader" type="button" aria-label="重新開啟新手導覽" title="新手導覽">?</button>
       <button class="btn refreshBtn" id="reload" aria-label="重新整理全部資料"><svg aria-hidden="true"><use href="#i-refresh"/></svg><span>更新</span></button>
     </div>
@@ -3537,6 +3537,32 @@ function decisionCenterDistanceText(value){
   const number=Number(value);if(!Number.isFinite(number))return"—";
   return formatC4Score(number);
 }
+// Header presentation only: never changes resolver/health decisions or data.
+function decisionCenterHeaderPresentation(dualTrack,health,now=new Date()){
+  const zone={timeZone:"Asia/Taipei"},dateOf=value=>new Intl.DateTimeFormat("en-CA",{...zone,year:"numeric",month:"2-digit",day:"2-digit"}).format(value);
+  const stamp=value=>typeof value==="string"&&/^\d{4}-\d{2}-\d{2}T.+(?:Z|[+-]\d{2}:\d{2})$/.test(value)&&Number.isFinite(Date.parse(value))&&Date.parse(value)<=now.getTime()?new Date(value):null;
+  const state=health?.marketState||"STALE",liveHealth=health?.items?.find(item=>item.key==="live"),officialHealth=health?.items?.find(item=>item.key==="official");
+  const codes=[...LONG_RADAR_SCORED_CODES],liveTimes=codes.map(code=>stamp(dualTrack?.items?.[code]?.live?.market_as_of)),today=dateOf(now);
+  const isLive=state==="OPEN"&&dualTrack?.market_state==="OPEN"&&dualTrack.target_date===today&&health?.level!=="ERROR"&&liveHealth?.level==="HEALTHY"&&codes.length>0&&liveTimes.every(time=>time&&dateOf(time)===dualTrack.target_date);
+  const label=isLive?"盤中交易":state==="OPEN"?"盤中待確認":({PREMARKET:"尚未開盤",CLOSED:"已收盤",HOLIDAY:"今日休市"})[state]||"資料待確認";
+  let times=isLive?liveTimes:codes.map(code=>stamp(dualTrack?.items?.[code]?.official?.market_as_of)),prefix=isLive?"更新":null;
+  const officialDate=health?.officialDate,age=window.HSDataFreshnessCore?.tradingDayAge?.(officialDate,today);
+  const officialValid=officialHealth&&officialHealth.level!=="ERROR"&&codes.length>0&&times.every(time=>time&&dateOf(time)===officialDate);
+  if(!isLive&&officialValid){
+    if(state==="CLOSED"&&officialDate===today)prefix="收盤";
+    else if(["PREMARKET","CLOSED","HOLIDAY"].includes(state)&&officialDate<today&&age!==null&&age!==undefined&&age<=1)prefix="前收";
+  }
+  if(!prefix)return{isLive:false,state,label,longText:"更新待確認",shortText:"更新待確認",accessible:"市場資料時間待確認；未使用裝置目前時間替代行情時間"};
+  // Conservative complete-batch time, not the newest single ETF or fetch time.
+  const time=new Date(Math.min(...times.map(time=>time.getTime()))),full=new Intl.DateTimeFormat("en-GB",{...zone,hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"}).format(time);
+  return{isLive,state,label,longText:prefix+" "+full,shortText:prefix+" "+full.slice(0,5),accessible:label+"；"+prefix+" "+dateOf(time)+" "+full+"（台北時間）"};
+}
+function renderDecisionCenterHeader(dualTrack,health){
+  const model=decisionCenterHeaderPresentation(dualTrack,health),label=$("#homeHeaderMarketState"),time=$("#homeHeaderLastUpdate"),pill=label?.closest(".hsHeaderState");
+  if(label)label.textContent=model.label;
+  if(pill){pill.classList.toggle("is-live",model.isLive);pill.dataset.state=model.isLive?"live":model.state.toLowerCase();pill.title=model.accessible;}
+  if(time){time.replaceChildren();for(const[cls,text]of[["hsHeaderTimeLong",model.longText],["hsHeaderTimeShort",model.shortText]]){const span=document.createElement("span");span.className=cls;span.textContent=text;span.setAttribute("aria-hidden","true");time.append(span);}const accessible=document.createElement("span");accessible.className="hsHeaderTimeAccessible";accessible.textContent=model.accessible;time.append(accessible);time.setAttribute("aria-label",model.accessible);time.title=model.accessible;}
+}
 function renderDecisionCenter(longs,dualTrack,leverageState){
   const host=$("#hsDecisionRoomGrid");if(!host)return;
   const officialRows=decisionCenterOfficialRows(dualTrack,longs),dashboardSymbols=new Set(HS_DASHBOARD_C4_SYMBOLS),dashboardOfficialRows=officialRows.filter(row=>dashboardSymbols.has(row.symbol)),highest=selectDecisionCenterHighest(dashboardOfficialRows),liveMove=selectDecisionCenterLiveMove(dualTrack),marketState=dualTrack?.market_state||"STALE";
@@ -3549,7 +3575,7 @@ function renderDecisionCenter(longs,dualTrack,leverageState){
   const leverage=decisionCenterLeverageSummary(leverageState),cnnView=cnnGaugePresentation(),healthTone=health.level==="HEALTHY"?"is-ok":"is-warning";
 host.innerHTML=`<div class="hsCoreDecisionHero"><div class="hsCoreIdentity"><span>${esc(focus?.symbol||highest?.symbol||"—")}</span><b>${esc(focus?.name||"正式資料暫不可用")}</b><small>${esc(focus?.tier||highest?.tier||"資料更新中")} ｜ 長期趨勢</small></div><div class="hsCoreHeroScore"><span>目前分數 <i>${focusStatus}</i></span><b>${Number.isFinite(focus?.score)?focus.score:"—"}<small>分</small></b><strong>${esc(focus?.tier||highest?.tier||"UNAVAILABLE")}</strong></div><div class="hsCoreThreshold"><span>距下一級門檻</span><b>${esc(focusThreshold)}</b><small>${esc(focusThresholdDetail)}</small></div></div><div class="hsDecisionStatusRail"><article><svg aria-hidden="true"><use href="#i-market"/></svg><span>市場狀態<b>${esc(decisionCenterMarketLabel(health.marketState))}</b><small>${esc(liveReady?`LIVE ${lastUpdate}`:health.marketState==="PREMARKET"?`前一交易日 FINAL ${highest?.date||"—"}`:`FINAL ${highest?.date||"—"}`)}</small></span></article><article><svg aria-hidden="true"><use href="#i-fund"/></svg><span>資料狀態<b data-health-overall class="${healthTone}">${esc(health.label)}</b><small>${esc(health.officialDate||"系統確認中")}</small></span></article><article><svg aria-hidden="true"><use href="#i-gauge"/></svg><span>美股情緒<span data-cnn-readout>${cnnInlinePresentation(cnnView)}</span></span></article><article><svg aria-hidden="true"><use href="#i-chip"/></svg><span>00631L 狀態<b>${esc(leverage.label)}</b><small>${esc(leverage.detail)}</small></span></article></div>${decisionCenterHealthHtml(health)}`;
   const caption=$("#hsDecisionMarketCaption");if(caption)caption.textContent=health.marketState==="PREMARKET"?"目前顯示前一交易日收盤資料":`${decisionCenterMarketLabel(health.marketState)} · 掌握下一步佈局`;
-  const headerState=$("#homeHeaderMarketState"),headerUpdate=$("#homeHeaderLastUpdate");if(headerState)headerState.textContent=decisionCenterMarketLabel(health.marketState);if(headerUpdate)headerUpdate.textContent=`最後更新 ${lastUpdate}`;
+  renderDecisionCenterHeader(dualTrack,health);
   const c4Grid=$("#hsDashboardC4Grid");if(c4Grid)c4Grid.innerHTML=decisionCenterC4Cards(dashboardOfficialRows,longs,dualTrack)||'<div class="newsEmpty">正式 C4 資料暫不可用。</div>';
   document.querySelectorAll("[data-home-c4-sort]").forEach(button=>button.classList.toggle("is-active",button.dataset.homeC4Sort===homeC4SortMode));
   liveDiagnosticRecord("render_decision",{market_state:currentFrontendDiagnosticMarketState(dualTrack),render_state_after:currentFrontendDiagnosticRenderState(dualTrack),selected_snapshot_time:window.HSLiveDiagnostics?.latestSnapshotTime(liveCanonicalCoreSnapshots),triggered_rerender:"YES"});
