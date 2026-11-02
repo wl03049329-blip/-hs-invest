@@ -67,6 +67,10 @@ updatefound, pending statechange and actual Controller changes; after the unchan
 failure, and do not latch off subsequent Controller verification. Query only local
 HS_APP_STATUS on an older Controller, not another network-staging HS_APP_CHECK.
 STATUS identifies the bounded-network handoff Worker as HS_STABLE_HANDOFF_V2.
+While a replacement is installing/waiting, do not re-enter network staging on
+the old Controller even when it still matches the loaded document. Pending
+state changes are observation events, not permission to restart old CHECK work.
+This prevents the observed stopped-old-Worker restart during native takeover.
 An already activated newer V2 Controller with no pending replacement may check
 and offer its verified newer code to an older document; it must not be mistaken
 for an older Controller blocking a newer document. No unselected code is CURRENT.
@@ -74,6 +78,12 @@ CURRENT still requires the actual activated Controller build, selected active
 commit, loaded UI and verified release to agree. Native failure/redundancy without
 a usable replacement remains rejected. Never force-close a client, discard input,
 clear financial stores or skip validation to resolve waiting.
+Selecting the verified code pointer does not itself finish native activation.
+Before navigating after an explicit selection, request the native registration
+update and require the actual activated Controller's local STATUS to match that
+selected build and pointer. Observe Controller/state changes with the same25s
+bound, retain an explicit handoff status on expiry, and recheck unsaved-input
+safety before navigation. Do not force skipWaiting or create an unbounded wait.
 Existing editing/saving/recovery prevents automatic reload; an update prompt is
 shown. Reload has a per-target session bound and a mismatched-build diagnostic.
 Offline uses the saved code version, not fabricated quotes or current scores.
@@ -109,6 +119,10 @@ Unknown/incomplete updates remain incomplete; do not label them current.
    Use synchronous waitForFunction predicates and separately await Worker replies.
    The validated local Playwright1.62.1 accepts an async-false Promise as truthy
    (returns a false handle without polling); it is not a readiness wait.
+   Code-update regressions that require market completeness use the exact pinned
+   published JSON blobs in tests/stable_app_recorded_market.cjs, not current-day
+   network prices. The V330 fixed-clock UI test uses the same recorded data date.
+   This is isolated test-server input only, never a live-price/public-site PASS.
 5. Public browser verification must match artifact SHA/commit/version, actual
    script/CSS pins and rendered root UI. A Pages SUCCESS alone is insufficient.
 6. Test real existing iPhone home-screen icon, full close/reopen and foreground
