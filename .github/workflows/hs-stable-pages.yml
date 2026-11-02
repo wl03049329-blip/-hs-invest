@@ -39,6 +39,7 @@ jobs:
       - name: Validate stable update and data contracts
         run: |
           node tests/test_stable_app_updates.js
+          node tests/test_stable_app_update_lifecycle.js
           node tests/test_portfolio_custom_positions.js
           node tests/test_portfolio_custom_positions_storage.js
           node tests/test_portfolio_group_strategy.js
