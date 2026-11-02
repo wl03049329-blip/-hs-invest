@@ -2454,3 +2454,25 @@ footer{color:#746f67}
   .cnnGaugeComparisons b{font-size:21px}
 }
 @media(prefers-reduced-motion:reduce){.cnnGaugeNeedle{transition:none}}
+
+/* Header market pill only. Override the legacy11px/7px mobile stack locally. */
+#home .hsHeaderState{display:flex;align-items:center;justify-content:space-between;gap:20px;min-width:300px;min-height:48px;box-sizing:border-box;padding:8px 18px;text-align:left;background:#100e0a;border-color:#776039;box-shadow:none}
+#home .hsHeaderState b{display:inline-flex;align-items:center;gap:8px;margin:0;white-space:nowrap;color:#f0e3c7;font-size:21px;font-weight:800;line-height:1.25}
+#home .hsHeaderState small{display:block;flex-shrink:0;margin:0;white-space:nowrap;color:#d1c3a8;font-size:16px;line-height:1.25;font-variant-numeric:tabular-nums}
+#home .hsHeaderTimeShort{display:none}
+#home .hsHeaderTimeAccessible{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+#home .hsHeaderState.is-live{border-color:#e5bd62;box-shadow:0 0 12px rgba(218,173,67,.17),inset 0 0 8px rgba(218,173,67,.04)}
+#home .hsHeaderState.is-live b::before{content:"";display:block;flex:0 0 7px;width:7px;height:7px;border-radius:50%;background:#edc66d;box-shadow:0 0 7px rgba(237,198,109,.45);animation:hsHeaderMarketBreath 3s ease-in-out infinite}
+@keyframes hsHeaderMarketBreath{0%,100%{opacity:.45}50%{opacity:1}}
+@media(max-width:900px){#home .hsHeaderState{min-width:270px;gap:14px;padding:8px 14px}#home .hsHeaderState b{font-size:20px}#home .hsHeaderState small{font-size:15px}}
+@media(max-width:600px){
+  #home.app-header.app-brand-header{row-gap:8px}
+  #home>.brandBlock{grid-column:1/-1}
+  #home .hsHeaderActions{grid-column:1/-1;min-width:0;width:100%;gap:6px}
+  #home .hsHeaderState{flex:1;min-width:0;min-height:44px;gap:10px;padding:8px 10px}
+  #home .hsHeaderState b{font-size:18px}
+  #home .hsHeaderState small{font-size:14px}
+  #home .hsHeaderActions .hsHelpButton,#home .hsHeaderActions .refreshBtn{width:44px;min-width:44px;height:44px;min-height:44px;flex:0 0 44px}
+}
+@media(max-width:340px){#home .hsHeaderState{gap:8px}#home .hsHeaderState b{font-size:16px;gap:6px}#home .hsHeaderState small{font-size:13px}#home .hsHeaderTimeLong{display:none}#home .hsHeaderTimeShort{display:inline}}
+@media(prefers-reduced-motion:reduce){#home .hsHeaderState.is-live b::before{animation:none;opacity:1}}
