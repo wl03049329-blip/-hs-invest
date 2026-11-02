@@ -29,12 +29,36 @@ is no self-referential hash or guessed future commit.
 Updates stage every declared asset and verify it before a complete marker.
 Only a complete version can become active. The code-only IndexedDB
 `hs.app.shell-update.v1:<project-scope>` atomically CASes the release pointer.
-CacheStorage keys are project-scoped and begin `hs-app-shell-v1-`; financial
+CacheStorage keys are project-scoped and begin `hs-app-shell-v1-`; new complete
+shells use the `-v2` suffix, which the legacy V3.2 pruner cannot delete. A native
+Worker Web Lock serializes code-cache staging, failed-stage cleanup, pruning and
+activation; prepare+CAS share one lock. It is a separate domain from financial
+locks. A missing Worker lock rejects updates, not silently emulated locking.
+Legacy code caches are retained; GC only removes unneeded v2 code caches.
+The same-commit/digest legacy active pointer can move to the verified v2 cache
+without changing the selected code or financial data. Financial
 databases/localStorage are not touched. Active, previous and known open-client
 shells remain available; unknown clients prevent cleanup. Hashed code assets are not substituted by
 unversioned network data. Financial/market responses are not offline shell data.
 
+Verified installed-shell navigation does not wait for online update checks.
+Manifest/asset deadlines cover the entire body, not just response headers.
+Only materialized, length/SHA-verified cached bytes are returned to the browser;
+already-decoded transport encoding/length headers are not reapplied.
+Evicted/damaged installed code is repaired only against that exact recorded
+release's bytes/SHA, under the same code lock; unavailable/mismatched bytes
+remain an explicit503. Financial stores are not a repair target.
+Code-metadata reads settle on transaction completion and reject transaction
+abort/error even if a request succeeded. Navigation, checks/status and
+activation/CAS read the actual database; a code-pointer memory-hint attempt was
+not retained because stale routing is not the update authority. An older code
+shell cannot claim CURRENT without matching selected code and Controller reply.
 App startup, foreground/pageshow and online transitions check for updates.
+Installed `registration.active` is not proof of document control. Send check/status
+to the actual activated Controller. CURRENT requires its build, selected active
+commit and loaded code to agree. Follow both controllerchange and the new
+Controller's statechange: claim can happen during activate. Until complete use
+WORKER_HANDOFF; never substitute Registration object identity for a build reply.
 Existing editing/saving/recovery prevents automatic reload; an update prompt is
 shown. Reload has a per-target session bound and a mismatched-build diagnostic.
 Offline uses the saved code version, not fabricated quotes or current scores.
@@ -61,6 +85,12 @@ Unknown/incomplete updates remain incomplete; do not label them current.
 4. Test previous Worker to current, code upgrade, foreground, offline/reconnect,
    partial/hash-failed updates, concurrent checks, busy forms, no reload loop,
    restart and rollback. Verify data bytes and encrypted backup/restore.
+   Record a new Document timeOrigin and actual UI/data/controlling-Worker state;
+   API existence or DCL alone is not sufficient during a Worker handoff. Include
+   headers-only body stalls and cross-Worker failed-staging interleavings.
+   Use synchronous waitForFunction predicates and separately await Worker replies.
+   The validated local Playwright1.62.1 accepts an async-false Promise as truthy
+   (returns a false handle without polling); it is not a readiness wait.
 5. Public browser verification must match artifact SHA/commit/version, actual
    script/CSS pins and rendered root UI. A Pages SUCCESS alone is insufficient.
 6. Test real existing iPhone home-screen icon, full close/reopen and foreground
