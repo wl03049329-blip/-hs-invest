@@ -62,6 +62,13 @@ with tempfile.TemporaryDirectory() as directory:
         assert meta["publication_status"] == "ARTIFACTS_WRITTEN"
         assert meta["github_fallback_gap_detected"] is False
         assert cache["source_dates"]["TWSE"] == "2026-09-24"  # Legacy mixed-date field is not an official-date claim.
+        # A newer MIS display observation must not erase the separate close.
+        closing = cache["official_close_cache"]
+        assert closing["source_dates"]["TWSE"] == "2026-09-23"
+        assert next(r for r in closing["items"] if r["code"] == "0050")["price"] == 111
+        before_close = json.dumps(closing, sort_keys=True)
+        quotes.write_market_cache(cache["items"], cache["source_status"], quotes.datetime.now(quotes.TAIPEI), cache)
+        assert json.dumps(json.loads(quotes.OUTPUT.read_text(encoding="utf-8"))["official_close_cache"], sort_keys=True) == before_close
         first_update = cache["updated_at"]
         quotes.refresh_official_close_cache()
         assert json.loads(quotes.OUTPUT.read_text(encoding="utf-8"))["updated_at"] == first_update

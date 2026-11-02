@@ -106,6 +106,17 @@ def finite_number(value: Any, *, positive: bool = False) -> float | None:
     return parsed
 
 
+def fetch_official_json(url: str) -> Any:
+    """Bounded transport retries; malformed/contradictory data is not repaired."""
+    for attempt in range(3):
+        try:
+            return fetch_json(url)
+        except OSError:
+            if attempt == 2:
+                raise
+            time_module.sleep(2 ** attempt)
+
+
 def iso_date(value: Any) -> str | None:
     digits = re.sub(r"\D", "", str(value or ""))
     if len(digits) == 7:
@@ -200,7 +211,7 @@ def latest_twse_daily_report(now: datetime, bulk_date: str, bulk_count: int) -> 
             "response": "json", "date": candidate.strftime("%Y%m%d"), "type": "ALLBUT0999",
         })
         try:
-            report = fetch_json(url)
+            report = fetch_official_json(url)
             if not isinstance(report, dict) or report.get("stat") != "OK":
                 continue
             if iso_date(report.get("date")) != candidate.isoformat():
@@ -950,6 +961,7 @@ def write_market_cache(
     refresh_attempt: dict[str, Any] | None = None,
     official_eod_snapshot: dict[str, Any] | None = None,
     official_fetch: dict[str, Any] | None = None,
+    official_close_cache: dict[str, Any] | None = None,
 ) -> None:
     items = sorted({item["code"]: item for item in items}.values(), key=lambda item: item["code"])
     validate_quote_items(items)
@@ -987,6 +999,12 @@ def write_market_cache(
             payload["radar_refresh"] = radar_refresh
         elif isinstance(existing.get("radar_refresh"), dict):
             payload["radar_refresh"] = existing["radar_refresh"]
+    # The intraday producer owns display observations, not the independent
+    # verified closing reference. Never discard the latter on an MIS overlay.
+    if official_close_cache is not None:
+        payload["official_close_cache"] = official_close_cache
+    elif isinstance(existing.get("official_close_cache"), dict):
+        payload["official_close_cache"] = existing["official_close_cache"]
     if radar_refresh:
         snapshots = dict(payload.get("intraday_quote_snapshots") or {})
         key = f'{radar_refresh["trading_date"]}_{radar_refresh["slot"].replace(":", "")}'
@@ -1085,7 +1103,7 @@ def fetch_official_rows(existing_quotes: dict[str, Any], now: datetime) -> tuple
     checked_at = now.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
     for market, url in (("TWSE", TWSE_CLOSE_URL), ("TPEx", TPEX_CLOSE_URL)):
         try:
-            payload = fetch_json(url)
+            payload = fetch_official_json(url)
             if not isinstance(payload, list):
                 raise ValueError(f"{market} closing source is not an array")
             items_by_market[market] = normalize_close_rows(payload, market)
@@ -1119,12 +1137,36 @@ def refresh_official_close_cache() -> None:
         statuses["TWSE"] = "official_closing_data_daily_report"
         official_fetch["last_success_at"]["TWSE"] = official_fetch["checked_at"]
     rows = merge_official_close_with_lkg(markets, existing.get("items", []))
+    close_cache = {
+        "version": 2,
+        "updated_at": official_fetch["checked_at"],
+        "official_last_checked_at": official_fetch["checked_at"],
+        "official_source_dates": official_fetch["source_dates"],
+        "official_last_success_at": official_fetch["last_success_at"],
+        "source_dates": official_fetch["source_dates"],
+        "source_status": dict(statuses),
+        "sources": {"TWSE_close": TWSE_DAILY_REPORT_URL if statuses.get("TWSE") == "official_closing_data_daily_report" else TWSE_CLOSE_URL, "TPEx_close": TPEX_CLOSE_URL},
+        "items": [row for row in rows if row.get("quote_mode") == "close"],
+    }
+    # A failed poll is not revocation of an already verified close. Preserve its
+    # original per-market provenance, not the intervening delayed display row.
+    previous_close = existing.get("official_close_cache") or {}
+    for market in ("TWSE", "TPEx"):
+        if statuses.get(market) != "cached_after_error" or not previous_close.get("items"):
+            continue
+        close_cache["items"] = [row for row in close_cache["items"] if row.get("market") != market] + [
+            row for row in previous_close["items"] if row.get("market") == market
+        ]
+        for field in ("source_status", "source_dates", "official_source_dates", "official_last_success_at"):
+            close_cache[field] = dict(close_cache[field])
+            close_cache[field][market] = previous_close.get(field, {}).get(market)
+        close_cache["sources"][market + "_close"] = previous_close.get("sources", {}).get(market + "_close")
     # An official feed may lag today's already-published MIS trade.  Never
     # replace a newer observation with an older close; equal-day official
     # closes do replace delayed observations after the feed catches up.
     prior = {item["code"]: item for item in existing.get("items", []) if isinstance(item, dict) and item.get("code")}
     rows = [prior[item["code"]] if item["code"] in prior and str(prior[item["code"]].get("date", "")) > str(item.get("date", "")) else item for item in rows]
-    write_market_cache(rows, statuses, now, existing, official_fetch=official_fetch)
+    write_market_cache(rows, statuses, now, existing, official_fetch=official_fetch, official_close_cache=close_cache)
     print(f"OFFICIAL_CLOSE_CACHE_REFRESHED symbols={len(rows)} TWSE={statuses['TWSE']} TPEx={statuses['TPEx']}")
 
 

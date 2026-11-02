@@ -1,0 +1,59 @@
+name: Completed market publication watchdog
+on:
+  schedule:
+    # Independent off-peak recovery: Taipei20:47 /22:47 /next08:47.
+    - cron: "47 0,12,14 * * 1-5"
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: write
+  issues: write
+concurrency:
+  group: hs-completed-market-watchdog
+  cancel-in-progress: false
+jobs:
+  audit:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PYTHONDONTWRITEBYTECODE: "1"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify public source dates and request bounded existing recovery
+        id: audit
+        continue-on-error: true
+        run: python -m scripts.check_completed_market --repair > "$RUNNER_TEMP/completed-market.json"
+      - name: Report incomplete publication (not a trading signal)
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs'), marker='<!-- hs-completed-market-v1 -->';
+            let report;
+            try { report=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+'/completed-market.json','utf8')); }
+            catch { report={healthy:false,reasons:['AUDIT_OR_CALENDAR_UNAVAILABLE']}; }
+            const issues=await github.paginate(github.rest.issues.listForRepo,{...context.repo,state:'open',per_page:100});
+            const prior=issues.find(i=>!i.pull_request&&i.user?.login==='github-actions[bot]'&&i.body?.includes(marker));
+            if (!report.healthy) {
+              const body=marker+'\n公開行情尚未驗證完成；已保留最後有效資料。補救請求不代表完成。\n\n'+JSON.stringify(report,null,2)+'\nRun: '+context.runId;
+              if(prior) await github.rest.issues.update({...context.repo,issue_number:prior.number,body});
+              else await github.rest.issues.create({...context.repo,title:'Completed market publication requires attention',body});
+            } else if(prior) await github.rest.issues.update({...context.repo,issue_number:prior.number,state:'closed'});
+            await core.summary.addCodeBlock(JSON.stringify(report,null,2),'json').write();
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: completed-market-audit-${{ github.run_id }}
+          path: ${{ runner.temp }}/completed-market.json
+          retention-days: 30
+      - name: Incomplete is not PASS
+        if: steps.audit.outcome != 'success'
+        run: exit 1

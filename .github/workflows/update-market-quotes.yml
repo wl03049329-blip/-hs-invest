@@ -15,6 +15,7 @@ on:
     # exchanges have had time to publish their closing bulk files.
     - cron: "30 0 * * 1-5"
     - cron: "30 8,10 * * 1-5"
+    - cron: "37 12,14 * * 1-5"
   workflow_dispatch:
 
 permissions:
@@ -71,7 +72,9 @@ jobs:
           git pull --rebase origin main
       - name: Finalize official EOD Core Score history
         run: |
-          expected_date="$(TZ=Asia/Taipei date +%F)"
+          # Same official-calendar +18:00 gate as the raw-daily collector.
+          # Crossing midnight must not request a nonexistent today's close.
+          expected_date="$(python -m scripts.check_completed_market --expected-only)"
           python scripts/fetch_official_eod_market.py \
             --expected-date "$expected_date" \
             --output "${RUNNER_TEMP}/official-eod-market.json"
@@ -87,11 +90,12 @@ jobs:
 
   official_quote_cache:
     name: Refresh official Portfolio quote cache independently
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.schedule == '30 0 * * 1-5' || github.event.schedule == '30 8,10 * * 1-5' }}
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     concurrency:
-      group: hs-official-quote-cache
+      # Same files as Railway / intraday publication: one writer at a time.
+      group: hs-live-intraday-slot-v4
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
@@ -101,7 +105,19 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Classify actual Taipei runtime (never the delayed cron label)
+        id: window
+        run: |
+          python - <<'PY'
+          import os
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          hour = datetime.now(ZoneInfo("Asia/Taipei")).hour
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write("allowed=" + str(hour < 9 or hour >= 16).lower() + "\n")
+          PY
       - name: Refresh official TWSE and TPEx closing quotes
+        if: steps.window.outputs.allowed == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
