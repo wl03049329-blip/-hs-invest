@@ -6,7 +6,7 @@ let passed=0;function test(name,fn){fn();passed++;console.log('PASS '+name);}cla
 function headerPresentationProjection(s){
  // V3.5 adds only these three reviewed portfolio adapters to the root. Remove
  // their exact tags before retaining the entire previous HTML SHA assertion.
- if(s.includes('src="portfolio-v3/smart-buy-core.js"'))for(const file of ['smart-buy-core','cash-edit','smart-buy-ui']){const tag='<script defer src="portfolio-v3/'+file+'.js"></script>\n';assert.equal(s.split(tag).length-1,1);s=s.replace(tag,'');}
+ if(s.includes('src="portfolio-v3/smart-buy-core.js"'))for(const file of ['target-settings351','smart-buy-core','cash-edit','smart-buy-ui']){const tag='<script defer src="portfolio-v3/'+file+'.js"></script>\n';assert.equal(s.split(tag).length-1,1);s=s.replace(tag,'');}
  // The home-only relocation has its own exact-source and financial-byte tests.
  // Pin the entire new HTML before projecting onto its reviewed pre-relocation
  // baseline; no arbitrary UI/body ranges are masked by this exception.
