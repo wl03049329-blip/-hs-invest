@@ -39,16 +39,21 @@ jobs:
           git pull --rebase origin main
       - name: Fetch validated official EOD market input
         run: |
-          expected_date="$(TZ=Asia/Taipei date +%F)"
+          expected_date="$(python -m scripts.check_completed_market --expected-only)"
           python scripts/fetch_official_eod_market.py \
             --expected-date "$expected_date" \
             --output "${RUNNER_TEMP}/official-eod-market.json"
       - name: Finalize expected Taipei trading date only
         run: |
-          expected_date="$(TZ=Asia/Taipei date +%F)"
-          node scripts/finalize_core_score_history.js \
+          expected_date="$(python -m scripts.check_completed_market --expected-only)"
+          set -o pipefail
+          timeout --signal=TERM 120s node scripts/finalize_core_score_history.js \
             --eod "${RUNNER_TEMP}/official-eod-market.json" \
-            --expected-date "$expected_date"
+            --expected-date "$expected_date" | tee "${RUNNER_TEMP}/finalized-core-result.log"
+          if grep -q 'FINALIZED_CORE_HISTORY_SOURCE_NOT_READY' "${RUNNER_TEMP}/finalized-core-result.log"; then
+            echo "::error::Official FINAL not published; prior verified FINAL retained."
+            exit 1
+          fi
       - name: Commit finalized EOD history only
         run: |
           git add finalized-core-score-snapshots-v1.json

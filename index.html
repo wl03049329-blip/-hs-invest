@@ -3515,7 +3515,7 @@ function renderHomeDataHealth(dualTrack,health){
   if(!label||!context||!content)return;
   label.textContent=health.label;label.className=health.level==="HEALTHY"?"is-ok":"is-warning";delete label.dataset.onlineLabel;delete label.dataset.onlineClass;
   const presentation=decisionCenterHeaderPresentation(dualTrack,health),source=health.items.find(item=>item.key==="official"),live=health.items.find(item=>item.key==="live");
-  const track=presentation.isLive?"LIVE":health.officialDate&&source?.level!=="ERROR"?`${source?.level==="WARNING"?"最後 FINAL":health.officialDate< (dualTrack?.target_date||taipeiToday())?"前日 FINAL":"FINAL"} ${health.officialDate}`:"正式資料待確認";
+  const track=presentation.isLive?"LIVE":source?.status==="今日正式分數待更新"?`今日正式分數待更新 · 沿用 ${health.officialDate} FINAL`:health.officialDate&&source?.level!=="ERROR"?`${source?.level==="WARNING"?"最後 FINAL":health.officialDate< (dualTrack?.target_date||taipeiToday())?"前日 FINAL":"FINAL"} ${health.officialDate}`:"正式資料待確認";
   context.textContent=`${track} · ${decisionCenterMarketLabel(health.marketState)}${health.marketState==="OPEN"&&!presentation.isLive?" · 盤中資料待確認":""}`;
   context.title=[source?.detail,live?.detail].filter(Boolean).join("；");
   content.innerHTML=decisionCenterHealthHtml(health);const details=content.querySelector("details");if(details)details.open=true;
@@ -3546,8 +3546,8 @@ function decisionCenterHealthItem(key,title,level,status,detail,impact="",unaffe
 function decisionCenterSystemHealth({dualTrack,officialRows,historyBySymbol,leverageState,cnnSnapshot,forwardState,adHocState,targetDate=taipeiToday(),now=new Date()}={}){
   const items=[],marketState=decisionCenterEffectiveMarketState(dualTrack,now),officialSnapshot=dualTrack?.official_snapshot,officialDate=String(officialSnapshot?.trading_date||officialRows?.[0]?.date||""),officialComplete=officialSnapshot?.source_status==="FINALIZED_EOD"&&officialSnapshot?.snapshot_type==="FINALIZED_CLOSE"&&officialSnapshot?.status==="SUCCESS"&&(officialRows||[]).length===LONG_RADAR_SCORED_CODES.size&&[...LONG_RADAR_SCORED_CODES].every(symbol=>dualTrack?.items?.[symbol]?.official?.status==="FINALIZED"&&dualTrack?.items?.[symbol]?.score_version===LONG_TERM_CORE_SCORE_VERSION);
   const officialAge=window.HSDataFreshnessCore?.tradingDayAge?.(officialDate,targetDate),officialCurrent=officialComplete&&officialDate<=targetDate&&officialAge!==null;
-  const officialDelayed=officialAge>3&&marketState!=="HOLIDAY";
-  items.push(officialCurrent?decisionCenterHealthItem("official","正式 C4",officialDelayed?"WARNING":"HEALTHY",officialDelayed?"更新時間需注意":"正常",`最新正式資料：${officialDate}`,officialDelayed?"正式分數時效":"",""):decisionCenterHealthItem("official","正式 C4","ERROR","無法作為正式依據","正式盤後資料不完整或版本不符","正式 C4、排名與決策摘要",""));
+  const officialDelayed=officialAge>3&&marketState!=="HOLIDAY",officialPending=officialCurrent&&marketState==="CLOSED"&&officialDate<targetDate;
+  items.push(officialCurrent?decisionCenterHealthItem("official","正式 C4",officialPending||officialDelayed?"WARNING":"HEALTHY",officialPending?"今日正式分數待更新":officialDelayed?"更新時間需注意":"正常",officialPending?`目前沿用 ${officialDate} FINAL；今日 ${targetDate} 官方完整資料及正式計算尚未全部發布`:`最新正式資料：${officialDate}`,officialPending||officialDelayed?"正式分數時效":"",""):decisionCenterHealthItem("official","正式 C4","ERROR","無法作為正式依據","正式盤後資料不完整或版本不符","正式 C4、排名與決策摘要",""));
   const offSession={PREMARKET:"尚未開盤",CLOSED:"目前非交易時段",HOLIDAY:"今日休市"}[marketState];
   if(offSession)items.push(decisionCenterHealthItem("live","盤中預估","HEALTHY",offSession,"非交易時段不要求盤中快照"));
   else{
