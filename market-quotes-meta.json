@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "updated_at": "2026-11-03T12:11:09.204415+08:00",
+  "updated_at": "2026-11-03T12:15:35.554970+08:00",
   "source_dates": {
     "TWSE": "2026-11-02",
     "TPEx": "2026-11-02"
@@ -23,8 +23,8 @@
   "github_fallback_last_run": "2026-10-19T05:27:58.484668Z",
   "github_fallback_gap_detected": false,
   "primary_trigger_source": "RAILWAY_PRIMARY",
-  "last_primary_tick_at": "2026-11-03T12:11:09.204415+08:00",
-  "last_successful_live_snapshot_at": "2026-11-03T12:11:09.204415+08:00",
+  "last_primary_tick_at": "2026-11-03T12:15:35.554970+08:00",
+  "last_successful_live_snapshot_at": "2026-11-03T12:15:35.554970+08:00",
   "latest_trading_date": "2026-11-03",
   "live_completeness": "5/5",
   "required_symbols_status": {
@@ -40,36 +40,36 @@
     "verified": true,
     "status": "success",
     "trading_date": "2026-11-03",
-    "slot": "12:11",
-    "captured_at": "2026-11-03T12:11:09.192518+08:00",
-    "verified_at": "2026-11-03T12:11:09.204415+08:00",
-    "market_as_of": "2026-11-03T12:11:03+08:00",
+    "slot": "12:15",
+    "captured_at": "2026-11-03T12:15:35.545513+08:00",
+    "verified_at": "2026-11-03T12:15:35.554970+08:00",
+    "market_as_of": "2026-11-03T12:15:33+08:00",
     "completeness": "5/5",
     "trigger_source": "RAILWAY_PRIMARY",
     "quote_sources": {
-      "0050": "MIS_Z",
-      "00662": "MIS_Z",
+      "0050": "FUGLE_LAST_TRADE",
+      "00662": "FUGLE_LAST_TRADE",
       "00757": "FUGLE_LAST_TRADE",
       "00830": "FUGLE_LAST_TRADE",
-      "00935": "MIS_Z"
+      "00935": "FUGLE_LAST_TRADE"
     }
   },
   "radar_refresh_attempt": {
     "verified": true,
     "status": "success",
     "trading_date": "2026-11-03",
-    "slot": "12:11",
-    "captured_at": "2026-11-03T12:11:09.192518+08:00",
-    "verified_at": "2026-11-03T12:11:09.204415+08:00",
-    "market_as_of": "2026-11-03T12:11:03+08:00",
+    "slot": "12:15",
+    "captured_at": "2026-11-03T12:15:35.545513+08:00",
+    "verified_at": "2026-11-03T12:15:35.554970+08:00",
+    "market_as_of": "2026-11-03T12:15:33+08:00",
     "completeness": "5/5",
     "trigger_source": "RAILWAY_PRIMARY",
     "quote_sources": {
-      "0050": "MIS_Z",
-      "00662": "MIS_Z",
+      "0050": "FUGLE_LAST_TRADE",
+      "00662": "FUGLE_LAST_TRADE",
       "00757": "FUGLE_LAST_TRADE",
       "00830": "FUGLE_LAST_TRADE",
-      "00935": "MIS_Z"
+      "00935": "FUGLE_LAST_TRADE"
     }
   },
   "intraday_completeness": {
@@ -240,10 +240,10 @@
   },
   "intraday_snapshot_meta": {
     "current_market_date": "2026-11-03",
-    "current_slot": "12:11",
-    "previous_successful_slot": "12:05",
-    "last_successful_snapshot": "2026-11-03_1211",
-    "snapshot_calculated_at": "2026-11-03T12:11:09.204415+08:00",
+    "current_slot": "12:15",
+    "previous_successful_slot": "12:11",
+    "last_successful_snapshot": "2026-11-03_1215",
+    "snapshot_calculated_at": "2026-11-03T12:15:35.554970+08:00",
     "trigger_source": "RAILWAY_PRIMARY"
   },
   "intraday_quote_snapshots": {
@@ -156330,6 +156330,108 @@
         "00757": "FUGLE_LAST_TRADE",
         "00830": "FUGLE_LAST_TRADE",
         "00935": "MIS_Z"
+      }
+    },
+    "2026-11-03_1215": {
+      "contract": "HS_LIVE_INTRADAY_SLOT_V4",
+      "market_date": "2026-11-03",
+      "slot": "12:15",
+      "status": "SUCCESS",
+      "captured_at": "2026-11-03T12:15:35.545513+08:00",
+      "calculated_at": "2026-11-03T12:15:35.554970+08:00",
+      "market_as_of": "2026-11-03T12:15:33+08:00",
+      "items": {
+        "0050": {
+          "code": "0050",
+          "date": "2026-11-03",
+          "high": 103.35,
+          "low": 100.95,
+          "market": "TWSE",
+          "name": "0050",
+          "open": 102.5,
+          "previous_close": 104.1,
+          "price": 101.15,
+          "price_field": "lastTrade.price",
+          "quote_source": "FUGLE_LAST_TRADE",
+          "quote_time": "12:15:33",
+          "source": "https://api.fugle.tw/marketdata/v1.0/stock/intraday/quote",
+          "volume": 165452000
+        },
+        "00662": {
+          "code": "00662",
+          "date": "2026-11-03",
+          "high": 118.1,
+          "low": 117.65,
+          "market": "TWSE",
+          "name": "00662",
+          "open": 117.85,
+          "previous_close": 119.95,
+          "price": 117.8,
+          "price_field": "lastTrade.price",
+          "quote_source": "FUGLE_LAST_TRADE",
+          "quote_time": "12:15:32",
+          "source": "https://api.fugle.tw/marketdata/v1.0/stock/intraday/quote",
+          "volume": 3800000
+        },
+        "00757": {
+          "code": "00757",
+          "date": "2026-11-03",
+          "high": 133.5,
+          "low": 132.8,
+          "market": "TWSE",
+          "name": "00757",
+          "open": 133.5,
+          "previous_close": 136.1,
+          "price": 132.8,
+          "price_field": "lastTrade.price",
+          "quote_source": "FUGLE_LAST_TRADE",
+          "quote_time": "12:15:30",
+          "source": "https://api.fugle.tw/marketdata/v1.0/stock/intraday/quote",
+          "volume": 708000
+        },
+        "00830": {
+          "code": "00830",
+          "date": "2026-11-03",
+          "high": 76.4,
+          "low": 75.35,
+          "market": "TWSE",
+          "name": "00830",
+          "open": 76.4,
+          "previous_close": 79.25,
+          "price": 75.75,
+          "price_field": "lastTrade.price",
+          "quote_source": "FUGLE_LAST_TRADE",
+          "quote_time": "12:15:31",
+          "source": "https://api.fugle.tw/marketdata/v1.0/stock/intraday/quote",
+          "volume": 15033000
+        },
+        "00935": {
+          "code": "00935",
+          "date": "2026-11-03",
+          "high": 52.45,
+          "low": 50.5,
+          "market": "TWSE",
+          "name": "00935",
+          "open": 52.25,
+          "previous_close": 53.15,
+          "price": 50.65,
+          "price_field": "lastTrade.price",
+          "quote_source": "FUGLE_LAST_TRADE",
+          "quote_time": "12:15:32",
+          "source": "https://api.fugle.tw/marketdata/v1.0/stock/intraday/quote",
+          "volume": 12457000
+        }
+      },
+      "non_blocking_status": {
+        "009815": "WAIT_NATIVE"
+      },
+      "trigger_source": "RAILWAY_PRIMARY",
+      "quote_sources": {
+        "0050": "FUGLE_LAST_TRADE",
+        "00662": "FUGLE_LAST_TRADE",
+        "00757": "FUGLE_LAST_TRADE",
+        "00830": "FUGLE_LAST_TRADE",
+        "00935": "FUGLE_LAST_TRADE"
       }
     }
   },
