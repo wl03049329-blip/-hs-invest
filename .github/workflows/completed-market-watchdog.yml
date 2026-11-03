@@ -5,6 +5,11 @@ on:
     # The existing repair path revalidates FINAL as well as quotes/daily bars.
     - cron: "47 0,10,12,14 * * 1-5"
   workflow_dispatch:
+  workflow_run:
+    # Audit actual publication, not merely producer success. Repairs use the
+    # existing serialized collector; a healthy publication never dispatches it.
+    workflows: [HS Stable App Pages]
+    types: [completed]
 permissions:
   contents: read
   actions: write
@@ -14,7 +19,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   audit:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && (github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository))
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
@@ -31,6 +36,8 @@ jobs:
       - name: Verify public source dates and request bounded existing recovery
         id: audit
         continue-on-error: true
+        env:
+          HS_COMPLETED_AUDIT_TRIGGER: ${{ github.event_name }}
         run: python -m scripts.check_completed_market --repair > "$RUNNER_TEMP/completed-market.json"
       - name: Report incomplete publication (not a trading signal)
         if: always()
@@ -41,6 +48,12 @@ jobs:
             let report;
             try { report=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+'/completed-market.json','utf8')); }
             catch { report={healthy:false,reasons:['AUDIT_OR_CALENDAR_UNAVAILABLE']}; }
+            if (report.deferred === true) {
+              // A mid-session Pages event is not completed-market evidence.
+              // Do not compete with the live producer or close prior alerts.
+              await core.summary.addCodeBlock(JSON.stringify(report,null,2),'json').write();
+              return;
+            }
             const issues=await github.paginate(github.rest.issues.listForRepo,{...context.repo,state:'open',per_page:100});
             const prior=issues.find(i=>!i.pull_request&&i.user?.login==='github-actions[bot]'&&i.body?.includes(marker));
             if (!report.healthy) {

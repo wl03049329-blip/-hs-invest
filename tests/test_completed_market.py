@@ -65,6 +65,42 @@ class CompletedPublication(unittest.TestCase):
                 quotes.fetch_official_json("https://www.twse.com.tw/")
             self.assertEqual(fetch.call_count, 3)
 
+    def test_only_daily_missing_does_not_rerun_final_or_live_producer(self):
+        with patch("scripts.check_completed_market.subprocess.check_output", return_value=json.dumps({"workflow_runs": []})), patch("scripts.check_completed_market.subprocess.run") as run:
+            result = repair(dt.datetime.now(dt.timezone.utc), ["DAILY_CALENDAR_NOT_CURRENT", "DAILY_BARS_INCOMPLETE"])
+            self.assertEqual(result, ["update-radar-daily.yml:REQUESTED_NOT_YET_VERIFIED"])
+            self.assertEqual(run.call_count, 1)
+            self.assertIn("update-radar-daily.yml", run.call_args.args[0])
+
+    def test_healthy_publication_cannot_create_a_workflow_loop(self):
+        with patch("scripts.check_completed_market.subprocess.check_output") as query, patch("scripts.check_completed_market.subprocess.run") as run:
+            self.assertEqual(repair(dt.datetime.now(dt.timezone.utc), []), [])
+            query.assert_not_called()
+            run.assert_not_called()
+
+    def test_post_pages_audit_main_success_same_repo_gate(self):
+        from pathlib import Path
+        workflow = Path(".github/workflows/completed-market-watchdog.yml").read_text(encoding="utf-8")
+        self.assertIn("workflows: [HS Stable App Pages]", workflow)
+        self.assertIn("types: [completed]", workflow)
+        for gate in ["conclusion == 'success'", "head_branch == 'main'", "head_repository.full_name == github.repository"]:
+            self.assertIn(gate, workflow)
+
+    def test_intraday_pages_event_defers_without_claiming_health_or_dispatch(self):
+        from scripts import check_completed_market as monitor
+        import io
+        from contextlib import redirect_stdout
+        now = dt.datetime(2026, 11, 4, 10, tzinfo=monitor.TZ)
+        with patch.dict("os.environ", {"HS_COMPLETED_AUDIT_TRIGGER": "workflow_run"}), patch.object(monitor.dt, "datetime") as clock, patch.object(monitor, "expected_day") as expected, patch.object(monitor, "repair") as recover, patch("sys.argv", ["check", "--repair"]), redirect_stdout(io.StringIO()) as output:
+            clock.now.return_value = now
+            monitor.main()
+            report = json.loads(output.getvalue())
+            self.assertIsNone(report["healthy"])
+            self.assertTrue(report["deferred"])
+            self.assertEqual(report["repair"], [])
+            expected.assert_not_called()
+            recover.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

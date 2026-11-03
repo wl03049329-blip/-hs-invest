@@ -8,8 +8,8 @@
   "volume_unit": "SHARES",
   "verified": true,
   "requested_start": "2026-09-01",
-  "requested_end": "2026-11-02",
-  "fetched_at": "2026-11-02T17:09:38.668092+00:00",
+  "requested_end": "2026-11-03",
+  "fetched_at": "2026-11-03T17:25:58.855611+00:00",
   "base_source_sha256": "7b94bf8e51b97c0069515474b0b4c4f588c87ea827591ea51638a881fa596ffb",
   "base_last_date": "2026-09-18",
   "overlap": {
@@ -252,38 +252,47 @@
       "min": 11.44,
       "close": 11.5,
       "Trading_Volume": 2205085
+    },
+    {
+      "date": "2026-11-03",
+      "stock_id": "009815",
+      "open": 11.4,
+      "max": 11.4,
+      "min": 11.23,
+      "close": 11.24,
+      "Trading_Volume": 2824095
     }
   ],
   "dividends": [],
   "action_coverage": {
     "start": "2026-09-01",
-    "end": "2026-11-02"
+    "end": "2026-11-03"
   },
   "action_checks": [
     {
       "source": "exDailyQ",
       "matches": [],
-      "sha256": "f8dbef0a8e855feeafec5198df7f6fe6cc5b3c7e58efba525efa214ed732dfe0"
+      "sha256": "4f02c03476e7813291a0bf6916cd0170a08c77e6313b7c655f2921009910c10c"
     },
     {
       "source": "etfSplitRslt",
       "matches": [],
-      "sha256": "708b6587e8157f4d879cea8c5c46677130c2bfe4c8a0b777d57740bdb7193bb1"
+      "sha256": "7b2edc55d04aa9a51d5efe4ab56ebb0803b0d70c1ec0c9bd2795599a65153fe0"
     },
     {
       "source": "etfRvsRslt",
       "matches": [],
-      "sha256": "3f3b37563bbf21bdfc4e7f9d02474ddb27af4ea0a8676707e8e847d8773dd650"
+      "sha256": "09cf2acb4e75c85ff677c8d41999d5236f4a043fa25362362fedad801b481fc9"
     },
     {
       "source": "revivt",
       "matches": [],
-      "sha256": "c8caeb91af1685a7567878a7e2adbe52fcc4c07cef00bc8ca8b9caf44ebf4d12"
+      "sha256": "719b072bdb384068498173376f39d9922cfc722ea4b9c370804e46aaa34d011b"
     },
     {
       "source": "pvChgRslt",
       "matches": [],
-      "sha256": "708b6587e8157f4d879cea8c5c46677130c2bfe4c8a0b777d57740bdb7193bb1"
+      "sha256": "7b2edc55d04aa9a51d5efe4ab56ebb0803b0d70c1ec0c9bd2795599a65153fe0"
     }
   ],
   "evidence": [
@@ -926,52 +935,69 @@
       "url": "https://www.tpex.org.tw/www/zh-tw/bulletin/pvChgRslt?startDate=2026%2F09%2F01&endDate=2026%2F11%2F02&response=json",
       "fetched_at": "2026-11-02T17:09:38.668092+00:00",
       "sha256": "708b6587e8157f4d879cea8c5c46677130c2bfe4c8a0b777d57740bdb7193bb1"
+    },
+    {
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=009815&date=2026%2F11%2F01&response=json",
+      "fetched_at": "2026-11-03T17:25:35.741515+00:00",
+      "sha256": "fd0cd2a5e19763b7c4789b2632f53304056fa56dc70d01b486567f363c6f1af0"
+    },
+    {
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/dailyQuotes?date=2026%2F11%2F03&response=json",
+      "fetched_at": "2026-11-03T17:25:43.178690+00:00",
+      "sha256": "28ef719ad878caa55727d986b49478d5f93c6cc8fe49c568c0f41d3b2ea54a41"
+    },
+    {
+      "url": "https://www.tpex.org.tw/www/zh-tw/indexInfo/inx?date=2026%2F11%2F01&response=json",
+      "fetched_at": "2026-11-03T17:25:32.660456+00:00",
+      "sha256": "7ab06c69266866502ee59900c4bada0fb43819eca8df0808af3f95aabd5d7848"
+    },
+    {
+      "url": "https://www.tpex.org.tw/www/zh-tw/bulletin/exDailyQ?startDate=2026%2F09%2F01&endDate=2026%2F11%2F03&response=json",
+      "fetched_at": "2026-11-03T17:25:46.498843+00:00",
+      "sha256": "4f02c03476e7813291a0bf6916cd0170a08c77e6313b7c655f2921009910c10c"
+    },
+    {
+      "url": "https://www.tpex.org.tw/www/zh-tw/bulletin/etfSplitRslt?startDate=2026%2F09%2F01&endDate=2026%2F11%2F03&response=json",
+      "fetched_at": "2026-11-03T17:25:49.565855+00:00",
+      "sha256": "7b2edc55d04aa9a51d5efe4ab56ebb0803b0d70c1ec0c9bd2795599a65153fe0"
+    },
+    {
+      "url": "https://www.tpex.org.tw/www/zh-tw/bulletin/etfRvsRslt?startDate=2026%2F09%2F01&endDate=2026%2F11%2F03&response=json",
+      "fetched_at": "2026-11-03T17:25:52.640945+00:00",
+      "sha256": "09cf2acb4e75c85ff677c8d41999d5236f4a043fa25362362fedad801b481fc9"
+    },
+    {
+      "url": "https://www.tpex.org.tw/www/zh-tw/bulletin/revivt?startDate=2026%2F09%2F01&endDate=2026%2F11%2F03&response=json",
+      "fetched_at": "2026-11-03T17:25:55.804211+00:00",
+      "sha256": "719b072bdb384068498173376f39d9922cfc722ea4b9c370804e46aaa34d011b"
+    },
+    {
+      "url": "https://www.tpex.org.tw/www/zh-tw/bulletin/pvChgRslt?startDate=2026%2F09%2F01&endDate=2026%2F11%2F03&response=json",
+      "fetched_at": "2026-11-03T17:25:58.855611+00:00",
+      "sha256": "7b2edc55d04aa9a51d5efe4ab56ebb0803b0d70c1ec0c9bd2795599a65153fe0"
     }
   ],
   "calendar_completeness": "TPEX_INDEX_SESSIONS_VERIFIED",
-  "expected_session_count": 183,
+  "expected_session_count": 184,
   "volume_verification": "Exact dailyQuotes shares; monthly rounded lots independently cross-checked, never multiplied to fabricate exact shares",
   "incremental_verification": {
-    "start": "2026-10-01",
-    "end": "2026-11-02",
+    "start": "2026-11-01",
+    "end": "2026-11-03",
     "sessions": [
-      "2026-10-01",
-      "2026-10-02",
-      "2026-10-05",
-      "2026-10-06",
-      "2026-10-07",
-      "2026-10-08",
-      "2026-10-12",
-      "2026-10-13",
-      "2026-10-14",
-      "2026-10-15",
-      "2026-10-16",
-      "2026-10-19",
-      "2026-10-20",
-      "2026-10-21",
-      "2026-10-22",
-      "2026-10-27",
-      "2026-10-28",
-      "2026-10-29",
-      "2026-10-30",
-      "2026-11-02"
+      "2026-11-02",
+      "2026-11-03"
     ],
     "provider": "TPEx/dailyQuotes",
     "overlap_count": 1,
-    "parent_content_sha256": "8b4937be12a71a498696039ea8826456fe7e9f1d5b1974664b320dcf38da7037",
+    "parent_content_sha256": "a32f607d8391fcde6181f08c612ad9831c69d152a0b407c1199a471151e1368e",
     "corporate_actions": "VERIFIED",
     "calendar_evidence": [
       {
-        "url": "https://www.tpex.org.tw/www/zh-tw/indexInfo/inx?date=2026%2F10%2F01&response=json",
-        "fetched_at": "2026-11-02T17:08:51.524642+00:00",
-        "sha256": "fc5890767081d0faa02375bb4c8d03cf15dabcd409fe2de9cab3a7f67253d6ee"
-      },
-      {
         "url": "https://www.tpex.org.tw/www/zh-tw/indexInfo/inx?date=2026%2F11%2F01&response=json",
-        "fetched_at": "2026-11-02T17:09:07.169839+00:00",
-        "sha256": "980ac404908b3b53ec889f1b093284626b50525906c609aedaf461e1f73d6f9a"
+        "fetched_at": "2026-11-03T17:25:32.660456+00:00",
+        "sha256": "7ab06c69266866502ee59900c4bada0fb43819eca8df0808af3f95aabd5d7848"
       }
     ]
   },
-  "content_sha256": "a32f607d8391fcde6181f08c612ad9831c69d152a0b407c1199a471151e1368e"
+  "content_sha256": "3c1b0ed9b41b1b45da7626c63145a096c7d213c864856e0590fa0dc2bdc58c43"
 }

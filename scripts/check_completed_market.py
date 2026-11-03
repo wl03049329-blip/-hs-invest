@@ -8,6 +8,7 @@ import argparse
 import contextlib
 import datetime as dt
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -54,12 +55,17 @@ def public_json(name):
             time.sleep(2 ** attempt)
 
 
-def repair(now):
+def repair(now, reasons=None):
     # Dispatch the existing, serialized producers only. This monitor never writes
     # quotes or competes with Railway's intraday producer. At most one request
     # per producer per 30min; running/queued work is never duplicated.
     result = []
-    for workflow in ("update-market-quotes.yml", "update-radar-daily.yml"):
+    workflows = []
+    if reasons is None or any(r.startswith(("OFFICIAL_", "CORE_")) for r in reasons):
+        workflows.append("update-market-quotes.yml")
+    if reasons is None or any(r.startswith("DAILY_") for r in reasons):
+        workflows.append("update-radar-daily.yml")
+    for workflow in workflows:
         raw = subprocess.check_output(["gh", "api", f"repos/{REPO}/actions/workflows/{workflow}/runs?branch=main&per_page=10"], text=True)
         runs = json.loads(raw)["workflow_runs"]
         if any(r["status"] != "completed" for r in runs):
@@ -79,6 +85,12 @@ def main():
     parser.add_argument("--expected-only", action="store_true")
     args = parser.parse_args()
     now = dt.datetime.now(TZ)
+    # Pages also publishes LIVE snapshots. During the session / pre18:00 gap,
+    # an event is not evidence of a completed day and must not dispatch another
+    # producer. Scheduled off-hours and pre-open audits remain unchanged.
+    if os.environ.get("HS_COMPLETED_AUDIT_TRIGGER") == "workflow_run" and 9 <= now.hour < 18:
+        print(json.dumps(dict(healthy=None, deferred=True, reasons=["WAIT_COMPLETED_SESSION_GATE"], repair=[])))
+        return
     with tempfile.TemporaryDirectory(prefix="hs-market-calendar-") as directory, contextlib.redirect_stdout(sys.stderr):
         expected, _, _ = expected_day(Client(directory), now)
     if args.expected_only:
@@ -86,7 +98,7 @@ def main():
         return
     report = inspect(expected, public_json("market-quotes.json"), public_json("data/radar-history/status-v1.json"), public_json("finalized-core-score-snapshots-v1.json"))
     if args.repair and not report["healthy"]:
-        report["repair"] = repair(now)
+        report["repair"] = repair(now, report["reasons"])
     print(json.dumps(report, ensure_ascii=False))
     if not report["healthy"]:
         raise SystemExit(1)
