@@ -84,7 +84,8 @@
  function effectiveTargets(groups,settings){const out={};for(const g of groups)for(const symbol of g.symbols){const t=settings.etf_targets[g.id]?.[symbol];if(t!==undefined&&t!==null)out[symbol]=settings.targets[g.id]*t/1000000;}return out;}
  // Qualification, intensity and global ceiling are supplied by the existing
  // private C4/period engine. This module does not define another C4 threshold.
- function plan({view,groups,settings,fp,ceiling,manualBudget=null,excluded=[],qualify,multiplier,positionValue}){
+ function plan({view,groups,settings,fp,ceiling,manualBudget=null,excluded=[],qualify,multiplier,positionValue,policy='LEGACY_V33'}){
+  if(!['LEGACY_V33','DEFICIT_FIRST_V2'].includes(policy))fail('INVALID_ALLOCATION_POLICY');
   const empty=reason=>({status:'PENDING',reason,budget_minor:null,spent_minor:0,unallocated_minor:null,remaining_cash_minor:view.cash_minor,basket:[],after:null,writes:false,production_writer:false});
   let detail;try{detail=describe(view,groups,settings,fp);}catch(e){return empty(e.message);}
   if(!detail.targets_complete)return empty('請補齊組合及ETF目標，並處理未分組持股');
@@ -94,7 +95,7 @@
   const fee=minor(view.settings.feeReserveMinor),unit=view.settings.unit;if(![1,1000].includes(unit))return empty('交易單位需要確認');
   if(manualBudget!==null)minor(manualBudget);
   const budget=Math.min(ceiling,view.cash_minor,manualBudget??ceiling),bySymbol=new Map(view.rows.map(r=>[r.symbol,r])),candidates=[];
-  for(const g of detail.groups){if(g.status!=='UNDERWEIGHT')continue;for(const m of g.members){const r=bySymbol.get(m.symbol);if(m.status==='OVERWEIGHT'||!qualify(r)||excluded.includes(r.symbol)||!(m.effective_stock_target_bps>0))continue;candidates.push({...m,gid:g.id,gap:g.target_bps/100-g.weight,score:r.c4.score,multiplier:multiplier(r.c4.score),price:r.price,target_product:settings.targets[g.id]*settings.etf_targets[g.id][r.symbol]});}}
+  for(const g of detail.groups){if(policy==='LEGACY_V33'&&g.status!=='UNDERWEIGHT')continue;for(const m of g.members){const r=bySymbol.get(m.symbol),product=settings.targets[g.id]*settings.etf_targets[g.id]?.[r.symbol];if(m.status==='OVERWEIGHT'||!qualify(r)||excluded.includes(r.symbol)||!(m.effective_stock_target_bps>0))continue;if(policy==='DEFICIT_FIRST_V2'&&(BigInt(m.market_minor)*100000000n>BigInt(detail.equity_minor)*BigInt(product)||BigInt(m.market_minor)*10000n>BigInt(g.market_minor)*BigInt(settings.etf_targets[g.id][r.symbol])))continue;candidates.push({...m,gid:g.id,gap:policy==='DEFICIT_FIRST_V2'?m.effective_stock_target_bps/100-r.weight:g.target_bps/100-g.weight,score:r.c4.score,multiplier:multiplier(r.c4.score),price:r.price,target_product:product});}}
   candidates.sort((a,b)=>b.gap-a.gap||b.multiplier-a.multiplier||a.symbol.localeCompare(b.symbol));
   let principalLimit=Math.max(0,budget-fee*candidates.length),basket=[],after=null,stable=false;const groupLimits=new Map();
   // Monotone fixed point accounts for actual rounded units, retained cash and

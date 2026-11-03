@@ -184,3 +184,34 @@ html[data-hs-v3-page] #hpv2 #pv34-editor.is-keyboard{padding-bottom:0}
 #hpv2 .pv3groupLegend>span:nth-child(2){flex:1;min-width:0;overflow-wrap:anywhere}
 @media(max-width:760px){#hpv2 .pv3donutrow{grid-template-columns:1fr;gap:8px}#hpv2 .pv3donutrow svg{margin:auto;width:132px}}
 @media(min-width:800px){#hpv2 #pv3-actions{width:auto;grid-template-columns:repeat(3,max-content)}}
+/* V3.5: obvious cash editing and a compact, read-only smart-buy entry. */
+#hpv2 .pv3facts>.pv35cash{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-column:1/-1;align-items:center;gap:6px 10px;font-size:14px}
+#hpv2 #pv3-cash{grid-column:1/-1;text-align:left;justify-self:stretch;font-size:19px;min-height:44px;color:#f1e4c4}
+#hpv2 #pv35-cash-edit{grid-row:1;grid-column:2;border:1px solid #b89a55;color:#e9cc84;min-height:44px;border-radius:10px;padding:7px 10px}
+#hpv2 .pv35preview{grid-column:1/-1;color:#efc66e}
+#hpv2 .pv3facts>.pv3assetWeights{display:flex;flex-direction:column;grid-column:1/-1;gap:8px;justify-content:center;align-items:stretch}
+#hpv2 .pv3assetWeights>div{display:flex;justify-content:space-between;gap:16px;align-items:center;font-size:14px}
+#hpv2 .pv3assetWeights b{font-size:17px;font-variant-numeric:tabular-nums;margin:0}
+#hpv2 .pv35buy{display:grid;gap:12px;margin-top:10px}
+#hpv2 .pv35buy label{display:grid;gap:8px;font-size:16px}
+#hpv2 .pv35buy input{width:100%;box-sizing:border-box;font-size:20px;min-height:48px;background:#141619;border:1px solid #766439;color:#fff;border-radius:10px;padding:10px}
+#hpv2 .pv35presets{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+#hpv2 .pv35presets button{min-width:0;padding:8px 2px;font-size:13px;min-height:44px}
+#hpv2 .pv35buy>button{min-height:48px;color:#16120a;background:#e4c67c;font-weight:700;border:0;border-radius:10px}
+#hpv2 .pv35notice:empty{display:none}
+#hpv2 .pv35result{width:min(620px,calc(100vw - 24px));max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 32px);box-sizing:border-box;margin:auto;padding:16px;border:1px solid #77643e;border-radius:16px;background:#111315;color:#eee;overflow:auto}
+#hpv2 .pv35result::backdrop{background:#000a}
+#hpv2 .pv35result header{display:flex;align-items:center;justify-content:space-between;gap:8px;position:sticky;top:-16px;background:#111315;z-index:1;padding:8px 0}
+#hpv2 .pv35result header h2{font-size:20px;margin:0}
+#hpv2 .pv35result button{min-height:44px;min-width:44px}
+#hpv2 .pv35line{display:flex;justify-content:space-between;gap:12px;font-size:14px;line-height:1.7;margin:5px 0}
+#hpv2 .pv35line b{text-align:right;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+#hpv2 .pv35buyrow{border-top:1px solid #343026;padding:12px 0}
+#hpv2 .pv35buyrow h3{font-size:17px;margin:0 0 8px}
+#hpv2 .pv35buyrow small{display:block;font-size:13px;color:#c5bda8;line-height:1.6}
+#hpv2 .pv35buyrow p{font-size:14px;margin:8px 0}
+#hpv2 .pv35bars{margin:12px 0}
+#hpv2 .pv35bars>div{height:8px;background:linear-gradient(to right,#dfc078 0 var(--stock),#566a76 var(--stock) 100%);border-radius:4px;margin-top:6px}
+#hpv2 .pv35advanced{margin:12px 0}
+#hpv2 #hpv2-cashDialog input:not([type=checkbox]){font-size:16px;min-height:44px;max-width:100%;box-sizing:border-box}
+@media(max-width:360px){#hpv2 #pv35-cash-edit{font-size:13px;padding:6px}#hpv2 .pv35line{font-size:13px}}
