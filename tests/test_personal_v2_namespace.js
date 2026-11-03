@@ -7,7 +7,7 @@ function headerPresentationProjection(s){
  // The home-only relocation has its own exact-source and financial-byte tests.
  // Pin the entire new HTML before projecting onto its reviewed pre-relocation
  // baseline; no arbitrary UI/body ranges are masked by this exception.
- if(s.includes('id="homeDataHealthDialog"')){assert.equal(crypto.createHash('sha256').update(s).digest('hex'),'da3d54bec90dc096ddff55a07f268d5a5cce88a9972a0a176ea2d03757c31d2c');s=cp.execFileSync('git',['show','bae9a75a0a545b2b401feb919e99df13f05dbe89:index.html'],{maxBuffer:4e6}).toString();}
+ if(s.includes('id="homeDataHealthDialog"')){assert.equal(crypto.createHash('sha256').update(s).digest('hex'),'feea775fc4fc1c80bed8827191db73f81e4c67ced7ced0983aee483c936c6083');s=cp.execFileSync('git',['show','bae9a75a0a545b2b401feb919e99df13f05dbe89:index.html'],{maxBuffer:4e6}).toString();}
  const start=s.indexOf('// Header presentation only:');if(start<0)return s;
  const end=s.indexOf('function renderDecisionCenter(longs',start),helper=s.slice(start,end);
  assert(end>start);assert.equal(crypto.createHash('sha256').update(helper).digest('hex'),'18b7c941280a3107185d5db8cb021c33cbbe19fdb37e1ee5dfcea2c09f80a184');

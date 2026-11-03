@@ -4083,6 +4083,9 @@ async function fetch(input,options){
  return{...v,snapshot:state.snapshot,raw_holdings:rawHoldings,plan_progress:progress,actual_cost_minor:book.total_cost_minor,realized_pnl_minor:book.realized_minor,dividend_income_gross_minor:book.dividend_gross_minor,today_pnl_minor:day.pnl_minor,today_pnl_percent:day.percent,today_reason:day.reason||day.description,today_status:day.status,price_date:v.price_date??day.date??null};
  }
  host.HSPersonalV2=Object.freeze({read,mode:'LOCAL_ONLY_V3',storagePrefix:window.HSPersonalNamespace.PREFIX,productionWriter:false});host.HSPersonalV3=host.HSPersonalV2;
+ const batchService=host.HSHoldingsBatch.create({simple:HSPortfolioSimpleHoldings,coordinator:HSPortfolioWriteCoordinator,local:HSPortfolioLocalFirstCore,backup:HSPortfolioFullBackupCore,ledger:HSPortfolioLedgerCore,fp}).service(localStorage,{locks:navigator.locks,currentView:read,guard:async()=>HSLocalSiteRuntime.allowed(location)&&isSecureContext&&!!navigator.locks&&await safeWorker()});
+ const batchNames=[];host.fetch(new URL('personal-v2/instrument-names.json',base)).then(r=>r.ok?r.json():null).then(data=>{if(Array.isArray(data?.items))for(const r of data.items)batchNames.push({symbol:r.code,name:r.name});}).catch(()=>{});
+ host.HSHoldingsBatch.mount({scope,read,service:batchService,resolve:value=>HSPortfolioSimpleHoldings.resolve(value,batchNames),money:minor=>Number.isSafeInteger(minor)?'NT$ '+(minor/100).toLocaleString('zh-TW',{maximumFractionDigits:2}):'資料不足',onBusy:setBusy,onChanged:()=>host.dispatchEvent(new Event('hs-personal-v2-changed')),encrypt:(payload,password)=>HSPortfolioBackupCrypto.encrypt({schema:'HS_PERSONAL_V3_EXPORT_V1',payload},password)});
  let uiStorage;try{uiStorage=host.localStorage;}catch(_){}
  const uiColors=host.HSPortfolioDisplayUI.colors(uiStorage);
  let groupsUI=null,strategyUI=null;
