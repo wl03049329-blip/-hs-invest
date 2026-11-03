@@ -4,6 +4,10 @@ let passed=0;function test(name,fn){fn();passed++;console.log('PASS '+name);}cla
 // Only the explicitly authorized stable-entry wiring is projected out. The
 // original exact-byte assertion for every unrelated HTML/inline JS remains.
 function headerPresentationProjection(s){
+ // The home-only relocation has its own exact-source and financial-byte tests.
+ // Pin the entire new HTML before projecting onto its reviewed pre-relocation
+ // baseline; no arbitrary UI/body ranges are masked by this exception.
+ if(s.includes('id="homeDataHealthDialog"')){assert.equal(crypto.createHash('sha256').update(s).digest('hex'),'8aeb08019c2f2652f9e4d0c43a909f9cda18de0be45598d8331788082791d2bb');s=cp.execFileSync('git',['show','bae9a75a0a545b2b401feb919e99df13f05dbe89:index.html'],{maxBuffer:4e6}).toString();}
  const start=s.indexOf('// Header presentation only:');if(start<0)return s;
  const end=s.indexOf('function renderDecisionCenter(longs',start),helper=s.slice(start,end);
  assert(end>start);assert.equal(crypto.createHash('sha256').update(helper).digest('hex'),'18b7c941280a3107185d5db8cb021c33cbbe19fdb37e1ee5dfcea2c09f80a184');

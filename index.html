@@ -374,6 +374,15 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
   <div class="hsHeaderStrap" data-tab-section="today"><span>洞察市場 · 掌握先機 · 紀律投資</span><small>DATA DRIVES A BETTER TOMORROW</small></div>
 
   <div id="message" class="message info">正在取得最新資料…</div>
+  <div id="homeDataHealth" class="hsHomeDataHealth" data-tab-section="today" aria-live="polite">
+    <span><b data-health-overall>資料確認中</b><small id="homeDataHealthContext">等待資料驗證</small></span>
+    <button id="homeDataHealthOpen" type="button" aria-haspopup="dialog" aria-controls="homeDataHealthDialog">健康細節 <span aria-hidden="true">›</span></button>
+  </div>
+  <dialog id="homeDataHealthDialog" class="hsHomeHealthDialog" aria-labelledby="homeDataHealthTitle">
+    <header><h2 id="homeDataHealthTitle">資料健康細節</h2><button type="button" id="homeDataHealthClose" aria-label="關閉資料健康細節">×</button></header>
+    <p class="hsHomeHealthOffline" hidden>目前離線，以下為最後一次檢查結果，不代表最新資料。</p>
+    <div id="homeDataHealthContent">資料確認中，請稍候。</div>
+  </dialog>
 
   <nav class="topTabs" aria-label="主要分頁">
     <button class="topTab appNavButton active" type="button" data-tab="today"><svg aria-hidden="true"><use href="#i-home"/></svg><span>首頁</span></button>
@@ -3493,6 +3502,35 @@ function decisionCenterLeverageSummary(state){
   if(state?.available===true)return {label:"等待訊號",detail:`正式狀態 ${state.status||"STANDBY"}`,healthy:true};
   return {label:"資料不足",detail:`正式狀態 ${state?.status||"DATA_UNAVAILABLE"}`,healthy:false};
 }
+// Home health presentation only; the original aggregate checks and diagnostics remain authoritative.
+function syncHomeHealthConnectivity(){
+  const offline=navigator.onLine===false,summary=$("#homeDataHealth"),label=summary?.querySelector("[data-health-overall]");
+  if(!summary||!label)return;
+  if(!offline&&label.dataset.onlineLabel){label.textContent=label.dataset.onlineLabel;label.className=label.dataset.onlineClass||"";}
+  if(offline){if(label.textContent!=="離線 · 更新待確認"){label.dataset.onlineLabel=label.textContent;label.dataset.onlineClass=label.className;}label.textContent="離線 · 更新待確認";label.className="is-warning";}
+  const notice=document.querySelector(".hsHomeHealthOffline");if(notice)notice.hidden=!offline;
+}
+function renderHomeDataHealth(dualTrack,health){
+  const label=document.querySelector("#homeDataHealth [data-health-overall]"),context=$("#homeDataHealthContext"),content=$("#homeDataHealthContent");
+  if(!label||!context||!content)return;
+  label.textContent=health.label;label.className=health.level==="HEALTHY"?"is-ok":"is-warning";delete label.dataset.onlineLabel;delete label.dataset.onlineClass;
+  const presentation=decisionCenterHeaderPresentation(dualTrack,health),source=health.items.find(item=>item.key==="official"),live=health.items.find(item=>item.key==="live");
+  const track=presentation.isLive?"LIVE":health.officialDate&&source?.level!=="ERROR"?`${source?.level==="WARNING"?"最後 FINAL":health.officialDate< (dualTrack?.target_date||taipeiToday())?"前日 FINAL":"FINAL"} ${health.officialDate}`:"正式資料待確認";
+  context.textContent=`${track} · ${decisionCenterMarketLabel(health.marketState)}${health.marketState==="OPEN"&&!presentation.isLive?" · 盤中資料待確認":""}`;
+  context.title=[source?.detail,live?.detail].filter(Boolean).join("；");
+  content.innerHTML=decisionCenterHealthHtml(health);const details=content.querySelector("details");if(details)details.open=true;
+  syncHomeHealthConnectivity();
+}
+function initHomeHealthDialog(){
+  const dialog=$("#homeDataHealthDialog"),open=$("#homeDataHealthOpen"),close=$("#homeDataHealthClose");if(!dialog||!open||!close)return;
+  let returnFocus=null,previousOverflow="";
+  open.addEventListener("click",()=>{if(dialog.open)return;returnFocus=open;previousOverflow=document.body.style.overflow;dialog.showModal();document.body.style.overflow="hidden";close.focus();});
+  close.addEventListener("click",()=>dialog.close());
+  dialog.addEventListener("click",event=>{if(event.target===dialog){const r=dialog.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)dialog.close();}});
+  dialog.addEventListener("close",()=>{document.body.style.overflow=previousOverflow;if(returnFocus?.isConnected)returnFocus.focus({preventScroll:true});});
+  dialog.addEventListener("keydown",event=>{if(event.key!=="Tab")return;const nodes=[...dialog.querySelectorAll('button,a[href],input,select,textarea,[tabindex="0"]')].filter(node=>node.getClientRects().length),first=nodes[0],last=nodes.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}});
+  window.addEventListener("offline",syncHomeHealthConnectivity);window.addEventListener("online",syncHomeHealthConnectivity);
+}
 const DECISION_CENTER_HEALTH_LEVELS=Object.freeze({HEALTHY:{label:"資料正常 ✓",rank:0},WARNING:{label:"資料注意 ⚠",rank:1},ERROR:{label:"資料異常 ✕",rank:2}});
 function decisionCenterEffectiveMarketState(dualTrack,now=new Date()){
   const state=String(dualTrack?.market_state||"STALE");
@@ -3573,7 +3611,8 @@ function renderDecisionCenter(longs,dualTrack,leverageState){
   const focusRows=sortDecisionCenterC4Rows(decisionCenterC4Rows(dashboardOfficialRows,longs,dualTrack),"score"),focus=focusRows[0],focusNext=focus?.next,focusDistance=focusNext?.highest?"最高決策區":Number.isFinite(focusNext?.distance)?`${decisionCenterDistanceText(focusNext.distance)} 分`:"—",focusStatus=!Number.isFinite(focus?.score)?"UNAVAILABLE":focus?.useLive?"LIVE":health.marketState==="PREMARKET"?"前日 FINAL":"FINAL",focusThreshold=focusNext?.highest?"已在最高決策區":Number.isFinite(focusNext?.distance)?`距${focusNext.nextLabel||"下一級"}僅 ${focusDistance}`:"門檻資料暫缺",focusThresholdDetail=focusNext?.highest?"維持紀律，等待布局":Number.isFinite(focusNext?.distance)?`再增加 ${focusDistance}即進入下一級`:focus?.unavailableReason||"維持觀察 · 等待時機";
   const lastUpdate=liveReady?(formatHomeQuoteTime(latestLive)||"—"):Number.isFinite(focus?.score)?(formatHomeQuoteTime(highest?.asOf)||highest?.date||"—"):"尚無今日有效盤中資料";
   const leverage=decisionCenterLeverageSummary(leverageState),cnnView=cnnGaugePresentation(),healthTone=health.level==="HEALTHY"?"is-ok":"is-warning";
-host.innerHTML=`<div class="hsCoreDecisionHero"><div class="hsCoreIdentity"><span>${esc(focus?.symbol||highest?.symbol||"—")}</span><b>${esc(focus?.name||"正式資料暫不可用")}</b><small>${esc(focus?.tier||highest?.tier||"資料更新中")} ｜ 長期趨勢</small></div><div class="hsCoreHeroScore"><span>目前分數 <i>${focusStatus}</i></span><b>${Number.isFinite(focus?.score)?focus.score:"—"}<small>分</small></b><strong>${esc(focus?.tier||highest?.tier||"UNAVAILABLE")}</strong></div><div class="hsCoreThreshold"><span>距下一級門檻</span><b>${esc(focusThreshold)}</b><small>${esc(focusThresholdDetail)}</small></div></div><div class="hsDecisionStatusRail"><article><svg aria-hidden="true"><use href="#i-market"/></svg><span>市場狀態<b>${esc(decisionCenterMarketLabel(health.marketState))}</b><small>${esc(liveReady?`LIVE ${lastUpdate}`:health.marketState==="PREMARKET"?`前一交易日 FINAL ${highest?.date||"—"}`:`FINAL ${highest?.date||"—"}`)}</small></span></article><article><svg aria-hidden="true"><use href="#i-fund"/></svg><span>資料狀態<b data-health-overall class="${healthTone}">${esc(health.label)}</b><small>${esc(health.officialDate||"系統確認中")}</small></span></article><article><svg aria-hidden="true"><use href="#i-gauge"/></svg><span>美股情緒<span data-cnn-readout>${cnnInlinePresentation(cnnView)}</span></span></article><article><svg aria-hidden="true"><use href="#i-chip"/></svg><span>00631L 狀態<b>${esc(leverage.label)}</b><small>${esc(leverage.detail)}</small></span></article></div>${decisionCenterHealthHtml(health)}`;
+host.innerHTML=`<div class="hsCoreDecisionHero"><div class="hsCoreIdentity"><span>${esc(focus?.symbol||highest?.symbol||"—")}</span><b>${esc(focus?.name||"正式資料暫不可用")}</b><small>${esc(focus?.tier||highest?.tier||"資料更新中")} ｜ 長期趨勢</small></div><div class="hsCoreHeroScore"><span>目前分數 <i>${focusStatus}</i></span><b>${Number.isFinite(focus?.score)?focus.score:"—"}<small>分</small></b><strong>${esc(focus?.tier||highest?.tier||"UNAVAILABLE")}</strong></div><div class="hsCoreThreshold"><span>距下一級門檻</span><b>${esc(focusThreshold)}</b><small>${esc(focusThresholdDetail)}</small></div></div>`;
+  renderHomeDataHealth(dualTrack,health);
   const caption=$("#hsDecisionMarketCaption");if(caption)caption.textContent=health.marketState==="PREMARKET"?"目前顯示前一交易日收盤資料":`${decisionCenterMarketLabel(health.marketState)} · 掌握下一步佈局`;
   renderDecisionCenterHeader(dualTrack,health);
   const c4Grid=$("#hsDashboardC4Grid");if(c4Grid)c4Grid.innerHTML=decisionCenterC4Cards(dashboardOfficialRows,longs,dualTrack)||'<div class="newsEmpty">正式 C4 資料暫不可用。</div>';
@@ -4527,7 +4566,7 @@ function renderCnnPresentationViews(){
     const level=rows.some(row=>row.classList.contains("is-error"))?"ERROR":rows.some(row=>row.classList.contains("is-warning"))?"WARNING":"HEALTHY";
     detail.className="hsHomeSystemDetails is-"+level.toLowerCase();
     detail.querySelector("header>b").textContent=DECISION_CENTER_HEALTH_LEVELS[level].label;
-    const overall=document.querySelector("[data-health-overall]");if(overall){overall.textContent=DECISION_CENTER_HEALTH_LEVELS[level].label;overall.className=level==="HEALTHY"?"is-ok":"is-warning";}
+    const overall=document.querySelector("[data-health-overall]");if(overall){overall.textContent=DECISION_CENTER_HEALTH_LEVELS[level].label;overall.className=level==="HEALTHY"?"is-ok":"is-warning";delete overall.dataset.onlineLabel;delete overall.dataset.onlineClass;}syncHomeHealthConnectivity();
   }
 }
 function renderHomeCnnGauge(){
@@ -5263,6 +5302,7 @@ window.HSLiveMarket=Object.freeze({
 // CNN's local artifact is independent of upstream ETF-price availability.
 refreshCnnFearGreed({force:true});
 initLiveDebugPanel();liveDiagnosticRecord("initial_page_load",{render_state_before:"FRONTEND_STATE_PENDING",render_state_after:"FRONTEND_STATE_PENDING"});loadFrontendBuildMetadata();loadAlerts();renderWatchlist();renderEvents();renderTrump();switchChipTab(localStorage.getItem(CHIP_TAB_STORAGE_KEY)||"overview",{scroll:false});switchTab(sessionStorage.getItem("hsRadar.activeTab")||"today",{scroll:false});scheduleCnnPoll();refreshLiveQuotes({force:true});scheduleLongRankRefresh();ensureStockCatalog().finally(async()=>{await ensureRadarPushRulesSync();await load();const pushedEtf=new URLSearchParams(location.search).get("radarEtf");if(/^\d{4,6}$/.test(pushedEtf||"")){switchTab("signals",{scroll:false});showRadarDetail(pushedEtf)}});
+initHomeHealthDialog();
 
 </script>
 <script src="portfolio-core.js?v=20261015-position-correction-v1"></script>
