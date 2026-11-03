@@ -1,8 +1,9 @@
 name: Completed market publication watchdog
 on:
   schedule:
-    # Independent off-peak recovery: Taipei20:47 /22:47 /next08:47.
-    - cron: "47 0,12,14 * * 1-5"
+    # Independent off-peak recovery: Taipei18:47 /20:47 /22:47 /next08:47.
+    # The existing repair path revalidates FINAL as well as quotes/daily bars.
+    - cron: "47 0,10,12,14 * * 1-5"
   workflow_dispatch:
 permissions:
   contents: read
