@@ -33,6 +33,9 @@ def stats(curve,trades):
     return s
 
 def simulate(panel,m,ev=None,slip=.001,yield_=0,signal_cut=None,end=None):
+    assert m['entry'] in P['entries'] and m['exit'] in P['exits'],'UNKNOWN_MODEL'
+    assert all(math.isfinite(r[k]) and r[k]>0 for r in panel for k in ['open','high','low','close']),'INVALID_PRICE'
+    assert all(a['date']<b['date'] for a,b in zip(panel,panel[1:])),'DATE_ORDER'
     ev=ev if ev is not None else events(panel);byi={x['i']:x for x in ev};cash=float(CAP);q=0.;pos=None;wait=None;pending=None;orders=[];trades=[];curve=[];first=next(x for x in panel if x['date']>='2018');lastday=first['date']
     for i,r in enumerate(panel):
         if r['date']<'2018' or end and r['date']>end:continue
@@ -95,7 +98,7 @@ def control(rows,source_curve=None,weight=.10,slip=.001,yield_=0):
     Matched path is a diagnostic control, not a new independently selected alpha
     strategy. Dividends are locked receivables (not spendable before payment).
     """
-    cash=float(CAP);receivable=0.;q=0.;curve=[];orders=[];prior=None;cursor=0;known=0.;lastday=next(x['date'] for x in rows if x['date']>='2018')
+    cash=float(CAP);receivable=0.;q=0.;oldq=0.;curve=[];orders=[];prior=None;cursor=0;known=0.;lastday=next(x['date'] for x in rows if x['date']>='2018')
     for r in rows:
         if r['date']<'2018':continue
         d=(date.fromisoformat(r['date'])-date.fromisoformat(lastday)).days;cash*=(1+yield_)**(d/365.25);lastday=r['date']
@@ -111,7 +114,7 @@ def control(rows,source_curve=None,weight=.10,slip=.001,yield_=0):
         orders.append({'decision':prior,'fill':r['date'],'target':target});assert prior is None or prior<r['date']
         # Acquired ex-date units do not earn that day's distribution; eligibility
         # uses yesterday's holdings, never today's rebalance quantity.
-        if r.get('cash_dividend'):receivable+=oldq*r['cash_dividend'] if 'oldq' in locals() else 0
+        if r.get('cash_dividend'):receivable+=oldq*r['cash_dividend']
         oldq=q;nav=cash+receivable+q*r['close'];curve.append({'date':r['date'],'nav':nav,'invested':q*r['close'],'exposure':q*r['close']/nav});prior=r['date'] if source_curve is None else prior
         assert cash>=-.001
     s=stats(curve,[]);s['locked_dividend_receivable']=receivable;return {'metrics':s,'orders':orders,'curve':curve}
