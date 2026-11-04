@@ -2,7 +2,7 @@
 import argparse,pathlib,re,subprocess,sys,math
 from base import *
 def command(out,name,args):
-    p=subprocess.run(args,cwd=ROOT,capture_output=True,text=True,encoding='utf8',errors='replace');log=p.stdout+'\n'+p.stderr;(out/(name+'.log')).write_text(log,encoding='utf8');r={'exit_code':p.returncode,'log_sha256':sha(log.encode()),'mode':'EXECUTED_THIS_STAGE'};n=re.search(r'Ran (\d+) tests',log);details=re.search(r'(?:FAILED|OK) \(([^)]+)\)',log);c={k:int(v) for k,v in re.findall(r'(failures|errors|skipped)=(\d+)',details[1])} if details else {}
+    p=subprocess.run(args,cwd=ROOT,capture_output=True,text=True,encoding='utf8',errors='replace');log=p.stdout+'\n'+p.stderr;(out/(name+'.log')).write_text(log,encoding='utf8');r={'exit_code':p.returncode,'log_sha256':sha(log.encode()),'mode':'EXECUTED_THIS_STAGE'};n=re.search(r'Ran (\d+) tests?',log);details=re.search(r'(?:FAILED|OK) \(([^)]+)\)',log);c={k:int(v) for k,v in re.findall(r'(failures|errors|skipped)=(\d+)',details[1])} if details else {}
     if n:r.update(total=int(n[1]),fail=c.get('failures',0)+c.get('errors',0),skip=c.get('skipped',0));r['pass']=r['total']-r['fail']-r['skip']
     return r
 def identities(out):
@@ -26,6 +26,7 @@ def run(out):
     for name,folder,pattern in [('stage3','research/hs_lc4/stage3','test_stage3.py'),('stage2','research/hs_lc4/stage2','test_stage2.py'),('stage1','research/hs_lc4','test_engine.py')]:
         tests[name]=command(out,'test-'+name,[sys.executable,'-m','unittest','discover','-s',folder,'-p',pattern]);assert tests[name]['exit_code']==0
     tests['L7_focused_existing_failure']=command(out,'test-L7-existing-failure',[sys.executable,'-m','unittest','discover','-s','research/hs_leverage','-p','test_phase_l7_anchor_review.py','-k','test_real_review_preparation_is_read_only_and_never_approval'])
+    assert tests['L7_focused_existing_failure'].get('fail')==1 and 'AssertionError: 8 != 7' in (out/'test-L7-existing-failure.log').read_text(encoding='utf8'),'UNEXPECTED_L7_FAILURE_DO_NOT_MISLABEL'
     tests['original_worktrees']=command(out,'test-original-worktrees',[sys.executable,str(ROOT.parent/'hs-v330-evidence/audit-current.py')]);assert tests['original_worktrees']['exit_code']==0
     prior=load(P2/'verification.json');inherited={**prior['tests']['legacy_L7'],'mode':'REUSED_STAGE2_IDENTICAL_LEGACY_CODE_AND_CHAIN_BYTES','source_head':prior['head'],'not_a_new_full_suite_run':True}
     prot=guard(out);result={'head':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),'tests':tests,'inherited_full_L7':inherited,'data_identities':identities(out),'protected':prot['protected'],'provenance':prot['provenance'],'chains':prot['chains'],'prior_stages_all_code_evidence':'BYTE_IDENTICAL','original_dirty_main':'UNCHANGED','formal_writer':'UNCHANGED_OFF','formal_shadow':'NO_RECOVERY','UI':load(out/'ui-results.json') if (out/'ui-results.json').exists() else {'status':'PENDING'},'production_deployed':False};dump(out/'verification.json',result);print(json.dumps(result,ensure_ascii=True))
