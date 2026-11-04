@@ -3966,7 +3966,7 @@ async function loadFinalizedCoreScoreHistory(){
 }
 function refreshFinalizedCoreScoreHistory(){
   if(document.hidden)return Promise.resolve(false);if(finalSourceRefreshFlight)return finalSourceRefreshFlight;
-  finalSourceRefreshFlight=loadFinalizedCoreScoreHistory().then(changed=>{if(changed){renderTop();renderCards();}return changed;}).finally(()=>{finalSourceRefreshFlight=null;});return finalSourceRefreshFlight;
+  finalSourceRefreshFlight=loadFinalizedCoreScoreHistory().then(changed=>{if(changed){const canonical=currentCanonicalCoreSnapshot();if(canonical)applyCanonicalCoreSnapshot(canonical);renderTop();renderCards();renderTable();}return changed;}).finally(()=>{finalSourceRefreshFlight=null;});return finalSourceRefreshFlight;
 }
 window.addEventListener("pageshow",()=>void refreshFinalizedCoreScoreHistory());
 window.addEventListener("online",()=>void refreshFinalizedCoreScoreHistory());
