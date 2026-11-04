@@ -26,10 +26,14 @@ def classify_frozen(raw,oldraw):
 def incidents():
     policy,_=shadow.load_context(ROOT);records,_=daily.validate_ledgers(ROOT/policy['paths']['forward_ledger'],ROOT/policy['paths']['outcomes_ledger'],policy)
     canonical=daily.prepare_review(ROOT);history=shadow.read_jsonl(ROOT/daily.INCIDENTS);status=load(ROOT/daily.STATUS)
-    pending=daily.pending_integrity_reviews(ROOT,records);want={r['record_id']:r for r in pending};got={r['incident_id']:r for r in canonical['incidents']};cached={r['incident_id']:r for r in status['blocking_incidents']}
+    import phase_l7_recovery_reader as reader
+    reviewed={r.get('incident_id') for r in records if r.get('record_type')=='CORPORATE_ACTION_RECOVERY' and not r.get('test_only') and r.get('recovery_mode')!='EXACT_SCOPE_RECOVERY_V1' and r.get('integrity_review_status')=='PASS' and r.get('approved_by') and r.get('new_data_version') and len(r.get('recovery_steps_completed',[]))>=8}
+    reviewed.update(reader.reviewed_ids(ROOT,records))
+    pending=[r for r in history if r.get('requires_integrity_review') and r['record_id'] not in reviewed];want={r['record_id']:r for r in pending};got={r['incident_id']:r for r in canonical['incidents']};cached={r['incident_id']:r for r in status['blocking_incidents']}
     assert set(want)==set(got);assert not canonical['authorizes_recovery'] and canonical['read_only'];assert all(not r['authorized'] for r in got.values())
     added=sorted(set(got)-set(cached));removed=sorted(set(cached)-set(got));tail=history[-1]
     assert added==[tail['record_id']] and not removed and tail['record_hash'] not in [r['record_hash'] for r in history[:-1]]
+    assert tail['incident_fingerprint'] not in {r.get('incident_fingerprint') for r in history[:-1]},'NEWEST_INCIDENT_NOT_A_NEW_SIGNATURE'
     assert set(cached)=={r['record_id'] for r in pending if r['record_id']!=tail['record_id']}
     return {'cached_status_count':len(cached),'canonical_count':len(got),'added':added,'removed':removed,'newest':{k:tail.get(k) for k in ['record_id','record_hash','previous_record_hash','checked_at','reason','current_failure_reason','expected_completed_bar','incident_fingerprint','requires_integrity_review','workflow_classification']},'rows':canonical['incidents'],'cause':'operational_failure builds unresolved/status BEFORE append_record, then writes status containing pre-append list; prepare_review replays post-append canonical chain. The test hardcodes the pre-append count. Latest distinct incident is missing only from cached diagnostic list, NOT approved, NOT a duplicate, NOT erased. FAIL_CLOSED remains. No test expectation modified.','future_fix_proposal':'Separate authorized maintenance: derive status blocking list from validated canonical history after append and test set/hash completeness, not a fixed7 or8. Explicit approval/receipt rules unchanged; do not perform this production modification in this study.'}
 def run(out):

@@ -6,7 +6,8 @@ from engine import features,thresholds,signals,measure
 CAP=P['capital_twd'];W=P['entry_cap_nav'];F=P['cost']['commission_each_side'];T=P['cost']['sell_tax']
 def models():return [{'id':a+'|'+b,'entry':a,'exit':b} for a,b in itertools.product(P['entries'],P['exits'])]
 def events(panel,opportunity='C95'):
-    sg=signals(panel,thresholds(panel),{'opportunity':opportunity});out=[];last=-1000
+    trained={y:t for y,t in thresholds(panel).items() if t[opportunity] is not None}
+    sg=signals(panel,trained,{'opportunity':opportunity});out=[];last=-1000
     for i,x in enumerate(panel):
         if sg[i] and i>last+70:
             out.append({'id':'EVENT:'+x['date'],'i':i,'date':x['date'],'mature':i+70<len(panel),'velocity':x['velocity'],'dd20':x['dd20'],'regime':x['regime']});last=i
@@ -20,16 +21,21 @@ def stats(curve,trades):
         if a['invested']<=1e-8:deployed+=d
     s['flat_calendar_fraction']=deployed/days if days else None
     s['max_exposure']=max(r['exposure'] for r in curve);s['over_cap_sessions']=sum(r['exposure']>W+1e-8 for r in curve);s['calmar']=s['CAGR']/abs(s['max_drawdown']) if s['max_drawdown'] else None
-    s['annual']={}
+    s['annual']={};s['annual_details']={}
     for y in sorted({x['date'][:4] for x in curve}):
         ids=[i for i,x in enumerate(curve) if x['date'].startswith(y)];previous=curve[ids[0]-1]['nav'] if ids[0] else CAP;s['annual'][y]=curve[ids[-1]]['nav']/previous-1
+        peak=previous;dd=0
+        for i in ids:peak=max(peak,curve[i]['nav']);dd=min(dd,curve[i]['nav']/peak-1)
+        s['annual_details'][y]={'return':s['annual'][y],'max_drawdown':dd,'trades_entered':sum(t['entry_date'].startswith(y) for t in trades),'average_exposure':sum(curve[i]['exposure'] for i in ids)/len(ids)}
     s['blocks']={}
     for a,b in [(2018,2021),(2022,2024),(2025,2026)]:
         ids=[i for i,x in enumerate(curve) if a<=int(x['date'][:4])<=b]
         if not ids:continue
         initial=curve[ids[0]-1]['nav'] if ids[0] else CAP;peak=initial;mdd=0
         for i in ids:peak=max(peak,curve[i]['nav']);mdd=min(mdd,curve[i]['nav']/peak-1)
-        s['blocks'][f'{a}-{b}']={'return':curve[ids[-1]]['nav']/initial-1,'max_drawdown':mdd,'trades':sum(a<=int(t['entry_date'][:4])<=b for t in trades)}
+        years=(date.fromisoformat(curve[ids[-1]]['date'])-date.fromisoformat(curve[ids[0]]['date'])).days/365.25
+        growth=curve[ids[-1]]['nav']/initial;cagr=growth**(1/years)-1 if years else None
+        s['blocks'][f'{a}-{b}']={'return':growth-1,'CAGR':cagr,'max_drawdown':mdd,'calmar':cagr/abs(mdd) if mdd else None,'trades':sum(a<=int(t['entry_date'][:4])<=b for t in trades)}
     return s
 
 def simulate(panel,m,ev=None,slip=.001,yield_=0,signal_cut=None,end=None):

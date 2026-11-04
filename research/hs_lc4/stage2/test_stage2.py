@@ -80,4 +80,23 @@ class SafetyTests(unittest.TestCase):
         raw={'open':22.,'high':23.,'low':21.,'close':22.};self.assertEqual(classify_frozen(raw,{k:v/22 for k,v in raw.items()}),'SPLIT_BASIS_ONLY')
     def test_incident_canonical_set_not_fixed_count(self):
         r=incidents();self.assertEqual(r['added'],[r['newest']['record_id']]);self.assertTrue(all(not x['authorized'] for x in r['rows']))
+    def test_missing_training_fail_closed(self):self.assertEqual(events(panel()),[])
+    def test_event_generation_is_prefix_causal(self):
+        p=features(load(P1/'adjusted-00631L.json')['rows']);a=events(p);b=events([x for x in p if x['date']<'2023'])
+        self.assertEqual([x['id'] for x in a if x['date']<'2023'],[x['id'] for x in b])
+    def test_common_events_nonoverlap(self):
+        p=features(load(P1/'adjusted-00631L.json')['rows']);e=events(p);self.assertTrue(all(b['i']-a['i']>70 for a,b in zip(e,e[1:])))
+    def test_holm_known_values(self):
+        from study import holm
+        r=holm([{'p_raw':.01},{'p_raw':.02},{'p_raw':.04}]);self.assertEqual([x['p_holm'] for x in r],[.03,.04,.04])
+    def test_signflip_zero_difference(self):
+        from study import signflip
+        self.assertEqual(signflip([{'date':'2020-01-01','difference':0},{'date':'2021-01-01','difference':0}]),1)
+    def test_paired_requires_same_events(self):
+        from study import paired
+        a=run();b=copy.deepcopy(a);b['event_outcomes']=[]
+        with self.assertRaises(AssertionError):paired(a,b)
+    def test_uncertainty_includes_unentered_zero_events(self):
+        from study import ci
+        rows=[{'date':'2020-01-01','x':0},{'date':'2021-01-01','x':1}];r=ci(rows,'x');self.assertEqual(r['n'],2);self.assertEqual(r['mean'],.5)
 if __name__=='__main__':unittest.main()
