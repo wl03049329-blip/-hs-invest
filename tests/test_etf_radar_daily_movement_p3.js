@@ -13,6 +13,7 @@ assert.ok(start>=0&&end>start,"P3 daily snapshot functions must exist");
 
 const memory=new Map(),context={Date,Number,Array,Object,Math,JSON,Set,HSIntradayBuyPointCore:intraday,HSFinalCoreProduction:production,LONG_TERM_CORE_SCORE_VERSION:"FINAL_CORE_WEIGHT_V1",DAILY_LONG_RANK_STORAGE_KEY:"hsRadar.dailyLongRank.v1",coreScoreTrendRanges:new Map(),finalizedCoreScoreHistoryArtifact:{schema_version:1,core_score_version:"FINAL_CORE_WEIGHT_V1",snapshots:[]},loadDailyLongRankHistory:()=>({schema_version:1,snapshots:[]}),esc:value=>String(value)};
 context.localStorage={getItem:key=>memory.get(key)||null,setItem:(key,value)=>memory.set(key,value)};
+context.window={addEventListener(){}};context.document={addEventListener(){}};context.setInterval=()=>{};
 vm.createContext(require("./c4-display-context")(context));vm.runInContext(html.slice(start,end),context);
 
 const item=(id,date,score,j,bias,drawdown,marketFear=60,valuation=55,availableWeight=100)=>({
