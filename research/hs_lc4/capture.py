@@ -19,8 +19,11 @@ def request(out,name,url):
             payload=json.loads(raw.decode('utf-8-sig'));rawfile.parent.mkdir(parents=True,exist_ok=True);rawfile.write_bytes(raw);dump(receipt,{'name':name,'url':url,'status':status,'sha256':sha(raw),'bytes':len(raw),'retrieved_at':datetime.now(timezone.utc).isoformat()});return payload
         except urllib.error.HTTPError as e:
             dump(out/'errors'/f'{name}-{i}.json',{'name':name,'status':e.code,'at':datetime.now(timezone.utc).isoformat()})
-            if e.code in (301,302,307,308,401,402,403,429) or i==2:raise
-            time.sleep(2**i)
+            if e.code in (301,302,307,401,402,403,429) or i==2:raise
+            # A redirect-loop transport failure is not an access denial. At most
+            # three attempts at the identical URL, preserving every failure receipt;
+            # never rotate identities, bypass authorization or ignore429.
+            time.sleep((5,20)[i] if e.code==308 else 2**i)
         except (OSError,ValueError) as e:
             dump(out/'errors'/f'{name}-{i}.json',{'name':name,'error':type(e).__name__,'at':datetime.now(timezone.utc).isoformat()})
             if i==2:raise
@@ -58,10 +61,16 @@ def probe(out):
         # retain link, not scrape a site that prohibits bulk HTML harvesting.
         dump(out/'references'/f'{name}.json',{'url':url,'verification':'Primary source read via browser/search; quote/table in report, no automated HTML harvesting'})
     return expected
-def monthly(out):
+def monthly(out,canonical=False):
     expected=probe(out);jobs=[(symbol,month) for symbol in ['00631L','0050'] for month in daily.months_between('2014-10-01',expected)]
     def one(job):
-        symbol,month=job;name='twse-'+symbol+'-'+month;url=f'https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date={month}01&stockNo={symbol}';p=request(out,name,url);assert p.get('stat')=='OK' and p.get('date','').startswith(month) and symbol in p.get('title',''),name;time.sleep(.3);return name
+        symbol,month=job;name='twse-'+symbol+'-'+month;url=f'https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date={month}01&stockNo={symbol}'
+        if canonical and not (out/'raw'/f'{name}.json').exists():url=f'https://www.twse.com.tw/rwd/zh/afterTrading/STOCK_DAY?date={month}01&stockNo={symbol}&response=json'
+        elif (out/'receipts'/f'{name}.json').exists():url=json.loads((out/'receipts'/f'{name}.json').read_text(encoding='utf8'))['url']
+        cached=(out/'raw'/f'{name}.json').exists()
+        p=request(out,name,url);assert p.get('stat')=='OK' and p.get('date','').startswith(month) and symbol in p.get('title',''),name
+        if not cached:time.sleep(1)
+        return name
     complete=[];fail=[]
     # Resume cached successes; stop the batch at the first unresolved source error.
     # A prior transport-level redirect loop is retained, never retried indefinitely.
@@ -72,4 +81,4 @@ def monthly(out):
         if len(complete)%20==0:print('MONTHS',len(complete),'PASS',len(fail),'FAIL',flush=True);dump(out/'monthly-progress.json',{'pass':complete,'fail':fail,'total':len(jobs)})
     dump(out/'monthly-progress.json',{'pass':complete,'fail':fail,'total':len(jobs)});seal(out);print('MONTHLY_DONE',len(complete),len(fail),flush=True)
 if __name__=='__main__':
-    ap=argparse.ArgumentParser();ap.add_argument('--out',required=True);ap.add_argument('--monthly',action='store_true');a=ap.parse_args();out=pathlib.Path(a.out).resolve();assert out!=ROOT and ROOT not in out.parents,'EVIDENCE_MUST_BE_OUTSIDE_REPO';out.mkdir(parents=True,exist_ok=True);(monthly if a.monthly else probe)(out)
+    ap=argparse.ArgumentParser();ap.add_argument('--out',required=True);ap.add_argument('--monthly',action='store_true');ap.add_argument('--canonical',action='store_true');a=ap.parse_args();out=pathlib.Path(a.out).resolve();assert out!=ROOT and ROOT not in out.parents,'EVIDENCE_MUST_BE_OUTSIDE_REPO';out.mkdir(parents=True,exist_ok=True);monthly(out,a.canonical) if a.monthly else probe(out)

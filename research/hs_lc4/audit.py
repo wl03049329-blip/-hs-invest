@@ -1,6 +1,6 @@
 """Fail-closed source reconciliation for the isolated research dataset."""
 from __future__ import annotations
-import argparse,json,math,pathlib,sys
+import argparse,json,math,pathlib,sys,re
 from datetime import datetime
 from capture import dump,sha,seal,TZ,FIELDS,ROOT
 
@@ -29,8 +29,23 @@ def yahoo(out,symbol):
         day=datetime.fromtimestamp(t,TZ).date().isoformat();v={k:q[k][i] for k in FIELDS};v['adjclose']=a[i]
         result[day]=v
     return result
+def dividends_official(out,symbol):
+    result={}
+    for year in range(2014,2027):
+        f=out/'raw'/f'twse-actions-{year}.json';b=f.read_bytes();receipt=json.loads((out/'receipts'/f.name).read_text(encoding='utf8'));assert sha(b)==receipt['sha256']
+        p=json.loads(b);assert p['stat']=='OK' and '股票代號' in p['fields']
+        for row in p['data']:
+            if row[1].strip()!=symbol:continue
+            y,m,d=map(int,re.findall(r'\d+',row[0]));day=f'{y+1911:04}-{m:02}-{d:02}'
+            assert row[6]=='息','UNRESOLVED_NON_CASH_DISTRIBUTION';assert day not in result;result[day]=number(row[5])
+    return result
 def assemble(out):
     seal(out);end=json.loads((out/'capture-context.json').read_text(encoding='utf8'))['expected_completed_day'];report={'end':end,'symbols':{},'status':'BLOCKED','errors':[]};datasets={}
+    source_manifest={}
+    for f in sorted((out/'raw').glob('*.json')):
+        b=f.read_bytes();receipt=json.loads((out/'receipts'/f.name).read_text(encoding='utf8'));assert sha(b)==receipt['sha256'] and len(b)==receipt['bytes'] and receipt['status']==200
+        source_manifest[f.name]={'sha256':sha(b),'url':receipt['url'],'retrieved_at':receipt['retrieved_at']}
+    dump(out/'source-manifest.json',source_manifest)
     for symbol,splitday,ratio in [('00631L','2026-03-31',22),('0050','2025-06-18',4)]:
         try:rows=official(out,symbol,end)
         except AssertionError as e:
@@ -38,8 +53,12 @@ def assemble(out):
         y=yahoo(out,symbol);fm=json.loads((out/'raw'/('finmind-TaiwanStockPrice-'+symbol+'.json')).read_text(encoding='utf8'));assert fm['status']==200
         fm={x['date']:x for x in fm['data']};actions=json.loads((out/'raw'/('finmind-TaiwanStockSplitPrice-'+symbol+'.json')).read_text(encoding='utf8'))
         assert actions['status']==200 and len(actions['data'])==1 and actions['data'][0]['date']==splitday
+        before=[d for d in rows if d<splitday];last=max(before);assert abs(rows[last]['close']-actions['data'][0]['before_price'])<.011
+        assert abs(actions['data'][0]['after_price']-round(rows[last]['close']/ratio,2))<=.011
         dividends=json.loads((out/'raw'/('finmind-TaiwanStockDividendResult-'+symbol+'.json')).read_text(encoding='utf8'));assert dividends['status']==200
-        if symbol=='00631L':assert dividends['data']==[],'UNRESOLVED_00631L_DIVIDEND'
+        divs=dividends_official(out,symbol);fmdiv={x['date']:x['stock_and_cache_dividend'] for x in dividends['data']}
+        assert divs==fmdiv,('OFFICIAL_DIVIDENDS_CONFLICT',symbol)
+        if symbol=='00631L':assert not divs,'UNRESOLVED_00631L_DIVIDEND'
         info={'official_rows':len(rows),'start':min(rows),'end':max(rows),'split_date':splitday,'split_ratio':ratio,'finmind_crosschecks':0,'yahoo_crosschecks':0,'research_repairs':[],'conflicts':[],'dividend_events':len(dividends['data'])};adjusted=[]
         for day,raw in sorted(rows.items()):
             split=ratio if day<splitday else 1
@@ -58,8 +77,8 @@ def assemble(out):
                 mismatches=[k for k in FIELDS if abs(z[k]*restore-raw[k])>.011]
                 if mismatches:
                     item=[day,'YAHOO_RAW_MISMATCH',mismatches]
-                    if symbol=='00631L' and f and all(abs(float(f[fk])-raw[k])<=.011 for k,fk in [('open','open'),('high','max'),('low','min'),('close','close')]):
-                        info['research_repairs'].append({'date':day,'fields':mismatches,'method':'TWSE_RAW_CONFIRMED_BY_FINMIND_SINGLE_SPLIT_NO_DIVIDENDS','rejected_yahoo':z,'official_raw':raw})
+                    if f and all(abs(float(f[fk])-raw[k])<=.011 for k,fk in [('open','open'),('high','max'),('low','min'),('close','close')]):
+                        info['research_repairs'].append({'date':day,'fields':mismatches,'method':'TWSE_RAW_CONFIRMED_BY_FINMIND_WITH_OFFICIAL_SPLIT_AND_SEPARATE_ACTIONS','rejected_yahoo':z,'official_raw':raw})
                     else:info['conflicts'].append(item)
                 factor=z['adjclose']/z['close']
                 if symbol=='00631L' and not math.isclose(factor,1,rel_tol=2e-5):info['conflicts'].append([day,'UNRESOLVED_ADJUSTMENT',factor])
@@ -69,8 +88,11 @@ def assemble(out):
                 # zero dividend events and daily second-source confirmation. No Shadow authority.
                 factor=1;info['research_repairs'].append({'date':day,'fields':[k for k in (*FIELDS,'adjclose') if not z or z.get(k) is None],'method':'OFFICIAL_RAW_SINGLE_DOCUMENTED_SPLIT_NO_DIVIDENDS_RESEARCH_ONLY'})
             else:
-                info['conflicts'].append([day,'0050_TOTAL_RETURN_FACTOR_MISSING']);continue
-            r={'date':day,**{k:raw[k]/split*factor for k in FIELDS},'raw_close':raw['close'],'split_divisor':split,'total_return_factor':factor};valid(r);adjusted.append(r)
+                factor=1;info['research_repairs'].append({'date':day,'method':'OFFICIAL_PRICE_AND_SEPARATE_OFFICIAL_CASH_DIVIDENDS_NO_VENDOR_TR_FACTOR'})
+            if symbol=='0050':factor=1 # Never import the vendor's extra unconfirmed2022-08-02 dividend.
+            r={'date':day,**{k:raw[k]/split*factor for k in FIELDS},'raw_close':raw['close'],'split_divisor':split,'total_return_factor':factor,'cash_dividend':divs.get(day,0)/split};valid(r);adjusted.append(r)
+        info['official_dividends_verified']=len(divs)
+        if symbol=='0050':info['benchmark_basis']='Official split-adjusted prices plus separately verified gross cash distributions, retained as cash (no reinvestment); no Yahoo dividend factors'
         if symbol=='00631L':
             frozen=json.loads((ROOT/'research/hs_leverage/data/00631L-historical-adjusted.json').read_text(encoding='utf8'))
             old={r['date']:r for r in frozen['item']['rows']};new={r['date']:r for r in adjusted};diff=[]
@@ -86,7 +108,7 @@ def assemble(out):
     report['status']='PASS' if not report['errors'] else 'BLOCKED';dump(out/'data-audit.json',report)
     manifest={}
     for s,rows in datasets.items():
-        p=out/('adjusted-'+s+'.json');dump(p,{'schema':'HS_LC4_AUDITED_RESEARCH_OHLC_V1','basis':'Official raw OHLC / documented split * verified Yahoo dividend adjustment; fractional total-return proxy','rows':rows});manifest[s]={'sha256':sha(p.read_bytes()),'rows':len(rows),'start':rows[0]['date'],'end':rows[-1]['date']}
+        p=out/('adjusted-'+s+'.json');dump(p,{'schema':'HS_LC4_AUDITED_RESEARCH_OHLC_V1','basis':'Official raw OHLC / documented split; cash distributions separately verified against official TWT49U and retained as cash, not vendor-adjusted-price returns','rows':rows});manifest[s]={'sha256':sha(p.read_bytes()),'rows':len(rows),'start':rows[0]['date'],'end':rows[-1]['date']}
     dump(out/'dataset-manifest.json',manifest);print(json.dumps({'status':report['status'],'conflicts':len(report['errors']),'first':report['errors'][:8],'manifest':manifest}));return report
 if __name__=='__main__':
     p=argparse.ArgumentParser();p.add_argument('--out',required=True);a=p.parse_args();r=assemble(pathlib.Path(a.out).resolve());sys.exit(0 if r['status']=='PASS' else 2)
