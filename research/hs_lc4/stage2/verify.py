@@ -4,7 +4,10 @@ from common import *
 from simulator import CAP
 def command(out,name,args):
     p=subprocess.run(args,cwd=ROOT,capture_output=True,text=True,encoding='utf8',errors='replace');log=p.stdout+'\n'+p.stderr;(out/(name+'.log')).write_text(log,encoding='utf8');r={'exit_code':p.returncode,'log_sha256':sha(log.encode())};n=re.search(r'Ran (\d+) tests',log);fail=re.search(r'FAILED \(failures=(\d+)',log)
-    if n:r.update(total=int(n[1]),fail=int(fail[1]) if fail else 0,skip=0);r['pass']=r['total']-r['fail']
+    if n:
+        details=re.search(r'(?:FAILED|OK) \(([^)]+)\)',log);counts={}
+        if details:counts={k:int(v) for k,v in re.findall(r'(failures|errors|skipped)=(\d+)',details[1])}
+        r.update(total=int(n[1]),fail=counts.get('failures',0)+counts.get('errors',0),errors=counts.get('errors',0),skip=counts.get('skipped',0));r['pass']=r['total']-r['fail']-r['skip']
     return r
 def numerical(out):
     runs=load(out/'all-runs.json');assert len(runs)==36
