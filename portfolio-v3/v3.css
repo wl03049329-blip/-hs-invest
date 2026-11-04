@@ -223,3 +223,53 @@ html[data-hs-v3-page] #hpv2 #pv34-editor.is-keyboard{padding-bottom:0}
 #hpv2 #pv3-target-total{color:#e6ca86;font-weight:700}
 #hpv2 .pv351formal{border-top:1px solid #363127;margin-top:14px;padding-top:12px;font-size:14px}
 #hpv2 .pv351formal summary{min-height:44px;display:flex;align-items:center;cursor:pointer;color:#d4c08c}
+
+/* V3.5.3: the asset summary only; other tabs, dialogs and financial rules unchanged. */
+#hpv2 .pv3 .pv353assets{padding:10px 14px;overflow:hidden;background:linear-gradient(135deg,#191915,#101214 55%);border-color:#49402b}
+#hpv2 .pv353assets .pv353header{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:14px}
+#hpv2 .pv353header small{margin:0;font-size:12px;color:#b8b4aa;font-variant-numeric:tabular-nums;white-space:nowrap}
+#hpv2 .pv353assets .pv3hero{font-size:clamp(26px,8.4vw,40px);line-height:1.15;margin:4px 0 3px;letter-spacing:-.03em;white-space:normal;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+#hpv2 .pv353assets .pv3pnl{padding:5px 0 7px;gap:12px;border-color:#30302b}
+#hpv2 .pv353assets .pv3pnl>div{min-width:0}
+#hpv2 .pv353assets .pv3pnl span{font-size:13px;color:#bcb9b0;line-height:1.4}
+#hpv2 .pv353assets .pv3pnl b{font-size:clamp(15px,4.5vw,20px);line-height:1.3;letter-spacing:-.025em;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+#hpv2 .pv353assets .pv3pnl small{font-size:12px;line-height:1.4;margin-top:1px;font-variant-numeric:tabular-nums}
+#hpv2 .pv353assets .pv3pnl small[hidden]{display:none}
+#hpv2 .pv353assets .pv3facts{padding:6px 0 5px;gap:12px;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+#hpv2 .pv353assets .pv3facts>div{display:flex;flex-direction:column;align-items:flex-start;gap:2px;font-size:13px;color:#bcb9b0;min-width:0}
+#hpv2 .pv353assets .pv3facts b{font-size:clamp(15px,4.5vw,19px);font-variant-numeric:tabular-nums;color:#eeeae1;overflow-wrap:anywhere}
+#hpv2 .pv353assets .pv353cash{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:0 10px;margin:0;padding:0 0 7px;align-items:center;border:0}
+#hpv2 .pv353cashValue{display:flex;flex-direction:column;min-width:0;gap:1px}
+#hpv2 .pv353cashValue>span{font-size:13px;color:#bcb9b0}
+#hpv2 .pv353assets #pv3-cash{display:block;text-align:left;min-height:24px;padding:0;border:0;background:none;color:#eeeae1;font-size:18px;line-height:1.3;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+#hpv2 .pv353assets #pv35-cash-edit{min-height:44px;min-width:90px;border:1px solid #827045;border-radius:10px;background:#242116;color:#ead393;font-size:14px;padding:7px 10px;white-space:nowrap}
+#hpv2 .pv353cash .pv35preview{grid-column:1/-1;min-height:0;margin:0}
+#hpv2 .pv353cash .pv35preview:empty{display:none}
+#hpv2 .pv353assets .pv3assetWeights{display:block;padding:0 0 5px;gap:0}
+#hpv2 .pv353assets .pv353weightHead{display:flex;justify-content:space-between;align-items:center;gap:6px;margin:0 0 6px;font-size:12px}
+#hpv2 .pv353weightHead>span{display:inline;margin:0;font-size:12px;color:#bcb9b0}
+#hpv2 .pv353assets .pv353weightHead b{display:inline;margin:0;font-size:13px;color:#e9e4d8;font-variant-numeric:tabular-nums}
+#hpv2 .pv353assets .pv353balanceBar{display:flex;height:8px;min-height:8px;gap:0;justify-content:flex-start;overflow:hidden;border-radius:5px;background:#2b3035}
+#hpv2 .pv353balanceBar[hidden]{display:none}
+#hpv2 .pv353balanceBar>i{height:8px;display:block;flex:none}
+#hpv2 .pv353stockBar{background:#cbb16f}
+#hpv2 .pv353cashBar{background:#668999}
+#hpv2 .pv353health{border-top:1px solid #30302b;margin:0;padding:0}
+#hpv2 .pv353health>summary{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;cursor:pointer;list-style:none;padding:5px 0 0}
+#hpv2 .pv353health>summary::-webkit-details-marker{display:none}
+#hpv2 .pv353health>summary>div{min-width:0}
+#hpv2 .pv353health strong{display:block;font-size:13px;line-height:1.4;font-weight:600;color:#dbca9b}
+#hpv2 .pv353health[data-level=ready] strong{color:#a6c7b0}
+#hpv2 .pv353health[data-level=warning] strong{color:#e2b67d}
+#hpv2 .pv353health>summary small{display:block;font-size:11px;line-height:1.5;color:#b3afa4}
+#hpv2 .pv353healthArrow{font-size:24px;color:#cbb16f;padding:0 5px;transition:transform .15s}
+#hpv2 .pv353health[open] .pv353healthArrow{transform:rotate(90deg)}
+#hpv2 .pv353healthBody{font-size:12px;line-height:1.5;padding-top:8px;overflow-wrap:anywhere}
+#hpv2 .pv353healthBody dl{display:grid;grid-template-columns:90px minmax(0,1fr);gap:5px 10px;margin:0 0 8px}
+#hpv2 .pv353healthBody dt{color:#bcb9b0}
+#hpv2 .pv353healthBody dd{margin:0;min-width:0}
+#hpv2 .pv353healthBody #pv3-market,#hpv2 .pv353healthBody #pv3-known-market{font-size:12px;line-height:1.5;margin:5px 0}
+#hpv2 .pv353assets .pvProfit{color:#ee6a75}
+#hpv2 .pv353assets .pvLoss{color:#62bf98}
+@media(min-width:800px){#hpv2 .pv3 .pv353assets{max-width:none}#hpv2 .pv353assets .pv3hero{font-size:40px}#hpv2 .pv353assets .pv3pnl b{font-size:21px}}
+@media(prefers-reduced-motion:reduce){#hpv2 .pv353healthArrow{transition:none}}

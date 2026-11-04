@@ -4172,7 +4172,8 @@ unitForm.onsubmit=async e=>{e.preventDefault();if(busy||scope.dataset.saving==='
  const referenceCeiling=v=>V.referenceCeiling(v);
  strategyUI=host.HSGroupStrategyUI.mount({scope,read,load:loadStrategy,save:saveStrategy,loadGroups,saveGroups,money,percent,fp,ceiling:referenceCeiling,qualify:r=>V.qualifies(r),multiplier:HSPortfolioC4SmartAccelerationCore.multiplier,positionValue:HSPortfolioCapitalBuildPlanCore.localPositionValue});
  const smartBuyUI=host.HSSmartBuyUI.mount({scope,read,load:loadStrategy,ceiling:referenceCeiling,qualify:r=>V.qualifies(r),multiplier:HSPortfolioC4SmartAccelerationCore.multiplier,positionValue:HSPortfolioCapitalBuildPlanCore.localPositionValue,fp,money,percent,cashReady:()=>api.read().cash?.status==='READY',c4Label:score=>Number.isFinite(score)?host.HSDecisionLayerV1?.STAGES?.find(s=>score>=s.min)?.label:null});
- const strategyUpdate=strategyUI.update,strategyInvalidate=strategyUI.invalidate;strategyUI.update=v=>{strategyUpdate(v);smartBuyUI.update(v);};strategyUI.invalidate=()=>{strategyInvalidate();smartBuyUI.invalidate();};
+ const assetSummary=host.HSAssetSummary.mount({scope,read,money,availability:host.HSSmartBuy.availability,qualify:r=>V.qualifies(r)});
+ const strategyUpdate=strategyUI.update,strategyInvalidate=strategyUI.invalidate;strategyUI.update=v=>{strategyUpdate(v);smartBuyUI.update(v);assetSummary.update(v);};strategyUI.invalidate=()=>{strategyInvalidate();smartBuyUI.invalidate();assetSummary.invalidate();};
  // Requests contain only public instrument identifiers; never portfolio amounts.
  const historySource=host.HSRadarHistorySource?new host.HSRadarHistorySource.Source({storage:null}):null;
  host.addEventListener('online',()=>void refresh());
