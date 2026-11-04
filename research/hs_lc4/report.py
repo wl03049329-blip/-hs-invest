@@ -8,14 +8,22 @@ def n(x):return '—' if x is None else f'{x:.2f}'
 def load(out,name):return json.loads((out/name).read_text(encoding='utf8'))
 def metricrow(name,m):return '|'+ '|'.join([name,pct(m['total_return']),pct(m['CAGR']),pct(m['max_drawdown']),str(m['closed_trades']),pct(m['win_rate']),pct(m['worst_MAE']),n(m['mean_holding_sessions']),pct(m['average_exposure']),n(m['capital_year_efficiency'])])+'|'
 def tableheader():return ['|方法|累積報酬|CAGR|收盤最大回撤|完成交易|勝率|交易最差低點MAE|平均持有日|平均曝險|資金年效率|','|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|']
-def event_study(panel):
+def event_study(panel,market_rows):
+    # Independent0050 cash-distribution-aware market context, known at each close.
+    levels=[];level=market_rows[0]['close'];previous=level
+    for x in market_rows:
+        level*=((x['close']+x.get('cash_dividend',0))/previous);previous=x['close'];levels.append(level)
+    mv={}
+    for i,x in enumerate(market_rows):
+        v=max(0,1-levels[i]/levels[i-5])*20 if i>=5 else None;mv[x['date']]=v
+    market_thresholds={y:quantile([v for d,v in mv.items() if int(d[:4])<y and v is not None and v>0],.95) for y in range(2018,2027)}
     th=thresholds(panel);m=next(x for x in candidates() if x['id']=='A90|NEXT_OPEN|NONE|TIME20');sg=signals(panel,th,m);events=[];last_exit=-1
     for i,x in enumerate(panel):
         if not sg[i] or i<=last_exit or i+21>=len(panel):continue
         en=panel[i+1]['open'];ex=panel[i+21]['open'];ret=ex*(1-.001)*(1-.001425-.001)/(en*(1+.001)*(1+.001425))-1
-        events.append({'signal':x['date'],'return':ret,'regime':x['regime'],'extreme95':x['velocity']>=th[int(x['date'][:4])]['C95'],'deep20':x['dd20']<=th[int(x['date'][:4])]['deep']});last_exit=i+21
+        events.append({'signal':x['date'],'return':ret,'regime':x['regime'],'extreme95':x['velocity']>=th[int(x['date'][:4])]['C95'],'deep20':x['dd20']<=th[int(x['date'][:4])]['deep'],'market_crash95':mv[x['date']]>=market_thresholds[int(x['date'][:4])] if mv.get(x['date']) is not None else None});last_exit=i+21
     bins={}
-    for key in ['extreme95','deep20']:
+    for key in ['extreme95','deep20','market_crash95']:
         bins[key]={str(flag):{'n':len(xs:=[x['return'] for x in events if x[key]==flag]),'mean':avg(xs),'median':statistics.median(xs) if xs else None,'win_rate':avg([int(x>0) for x in xs])} for flag in [False,True]}
     return {'events':events,'bins':bins,'warning':'A90 nonoverlapping20-session event screen, annual past-only thresholds; historical selected sample, not new OOS or proof of score calibration.'}
 def year_bootstrap(trades):
@@ -25,7 +33,7 @@ def year_bootstrap(trades):
         if sample:means.append(avg(sample))
     return {'years':len(years),'mean_CI95':[quantile(means,.025),quantile(means,.975)],'warning':'Year-block descriptive uncertainty only; few dependent regimes, already selected history.'}
 def run(out):
-    seal(out);s=load(out,'summary.json');a=load(out,'data-audit.json');grid=load(out,'all-models.json');diag=load(out,'selected-diagnostics.json');wf=load(out,'walk-forward.json');manifest=load(out,'source-manifest.json');panel=features(load(out,'adjusted-00631L.json')['rows']);ev=event_study(panel);dump(out/'factor-diagnostics.json',ev);yb=year_bootstrap(wf['trades']);dump(out/'year-block-uncertainty.json',yb)
+    seal(out);s=load(out,'summary.json');a=load(out,'data-audit.json');grid=load(out,'all-models.json');diag=load(out,'selected-diagnostics.json');wf=load(out,'walk-forward.json');manifest=load(out,'source-manifest.json');panel=features(load(out,'adjusted-00631L.json')['rows']);ev=event_study(panel,load(out,'adjusted-0050.json')['rows']);dump(out/'factor-diagnostics.json',ev);yb=year_bootstrap(wf['trades']);dump(out/'year-block-uncertainty.json',yb)
     lines=['# HS 00631L L-C4 歷史戰術研究 V1','', '**研究資料重建完成；歷史比較完成。正式 L-C4 分數／實資／正式 Shadow 恢復：NO-GO。**','',
     '研究分支 `research/hs-lc4-history-v1`，基準 main `7cb3a015e565222d95cdc42ec8eac100951f6cbe`。只新增 research/hs_lc4；原正式程式、凍結研究、三鏈與金融資料不改寫。',
     '資料截點2026-11-04；擷取開始2026-11-05 00:07台北時間。下列不是今日買點，也不是投資報酬保證。','',
@@ -52,7 +60,7 @@ def run(out):
         for alloc in ['0.1','1']:lines.append(metricrow(f'{symbol} B&H 初始{float(alloc)*100:.0f}%',bs[alloc]))
     lines += [metricrow('全現金0%',s['benchmarks']['00631L']['0']),'',
     '- 策略報酬為全帳戶NAV，交易MAE則為該筆已投入資金的最差低價淨值損失，不能把兩者混為一談。資金年效率＝淨帳戶獲利/市值曝險積分資金年，不等於無風險可放大的年報酬；含利息情境須另看對全現金超額。',
-    '- 0050含官方現金分配並留現金（不再投資），不扣投資人個別股息稅；除息日僅估值應收，不宣稱當天現金已入帳可下單。默认0%現金收益下不產生提前入息利息。B&H最終市值另扣一次出場成本，策略未完倉仍為未實現市價估值，不能將微小差額當alpha。','',
+    '- 0050含官方現金分配並留現金（不再投資），不扣投資人個別股息稅；除息日僅估值應收，不宣稱當天現金已入帳可下單。預設0%現金收益下不產生提前入息利息。策略與B&H期末均按市價估值未完成部位，另列hypothetical_liquidation_nav扣同一套出場摩擦，不能虛構期末完成交易或用不同口徑製造alpha。','',
     '### 全上市期間2014-10-31起','']+tableheader()
     lines.append(metricrow('WF（2014-17及無足夠選模樣本年持現金）',s['full_period']['walk_forward']))
     for symbol,bs in s['full_period']['benchmarks'].items():
@@ -64,7 +72,7 @@ def run(out):
         for v in sorted({k.split('|')[i] for k in grid}):
             ms=[m for k,m in grid.items() if k.split('|')[i]==v];lines.append('|'+ '|'.join([label,v,str(len(ms)),pct(statistics.median(m['CAGR'] for m in ms)),pct(statistics.median(m['max_drawdown'] for m in ms)),pct(statistics.median(m['worst_MAE'] for m in ms if m['worst_MAE'] is not None))])+'|')
     lines += ['', '## 6. 候選、失敗事件與可靠性','',
-    '- 推薦保留「研究候選」：年度WF於2026年依2025年底前資料選出的 C95_AND_DEEP20 / DELAY_3 / HALF_THEN_DOWN5 / TIME20；另保留不加碼的 C95 / NEXT_OPEN / NONE / TIME20 作透明對照。這不是推薦實際買進，尤其向下加碼不可只因全期中位數較好就啟用。',
+    f"- 推薦保留『研究候選』：年度WF於2026年依2025年底前資料選出的 `{s['choices'][-1]['selected']}`；另保留不加碼的 C95 / NEXT_OPEN / NONE / TIME20 作透明對照。這不是推薦實際買進，尤其向下加碼不可只因全期中位數較好就啟用。",
     f"- 事後最高CAGR為 `{s['hindsight_best']['id']}`，但它只是診斷候選；單筆最差MAE達{pct(s['hindsight_best']['metrics']['worst_MAE'])}。高報酬排名無法消除崩跌風險。",
     f"- WF僅{s['walk_forward']['closed_trades']}筆完成交易，episode bootstrap平均單筆報酬95%區間{pct(diag['nested_walk_forward']['bootstrap']['mean_CI95'][0])}～{pct(diag['nested_walk_forward']['bootstrap']['mean_CI95'][1])}；年度區塊區間{pct(yb['mean_CI95'][0])}～{pct(yb['mean_CI95'][1])}（僅{yb['years']}個有交易年份）。這些區間未消除選模偏誤，且不足支持正式校準。",
     f"- WF收盤最大曝險{pct(s['walk_forward']['max_close_exposure'])}，超過10%漂移{s['walk_forward']['cap_breach_sessions']}個交易日。不能宣稱具有無條件10%硬上限。",
@@ -90,7 +98,7 @@ def run(out):
     lines += ['', '## 8. 全部162候選（完整公開，禁止只報贏家）','']+tableheader()
     for k,m in sorted(grid.items()):lines.append(metricrow(k,m))
     lines += ['', '## 9. 驗證、限制與下一步','',
-    '- 新增研究機制44項PASS，包含前5日最高價而非最高收盤的RED→GREEN修正；既有L7安全回歸211PASS/1FAIL/0SKIP（事故數硬編碼7，實際8，與遠端相同），沒有將FAIL改SKIP、沒有修改舊斷言。Protected20/20、Provenance7/7、三鏈PASS；正式Writer及實資配置維持OFF/0。',
+    '- 新增研究機制45項PASS，包含前5日最高價而非最高收盤的RED→GREEN修正與一致的期末估值口徑；既有L7安全回歸211PASS/1FAIL/0SKIP（事故數硬編碼7，實際8，與遠端相同），沒有將FAIL改SKIP、沒有修改舊斷言。Protected20/20、Provenance7/7、三鏈PASS；正式Writer及實資配置維持OFF/0。',
     '- 原dirty main與既有工作樹以既有逐位元封印核對通過；新研究前後所有舊research/hs_leverage檔案SHA一致。沒有讀取/輸出個人真實持股資料，沒有操作PR、Push、Merge、正式Workflow或Deploy。',
     '- 原Shadow恢復仍BLOCKED；正式模型/分數仍NO-GO。本輪已完成可重現歷史比較，不授權回填舊Forward觀察或把已看過的2024/2025當全新OOS。',
     '- 後續如授權：先針對8筆事故及最新完整來源另作精確恢復審核（含原硬編碼測試的等價修復），再以新研究協定登錄後的真正前瞻資料驗證候選，完成實際交易單位/成本/流動性與曝險控制。此處不啟動下一階段。','',

@@ -97,11 +97,14 @@ class EngineTests(unittest.TestCase):
         rows=[{'date':'2020-01-01','open':100.,'close':100.},{'date':'2020-01-02','open':90.,'close':90.,'cash_dividend':10.}]
         a=e.baseline(rows,'2020',1,slip=0)
         units=e.CAP/(100*(1+e.FEE));expected=units*(90*(1-e.FEE-e.TAX)+10)
-        self.assertAlmostEqual(a['final_nav'],expected,6)
+        self.assertAlmostEqual(a['hypothetical_liquidation_nav'],expected,6)
+        self.assertAlmostEqual(a['final_nav'],units*100,6)
     def test_buyer_on_exdate_does_not_receive_dividend(self):
         a=[{'date':'2020-01-01','open':100.,'close':100.,'cash_dividend':10.},{'date':'2020-01-02','open':100.,'close':100.}];b=copy.deepcopy(a);b[0]['cash_dividend']=0
         self.assertEqual(e.baseline(a,'2020',1),e.baseline(b,'2020',1))
     def test_excluded_crisis_year_does_not_create_trade(self):self.assertFalse(run(excluded_trigger_years=(2020,))['orders'])
     def test_confirmation_requires_actual_previous_high_not_close(self):
         p=fixture();self.assertEqual(p[7]['prior_high5'],101.)
+    def test_tail_liquidation_is_not_a_closed_trade(self):
+        r=run(triggers=(95,));self.assertLess(r['metrics']['hypothetical_liquidation_nav'],r['metrics']['final_nav']);self.assertFalse(r['trades'])
 if __name__=='__main__':unittest.main(verbosity=2)

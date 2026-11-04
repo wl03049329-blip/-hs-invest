@@ -66,7 +66,7 @@ def simulate(panel,model=None,choices=None,start='2018-01-01',end=None,signal_en
                 assert cost<=cash+.0001 and units>=0
                 q+=units;cash-=cost;pos['cost']+=cost;pos['tranches']+=1
             orders.append({'kind':kind,'decision':panel[pending['decision_i']]['date'],'fill':day,'model':pending.get('model',{}).get('id',pos['model'] if pos else None),'cash_after':cash});pending=None
-        nav=cash+q*r['close'];low=cash+q*r['low'];peak=max(peak,nav);lowdd=min(lowdd,low/peak-1);worstlow=min(worstlow,low)
+        nav=cash+q*r['close'];low=cash+q*r['low'];lowdd=min(lowdd,low/peak-1);peak=max(peak,nav);worstlow=min(worstlow,low)
         exp=q*r['close']/nav;maxexp=max(maxexp,exp)
         if exp>RISK+1e-8:capbreaches+=1
         curve.append({'date':day,'nav':nav,'low_nav':low,'exposure':exp,'invested':q*r['close']})
@@ -96,7 +96,8 @@ def simulate(panel,model=None,choices=None,start='2018-01-01',end=None,signal_en
     metrics=measure(curve,trades);years=max(1,(date.fromisoformat(curve[-1]['date'])-date.fromisoformat(curve[0]['date'])).days)/365.25
     metrics['capital_efficiency_note']='Includes cash carry; do not read yield scenarios as pure tactical alpha.'
     metrics['excess_return_over_all_cash']=curve[-1]['nav']/CAP-(1+cash_yield)**years
-    metrics.update({'cap_breach_sessions':capbreaches,'max_close_exposure':maxexp,'intraday_portfolio_drawdown':lowdd,'open_position':pos is not None})
+    metrics['hypothetical_liquidation_nav']=cash+q*panel[ids[-1]]['close']*(1-slip)*(1-FEE-TAX)
+    metrics.update({'cap_breach_sessions':capbreaches,'max_close_exposure':maxexp,'low_vs_prior_close_peak':lowdd,'open_position':pos is not None})
     return {'metrics':metrics,'trades':trades,'open_position':pos,'orders':orders,'curve':curve}
 
 def measure(curve,trades):
@@ -113,9 +114,10 @@ def baseline(rows,start,allocation,cash_yield=0,slip=.001):
         d=(date.fromisoformat(x['date'])-date.fromisoformat(prev)).days;cash*=(1+cash_yield)**(d/365.25);prev=x['date'];nav=cash+q*x['close'];curve.append({'date':x['date'],'nav':nav,'invested':q*x['close'],'exposure':q*x['close']/nav})
         if i>0 and x.get('cash_dividend'):
             cash+=q*x['cash_dividend'];curve[-1]['nav']=cash+q*x['close'];curve[-1]['exposure']=q*x['close']/curve[-1]['nav']
-    # Liquidation haircut on the final mark is explicit; no simulated final trade label.
-    curve[-1]['nav']=cash+q*r[-1]['close']*(1-slip)*(1-FEE-TAX)
-    return measure(curve,[])
+    # Same endpoint convention as tactics: mark open holdings, separately expose
+    # the liquidation haircut, without manufacturing a final completed trade.
+    result=measure(curve,[]);result['hypothetical_liquidation_nav']=cash+q*r[-1]['close']*(1-slip)*(1-FEE-TAX)
+    return result
 
 def bootstrap(trades):
     xs=[t['net_return'] for t in trades]
