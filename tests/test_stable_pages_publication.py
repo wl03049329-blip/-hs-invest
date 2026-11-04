@@ -46,6 +46,33 @@ class StablePublicationTests(unittest.TestCase):
         self.receipt['deployment_commit'] = 'PENDING'
         self.assertFalse(self.check())
 
+    def test_final_verifies_exact_artifact_not_unrelated_raw_generation(self):
+        self.files['finalized-core-score-snapshots-v1.json'] = json.loads((self.root / 'finalized-core-score-snapshots-v1.json').read_text(encoding='utf-8'))
+        self.files[daily.PUBLIC_STATUS] = {'concurrent_raw_update': True}
+        self.assertTrue(verify(self.root, 'https://fixture.invalid/-hs-invest/', attempts=1, delay=0,
+                               fetcher=self.fetch, run_reader=lambda: [self.run], verify_final=True))
+
+    def test_final_old_public_artifact_is_not_success(self):
+        self.files['finalized-core-score-snapshots-v1.json'] = {'snapshots': []}
+        self.assertFalse(verify(self.root, 'https://fixture.invalid/-hs-invest/', attempts=1, delay=0,
+                                fetcher=self.fetch, run_reader=lambda: [self.run], verify_final=True))
+
+    def test_final_needs_matching_successful_pages_run(self):
+        self.files['finalized-core-score-snapshots-v1.json'] = json.loads((self.root / 'finalized-core-score-snapshots-v1.json').read_text(encoding='utf-8'))
+        self.run['status'] = 'in_progress'
+        self.assertFalse(verify(self.root, 'https://fixture.invalid/-hs-invest/', attempts=1, delay=0,
+                                fetcher=self.fetch, run_reader=lambda: [self.run], verify_final=True))
+
+    def test_final_does_not_read_a_separate_raw_archive(self):
+        import tempfile
+        payload = json.loads((self.root / 'finalized-core-score-snapshots-v1.json').read_text(encoding='utf-8'))
+        self.files['finalized-core-score-snapshots-v1.json'] = payload
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            (root / 'finalized-core-score-snapshots-v1.json').write_text(json.dumps(payload), encoding='utf-8')
+            self.assertTrue(verify(root, 'https://fixture.invalid/-hs-invest/', attempts=1, delay=0,
+                                   fetcher=self.fetch, run_reader=lambda: [self.run], verify_final=True))
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -3948,9 +3948,31 @@ function coreScoreHistoryState(ticker,history=loadDailyLongRankHistory()){
   const rows=mergeCoreScoreHistoryRows(officialRows,localRows,10),source=rows[0]?.historySource||"local",seriesSource=rows.every(row=>row.historySource==="official")?"official":rows.some(row=>row.historySource==="official")?"mixed":"local";
   return{kind:rows.length?"ready":"empty",rows,source,seriesSource,officialCount:officialRows.length,range:"10D"};
 }
+// HS_FINAL_SOURCE_REFRESH_V1_BEGIN — public FINAL data only, no financial writes.
+let finalSourceRefreshFlight=null;
 async function loadFinalizedCoreScoreHistory(){
-  try{const response=await fetch("finalized-core-score-snapshots-v1.json",{cache:"no-store"});if(!response.ok)throw new Error("history unavailable");const payload=await response.json();if(payload?.schema_version===1&&payload?.core_score_version===LONG_TERM_CORE_SCORE_VERSION&&Array.isArray(payload?.snapshots))finalizedCoreScoreHistoryArtifact=payload;}catch{finalizedCoreScoreHistoryArtifact={schema_version:1,core_score_version:LONG_TERM_CORE_SCORE_VERSION,snapshots:[]}}
+  try{
+    const response=await fetch("finalized-core-score-snapshots-v1.json",{cache:"no-store",signal:AbortSignal.timeout(15000)});
+    if(!response.ok)throw new Error("history unavailable");const payload=await response.json(),today=taipeiToday();
+    if(payload?.schema_version!==1||payload?.core_score_version!==LONG_TERM_CORE_SCORE_VERSION||!Array.isArray(payload.snapshots))throw new Error("FINAL_SOURCE_SCHEMA");
+    const dates=new Set();for(const row of payload.snapshots){if(dates.has(row.date)||row.date>today)throw new Error("FINAL_SOURCE_DATE");dates.add(row.date);}
+    const verified=window.HSCanonicalScoreResolver?.resolveFinalOnly({finalizedArtifact:payload,targetDate:today,scoreVersion:LONG_TERM_CORE_SCORE_VERSION,symbols:LONG_RADAR_SCORED_CODES});
+    if(!verified||verified.trading_date!==[...dates].sort().at(-1))throw new Error("FINAL_SOURCE_UNVERIFIED");
+    const latest=payload.snapshots.find(row=>row.date===verified.trading_date);
+    if(![...LONG_RADAR_SCORED_CODES].every(symbol=>Number.isFinite(latest.rows.find(row=>row.symbol===symbol)?.final_core_score)))throw new Error("FINAL_SOURCE_SCORE_INVALID");
+    for(const old of finalizedCoreScoreHistoryArtifact.snapshots||[]){if(!payload.snapshots.some(row=>row.date===old.date&&JSON.stringify(row)===JSON.stringify(old)))throw new Error("FINAL_SOURCE_ROLLBACK_OR_REWRITE");}
+    const changed=JSON.stringify(finalizedCoreScoreHistoryArtifact)!==JSON.stringify(payload);finalizedCoreScoreHistoryArtifact=payload;return changed;
+  }catch{return false;} // Retain the last verified artifact and its REAL date.
 }
+function refreshFinalizedCoreScoreHistory(){
+  if(document.hidden)return Promise.resolve(false);if(finalSourceRefreshFlight)return finalSourceRefreshFlight;
+  finalSourceRefreshFlight=loadFinalizedCoreScoreHistory().then(changed=>{if(changed){const canonical=currentCanonicalCoreSnapshot();if(canonical)applyCanonicalCoreSnapshot(canonical);renderTop();renderCards();renderTable();}return changed;}).finally(()=>{finalSourceRefreshFlight=null;});return finalSourceRefreshFlight;
+}
+window.addEventListener("pageshow",()=>void refreshFinalizedCoreScoreHistory());
+window.addEventListener("online",()=>void refreshFinalizedCoreScoreHistory());
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)void refreshFinalizedCoreScoreHistory();});
+setInterval(()=>void refreshFinalizedCoreScoreHistory(),60000);
+// HS_FINAL_SOURCE_REFRESH_V1_END
 function stableResearchValue(value){return Array.isArray(value)?value.map(stableResearchValue):value&&typeof value==="object"?Object.fromEntries(Object.keys(value).sort().map(key=>[key,stableResearchValue(value[key])])):value}
 async function researchSha256(value){
   if(!globalThis.crypto?.subtle)return null;

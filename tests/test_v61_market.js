@@ -129,8 +129,10 @@ check("期貨籌碼官方來源多時段補抓保留，首頁正式 fallback 由
   assert.match(marketRunner, /tx-futures-quote\.json/);
   assert.match(marketWorkflow, /group: hs-live-intraday-slot-v4/);
   assert.match(marketWorkflow, /cancel-in-progress: false/);
-  assert.match(marketWorkflow, /needs: intraday/);
-  assert.match(marketWorkflow, /if: \$\{\{ always\(\) \}\}/);
+  const finalJob=marketWorkflow.slice(marketWorkflow.indexOf('  eod:'),marketWorkflow.indexOf('  official_quote_cache:'));
+  assert.doesNotMatch(finalJob, /needs: intraday/);
+  assert.match(finalJob, /group: hs-eod-core-history/);
+  assert.match(finalJob, /if: github.ref == 'refs\/heads\/main'/);
 });
 
 check("首頁重點與情緒結論存在", () => {

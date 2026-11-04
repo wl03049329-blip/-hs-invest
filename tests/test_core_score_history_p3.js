@@ -11,6 +11,7 @@ const start=html.indexOf("function isCompletedTradingDate");
 const end=html.indexOf("function longOverviewCardHtml");
 assert.ok(start>=0&&end>start,"P3 history helpers must exist");
 const context={Date,Number,Array,Object,Math,Set,HSFinalCoreProduction:production,loadDailyLongRankHistory:()=>({schema_version:1,snapshots:[]})};
+context.window={addEventListener(){}};context.document={addEventListener(){}};context.setInterval=()=>{};
 vm.createContext(context);vm.runInContext(html.slice(start,end),context);
 
 const item=(ticker,date,score,j=12)=>({
