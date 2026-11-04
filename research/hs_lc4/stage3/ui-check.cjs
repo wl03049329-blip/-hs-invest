@@ -1,5 +1,5 @@
 // Isolated offline DESIGN acceptance, never a production/iPhone-PWA assertion.
-const fs=require('fs'),path=require('path'),{pathToFileURL}=require('url');
+const fs=require('fs'),path=require('path'),crypto=require('crypto'),{pathToFileURL}=require('url');
 const {chromium,webkit}=require('playwright');
 const out=path.resolve(process.argv[2]);if(!fs.existsSync(path.join(out,'radar-design.html')))throw Error('DESIGN_REQUIRED');
 const results=[],screens=[];let checks=0;const ok=(v,msg)=>{checks++;if(!v)throw Error(msg)};
@@ -26,5 +26,5 @@ const results=[],screens=[];let checks=0;const ok=(v,msg)=>{checks++;if(!v)throw
    await context.close();
   }}finally{await browser.close()}
  }
- fs.writeFileSync(path.join(out,'ui-results.json'),JSON.stringify({scope:'OFFLINE_DESIGN_ONLY',pass:checks,fail:0,skip:0,cases:results,screenshots:screens,iPhoneSafari:'PENDING',installedPWA:'PENDING',production:'NOT_TESTED_NOT_DEPLOYED'},null,2));console.log(JSON.stringify({pass:checks,cases:results.length,fail:0,scope:'OFFLINE_DESIGN_ONLY'}));
+ fs.writeFileSync(path.join(out,'ui-results.json'),JSON.stringify({scope:'OFFLINE_DESIGN_ONLY',input_html_sha256:crypto.createHash('sha256').update(html).digest('hex'),pass:checks,fail:0,skip:0,cases:results,screenshots:screens,iPhoneSafari:'PENDING',installedPWA:'PENDING',production:'NOT_TESTED_NOT_DEPLOYED'},null,2));console.log(JSON.stringify({pass:checks,cases:results.length,fail:0,scope:'OFFLINE_DESIGN_ONLY'}));
 })().catch(e=>{const f=path.join(out,'ui-failure.json');fs.writeFileSync(fs.existsSync(f)?path.join(out,`ui-failure-${Date.now()}.json`):f,JSON.stringify({error:String(e),checks_completed:checks,results},null,2));console.error(e);process.exitCode=1});

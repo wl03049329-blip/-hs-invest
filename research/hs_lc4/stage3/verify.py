@@ -19,6 +19,7 @@ def identities(out):
             f=x['common_mature'][name];assert 0<=f['count']<=f['n'];assert f['not_a_forecast']
     snap=load(out/'radar-snapshot.json');assert snap['score'] is None and snap['tiers'] is None and not snap['entry']['authorized'] and not snap['writer'];assert snap['training_end'][:4]<snap['asof'][:4]
     reused=load(out/'risk-comparison-reused.json');assert reused['source_sha256']==sha((P2/'all-models.json').read_bytes()) and len(reused['models'])==4
+    ui=load(out/'ui-results.json');assert ui['input_html_sha256']==sha((out/'radar-design.html').read_bytes()) and ui['fail']==0
     return {'same_fixed_events':15,'common_mature':14,'path_records':75,'new_strategy_count':0,'horizon_denominators':'PASS','market_partition':'PASS','snapshot_authorization':'NOT_APPROVED','score':None}
 def run(out):
     guard(out);tests={}
