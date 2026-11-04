@@ -202,7 +202,9 @@ def latest_twse_daily_report(now: datetime, bulk_date: str, bulk_count: int) -> 
     This is only called by the independent after-close Portfolio cache job; it
     does not participate in the intraday Radar/Core Score path.
     """
-    first_day = now.date() if now.time() >= time(16, 0) else now.date() - timedelta(days=1)
+    # Try after the actual close, not an arbitrary16:00 delay. The dated
+    # official report, schema and full-market completeness below still decide.
+    first_day = now.date() if now.time() >= time(13, 30) else now.date() - timedelta(days=1)
     for offset in range(7):
         candidate = first_day - timedelta(days=offset)
         if candidate.isoformat() < bulk_date:

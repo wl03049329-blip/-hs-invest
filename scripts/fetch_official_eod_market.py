@@ -10,7 +10,10 @@ import json
 import os
 import re
 import tempfile
+import time
 import urllib.request
+from urllib.error import HTTPError, URLError
+from http.client import IncompleteRead, RemoteDisconnected
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -95,10 +98,18 @@ def normalize_rows(rows: list[dict[str, Any]], provider: str) -> dict[str, dict[
 
 def fetch_bytes(url: str, timeout: int = 30) -> bytes:
     request = urllib.request.Request(url, headers={"Accept": "application/json,text/csv", "User-Agent": "HS-ETF-Radar/2.0"})
-    with urllib.request.urlopen(request, timeout=timeout) as response:
-        if response.status != 200:
-            raise RuntimeError(f"HTTP_{response.status}")
-        return response.read()
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                if response.status != 200:
+                    raise RuntimeError(f"HTTP_{response.status}")
+                return response.read()
+        except (URLError, TimeoutError, IncompleteRead, RemoteDisconnected, ConnectionError) as exc:
+            if isinstance(exc, HTTPError) and exc.code not in (408, 429, 500, 502, 503, 504):
+                raise
+            if attempt == 2:
+                raise
+            time.sleep(2 ** attempt)
 
 
 def fetch_primary() -> dict[str, dict[str, Any]]:

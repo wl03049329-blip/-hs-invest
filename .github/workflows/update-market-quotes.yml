@@ -15,6 +15,11 @@ on:
     # exchanges have had time to publish their closing bulk files.
     - cron: "30 0 * * 1-5"
     - cron: "30 8,10 * * 1-5"
+    # Source-ready FINAL / official-close retries after13:30. These are only
+    # opportunities to validate; a clock tick never promotes missing data.
+    - cron: "45 5,6 * * 1-5"
+    - cron: "0,15,30,45 7 * * 1-5"
+    - cron: "0 8,9,10 * * 1-5"
     - cron: "37 12,14 * * 1-5"
   workflow_dispatch:
 
@@ -50,10 +55,17 @@ jobs:
 
   eod:
     name: Finalize official EOD independently
-    needs: intraday
-    if: ${{ always() }}
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: write
+      actions: write
+    concurrency:
+      group: hs-eod-core-history
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -72,9 +84,10 @@ jobs:
           git pull --rebase origin main
       - name: Finalize official EOD Core Score history
         run: |
-          # Same official-calendar +18:00 gate as the raw-daily collector.
-          # Crossing midnight must not request a nonexistent today's close.
-          expected_date="$(python -m scripts.check_completed_market --expected-only)"
+          # Candidate from the official calendar, after13:30 (not18:00 raw K).
+          # Only complete official OHLC + matching adjusted history can finalize.
+          # Midnight/pre-open still request the previous completed session.
+          expected_date="$(python -m scripts.check_completed_market --final-expected-only)"
           python scripts/fetch_official_eod_market.py \
             --expected-date "$expected_date" \
             --output "${RUNNER_TEMP}/official-eod-market.json"
@@ -88,12 +101,39 @@ jobs:
             echo "::error::Official Core history unavailable; old finalized data retained."
             exit 1
           fi
+          node -e 'const fs=require("fs"),p=JSON.parse(fs.readFileSync("finalized-core-score-snapshots-v1.json")),d=process.argv[1];if(!p.snapshots.some(s=>s.date===d&&s.finalized===true&&s.snapshot_type==="FINALIZED_CLOSE"))throw Error("FINAL_DATE_NOT_PUBLISHED:"+d)' "$expected_date"
       - name: Commit finalized EOD Core Score history
+        id: publish
         run: |
           git add finalized-core-score-snapshots-v1.json
-          git diff --cached --quiet || git commit -m "Update official ETF radar score history"
-          git pull --rebase
-          git push
+          if git diff --cached --quiet; then
+            echo "FINAL_ALREADY_VERIFIED_NO_HISTORY_OVERWRITE"
+            exit 0
+          fi
+          git commit -m "Update official ETF radar score history"
+          git pull --rebase origin main
+          git push origin HEAD:main
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+      - name: Publish verified FINAL even if the unrelated LIVE job fails
+        env:
+          FINAL_CHANGED: ${{ steps.publish.outputs.changed }}
+        run: |
+          # A no-op Git commit is not proof that the prior deployment succeeded.
+          # Reuse a verified public FINAL, otherwise repair the site publication.
+          if [ "$FINAL_CHANGED" != true ] && python -m scripts.verify_stable_pages --base-url "https://wl03049329-blip.github.io/-hs-invest/" --verify-final --attempts 1; then
+            exit 0
+          fi
+          previous=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/hs-stable-pages.yml/runs?event=workflow_dispatch&per_page=1" --jq '.workflow_runs[0].id // 0')
+          gh workflow run hs-stable-pages.yml --ref main
+          found=''
+          for attempt in $(seq 1 12); do
+            id=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/hs-stable-pages.yml/runs?event=workflow_dispatch&per_page=1" --jq '.workflow_runs[0].id // 0')
+            if [ "$id" -gt "$previous" ]; then found="$id"; break; fi
+            sleep 5
+          done
+          test -n "$found" || { echo '::error::PAGES_RUN_NOT_CREATED'; exit 1; }
+          gh run watch "$found" --interval 5 --exit-status
+          python -m scripts.verify_stable_pages --base-url "https://wl03049329-blip.github.io/-hs-invest/" --verify-final
 
   official_quote_cache:
     name: Refresh official Portfolio quote cache independently
@@ -124,9 +164,9 @@ jobs:
           import os
           from datetime import datetime
           from zoneinfo import ZoneInfo
-          hour = datetime.now(ZoneInfo("Asia/Taipei")).hour
+          now = datetime.now(ZoneInfo("Asia/Taipei"))
           with open(os.environ["GITHUB_OUTPUT"], "a") as f:
-              f.write("allowed=" + str(hour < 9 or hour >= 16).lower() + "\n")
+              f.write("allowed=" + str(now.hour < 9 or (now.hour, now.minute) >= (13, 30)).lower() + "\n")
           PY
       - name: Refresh official TWSE and TPEx closing quotes
         id: quotes

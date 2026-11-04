@@ -12,12 +12,17 @@ import time
 from urllib.request import urlopen
 
 
-def verify(root, base_url, attempts=6, delay=20, fetcher=urlopen, run_reader=None):
+def verify(root, base_url, attempts=6, delay=20, fetcher=urlopen, run_reader=None, verify_final=False):
     from scripts.update_radar_daily import SYMBOLS, path_for, PUBLIC_STATUS
     root = pathlib.Path(root)
-    expected = {str(path_for(root, s).relative_to(root)).replace('\\', '/'):
-                json.loads(path_for(root, s).read_text(encoding='utf-8')) for s in SYMBOLS}
-    expected[PUBLIC_STATUS] = json.loads((root / PUBLIC_STATUS).read_text(encoding='utf-8'))
+    if verify_final:
+        # The independent FINAL publisher verifies its immutable artifact, not
+        # a concurrently advancing raw-K producer's unrelated generation.
+        expected = {'finalized-core-score-snapshots-v1.json': json.loads((root / 'finalized-core-score-snapshots-v1.json').read_text(encoding='utf-8'))}
+    else:
+        expected = {str(path_for(root, s).relative_to(root)).replace('\\', '/'):
+                    json.loads(path_for(root, s).read_text(encoding='utf-8')) for s in SYMBOLS}
+        expected[PUBLIC_STATUS] = json.loads((root / PUBLIC_STATUS).read_text(encoding='utf-8'))
     if run_reader is None:
         def run_reader():
             return json.loads(subprocess.check_output([
@@ -34,7 +39,7 @@ def verify(root, base_url, attempts=6, delay=20, fetcher=urlopen, run_reader=Non
                        r.get('status') == 'completed' and r.get('conclusion') == 'success' for r in run_reader()):
                 raise ValueError('PAGES_RUN_NOT_SUCCESSFUL_FOR_PUBLIC_COMMIT')
             for name, payload in expected.items():
-                with fetcher(base_url.rstrip('/') + '/' + name + '?v=' + payload['content_sha256'], timeout=25) as response:
+                with fetcher(base_url.rstrip('/') + '/' + name + '?v=' + str(payload.get('content_sha256', time.time_ns())), timeout=25) as response:
                     if json.loads(response.read()) != payload:
                         raise ValueError('PUBLICATION_MISMATCH:' + name)
             print(json.dumps({'event': 'PUBLICATION_VERIFIED', 'files': len(expected), 'pages_commit': commit}))
@@ -49,5 +54,7 @@ def verify(root, base_url, attempts=6, delay=20, fetcher=urlopen, run_reader=Non
 if __name__ == '__main__':
     p = argparse.ArgumentParser()
     p.add_argument('--base-url', required=True)
+    p.add_argument('--verify-final', action='store_true')
+    p.add_argument('--attempts', type=int, choices=range(1, 7), default=6)
     args = p.parse_args()
-    raise SystemExit(0 if verify(pathlib.Path(__file__).resolve().parents[1], args.base_url) else 1)
+    raise SystemExit(0 if verify(pathlib.Path(__file__).resolve().parents[1], args.base_url, attempts=args.attempts, verify_final=args.verify_final) else 1)

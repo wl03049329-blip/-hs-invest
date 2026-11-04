@@ -126,11 +126,16 @@ def verify_archive(root, symbol):
         raise ValueError("TPEX_ACTION_INTEGRITY")
     return p
 
-def expected_day(client, now, as_of=None):
+def expected_day(client, now, as_of=None, *, minimum_time=(18, 0)):
+    # This selects a candidate session, never certifies source completion.
+    # Raw historical bars retain18:00. FINAL may TRY after the market close,
+    # but its separate official OHLC + adjusted-history validators still decide.
     local = now.astimezone(TZ)
-    limit = local.date() if local.hour >= 18 else local.date() - dt.timedelta(days=1)
+    if minimum_time not in ((18, 0), (13, 30)):
+        raise ValueError("UNSUPPORTED_COMPLETION_POLICY")
+    limit = local.date() if (local.hour, local.minute) >= minimum_time else local.date() - dt.timedelta(days=1)
     target = dt.date.fromisoformat(as_of) if as_of else limit
-    if target > limit: raise ValueError("UNCOMPLETED_DAY_1800_TAIPEI")
+    if target > limit: raise ValueError("UNCOMPLETED_DAY_1800_TAIPEI" if minimum_time == (18, 0) else "BEFORE_OFFICIAL_MARKET_CLOSE")
     e = client.get(HOLIDAY_URL)
     holidays = e["payload"]
     if not isinstance(holidays, list) or not holidays or not any(iso_date(r.get("Date")).startswith(str(target.year)) for r in holidays):

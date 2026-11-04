@@ -1,7 +1,9 @@
 """Public completed-session audit; never reads local portfolio or financial data.
 
-The raw-daily collector owns calendar/18:00 semantics. A successful job or a
-recent generated_at is not evidence that the expected trading date was published.
+Raw historical bars retain the18:00 gate. --final-expected-only selects an
+official-calendar candidate after13:30; only the independent official OHLC and
+adjusted-history validation may finalize it. A successful job or a recent
+generated_at is not evidence that the expected date was publicly published.
 """
 from __future__ import annotations
 import argparse
@@ -83,17 +85,19 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--repair", action="store_true")
     parser.add_argument("--expected-only", action="store_true")
+    parser.add_argument("--final-expected-only", action="store_true",
+                        help="Calendar-verified candidate after13:30; NOT proof of official source readiness")
     args = parser.parse_args()
     now = dt.datetime.now(TZ)
     # Pages also publishes LIVE snapshots. During the session / pre18:00 gap,
     # an event is not evidence of a completed day and must not dispatch another
     # producer. Scheduled off-hours and pre-open audits remain unchanged.
-    if os.environ.get("HS_COMPLETED_AUDIT_TRIGGER") == "workflow_run" and 9 <= now.hour < 18:
+    if not args.final_expected_only and os.environ.get("HS_COMPLETED_AUDIT_TRIGGER") == "workflow_run" and 9 <= now.hour < 18:
         print(json.dumps(dict(healthy=None, deferred=True, reasons=["WAIT_COMPLETED_SESSION_GATE"], repair=[])))
         return
     with tempfile.TemporaryDirectory(prefix="hs-market-calendar-") as directory, contextlib.redirect_stdout(sys.stderr):
-        expected, _, _ = expected_day(Client(directory), now)
-    if args.expected_only:
+        expected, _, _ = expected_day(Client(directory), now, minimum_time=(13, 30) if args.final_expected_only else (18, 0))
+    if args.expected_only or args.final_expected_only:
         print(expected)
         return
     report = inspect(expected, public_json("market-quotes.json"), public_json("data/radar-history/status-v1.json"), public_json("finalized-core-score-snapshots-v1.json"))

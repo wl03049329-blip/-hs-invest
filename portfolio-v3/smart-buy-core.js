@@ -23,11 +23,25 @@
    return{...result,requested_minor:requested,unused_requested_minor:result.status==='READY'?requested-result.spent_minor:null,targets:S.effectiveTargets(groups,settings),snapshot_sha256:view.snapshot.state_sha256,policy:'DEFICIT_FIRST_V2'};
   }catch{return pending('目標或金融資料需要確認，暫不提供買進清單');}
  }
+ function availability(view){
+  const rows=view.rows||[],result=(code,reason,prices_ready=false)=>({code,reason,prices_ready});
+  if(!rows.length)return result('NO_HOLDINGS','新增持股後可查看價格與配置試算');
+  const missing=rows.filter(r=>!r.quote||!Number.isSafeInteger(r.market_value_minor)),unit=missing.filter(r=>r.unit_status&&/REQUIRED|UNCONFIRMED/.test(r.unit_status));
+  if(unit.length)return result('UNIT_REVIEW_REQUIRED','股數或分割單位待核對：'+unit.map(r=>r.symbol).join('、')+'；不推算股數或完整比例');
+  if((missing.length||!view.latest)&&Object.entries(view.price_source_status||{}).some(([k,s])=>['TWSE','TPEx'].includes(k)&&typeof s==='string'&&/cached_after_error|unavailable|failed|error/i.test(s)))return result('SOURCE_ANOMALY','行情來源異常；待核對價格：'+rows.filter(r=>!r.quote||r.quote.latest!==true).map(r=>r.symbol).join('、')+'。保留已驗證資料，不產生不完整配置');
+  if(missing.length)return result('PARTIAL_PRICE_MISSING','缺少有效價格：'+missing.map(r=>r.symbol).join('、')+'；其他已驗證個股與現金仍可查看');
+  if(!view.complete)return result('MIXED_PRICE_DATES','持股價格日期不一致，暫不計算完整配置');
+  if(view.price_session&&view.price_session.known!==true)return result('CALENDAR_UNAVAILABLE','交易日狀態待確認，保留已標示日期的價格，不產生完整買進試算');
+  if(!view.latest)return result('WAITING_CURRENT_PRICE','正在等待'+(view.price_session?.expected_price_date||'最近交易日')+'有效價格：'+rows.filter(r=>r.quote?.latest!==true).map(r=>r.symbol).join('、')+'；舊價格不當作當日收盤');
+  const required=view.c4_required_date||view.price_session?.required_c4_date||view.price_date,pending=rows.filter(r=>!['009815','00631L'].includes(r.symbol)&&(!Number.isFinite(r.c4?.score)||r.c4?.latest!==true||r.c4.date!==required));
+  if(pending.length)return result('PRICES_READY_C4_PENDING','價格已備妥；'+(required||'當日')+'正式C4待更新：'+pending.map(r=>r.symbol).join('、')+'。配置試算可用，舊分數僅按日期顯示，不授予當日加碼資格',true);
+  return result('PRICES_AND_C4_READY','價格與適用C4均已更新；配置試算與正式風控參考分開核對',true);
+ }
  function projection({view,strategy,requested,fp,positionValue,at}){
   const pending=reason=>({status:'PENDING',reason,basket:[],writes:false,production_writer:false,not_executable:true});
   if(!Number.isSafeInteger(requested)||requested<=0)return pending('請輸入本次想投入的金額');
   if(view.cash_confirmed!==true||!view.snapshot)return pending('請先核對可投資現金');
-  if(!view.complete||!view.latest||!view.rows?.length)return pending('行情待更新，缺少完整有效價格，暫時無法計算股數與買後配置');
+  const ready=availability(view);if(!ready.prices_ready)return pending(ready.reason);
   if(!Number.isSafeInteger(view.cash_minor)||view.cash_minor<=0)return pending('目前沒有可投資現金');
   try{
    let groups,settings;if(strategy?.value){groups=strategy.groupValue?.groups;settings=S.validate(strategy.value,groups,fp);}else{if(strategy?.groupValue?.groups?.length)return pending('請先確認自訂部位的ETF目標');if(!view.targets_complete)return pending('請設定每支ETF目標，合計100%');groups=view.rows.map((r,i)=>({id:'single-'+i,name:r.name||r.symbol,symbols:[r.symbol],target_bps:Math.round(view.settings.targets[r.symbol]*100)}));settings=S.create(null,groups,{order:groups.map(g=>g.id),targets:Object.fromEntries(groups.map(g=>[g.id,g.target_bps])),etf_targets:Object.fromEntries(groups.map(g=>[g.id,{[g.symbols[0]]:10000}])),mode:'GROUP'},at,fp);}
@@ -45,5 +59,5 @@
   }catch{return pending('配置或交易單位資料需要確認，暫時無法安全試算');}
  }
  function recommend(options){return{theory:projection(options),formal:calculate(options),writes:false,production_writer:false};}
- return Object.freeze({amount,cashPreview,calculate,projection,recommend});
+ return Object.freeze({amount,cashPreview,calculate,availability,projection,recommend});
 });

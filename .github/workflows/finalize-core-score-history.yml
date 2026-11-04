@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: hs-eod-core-history
@@ -19,8 +20,11 @@ concurrency:
 
 jobs:
   finalize:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -39,13 +43,15 @@ jobs:
           git pull --rebase origin main
       - name: Fetch validated official EOD market input
         run: |
-          expected_date="$(python -m scripts.check_completed_market --expected-only)"
+          # Candidate only: the unchanged official OHLC/history proof decides.
+          expected_date="$(python -m scripts.check_completed_market --final-expected-only)"
+          echo "HS_FINAL_EXPECTED_DATE=$expected_date" >> "$GITHUB_ENV"
           python scripts/fetch_official_eod_market.py \
             --expected-date "$expected_date" \
             --output "${RUNNER_TEMP}/official-eod-market.json"
       - name: Finalize expected Taipei trading date only
         run: |
-          expected_date="$(python -m scripts.check_completed_market --expected-only)"
+          expected_date="$HS_FINAL_EXPECTED_DATE"
           set -o pipefail
           timeout --signal=TERM 120s node scripts/finalize_core_score_history.js \
             --eod "${RUNNER_TEMP}/official-eod-market.json" \
@@ -54,9 +60,34 @@ jobs:
             echo "::error::Official FINAL not published; prior verified FINAL retained."
             exit 1
           fi
+          node -e 'const fs=require("fs"),p=JSON.parse(fs.readFileSync("finalized-core-score-snapshots-v1.json")),d=process.argv[1];if(!p.snapshots.some(s=>s.date===d&&s.finalized===true&&s.snapshot_type==="FINALIZED_CLOSE"))throw Error("FINAL_DATE_NOT_PUBLISHED:"+d)' "$expected_date"
       - name: Commit finalized EOD history only
+        id: publish
         run: |
           git add finalized-core-score-snapshots-v1.json
-          git diff --cached --quiet || git commit -m "Update official ETF radar score history"
-          git pull --rebase
-          git push
+          if git diff --cached --quiet; then
+            echo "FINAL_ALREADY_VERIFIED_NO_HISTORY_OVERWRITE"
+            exit 0
+          fi
+          git commit -m "Update official ETF radar score history"
+          git pull --rebase origin main
+          git push origin HEAD:main
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+      - name: Verify FINAL publication independently of a no-op Git commit
+        env:
+          FINAL_CHANGED: ${{ steps.publish.outputs.changed }}
+        run: |
+          if [ "$FINAL_CHANGED" != true ] && python -m scripts.verify_stable_pages --base-url "https://wl03049329-blip.github.io/-hs-invest/" --verify-final --attempts 1; then
+            exit 0
+          fi
+          previous=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/hs-stable-pages.yml/runs?event=workflow_dispatch&per_page=1" --jq '.workflow_runs[0].id // 0')
+          gh workflow run hs-stable-pages.yml --ref main
+          found=''
+          for attempt in $(seq 1 12); do
+            id=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/hs-stable-pages.yml/runs?event=workflow_dispatch&per_page=1" --jq '.workflow_runs[0].id // 0')
+            if [ "$id" -gt "$previous" ]; then found="$id"; break; fi
+            sleep 5
+          done
+          test -n "$found" || { echo '::error::PAGES_RUN_NOT_CREATED'; exit 1; }
+          gh run watch "$found" --interval 5 --exit-status
+          python -m scripts.verify_stable_pages --base-url "https://wl03049329-blip.github.io/-hs-invest/" --verify-final
