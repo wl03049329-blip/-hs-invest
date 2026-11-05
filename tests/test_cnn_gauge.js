@@ -52,9 +52,11 @@ check("stale and expired cached data are never advertised as current",()=>{
  const before=JSON.stringify(validated);now+=12*86400000;assert.equal(sandbox.cnnGaugePresentation().state,"expired");assert.equal(sandbox.cnnGaugePresentation().cnn,null);assert.equal(JSON.stringify(validated),before);
  now=Date.parse("2026-10-17T04:00:00Z");
 });
-check("homepage still has six cards and only CNN gets the dial; focused mood navigation",()=>{
+check("homepage has five cards with CNN first; focused mood navigation",()=>{
  const cards=html.slice(html.indexOf('id="homeSentimentCards"'),html.indexOf('id="homeSentimentDetails"'));
- assert.equal((cards.match(/data-home-chip=/g)||[]).length,6);assert.equal((cards.match(/data-cnn-mini/g)||[]).length,1);
+ assert.equal((cards.match(/data-home-chip=/g)||[]).length,5);assert.equal((cards.match(/data-cnn-mini/g)||[]).length,1);
+ assert.equal(cards.match(/<button id="([^"]+)"/)[1],"homeCnnCard");
+ assert.doesNotMatch(cards,/homeSentimentOverviewCard|<use href=/);
  assert.match(html,/id="cnnFearGreedPanel"[^>]*tabindex="-1"/);assert.match(html,/id="cnnGaugeTitle"/);
  assert.match(html,/data-cnn-refresh/);assert.doesNotMatch(html.slice(html.indexOf("function renderCnnDashboard"),html.indexOf("function openCnnGauge")),/一年|year|previous.*year/);
  assert.match(html,/refreshCnnFearGreed\(\{force:true\}\);\s*initLiveDebugPanel/,"CNN local artifact must not wait for upstream ETF API success");
