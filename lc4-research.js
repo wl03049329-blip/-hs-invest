@@ -1,17 +1,47 @@
 /* Descriptive research subpage. Never reads or writes financial storage. */
 (()=>{'use strict';
- const S={bundle:null,pointer:null,returnFocus:null,loading:false,scroll:''};
+ const S={bundle:null,pointer:null,returnFocus:null,loading:false,scroll:'',stats:null,expiryTimer:null};
  const $=s=>document.querySelector(s), el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
  const pct=(x,d=1)=>typeof x==='number'&&Number.isFinite(x)?(x*100).toFixed(d)+'%':'—';
  const num=x=>typeof x==='number'&&Number.isFinite(x)?x.toFixed(1):'—';
  const dialog=el('dialog',undefined,'lc4r');dialog.id='lc4-research';dialog.setAttribute('aria-labelledby','lc4r-title');
- const header=el('header');const title=el('h2','00631L 研究雷達');title.id='lc4r-title';
+ const header=el('header');const title=el('h2','00631L 正二雷達 · 完整研究');title.id='lc4r-title';
  const close=el('button','關閉 ×');close.type='button';close.setAttribute('aria-label','關閉研究雷達');
  header.append(title,close);const content=el('div',undefined,'lc4r-content');content.setAttribute('aria-live','polite');
  const toolbar=el('div',undefined,'lc4r-toolbar'),refresh=el('button','檢查研究資料');refresh.type='button';
  const notice=el('p','描述性研究 · 非買進訊號 · 不配置資金','lc4r-notice');toolbar.append(notice,refresh);dialog.append(header,toolbar,content);document.body.append(dialog);
  function section(title){const n=el('section');n.append(el('h3',title));content.append(n);return n;}
  function line(parent,label,value){const row=el('div',undefined,'lc4r-row');row.append(el('span',label),el('strong',value));parent.append(row);}
+ const signed=x=>typeof x==='number'&&Number.isFinite(x)?(x>0?'+':'')+pct(x,2):'資料不足';
+ const fraction=(k,n)=>n?`${pct(k/n,2)}（${k}／${n}）`:'資料不足';
+ function home(operation){const host=$('#lc4-radar-v2');if(!host)return;host.replaceChildren();const b=S.bundle,s=S.stats;
+  const stale=!Number.isFinite(Date.parse(b.next_source_check_due))||Date.now()>=Date.parse(b.next_source_check_due);
+  const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+  const usable=!stale&&b.asof<=today&&Number.isFinite(Date.parse(b.produced_at))&&Date.parse(b.produced_at)<=Date.now()&&operation?.bundle_sha256===S.pointer.sha256&&operation.live_source_check===true&&['NOOP','VERIFIED_RESEARCH_UPDATED'].includes(operation.status);
+  const t=HSLC4RadarV2.threshold(s.return5,b.asof,today,usable),state=({REACHED:'已達極端急跌警戒線',BELOW:'尚未達極端急跌警戒線',INSUFFICIENT:'資料不足，等待核驗',EXPIRED:'年度門檻已到期或不適用'})[t.state];
+  host.dataset.state=t.state;const head=el('div',undefined,'lc4v2-meta');head.append(el('span',`${b.asof} 收盤 · ${usable?'來源已核驗':'歷史資料，待核驗更新'}`),el('strong',`NT$ ${s.close.toFixed(2)}`));host.append(head);
+  const crash=el('section',undefined,'lc4v2-crash');crash.append(el('span','最近 5 個交易日'),el('strong',signed(s.return5),'lc4v2-big'),el('b',state,'lc4v2-status'));
+  const graph=el('figure',undefined,'lc4v2-threshold');graph.setAttribute('role','img');graph.setAttribute('aria-label',`五日漲跌 ${signed(s.return5)}；警戒線 ${t.linePct.toFixed(6)}%；${state}。不是分數或買進訊號。`);
+  const depth=Math.max(0,-(s.return5??0)*100),scale=Math.max(15,-t.linePct*1.25,depth*1.15),rail=el('div',undefined,'lc4v2-rail');rail.append(el('i',undefined,'lc4v2-line'),el('i',undefined,'lc4v2-now'));rail.style.setProperty('--line',(-t.linePct/scale*100)+'%');rail.style.setProperty('--now',(depth/scale*100)+'%');graph.append(rail,el('figcaption',`極端急跌警戒線：5日跌幅 ${t.linePct.toFixed(2)}%`));crash.append(graph);
+  crash.append(el('small',t.state==='REACHED'||t.state==='BELOW'?`${t.gapPP>=0?'超過警戒線':'距警戒線尚差'} ${Math.abs(t.gapPP).toFixed(2)} 個百分點 · 金點為目前跌幅，細線為門檻`:'僅顯示標示日期的歷史數值，不判定當前資格'));
+  crash.append(el('p','急跌條件達標不代表已經止跌或適合買進。'));host.append(crash);
+  const dd=el('div',undefined,'lc4v2-drawdown');for(const h of[120,240]){const n=el('div');n.append(el('span',`距 ${h} 日收盤高點`),el('strong',signed(s['dd'+h])));dd.append(n);}host.append(dd);
+  const history=el('section');history.append(el('h3','歷史急跌後上漲比例'));const wins=el('div',undefined,'lc4v2-wins');for(const h of[5,10,20]){const x=s.horizons[h],n=el('div');n.append(el('span',`${h} 日後`),el('strong',x.n?pct(x.upFraction,2):'資料不足'),el('small',`${x.up}／${x.n} 例`));wins.append(n);}history.append(wins,el('small','固定年度急跌事件；各期只納入成熟樣本，歷史比例不是未來機率。'));host.append(history);
+  const panel=el('section'),tabs=el('div',undefined,'lc4v2-tabs'),detail=el('div');tabs.setAttribute('role','group');tabs.setAttribute('aria-label','反彈及下跌風險觀察期間');
+  function horizon(h){const x=s.horizons[h];detail.replaceChildren();tabs.querySelectorAll('button').forEach(n=>n.setAttribute('aria-pressed',String(n.dataset.v2h===h)));
+   detail.append(el('h3',`${h} 日歷史反彈`));line(detail,'第 N 日收盤報酬中位數',signed(x.endMedian));line(detail,'期間最高反彈中位數',signed(x.highMedian));
+   const touch=el('div',undefined,'lc4v2-touch');for(const p of[5,10,15])touch.append(el('small',`曾達 +${p}%：${fraction(x.touch[p].count,x.n)}`));detail.append(touch,el('small','最高反彈為事後最高價統計，不代表可成交獲利。'));
+   detail.append(el('h3',`${h} 日再次下跌風險`));line(detail,'再破觸發日低點',fraction(x.breakLow,x.n));line(detail,'最大不利波動中位數',signed(x.maeMedian));detail.append(el('small',`相對觸發日收盤；有效 ${x.n} 例、未成熟 ${x.pending} 例。`));
+  }
+  for(const h of['5','10','20']){const n=el('button',h+' 日');n.type='button';n.dataset.v2h=h;n.onclick=()=>horizon(h);tabs.append(n);}panel.append(tabs,detail);horizon('5');host.append(panel);
+  const peak=el('section');peak.append(el('h3','20 日內高點出現時間'));const dist=el('div',undefined,'lc4v2-peaks');for(const[i,label]of['1–5 日','6–10 日','11–20 日'].entries()){const n=el('div');n.append(el('span',label),el('strong',s.peak20.n?pct(s.peak20.fractions[i],2):'資料不足'),el('small',`${s.peak20.counts[i]}／${s.peak20.n}`));dist.append(n);}peak.append(dist,el('small','同一組完整 20 日事件；重複高點取最早日，非最佳賣出時間。'));host.append(peak);
+  clearTimeout(S.expiryTimer);const limits=[Date.parse(b.next_source_check_due),Date.parse('2027-01-01T00:00:00+08:00')].filter(x=>Number.isFinite(x)&&x>Date.now());if(limits.length)S.expiryTimer=setTimeout(()=>home(operation),Math.min(86400000,Math.min(...limits)-Date.now()+1));
+ }
+ function detailedV2(){const s=S.stats,p=HSLC4RadarV2.policy,n=section('正二雷達 V2.0 · 統計口徑');line(n,'2026 原始急跌速度門檻',String(p.velocity));line(n,'精確五日警戒跌幅',String(-p.velocity*5)+'%');line(n,'訓練截止／門檻到期',p.trainingEnd+'／'+p.to);line(n,'門檻版本',p.version);
+  n.append(el('p','目前警戒線保留 2026 固定門檻；歷史母體則沿用已審核的年度 C95／70 交易日冷卻規則，並非每個事件均達 2026 門檻。沒有重新篩選事件或調整參數。'),el('p','日數由觸發後下一交易日起算。期末報酬＝第 N 日收盤／觸發日收盤−1；最高反彈＝期間最高價／觸發日收盤−1；最大不利波動＝min(0,期間最低價／觸發日收盤−1)。再破低比較觸發日最低價；無費用、無實際交易。'));
+  const years=el('details');years.append(el('summary','各年度樣本與事件明細'));for(const[year,y]of Object.entries(s.byYear)){line(years,year+' 年固定事件',String(y.events));for(const h of[5,10,20]){const x=y.horizons[h];line(years,`${h} 日上漲／期末中位數`,`${fraction(x.up,x.n)} · ${signed(x.endMedian)}`);}}for(const h of[5,10,20]){years.append(el('h4',`${h} 日事件：期末／最高／最大不利`));for(const e of s.horizons[h].paths)line(years,e.date,`${signed(e.endReturn)}／${signed(e.highReturn)}／${signed(e.mae)}`);}n.append(years);
+  n.append(el('p','固定樣本數少，70 日冷卻僅減少重疊，不能證明事件獨立；已看過及用於模型比較的結果並非全新樣本外驗證。2027 門檻未獨立審核批准前停止當前門檻判定，正式進場資格始終未開放。'));
+ }
  function unlock(){document.body.style.overflow=S.scroll;const target=S.returnFocus;if(target?.isConnected)target.focus({preventScroll:true});}
  close.onclick=()=>dialog.close();dialog.addEventListener('close',unlock);dialog.addEventListener('click',e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)dialog.close();}});
  async function json(url){const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);try{const res=await fetch(url,{cache:'no-store',signal:controller.signal});if(!res.ok)throw Error('HTTP_'+res.status);const text=await res.text();if(text.length>8000000)throw Error('RESEARCH_BODY_TOO_LARGE');return{value:JSON.parse(text),text};}finally{clearTimeout(timer);}}
@@ -30,6 +60,7 @@
   line(status,'正式 Shadow 資料日期',shadow?.latest_data_date||'無法確認');
   line(status,'待審事故／舊狀態快取',`${r.data.canonical_incidents}／${r.data.cached_incidents}（不同時點）`);
   status.append(el('p','研究資料重建不會解除正式封鎖；沒有正式 L-C4 分數、加碼級距或進場資格。','lc4r-warn'));
+  detailedV2();
   const cards=section('市場觀察');cards.classList.add('lc4r-grid');
   for(const[label,value,detail]of[
    ['五日急跌歷史百分位',num(r.opportunity.positive_decline_percentile)+' 百分位',`五日漲跌 ${pct(r.opportunity.return5)} · 僅比較歷史下跌日`],
@@ -56,11 +87,12 @@
    if(hash!==p.sha256||bytes.length!==p.bytes)throw Error('RESEARCH_HASH_MISMATCH');verify(b,p);
    let shadow=null,operation=null;try{shadow=(await json('research/hs_leverage/forward/daily-status.json')).value;}catch{}
    try{operation=(await json('data/lc4-research/status.json')).value;if(operation.bundle_sha256!==p.sha256)operation=null;}catch{}
-   S.bundle=b;S.pointer=p;render(shadow,operation);
-  }catch(e){content.replaceChildren(el('p','研究資料目前無法核驗，未顯示未確認數值。','lc4r-warn'),el('small',String(e.message)));}
+   const stats=HSLC4RadarV2.describe(b.history);if(stats.asof!==b.asof||Math.abs(stats.close-b.description.radar.stabilization.close)>1e-8||Math.abs(stats.return5-b.description.radar.opportunity.return5)>1e-12)throw Error('RESEARCH_HISTORY_SNAPSHOT_MISMATCH');S.bundle=b;S.pointer=p;S.stats=stats;home(operation);render(shadow,operation);
+  }catch(e){clearTimeout(S.expiryTimer);content.replaceChildren(el('p','研究資料目前無法核驗，未顯示未確認數值。','lc4r-warn'),el('small',String(e.message)));const host=$('#lc4-radar-v2');if(host){host.dataset.state='INSUFFICIENT';host.replaceChildren(el('p','研究資料不足或無法核驗，暫不顯示數值。','lc4r-warn'));}}
   finally{S.loading=false;refresh.disabled=false;}}
  refresh.onclick=load;
  function open(trigger){if(dialog.open)return;S.returnFocus=trigger;S.scroll=document.body.style.overflow;document.body.style.overflow='hidden';dialog.showModal();content.replaceChildren(el('p','正在核驗研究資料…'));close.focus();load();}
  document.addEventListener('click',e=>{const trigger=e.target.closest('[data-lc4-research-open]');if(trigger){e.preventDefault();open(trigger);}});
- window.addEventListener('online',()=>{if(dialog.open)load();});document.addEventListener('visibilitychange',()=>{if(!document.hidden&&dialog.open)load();});
+ window.addEventListener('online',load);document.addEventListener('visibilitychange',()=>{if(!document.hidden)load();});
+ load();
 })();

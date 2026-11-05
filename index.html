@@ -16,6 +16,8 @@ html[data-hs-v3-boot="ready"] #hs-v3-boot-panel{display:none!important}
 <link rel="stylesheet" href="portfolio-v3/v3.css">
 <link rel="stylesheet" href="app-update.css">
 <link rel="stylesheet" href="lc4-research.css">
+<link rel="stylesheet" href="lc4-radar-v2.css">
+<script defer src="lc4-radar-core.js"></script>
 <script defer src="lc4-research.js"></script>
 <meta name="theme-color" content="#050505" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -443,9 +445,10 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
   </section>
 
   <section id="homeLeverageBrief" class="panel homeLeverageBrief" data-tab-section="today" aria-labelledby="homeLeverageBriefTitle">
-    <div class="panelTitle compactTitle"><div><p class="eyebrow">HS LEVERAGE</p><h2 id="homeLeverageBriefTitle"><svg aria-hidden="true"><use href="#i-chip"/></svg>00631L 槓桿戰術雷達</h2><span class="hsLeverageIsolation">獨立策略｜不納入 C4 排名</span></div><small>獨立戰術觀察 · 嚴控風險</small></div>
-    <div id="homeLeverageCard"><div class="skeleton">載入 00631L 槓桿戰術資料中…</div></div>
-    <button type="button" class="lc4r-entry" data-lc4-research-open>00631L 研究雷達 › <small>歷史風險觀察，非買進訊號</small></button>
+    <div class="panelTitle compactTitle"><div><p class="eyebrow">HS LEVERAGE</p><h2 id="homeLeverageBriefTitle"><svg aria-hidden="true"><use href="#i-chip"/></svg>00631L 正二雷達</h2><span class="hsLeverageIsolation">急跌機會與歷史統計｜不納入 C4 排名</span></div><small>描述性研究 · 非買進訊號</small></div>
+    <div id="homeLeverageCard" hidden aria-hidden="true"><div class="skeleton">載入 00631L 槓桿戰術資料中…</div></div>
+    <div id="lc4-radar-v2" class="lc4v2" aria-live="polite"><p>正在核驗研究資料…</p></div>
+    <button type="button" class="lc4r-entry" data-lc4-research-open>00631L 查看完整研究 › <small>樣本、方法與風險限制</small></button>
   </section>
 
   <section id="hsStoryEntry" class="hsStoryEntry tabHidden" data-tab-section="more" aria-labelledby="hsStoryEntryTitle">
