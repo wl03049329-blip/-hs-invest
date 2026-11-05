@@ -199,7 +199,12 @@ class AnchorReviewTests(unittest.TestCase):
             result = daily.run(self.root, now=self.now)
         self.assertEqual(result['current_failure_reason'], 'LOCAL_PUBLICATION_FAILED')
         self.assertEqual(result['diagnostics'], {'SOURCE_COLLECTION': 'SUCCESS',
-            'CANDIDATE_VALIDATION': 'PASS', 'INTEGRITY_REVIEW': 'PASS', 'PUBLICATION': 'FAILED'})
+            'CANDIDATE_VALIDATION': 'PASS', 'INTEGRITY_REVIEW': 'PENDING', 'PUBLICATION': 'FAILED'})
+        # A local-write failure is now inventoried after its durable append;
+        # the newly pending review must not be mislabeled as already passed.
+        chain = shadow.read_jsonl(self.root / daily.INCIDENTS)
+        self.assertIn(chain[-1]['record_hash'],
+                      [r['record_hash'] for r in result['blocking_incidents']])
         self.assertEqual(self.files(), before)
 
     def test_old_authorization_cannot_publish_new_bridge_target(self):
@@ -249,7 +254,13 @@ class AnchorReviewTests(unittest.TestCase):
                  '00631l-leverage-status-v1.json', *self.policy['paths'].values()]
         before = {p: (root / p).read_bytes() for p in paths}
         report = daily.prepare_review(root)
-        self.assertEqual(len(report['incidents']), 7)
+        records, _ = daily.validate_ledgers(root / self.policy['paths']['forward_ledger'],
+                                           root / self.policy['paths']['outcomes_ledger'], self.policy)
+        expected = {r['record_id']: r['record_hash']
+                    for r in daily.pending_integrity_reviews(root, records)}
+        self.assertTrue(expected)
+        self.assertEqual({r['incident_id']: r['incident_record_hash']
+                          for r in report['incidents']}, expected)
         self.assertTrue(report['read_only'])
         self.assertFalse(report['authorizes_recovery'])
         for row in report['incidents']:
