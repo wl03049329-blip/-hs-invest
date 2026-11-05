@@ -11,7 +11,10 @@ unreviewed units remain excluded. No C4 input is used.
 
 Estimate=sum(current shares × current close) − sum(current shares × previous
 close on the same split basis), with existing safe integer money arithmetic.
-Percent divides by the matching previous-close value. Partial results identify
+Estimate-only decimal products use exact eight-decimal BigInt inputs, sum raw
+changes before rounding the total to cents, and do not subtract two separately
+rounded valuations. Percent uses the matching unrounded previous-close value.
+Original account valuation arithmetic is unchanged. Partial results identify
 covered/total symbols and missing reasons; no missing item is treated as zero.
 Exchange-calendar expectation is not evidence that a new close exists. During
 missing/unknown sessions current estimates remain unavailable; weekends retain
