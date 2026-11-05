@@ -1,0 +1,37 @@
+name: L-C4 verified research snapshot (publication disabled)
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '45 10,12,14 * * 1-5' # Taipei 18:45 / 20:45 / 22:45
+permissions:
+  contents: read
+concurrency:
+  group: hs-lc4-research-only
+  cancel-in-progress: false
+jobs:
+  research:
+    if: github.ref == 'refs/heads/main' && vars.HS_LC4_RESEARCH_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Research and safety tests
+        run: python -m unittest discover -s tests -p 'test_lc4*.py'
+      - name: Official completed daily research update only
+        run: python scripts/lc4_research_daily.py --evidence "$RUNNER_TEMP/lc4-source-evidence"
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+      - name: Preserve validated research snapshot and public source evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lc4-research-${{ github.run_id }}
+          path: |
+            data/lc4-research
+            ${{ runner.temp }}/lc4-source-evidence
+          retention-days: 90
+      # Deliberately no Git push, Pages dispatch, Shadow job or deployment.
+      # Enabling production publication requires the next explicit approval.

@@ -15,6 +15,8 @@ html[data-hs-v3-boot="ready"] #hs-v3-boot-panel{display:none!important}
 <script src="portfolio-v3/entry.js"></script>
 <link rel="stylesheet" href="portfolio-v3/v3.css">
 <link rel="stylesheet" href="app-update.css">
+<link rel="stylesheet" href="lc4-research.css">
+<script defer src="lc4-research.js"></script>
 <meta name="theme-color" content="#050505" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -443,6 +445,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
   <section id="homeLeverageBrief" class="panel homeLeverageBrief" data-tab-section="today" aria-labelledby="homeLeverageBriefTitle">
     <div class="panelTitle compactTitle"><div><p class="eyebrow">HS LEVERAGE</p><h2 id="homeLeverageBriefTitle"><svg aria-hidden="true"><use href="#i-chip"/></svg>00631L 槓桿戰術雷達</h2><span class="hsLeverageIsolation">獨立策略｜不納入 C4 排名</span></div><small>獨立戰術觀察 · 嚴控風險</small></div>
     <div id="homeLeverageCard"><div class="skeleton">載入 00631L 槓桿戰術資料中…</div></div>
+    <button type="button" class="lc4r-entry" data-lc4-research-open>00631L 研究雷達 › <small>歷史風險觀察，非買進訊號</small></button>
   </section>
 
   <section id="hsStoryEntry" class="hsStoryEntry tabHidden" data-tab-section="more" aria-labelledby="hsStoryEntryTitle">
@@ -669,6 +672,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
   </section>
 
   <section id="moreHub" class="moreHub tabHidden" data-tab-section="more" aria-label="HS 方法與設定中心">
+    <button type="button" class="lc4r-entry" data-lc4-research-open>00631L 研究雷達 ›</button>
     <details id="hsMethodologyGuide" class="moreHubCard"><summary><span>買點評分方法</span><small>FINAL_CORE_WEIGHT_V1</small></summary><p>長期核心正式分數只使用週 J 低檔 30%、52 週高點回檔 55%、20 日急跌 15%。三項缺一即不評分，不以其他因子補權重；週乖離、市場恐慌與估值只作輔助資訊。波段與槓桿模型維持既有引擎。</p></details>
     <details class="moreHubCard"><summary><span>資料來源與使用說明</span><small>盤中試算、盤後資料與估值代理</small></summary><p>盤中價格可能延遲；週 KD、融資、法人、期貨籌碼與估值各自標示資料日期。缺少資料不以 0 代替。</p></details>
     <details class="moreHubCard"><summary><span>HS 投資原則</span><small>分批、紀律，不把評分當成保證</small></summary><p>長期持有仍要重視買點；恐慌時比亢奮時更值得注意；不用單一訊號 All in，也不以模型預言市場。</p></details>

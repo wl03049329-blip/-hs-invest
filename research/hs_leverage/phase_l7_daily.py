@@ -938,6 +938,14 @@ def operational_failure(root, policy, prior, historical, records, realized, now,
     if not dry_run and classification != "KNOWN_FAIL_CLOSED_DEDUPED":
         shadow.append_record(root / INCIDENTS, {"record_type": "DAILY_VALIDATION_FAILURE",
                             "record_id": "OPERATIONAL:" + key, **status})
+        # The immutable incident stores its pre-append context. The operational
+        # status must instead inventory the completed chain, including this new
+        # incident and its real hash. This is not an integrity-review approval.
+        unresolved = pending_integrity_reviews(root, records)
+        status["blocking_incidents"] = [
+            {"incident_id": r["record_id"], "reason": r["reason"], "record_hash": r["record_hash"]}
+            for r in unresolved]
+        status["diagnostics"] = diagnostic_state(progress or {}, unresolved, reason)
         atomic_json(root / STATUS, status)
     return status
 
