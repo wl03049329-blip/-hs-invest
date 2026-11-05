@@ -73,6 +73,45 @@ class StablePublicationTests(unittest.TestCase):
             self.assertTrue(verify(root, 'https://fixture.invalid/-hs-invest/', attempts=1, delay=0,
                                    fetcher=self.fetch, run_reader=lambda: [self.run], verify_final=True))
 
+    def quote_check(self):
+        return verify(self.root, 'https://fixture.invalid/-hs-invest/', attempts=1, delay=0,
+                      fetcher=self.fetch, run_reader=lambda: [self.run], verify_quotes=True)
+
+    def seed_quotes(self):
+        for name in ('market-quotes.json', 'market-quotes-meta.json'):
+            self.files[name] = json.loads((self.root / name).read_text(encoding='utf-8'))
+
+    def test_quote_success_attests_both_exact_files_not_raw_history(self):
+        self.seed_quotes()
+        del self.files[daily.PUBLIC_STATUS]
+        self.assertTrue(self.quote_check())
+
+    def test_quote_prices_or_metadata_mismatch_is_not_success(self):
+        for name in ('market-quotes.json', 'market-quotes-meta.json'):
+            with self.subTest(file=name):
+                self.seed_quotes()
+                self.files[name] = {'old_or_partial': True}
+                self.assertFalse(self.quote_check())
+
+    def test_quote_failed_upload_is_not_success_even_if_public_json_matches(self):
+        self.seed_quotes()
+        self.run['conclusion'] = 'cancelled'
+        self.assertFalse(self.quote_check())
+
+    def test_quote_only_checkout_has_no_dependency_on_unrelated_history(self):
+        import tempfile
+        self.seed_quotes()
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            for name in ('market-quotes.json', 'market-quotes-meta.json'):
+                (root / name).write_text(json.dumps(self.files[name]), encoding='utf-8')
+            self.assertTrue(verify(root, 'https://fixture.invalid/-hs-invest/', attempts=1, delay=0,
+                                   fetcher=self.fetch, run_reader=lambda: [self.run], verify_quotes=True))
+
+    def test_mutually_conflicting_scopes_rejected(self):
+        with self.assertRaisesRegex(ValueError, 'PUBLICATION_SCOPE_CONFLICT'):
+            verify(self.root, 'https://fixture.invalid/', verify_final=True, verify_quotes=True)
+
 
 if __name__ == '__main__':
     unittest.main()
