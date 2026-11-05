@@ -42,6 +42,7 @@
   function horizon(h){const x=b.description.risk[h];details.replaceChildren();tabs.querySelectorAll('button').forEach(n=>n.setAttribute('aria-pressed',String(n.dataset.h===h)));
    line(details,'成熟樣本／未完整',`${x.n}／${x.pending}`);line(details,'再次跌破觸發日低點',`${x.further_break_count}／${x.n}（歷史 ${x.n?pct(x.further_break_count/x.n):'—'}）`);
    line(details,'最大不利波動中位數',pct(x.mae_median));line(details,'最差最大不利波動',pct(x.mae_min));
+   const distribution=el('details');distribution.dataset.lc4Distribution='true';distribution.append(el('summary','查看完整歷史分布（由差至佳）'),el('p',x.mae_values.map(v=>pct(v)).join(' · ')));details.append(distribution);
    details.append(el('p','波動口徑：觸發後下一交易日開盤至期間最低價；不含成本、非帳戶回撤，不能當成可成交的最低點。'));
    for(const[label,event]of[['典型事件（事後中位數附近）',x.typical],['最差事件（事後展示）',x.worst]])if(event){const n=el('article');n.append(el('h4',`${label} · ${event.date}`));line(n,'最大不利波動',pct(event.low_vs_entry_open));line(n,'期末相對觸發日收盤',pct(event.close_return));details.append(n);}
   }

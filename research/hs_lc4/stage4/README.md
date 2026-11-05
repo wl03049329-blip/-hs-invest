@@ -84,9 +84,12 @@ root, click the research launcher. No PWA manifest/scope/App identity changes.
 
 `browser.cjs <evidence-directory> <built-site-directory>` uses installed Chrome
 and bundled WebKit at320/375/390/1280. All profiles are isolated and all test
-financial markers synthetic. Production Railway connections are deliberately
-blocked; corresponding WebKit access-control messages are separately recorded,
-never counted as verified live-market behavior. iPhone Safari and installed PWA
+financial markers synthetic. External requests are blocked where interception
+is supported; WebKit requests routed through its Worker can instead receive an
+actual loopback-Origin CORS rejection. Each access-control exception must match
+an explicitly aborted URL OR an actual requestfailed event recording that CORS
+rejection. These are separately recorded, never counted as verified live-market
+behavior. iPhone Safari and installed PWA
 remain PENDING. The existing PWA protocol/browser harness is run independently.
 
 The existing full-HTML financial seal remains: its projection strips ONLY four

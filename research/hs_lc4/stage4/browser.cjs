@@ -30,7 +30,7 @@ const storage=p=>p.evaluate(()=>Object.fromEntries(Object.entries(localStorage).
   try{for(const width of[320,375,390,1280]){
    if(process.env.LC4_CASE&&process.env.LC4_CASE!==name+width)continue;
    mode='normal';const context=await browser.newContext({viewport:{width,height:900},isMobile:width<700,hasTouch:width<700});
-   const page=await context.newPage();activePage=page;activeContext=context;activeCase=name+width;const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('requestfailed',r=>network.push({case:activeCase,url:r.url(),failure:r.failure(),at:performance.now()}));await context.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());
+   const page=await context.newPage();activePage=page;activeContext=context;activeCase=name+width;const errors=[],blockedRequests=new Set();page.on('pageerror',e=>errors.push(e.message));page.on('requestfailed',r=>network.push({case:activeCase,url:r.url(),failure:r.failure(),at:performance.now()}));await context.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>{const u=new URL(r.request().url());blockedRequests.add('/'+u.host+u.pathname+u.search);return r.abort();});
    await context.tracing.start({screenshots:true,snapshots:true});await page.goto(base,{waitUntil:'domcontentloaded'});await ready(page);
    await page.waitForFunction(()=>self.HSStableApp?.status().phase==='CURRENT'&&navigator.serviceWorker.controller?.state==='activated');
    await page.evaluate(()=>localStorage.setItem('lc4-test-ledger','SYNTHETIC_UNCHANGED'));
@@ -44,7 +44,7 @@ const storage=p=>p.evaluate(()=>Object.fromEntries(Object.entries(localStorage).
    const box=await page.locator('#lc4-research header button').boundingBox();ok(box.width>=44&&box.height>=44,'close touch target');ok(box.y>=0,'header safe viewport');
    ok(await page.evaluate(()=>document.body.style.overflow==='hidden'),'background locked');
    await page.screenshot({path:path.join(out,`${name}-${width}-top.png`),fullPage:false});
-   for(const h of['5','10','20']){await page.locator(`.lc4r [data-h="${h}"]`).click();ok(await page.locator(`.lc4r [data-h="${h}"]`).getAttribute('aria-pressed')==='true','horizon'+h);}
+   for(const h of['5','10','20']){await page.locator(`.lc4r [data-h="${h}"]`).click();ok(await page.locator(`.lc4r [data-h="${h}"]`).getAttribute('aria-pressed')==='true','horizon'+h);await page.locator('[data-lc4-distribution] summary').click();ok(await page.locator('[data-lc4-distribution]').getAttribute('open')!==null,'full empirical distribution visible'+h);await page.locator('[data-lc4-distribution] summary').click();}
    await page.locator('.lc4r [data-h="20"]').click();ok((await page.locator('.lc4r-content').innerText()).includes('11／14'),'historical denominator11/14');
    await page.screenshot({path:path.join(out,`${name}-${width}-risk.png`),fullPage:false});
    await page.locator('#lc4-research header button').click();ok(!await page.locator('#lc4-research').evaluate(n=>n.open),'close works');
@@ -58,9 +58,14 @@ const storage=p=>p.evaluate(()=>Object.fromEntries(Object.entries(localStorage).
    if(width===375){for(const testmode of['hash','contract','missing','stale']){mode=testmode;await entry.click();if(testmode==='stale'){await page.locator('[data-lc4-health]').waitFor();ok((await page.locator('.lc4r-content').innerText()).includes('資料可能過期'),'stale never current');}else{await page.waitForFunction(()=>document.querySelector('.lc4r-content')?.textContent.includes('無法核驗'));ok(await page.locator('.lc4r article').count()===0,testmode+' hides unverified values');}await page.locator('#lc4-research header button').click();}
     mode='normal';await entry.click();await page.locator('[data-lc4-health]').waitFor();await context.setOffline(true);await page.getByRole('button',{name:'檢查研究資料',exact:true}).click();await page.waitForFunction(()=>document.querySelector('.lc4r-content')?.textContent.includes('無法核驗'));ok(true,'offline fail closed');await context.setOffline(false);await page.getByRole('button',{name:'檢查研究資料',exact:true}).click();await page.locator('[data-lc4-health]').waitFor();ok(true,'reconnection refresh');await page.locator('#lc4-research header button').click();}
    // Existing root may log blocked remote telemetry; no new module exceptions.
-   const blockedRemote=errors.filter(e=>/^\/hs-invest-production\.up\.railway\.app\/api\/(live-scores|push\/config) due to access control checks\.$/.test(e));
+   const suffix=' due to access control checks.';
+   const blockedRemote=errors.filter(e=>e.endsWith(suffix)&&(
+    blockedRequests.has(e.slice(0,-suffix.length))||network.some(r=>{
+     if(r.case!==activeCase||!/Access-Control-Allow-Origin/.test(r.failure?.errorText||''))return false;
+     const u=new URL(r.url);return e==='/'+u.host+u.pathname+u.search+suffix;
+    })));
    ok(errors.length===blockedRemote.length,'unexpected page errors '+errors.join(';'));await context.tracing.stop({path:path.join(out,`${name}-${width}.zip`)});
-   results.push({engine:name,width,status:'PASS',browser:browser.version(),errors,externalNetwork:blockedRemote.length?'SKIP_ISOLATED_PROFILE_BLOCKS_PRODUCTION_RAILWAY':'NOT_LIVE_TESTED'});fs.writeFileSync(path.join(out,'partial.json'),JSON.stringify({pass:count,results},null,2));await context.close();activePage=null;activeContext=null;
+   results.push({engine:name,width,status:'PASS',browser:browser.version(),errors,blockedRequestCount:blockedRequests.size,externalNetwork:blockedRemote.length?'SKIP_TRACE_CONFIRMED_CORS_OR_EXPLICIT_ABORT':'NOT_LIVE_TESTED'});fs.writeFileSync(path.join(out,'partial.json'),JSON.stringify({pass:count,results},null,2));await context.close();activePage=null;activeContext=null;
   }}finally{await browser.close();}
  }
  fs.writeFileSync(path.join(out,'results.json'),JSON.stringify({pass:count,fail:0,skip:results.filter(r=>r.externalNetwork.startsWith('SKIP')).length,results,source:'LOCAL_BUILT_ORIGINAL_ROOT_WITH_PINNED_TEST_MARKET',physical_iPhone:'PENDING',public_deployment:'NOT_PERFORMED'},null,2));console.log(JSON.stringify({pass:count,fail:0,cases:results.length}));
