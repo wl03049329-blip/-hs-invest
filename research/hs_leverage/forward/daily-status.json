@@ -3,7 +3,7 @@
   "system_state": "FAIL_CLOSED",
   "signal_status": "NO_SIGNAL",
   "reason": "BRIDGE_HISTORICAL_GAP_REVIEW_REQUIRED:2026-10-13",
-  "checked_at": "2026-10-19T14:54:43.672686+00:00",
+  "checked_at": "2026-11-05T15:43:57.908679+00:00",
   "latest_data_date": "2026-10-13",
   "current_failure_reason": "RECOVERY_EVIDENCE_AVAILABLE",
   "blocking_incidents": [
@@ -41,6 +41,16 @@
       "incident_id": "OPERATIONAL:a4b94a8477187e08e718c4d87c1c7f6d592df0d7638cae07c2cd8247f6797379",
       "reason": "BRIDGE_HISTORICAL_GAP_REVIEW_REQUIRED:2026-10-13",
       "record_hash": "4b902e5ff203dd034067b9e96ff7c969183d2271b24ad4a6d0e5600efb082b83"
+    },
+    {
+      "incident_id": "OPERATIONAL:935667816c0686fe4b7e2949cfcc63b1ed0747ad7f2a6fe4d48c76a32a6746a6",
+      "reason": "BRIDGE_HISTORICAL_GAP_REVIEW_REQUIRED:2026-10-13",
+      "record_hash": "be92d06ca8f41c983f7923e46617ad9fddcdfc139a9221b9ca1beb1c554e45cc"
+    },
+    {
+      "incident_id": "OPERATIONAL:bac945f98e9fc4ee158bfc89d6eecca7633c240cda66e199474920fa3c72e86a",
+      "reason": "BRIDGE_HISTORICAL_GAP_REVIEW_REQUIRED:2026-10-13",
+      "record_hash": "33c34e0e66810549dc4d56647a8af357d54e769af169e59af3a778e7eb831fbe"
     }
   ],
   "diagnostics": {
@@ -50,20 +60,20 @@
     "PUBLICATION": "NOT_PUBLISHED"
   },
   "publication_scope": "GIT_PUSH_AND_PAGES_NOT_OBSERVED",
-  "expected_completed_bar": "2026-10-19",
+  "expected_completed_bar": "2026-11-05",
   "freshness": "STALE",
   "data_integrity": "FAIL",
   "dry_run": false,
   "requires_integrity_review": true,
   "workflow_classification": "RECOVERY_EVIDENCE_AVAILABLE",
   "incident_identity": {
-    "target_completed_trading_date": "2026-10-19",
+    "target_completed_trading_date": "2026-11-05",
     "normalized_root_cause": "BRIDGE_HISTORICAL_GAP_REVIEW_REQUIRED",
     "latest_verified_anchor_date": "2026-10-13",
     "source_failure_class": "BRIDGE_HISTORICAL_GAP_REVIEW_REQUIRED",
     "policy_version": "HS_LEVERAGE_C_V1_FORWARD_POLICY_2026:V1:HS_LEVERAGE_C_V1_THRESHOLD_2026_TRAIN_END_2025-12-31"
   },
-  "incident_fingerprint": "935667816c0686fe4b7e2949cfcc63b1ed0747ad7f2a6fe4d48c76a32a6746a6",
+  "incident_fingerprint": "bac945f98e9fc4ee158bfc89d6eecca7633c240cda66e199474920fa3c72e86a",
   "source_probe_evidence": {
     "sessions": [
       {
@@ -110,13 +120,145 @@
           "high": 36.599998474121094,
           "low": 35.91999816894531,
           "close": 36.5099983215332,
-          "volume": 304319202,
+          "volume": 299498333,
           "adjclose": 36.5099983215332
+        }
+      },
+      {
+        "date": "2026-10-20",
+        "missing": [],
+        "values": {
+          "open": 36.06999969482422,
+          "high": 36.630001068115234,
+          "low": 35.68000030517578,
+          "close": 35.869998931884766,
+          "volume": 237480231,
+          "adjclose": 35.869998931884766
+        }
+      },
+      {
+        "date": "2026-10-21",
+        "missing": [],
+        "values": {
+          "open": 36.88999938964844,
+          "high": 37.189998626708984,
+          "low": 36.36000061035156,
+          "close": 36.61000061035156,
+          "volume": 143484404,
+          "adjclose": 36.61000061035156
+        }
+      },
+      {
+        "date": "2026-10-22",
+        "missing": [],
+        "values": {
+          "open": 36.97999954223633,
+          "high": 37.0,
+          "low": 35.59000015258789,
+          "close": 35.61000061035156,
+          "volume": 217204133,
+          "adjclose": 35.61000061035156
+        }
+      },
+      {
+        "date": "2026-10-27",
+        "missing": [],
+        "values": {
+          "open": 36.130001068115234,
+          "high": 36.25,
+          "low": 35.22999954223633,
+          "close": 35.599998474121094,
+          "volume": 146504248,
+          "adjclose": 35.599998474121094
+        }
+      },
+      {
+        "date": "2026-10-28",
+        "missing": [],
+        "values": {
+          "open": 36.650001525878906,
+          "high": 36.880001068115234,
+          "low": 36.40999984741211,
+          "close": 36.880001068115234,
+          "volume": 118176745,
+          "adjclose": 36.880001068115234
+        }
+      },
+      {
+        "date": "2026-10-29",
+        "missing": [],
+        "values": {
+          "open": 36.66999816894531,
+          "high": 36.779998779296875,
+          "low": 35.56999969482422,
+          "close": 35.88999938964844,
+          "volume": 172035917,
+          "adjclose": 35.88999938964844
+        }
+      },
+      {
+        "date": "2026-10-30",
+        "missing": [],
+        "values": {
+          "open": 34.349998474121094,
+          "high": 34.54999923706055,
+          "low": 33.689998626708984,
+          "close": 34.15999984741211,
+          "volume": 398858894,
+          "adjclose": 34.15999984741211
+        }
+      },
+      {
+        "date": "2026-11-02",
+        "missing": [],
+        "values": {
+          "open": 33.34000015258789,
+          "high": 34.029998779296875,
+          "low": 33.31999969482422,
+          "close": 33.83000183105469,
+          "volume": 202647157,
+          "adjclose": 33.83000183105469
+        }
+      },
+      {
+        "date": "2026-11-03",
+        "missing": [],
+        "values": {
+          "open": 32.7599983215332,
+          "high": 33.20000076293945,
+          "low": 31.420000076293945,
+          "close": 31.479999542236328,
+          "volume": 441015859,
+          "adjclose": 31.479999542236328
+        }
+      },
+      {
+        "date": "2026-11-04",
+        "missing": [],
+        "values": {
+          "open": 31.889999389648438,
+          "high": 32.0,
+          "low": 29.610000610351562,
+          "close": 30.850000381469727,
+          "volume": 527548645,
+          "adjclose": 30.850000381469727
+        }
+      },
+      {
+        "date": "2026-11-05",
+        "missing": [],
+        "values": {
+          "open": 30.5,
+          "high": 31.0,
+          "low": 29.149999618530273,
+          "close": 29.209999084472656,
+          "volume": 495096484,
+          "adjclose": 29.209999084472656
         }
       }
     ],
     "validation": "PASS",
-    "data_version": "adjusted_daily_v1:9292c3db3db6ddf595f39a91fb08a5af4665ec5f8637fabf7f57fc5d3f795e62"
+    "data_version": "adjusted_daily_v1:b95c25fedc19299c1bd27d34eaac04261330c1c92adbd93ee5f11e133b161549"
   },
   "forward_observations": 2,
   "eligible_observations": 0,
