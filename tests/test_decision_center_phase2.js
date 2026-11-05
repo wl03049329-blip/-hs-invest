@@ -57,7 +57,7 @@ assert.match(html,/WAIT_NATIVE/);
 assert.match(html,/系統不使用替代值估算/);
 assert.match(html,/前日 FINAL/);
 assert.match(html,/盤中狀態<\/dt><dd>\$\{esc\(emptyMessage\)\}/);
-assert.match(html,/獨立策略｜不納入 C4 排名/);
+assert.match(html,/急跌機會與歷史統計｜不納入 C4 排名/);
 assert.match(html,/市場總覽：\$\{esc\(view\.value\)\}/);
 assert.match(html,/HSCnnGauge\.marketCoverage\(/,"overview must use Taiwan coverage rather than a CNN-only conclusion");
 assert.match(html,/return marketSentimentPresentation\(\)\.text/);
