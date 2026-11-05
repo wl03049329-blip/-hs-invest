@@ -1,0 +1,48 @@
+/* Scope limited to the existing personal portfolio. No global tab/nav changes. */
+.pv360 .pv3allocation{position:relative;padding:16px!important}
+.pv360 .pv3allocation>h3{font-size:19px;margin:0 0 14px;color:#e8e3d9;padding-right:100px;min-height:30px}
+.pv360 .pv360-menu{position:static;margin:0}
+.pv360 .pv360-menu>summary{position:absolute;top:7px;right:16px;min-height:44px;display:flex;align-items:center;justify-content:flex-end;cursor:pointer;color:#d1bd8a;font-size:14px;list-style:none}
+.pv360 .pv360-menu-body{padding:10px;background:#181818;border:1px solid #49402f;border-radius:12px}
+.pv360 .pv360-menu-body button{min-height:44px}
+.pv360 .pv360-color-settings>summary{min-height:44px;cursor:pointer;padding:12px 0}
+.pv360 .pv3allocation>.groupModes{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px;margin:0 0 10px!important}
+.pv360 .pv3allocation>.groupModes button{grid-column:auto!important;min-height:44px}
+.pv360 .gs-controls{display:flex!important;flex-wrap:wrap;gap:8px}
+.pv360 .pv360-allocation-intro{color:#b9b6ae;font-size:14px;line-height:1.5;margin:8px 0}
+.pv360 .pv360-dashboard{display:grid;grid-template-columns:1fr;gap:14px;min-width:0}
+.pv360 .pv360-plot{width:min(100%,250px);aspect-ratio:1;margin:0 auto;position:relative}
+.pv360 .pv360-plot svg{display:block;width:100%;height:100%;overflow:visible}
+.pv360 .pv360-plot circle{cursor:pointer;transition:stroke-width .18s ease;pointer-events:visibleStroke}
+.pv360 .pv360-plot circle[aria-pressed=true]{animation:pv360-select .2s ease-out}
+@keyframes pv360-select{from{opacity:.65}to{opacity:1}}
+.pv360 .pv360-plot circle:focus{outline:none;stroke-width:26px}
+.pv360 .pv360-center{position:absolute;inset:23%;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:5px;text-align:center;pointer-events:none}
+.pv360 .pv360-center span{font-size:13px;line-height:1.4;overflow-wrap:anywhere;color:#c2bcae}
+.pv360 .pv360-center strong{font-size:29px;line-height:1.15;color:#e6d29d;font-variant-numeric:tabular-nums}
+.pv360 .pv360-center small{font-size:12px;color:#ddd8cf;overflow-wrap:anywhere}
+.pv360 .pv360-group-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.pv360 .pv360-group{min-height:110px;border:1px solid #343430;background:#171818;border-radius:12px;padding:12px;text-align:left;font:inherit;color:#e8e3d9;cursor:pointer;overflow-wrap:anywhere;position:relative}
+.pv360 .pv360-group:before{content:'';display:block;width:14px;height:4px;background:var(--group-color);border-radius:4px;margin-bottom:8px}
+.pv360 .pv360-group[aria-pressed=true]{border-color:#b69b5c;background:#242119}
+.pv360 .pv360-group span{font-size:14px;line-height:1.4}
+.pv360 .pv360-group strong{display:block;font-size:26px;color:#e7dfce;margin:5px 0;font-variant-numeric:tabular-nums}
+.pv360 .pv360-group small{display:block;font-size:12px;line-height:1.45;color:#b9b4aa}
+.pv360 .pv360-expand{min-height:44px;width:100%;border:1px solid #574c33;background:transparent;color:#d7c79f;border-radius:10px;font:inherit;cursor:pointer}
+.pv360 .pv360-detail-line{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;font-size:14px;margin:9px 0;line-height:1.5}
+.pv360 .pv360-detail-line>span{color:#b5b0a6}.pv360 .pv360-detail-line>b{font-weight:500;overflow-wrap:anywhere}
+.pv360 .pv360-sort{display:flex;justify-content:flex-end;align-items:center;gap:8px;font-size:13px;color:#aaa69d;margin-bottom:12px}
+.pv360 .pv360-sort select{min-height:44px;max-width:70%;font-size:16px;background:#191919;border:1px solid #4c422d;color:#e3dac5;border-radius:10px;padding:6px 10px}
+.pv360 .pv360-holding .pv3row>summary{display:flex!important;flex-direction:column!important;gap:12px!important;padding:15px!important;min-width:0;position:relative}
+.pv360 .pv360-stock-title{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;width:100%}
+.pv360 .pv360-stock-title>b{font-size:16px!important;line-height:1.45;white-space:normal!important;overflow-wrap:anywhere;max-width:calc(100% - 35px);color:#efebe2}
+.pv360 .pv360-chevron{font-size:19px;color:#a99e86}
+.pv360 .pv360-stock-values{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;width:100%;align-items:start;font-variant-numeric:tabular-nums}
+.pv360 .pv360-stock-values>div{min-width:0}.pv360 .pv360-stock-values small{display:block;color:#aaa69c;font-size:12px;margin-bottom:5px}
+.pv360 .pv360-stock-values strong{display:block;font-size:clamp(17px,4.8vw,24px);font-weight:650;color:#f1ece1;overflow-wrap:anywhere;line-height:1.3}
+.pv360 .pv360-stock-values b{display:block;font-size:14px;line-height:1.45;overflow-wrap:anywhere;font-weight:550}
+.pv360 .pv360-stock-state{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:12px;color:#beb5a1;width:100%;line-height:1.5}
+.pv360 .pv360-holding .pv3desktopDelete{position:static!important;align-self:flex-end;min-width:44px;min-height:44px;font-size:18px}
+.pv360 .pv360-estimate-info{font-size:12px;color:#b7b0a0;margin-top:6px}.pv360 .pv360-estimate-info>summary{cursor:pointer;min-height:44px;display:flex;align-items:center}.pv360 .pv360-estimate-info p{font-size:12px;line-height:1.6}
+@media(min-width:768px){.pv360 .pv360-dashboard{grid-template-columns:260px minmax(0,1fr);align-items:start}.pv360 .pv360-selection{grid-column:1/-1}.pv360 .pv360-plot{width:250px}.pv360 .pv360-stock-values strong{font-size:24px}}
+@media(prefers-reduced-motion:reduce){.pv360 .pv360-plot circle{transition:none;animation:none}}

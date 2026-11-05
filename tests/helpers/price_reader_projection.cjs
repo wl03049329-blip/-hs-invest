@@ -4,6 +4,7 @@
 // prior production reader and the original test then checks its older seal.
 const assert=require('assert/strict'),cp=require('child_process'),crypto=require('crypto');
 module.exports=function(source){
+ if(source.includes(' const currentEstimate=host.HSPortfolio360.estimate'))source=require('./portfolio360_projection.cjs')(source);
  const prior=cp.execFileSync('git',['show','6b7a0c5:portfolio-v3/personal-v3.js'],{maxBuffer:8e6}).toString();
  const a=source.indexOf(' // Calendar expectation is NOT proof'),b=source.indexOf(' function closeQuotes(',a);assert(a>0&&b>a);
  const helper=source.slice(a,b);assert.equal(crypto.createHash('sha256').update(helper).digest('hex'),'9d8fb4eae522f677e3b3e275fae0cf96d12b369ac8bb32b985cbebaf8f6b8425');
