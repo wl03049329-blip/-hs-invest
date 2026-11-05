@@ -145,6 +145,8 @@ jobs:
       actions: write
     env:
       GH_TOKEN: ${{ github.token }}
+    outputs:
+      quote_commit: ${{ steps.quotes.outputs.commit }}
     concurrency:
       # Same files as Railway / intraday publication: one writer at a time.
       group: hs-live-intraday-slot-v4
@@ -179,15 +181,46 @@ jobs:
           git add -- market-quotes.json market-quotes-meta.json
           if ! git diff --cached --quiet; then
             git commit -m "Update official Portfolio quote cache"
-            git pull --rebase origin main
-            git push origin main
+            # A transient GitHub commit_refs failure is not a source failure.
+            # Retry the same validated commit, never refetch/rewrite on failure.
+            published=false
+            for attempt in 1 2 3; do
+              git pull --rebase origin main
+              if git push origin HEAD:main; then published=true; break; fi
+              sleep 3
+            done
+            test "$published" = true
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
+          echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  official_quote_publication:
+    name: Publish and verify official Portfolio quotes independently
+    needs: official_quote_cache
+    if: github.ref == 'refs/heads/main' && needs.official_quote_cache.outputs.quote_commit != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.official_quote_cache.outputs.quote_commit }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
       - name: Independently publish and verify the official quote commit
-        if: steps.quotes.outputs.changed == 'true'
         # GITHUB_TOKEN pushes do not trigger push workflows. Do not wait for
         # unrelated Core history success to publish verified official prices.
+        # Publication waits hold NO LIVE writer lock. A no-op collection still
+        # repairs a previous failed upload; only exact public quotes count.
         run: |
+          if python -m scripts.verify_stable_pages --base-url "https://wl03049329-blip.github.io/-hs-invest/" --verify-quotes --attempts 1; then
+            exit 0
+          fi
           previous=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/hs-stable-pages.yml/runs?event=workflow_dispatch&per_page=1" --jq '.workflow_runs[0].id // 0')
           gh workflow run hs-stable-pages.yml --ref main
           found=''
@@ -198,4 +231,4 @@ jobs:
           done
           test -n "$found" || { echo '::error::PAGES_RUN_NOT_CREATED'; exit 1; }
           gh run watch "$found" --interval 5 --exit-status
-          python -m scripts.verify_stable_pages --base-url "https://wl03049329-blip.github.io/-hs-invest/"
+          python -m scripts.verify_stable_pages --base-url "https://wl03049329-blip.github.io/-hs-invest/" --verify-quotes
