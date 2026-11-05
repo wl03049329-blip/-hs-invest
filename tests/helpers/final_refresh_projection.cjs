@@ -3,6 +3,7 @@
 // seal, including every financial, LIVE/FINAL, C4 and other-tab function.
 const assert=require('assert/strict'),cp=require('child_process'),crypto=require('crypto');
 module.exports=function(source){
+ if(source.includes('portfolio-v3/experience360.js'))for(const literal of['<link rel="stylesheet" href="portfolio-v3/experience360.css">\n','<script defer src="portfolio-v3/experience360.js"></script>\n']){assert.equal(source.split(literal).length-1,1);source=source.replace(literal,'');}
  // Radar V2 replaces only the visible leverage presentation, not its inline
  // renderer or ANY market/financial function. Normalize exact reviewed literals.
  if(source.includes('<script defer src="lc4-radar-core.js"></script>')){
