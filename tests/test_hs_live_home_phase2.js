@@ -100,7 +100,8 @@ assert.match(html, /data-home-c4-sort="score"/);
 assert.match(html, /data-home-c4-sort="change"/);
 assert.match(html, /data-home-c4-sort="threshold"/);
 assert.match(css, /\.hsDashboardC4Card\.is-leader\{grid-column:1\/-1/);
-assert.match(css, /\.hsCommandSentiment \.homeSentimentCards\{display:grid!important;grid-template-columns:repeat\(6/);
+assert.match(css, /#homeSentiment \.homeSentimentCards\s*\{\s*display: grid;\s*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+assert.doesNotMatch(css, /\.hsCommandSentiment|#homeSentimentOverviewCard/);
 assert.doesNotMatch(html, /id="homeSwingBrief"/);
 
 console.log("HS LIVE Phase 2 UI contract: PASS");

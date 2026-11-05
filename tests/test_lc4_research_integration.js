@@ -10,7 +10,7 @@ for(const mutation of[
 console.log('PASS strict negative financial/navigation/entry seal checks');
 const old=cp.execFileSync('git',['show','2de99f950d87b3f4befb4d507019dbe423320107:index.html'],{maxBuffer:8000000}).toString();
 const inline=s=>[...s.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)].map(x=>x[1]).filter(Boolean);
-assert.deepEqual(inline(html),inline(old));console.log('PASS every existing inline script byte-identical');
+assert.deepEqual(inline(require('./helpers/home_sentiment_projection.cjs')(html)),inline(old));console.log('PASS existing inline scripts byte-identical outside reviewed home sentiment presentation');
 for(const name of['lc4-research.js','lc4-research.css'])assert(fs.existsSync(name));
 const script=fs.readFileSync('lc4-research.js','utf8');for(const api of['localStorage','indexedDB','sessionStorage','HSLeverage'])assert(!script.includes(api));
 console.log('PASS research module has no financial storage API');
