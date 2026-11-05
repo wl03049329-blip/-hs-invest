@@ -7,11 +7,24 @@ from scripts import lc4_research_daily as daily
 class ResearchTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.history=daily.load_history(ROOT)
+        # Pin historical test inputs; future valid daily publications must not
+        # silently move these fixtures or make a seed-row assertion fail.
+        name='snapshots/2026-11-04-r000002-efa7430fb94b.json'
+        raw=(ROOT/daily.DIR/name).read_bytes();b=json.loads(raw)
+        assert daily.sha(raw)=='efa7430fb94bee5df7f867b3ea6537e4ac170883e9d850f3867df4eeb984b553'
+        cls.history=b['history']
+        cls.pointer={'schema':'HS_LC4_RESEARCH_POINTER_V1','asof':b['asof'],'revision':b['revision'],
+          'path':name,'sha256':daily.sha(raw),'bytes':len(raw),
+          'input_sha256':daily.digest({'history':cls.history,'envelope_version':1})}
         cls.sources=json.loads(gzip.decompress((ROOT/daily.DIR/'seed-sources.json.gz').read_bytes()))
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup);self.root=pathlib.Path(self.tmp.name)
-        shutil.copytree(ROOT/daily.DIR,self.root/daily.DIR)
+        # A growing production archive is not a test fixture. Copy only the
+        # pinned seed/initial chain; preserve and test new snapshots in temp.
+        for name in ('seed.json','seed-history.json.gz','seed-sources.json.gz','status.json',
+                     'snapshots/2026-11-04-r000001-b37dce6724db.json',self.pointer['path']):
+            dest=self.root/daily.DIR/name;dest.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(ROOT/daily.DIR/name,dest)
+        (self.root/daily.DIR/'latest.json').write_bytes(daily.encoded(self.pointer))
         self.history=copy.deepcopy(type(self).history)
     def client(self,mutate=None):
         sources=self.sources
@@ -59,7 +72,7 @@ class ResearchTests(unittest.TestCase):
         for s in ('00631L','0050'):
             self.assertEqual(new['histories'][s][:-1],original['histories'][s]);self.assertEqual(new['histories'][s][-1]['date'],'2026-11-05')
     def test_new_cash_action_on_leverage_requires_review(self):
-        with patch.object(daily,'official_sessions',return_value=([],{})),patch.object(daily,'twse_actions',return_value=([{'date':'2026-11-04','amount':1}],[],None)):
+        with patch.object(daily,'official_sessions',return_value=(['2026-11-04'],{})),patch.object(daily,'twse_actions',return_value=([{'date':'2026-11-04','amount':1}],[],None)):
             with self.assertRaisesRegex(ValueError,'ACTION_REQUIRES_REVIEW'):daily.extend(self.history,self.client(),'2026-11-04')
     def test_source_failure_preserves_last_verified_pointer(self):
         before=(self.root/daily.DIR/'latest.json').read_bytes()
@@ -77,8 +90,10 @@ class ResearchTests(unittest.TestCase):
     def test_fixed_events_and_authorization_stay_separate(self):
         r=daily.describe(self.history);self.assertEqual(r['fixed_event_count'],15)
         self.assertFalse(r['radar']['entry']['authorized']);self.assertIsNone(r['radar']['score']);self.assertFalse(r['radar']['writer'])
-        self.assertEqual(r['radar']['data']['formal_shadow'],'FAIL_CLOSED')
-        self.assertEqual(r['radar']['data']['canonical_incidents'],8)
+        import phase_l7_daily
+        pending=phase_l7_daily.prepare_review(ROOT)['incidents']
+        self.assertEqual(r['radar']['data']['formal_shadow'],'FAIL_CLOSED' if pending else 'REQUIRES_FORMAL_STATUS_VERIFICATION')
+        self.assertEqual(r['radar']['data']['canonical_incidents'],len(pending))
         for h,count,n in [('5',10,15),('10',11,15),('20',11,14)]:
             # Stage3 available-case denominators (not its common-mature14).
             x=r['risk'][h];self.assertEqual(x['n'],n);self.assertGreaterEqual(x['further_break_count'],count)

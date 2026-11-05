@@ -4,7 +4,7 @@ Uses the existing official calendar/month/action validators and 18:00 policy.
 One immutable bundle contains history + snapshot + receipts; latest is promoted
 last. A failed run leaves the last verified bundle intact. No remote publication.
 """
-import argparse, copy, datetime as dt, gzip, hashlib, json, math, os, sys
+import argparse, copy, datetime as dt, gzip, hashlib, json, math, os, shutil, sys
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
@@ -45,6 +45,14 @@ def validate_rows(rows):
         previous=r['date']
     require(len(rows)>=240,'HISTORY_SHORT')
 
+def validate_source_timing(client,target,now):
+    cutoff=dt.datetime.combine(dt.date.fromisoformat(target),dt.time(18),TZ)
+    bars=[e for url,e in client.entries.items() if '/exchangeReport/' in url]
+    require(len(bars)>=4,'OFFICIAL_RECEIPTS_INCOMPLETE')
+    for e in bars:
+        fetched=dt.datetime.fromisoformat(e['fetched_at'])
+        require(fetched.tzinfo is not None and cutoff<=fetched<=now,'SOURCE_CAPTURE_BEFORE_COMPLETION_OR_FUTURE')
+
 def load_history(root):
     directory=Path(root)/DIR;seed=read(directory/'seed.json')
     raw=(directory/'seed-history.json.gz').read_bytes()
@@ -72,10 +80,10 @@ def extend(history,client,target):
     require(target>=history['asof'],'RESEARCH_ROLLBACK_REJECTED')
     result=copy.deepcopy(history);anchor=history['asof']
     month_list=list(months(anchor,target));require(len(month_list)<=24,'GAP_REQUIRES_REVIEW')
-    sessions=[]
+    sessions=[];observed=set()
     for month in month_list:
-        ds,_=official_sessions(client,'twse',month,target);sessions.extend(d for d in ds if anchor<d<=target)
-    require(target==anchor or (sessions and sessions[-1]==target),'OFFICIAL_SESSION_NOT_PUBLISHED')
+        ds,_=official_sessions(client,'twse',month,target);observed.update(ds);sessions.extend(d for d in ds if anchor<d<=target)
+    require(target in observed and (target==anchor or (sessions and sessions[-1]==target)),'OFFICIAL_SESSION_NOT_PUBLISHED')
     for symbol in ('00631L','0050'):
         rows=result['histories'][symbol];by={r['date']:r for r in rows};fresh=[];seen_anchor=False
         for month in month_list:
@@ -172,8 +180,9 @@ def publish(root,history,client,now,calendar_ref):
     return {'status':'VERIFIED_RESEARCH_UPDATED','asof':bundle['asof'],'revision':bundle['revision'],'sha256':hash_}
 
 def update(args):
-    now=dt.datetime.now(dt.timezone.utc);client=Client(args.evidence,ROOT)
-    history=load_history(ROOT)
+    started=now=dt.datetime.now(dt.timezone.utc);client=Client(args.evidence,ROOT)
+    work=Path(getattr(args,'output_root',None) or ROOT)
+    history=load_history(work)
     try:
         if args.seed_only:
             # Offline packaging is explicitly historical, not a live-source check.
@@ -181,20 +190,34 @@ def update(args):
         else:
             target,_,calendar_ref=research_expected_day(client,now)
             history=extend(history,client,target)
-        result=publish(ROOT,history,client,now,calendar_ref)
-        atomic_json(ROOT/DIR/'status.json',{'checked_at':now.isoformat(),**result,
-          'bundle_sha256':read(ROOT/DIR/'latest.json')['sha256'],
+            # Compare receipts to validation time, not the clock captured before
+            # network collection. Future receipts still fail with no skew waiver.
+            now=dt.datetime.now(dt.timezone.utc)
+            validate_source_timing(client,target,now)
+            require(research_expected_day(client,now)[0]==target,'TARGET_CHANGED_DURING_COLLECTION')
+        result=publish(work,history,client,now,calendar_ref)
+        atomic_json(work/DIR/'status.json',{'schema':'HS_LC4_RESEARCH_OPERATION_V2','started_at':started.isoformat(),'checked_at':now.isoformat(),**result,
+          'verified_target':target,'bundle_sha256':read(work/DIR/'latest.json')['sha256'],
           'source_receipts':[ref(e) for e in client.entries.values()],
           'live_source_check':not args.seed_only,'writer':False})
         print(json.dumps(result));return 0
     except Exception as exc:
-        atomic_json(ROOT/DIR/'status.json',{'status':'RESEARCH_UPDATE_BLOCKED','checked_at':now.isoformat(),
-                     'reason':str(exc),'retained_asof':history['asof'],'writer':False})
+        atomic_json(work/DIR/'status.json',{'schema':'HS_LC4_RESEARCH_OPERATION_V2','status':'RESEARCH_UPDATE_BLOCKED','started_at':started.isoformat(),'checked_at':dt.datetime.now(dt.timezone.utc).isoformat(),
+                     'reason':str(exc),'retained_asof':load_history(work)['asof'],
+                     'bundle_sha256':read(work/DIR/'latest.json')['sha256'],'writer':False})
         raise
 
 def main():
     p=argparse.ArgumentParser();p.add_argument('--evidence',required=True);p.add_argument('--seed-only',action='store_true')
-    args=p.parse_args();lock=ROOT/DIR/'.update.lock'
+    p.add_argument('--dry-run',action='store_true');p.add_argument('--output',type=Path)
+    args=p.parse_args()
+    if args.dry_run:
+        require(args.output is not None,'DRY_RUN_OUTPUT_REQUIRED')
+        dest=args.output.resolve();require(dest!=ROOT and ROOT not in dest.parents and dest not in ROOT.parents,'ISOLATED_OUTPUT_REQUIRED')
+        require(not dest.exists(),'OUTPUT_ALREADY_EXISTS')
+        shutil.copytree(ROOT/DIR,dest/DIR);args.output_root=dest
+    else:require(args.output is None,'OUTPUT_REQUIRES_DRY_RUN')
+    lock=Path(getattr(args,'output_root',None) or ROOT)/DIR/'.update.lock'
     # Exclusive local ownership complements the workflow concurrency group.
     # A stale lock is diagnosed, never automatically removed by another run.
     fd=os.open(lock,os.O_CREAT|os.O_EXCL|os.O_WRONLY,0o600)

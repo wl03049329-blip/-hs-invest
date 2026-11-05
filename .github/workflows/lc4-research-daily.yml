@@ -1,37 +1,95 @@
-name: L-C4 verified research snapshot (publication disabled)
+name: L-C4 verified research daily publication
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: Dry-run by default; publishing also requires all approval gates
+        type: choice
+        options: [dry-run, publish]
+        default: dry-run
   schedule:
-    - cron: '45 10,12,14 * * 1-5' # Taipei 18:45 / 20:45 / 22:45
+    - cron: '45 10,12,14 * * 1-5' # Taipei18:45/20:45/22:45, unchanged18:00 completed-daily rule
 permissions:
   contents: read
 concurrency:
   group: hs-lc4-research-only
   cancel-in-progress: false
+env:
+  PYTHONDONTWRITEBYTECODE: '1'
 jobs:
-  research:
-    if: github.ref == 'refs/heads/main' && vars.HS_LC4_RESEARCH_ENABLED == 'true'
+  generate:
+    if: (github.event_name == 'workflow_dispatch' && inputs.mode == 'dry-run') || (github.ref == 'refs/heads/main' && vars.HS_LC4_RESEARCH_ENABLED == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    outputs:
+      verified: ${{ steps.plan.outputs.verified }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Research and safety tests
+      - name: Research, workflow and safety contracts
         run: python -m unittest discover -s tests -p 'test_lc4*.py'
-      - name: Official completed daily research update only
-        run: python scripts/lc4_research_daily.py --evidence "$RUNNER_TEMP/lc4-source-evidence"
-        env:
-          PYTHONDONTWRITEBYTECODE: '1'
-      - name: Preserve validated research snapshot and public source evidence
+      - name: Generate in isolated staging, never the checked-out data namespace
+        id: generate
+        run: python scripts/lc4_research_daily.py --dry-run --output "$RUNNER_TEMP/lc4-stage" --evidence "$RUNNER_TEMP/lc4-package/source-evidence"
+      - name: Revalidate exact sources, target, chain and data-only publication plan
+        id: plan
+        run: |
+          python scripts/lc4_research_release.py plan --staged "$RUNNER_TEMP/lc4-stage" --evidence "$RUNNER_TEMP/lc4-package/source-evidence" --plan "$RUNNER_TEMP/lc4-package/plan.json"
+          python scripts/lc4_research_release.py package --staged "$RUNNER_TEMP/lc4-stage" --evidence "$RUNNER_TEMP/lc4-package/source-evidence" --plan "$RUNNER_TEMP/lc4-package/plan.json" --delta "$RUNNER_TEMP/lc4-package/delta"
+          echo 'verified=true' >> "$GITHUB_OUTPUT"
+      - name: Retain candidate, source receipts and failure diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: lc4-research-${{ github.run_id }}
-          path: |
-            data/lc4-research
-            ${{ runner.temp }}/lc4-source-evidence
-          retention-days: 90
-      # Deliberately no Git push, Pages dispatch, Shadow job or deployment.
-      # Enabling production publication requires the next explicit approval.
+          path: ${{ runner.temp }}/lc4-package
+          retention-days: 7
+      - name: Never report successful data production without verified output
+        if: always()
+        env:
+          GENERATE: ${{ steps.generate.outcome }}
+          PLAN: ${{ steps.plan.outcome }}
+        run: |
+          test "$GENERATE" = success && test "$PLAN" = success || { echo '::error::LC4_RESEARCH_DATA_BLOCKED; last verified data retained'; exit 1; }
+          echo 'Verified research candidate only. Not Shadow approval; not a trading signal.' >> "$GITHUB_STEP_SUMMARY"
+  publish:
+    needs: generate
+    if: needs.generate.outputs.verified == 'true' && github.ref == 'refs/heads/main' && vars.HS_LC4_RESEARCH_ENABLED == 'true' && vars.HS_LC4_RESEARCH_PUBLISH_ENABLED == 'true' && vars.HS_LC4_RELEASE_APPROVED == 'true' && (github.event_name == 'schedule' || inputs.mode == 'publish')
+    environment: hs-lc4-research-publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: write
+      actions: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      HS_LC4_RESEARCH_ENABLED: ${{ vars.HS_LC4_RESEARCH_ENABLED }}
+      HS_LC4_RESEARCH_PUBLISH_ENABLED: ${{ vars.HS_LC4_RESEARCH_PUBLISH_ENABLED }}
+      HS_LC4_RELEASE_APPROVED: ${{ vars.HS_LC4_RELEASE_APPROVED }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          name: lc4-research-${{ github.run_id }}
+          path: ${{ runner.temp }}/lc4-package
+      - name: Guarded data-only commit, non-force push, existing Stable Pages and public verification
+        run: |
+          python scripts/lc4_research_release.py materialize --staged "$RUNNER_TEMP/lc4-stage" --delta "$RUNNER_TEMP/lc4-package/delta" --evidence "$RUNNER_TEMP/lc4-package/source-evidence" --plan "$RUNNER_TEMP/lc4-package/plan.json"
+          python scripts/lc4_research_release.py execute --staged "$RUNNER_TEMP/lc4-stage" --evidence "$RUNNER_TEMP/lc4-package/source-evidence" --plan "$RUNNER_TEMP/lc4-package/plan.json" --state "$RUNNER_TEMP/lc4-release-state.json"
+      - name: Preserve partial-publication recovery state, never retry a blind write
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lc4-release-state-${{ github.run_id }}
+          path: ${{ runner.temp }}/lc4-release-state.json
+          retention-days: 7
