@@ -5,12 +5,15 @@ const html = fs.readFileSync("index.html", "utf8");
 const css = fs.readFileSync("formal-black-gold.css", "utf8");
 const core = fs.readFileSync("leverage-v1-core.js", "utf8");
 
-assert.match(html, /id="homeLeverageBrief"[\s\S]*?HS LEVERAGE[\s\S]*?00631L 槓桿戰術雷達/);
+assert.match(html, /id="homeLeverageBrief"[\s\S]*?HS LEVERAGE[\s\S]*?00631L 正二雷達/);
+assert.match(html, /id="homeLeverageCard" hidden aria-hidden="true"/);
+assert.match(html, /id="lc4-radar-v2" class="lc4v2"/);
+assert.match(html, /急跌機會與歷史統計｜不納入 C4 排名/);
 assert.doesNotMatch(html, /id="homeSwingBrief"/);
 assert.match(html, /<script src="leverage-v1-core\.js\?v=20260822-l1"><\/script>/);
 assert.match(html, /function leverageV1State\(item\)/);
 assert.match(html, /function leverageHomeCompactCard\(item\)/);
-assert.match(html, /獨立策略｜不納入 C4 排名/);
+assert.match(html, /急跌機會與歷史統計｜不納入 C4 排名/);
 assert.match(html, /5D 急跌速度/);
 assert.match(html, /戰術觀察/);
 assert.match(html, /5D 急跌速度相對觸發門檻/);

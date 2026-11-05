@@ -47,7 +47,7 @@ for(const text of ["今日核心決策","目前分數","C4 今日盤中追蹤","
 assert.match(css,/\.hsCoreDecisionHero\{[^}]*display:grid/);assert.match(css,/@media\(max-width:430px\)[\s\S]*?\.hsDecisionStatusRail\{grid-template-columns:repeat\(2/);
 console.log("PASS HS Decision Center Phase 2 summary and responsive contract");
 
-for(const marker of ["今日核心決策","市場情緒快覽","C4 今日盤中追蹤","00631L 槓桿戰術雷達","hsDashboardC4Grid","homeDataHealthDialog"])assert.ok(html.includes(marker),`${marker} must remain on the homepage`);
+for(const marker of ["今日核心決策","市場情緒快覽","C4 今日盤中追蹤","00631L 正二雷達","hsDashboardC4Grid","homeDataHealthDialog"])assert.ok(html.includes(marker),`${marker} must remain on the homepage`);
 assert.ok(!html.includes('class="hsDecisionStatusRail"'),"duplicate four-card home presentation is retired; full health diagnostics remain in the dialog");
 const order=["id=\"hsDecisionRoom\"","id=\"homeSentiment\"","id=\"homeEtfBrief\"","id=\"homeLeverageBrief\""].map(marker=>html.indexOf(marker));
 assert.ok(order.every((value,index)=>value>0&&(index===0||value>order[index-1])),"homepage operations flow must be Hero -> Sentiment -> C4 -> 00631L");
@@ -57,7 +57,7 @@ assert.match(html,/WAIT_NATIVE/);
 assert.match(html,/系統不使用替代值估算/);
 assert.match(html,/前日 FINAL/);
 assert.match(html,/盤中狀態<\/dt><dd>\$\{esc\(emptyMessage\)\}/);
-assert.match(html,/獨立策略｜不納入 C4 排名/);
+assert.match(html,/急跌機會與歷史統計｜不納入 C4 排名/);
 assert.match(html,/市場總覽：\$\{esc\(view\.value\)\}/);
 assert.match(html,/HSCnnGauge\.marketCoverage\(/,"overview must use Taiwan coverage rather than a CNN-only conclusion");
 assert.match(html,/return marketSentimentPresentation\(\)\.text/);
