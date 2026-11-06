@@ -11,6 +11,26 @@ module.exports=function(source){
   assert(a>=0&&b>a,start);
   return s.slice(a,b);
  };
+ // Phase 4A: verify each reviewed UI-only slice, then require the entire
+ // V3.7 page to match before applying the prior historical projection.
+ if(source.includes('id="officialMarginObservation"')){
+  const v370=cp.execFileSync('git',['show','73a684a1afea66299b3ff90a32f866a2427f0b63:index.html'],{maxBuffer:8e6}).toString();
+  for(const [start,end,pin] of [
+    ["  <section id=\"homeSentiment\"","  </section>","474ab706e10b515f9f984d4536d4b0b121efba5d596040fa78988d1ff8f7c5ae"],
+    ["      <button class=\"chipSegment\" type=\"button\" role=\"tab\" aria-selected=\"false\" data-chip-tab=\"margin\"","      <button class=\"chipSegment\" type=\"button\" role=\"tab\" aria-selected=\"false\" data-chip-tab=\"institutions\"","6d084df261f0840c616aaea90af7858b058265479f9a957276d9c42194f3804c"],
+    ["    <div class=\"chipPanel\" data-chip-panel=\"margin\" hidden>","    <div class=\"chipPanel\" data-chip-panel=\"institutions\" hidden>","d25bea163340da3b148a2406980dfedbff4b41307ad6bdcb9b42dc60540fd19d"],
+    ["<script src=\"margin-risk-core.js\"></script>","<script src=\"cnn-gauge.js","1a8d2dc0a50854a9cffd81c1f6d6a8204449c7971a62549c25756ee84ebdd83f"],
+    ["function renderHomeSentimentCards(","function marketSentimentPresentation(","1f71a9f4cd5844b6d07a0e48c0e297bcdd24c4cf5f076d21e46378ef45ed4481"],
+    ["function renderMarketSentimentSummary(","function combinedSentimentConclusion(","2563c12534cd6fda1ab32c7c9e901dff17fd4436958edfe527cf1013ea0e992f"],
+    ["function switchChipTab(","async function loadMarketEvents(","f7dd26b814bafd0253e6a7a9f741da7dacb710866fa22030a1172b0064179d39"],
+    ["$(\"#homeCnnCard\").addEventListener","$(\"#cnnFearGreedContent\").addEventListener","10819ffd94f96f338394e433b91da1f583c617012bce0e6b74a84770be2a8409"],
+  ]){
+   const block=range(source,start,end);
+   assert.equal(crypto.createHash('sha256').update(block).digest('hex'),pin,'UNREVIEWED_OFFICIAL_MARGIN_UI_CHANGE: '+start);
+   source=source.replace(block,range(v370,start,end));
+  }
+  assert.equal(source,v370,'UNRELATED_V380_HTML_OR_FINANCIAL_FUNCTION_CHANGED');
+ }
  for(const [start,end,pin] of [
   ["  <section id=\"homeSentiment\"","  </section>","2513c08a51548f6908e37c7cbe3c587b0867435b72be6f438ad795466d67450b"],
   ["function setHomeSentimentCard(","function cnnGaugePresentation(","f0a02c3bb06c95c102dd1681029ef9781539a4d1138cf7550853212e54b01eed"],
