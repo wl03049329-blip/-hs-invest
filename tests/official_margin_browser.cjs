@@ -75,8 +75,13 @@ async function run(){
           const geometry=await p.evaluate(()=>({doc:document.documentElement.scrollWidth, table:document.querySelector('#officialMarginObservation table').getBoundingClientRect().right}));
           assert.ok(geometry.doc<=width+1&&geometry.table<=width+1,'page/table overflow '+JSON.stringify(geometry));
           await panel.screenshot({path:path.join(out,`observation-${name}-${width}.png`)});
-          assert.deepEqual(errors,[]);
-          results.push({name,width,before:old.height,after:now.height,reduction:1-now.height/old.height});
+          // WebKit can surface the deliberately isolated FinMind transport as
+          // a PageError even when the route supplies 503. Keep it in evidence,
+          // but require zero unrelated/app errors (same rule as the PWA suite).
+          const transport=errors.filter(x=>/^\/api\.finmindtrade\.com\/api\/v4\/data\?dataset=TaiwanStock(?:Price|DividendResult)&[^\n]+ due to access control checks\.$/.test(x));
+          assert.deepEqual(errors.filter(x=>!transport.includes(x)),[]);
+          results.push({name,width,before:old.height,after:now.height,reduction:1-now.height/old.height,
+            expectedIsolatedTransport:transport});
           console.log('PASS',JSON.stringify(results.at(-1)));
         }finally{await context.close();}
       }
