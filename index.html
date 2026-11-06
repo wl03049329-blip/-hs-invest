@@ -5326,6 +5326,8 @@ async function load(){
     rebuildWatchDiagnostics(settled);
     if(!all.length){
       renderTop();renderCards();renderWatchDiagnostics();
+      // The existing futures snapshot is independent of ETF price availability.
+      void loadFuturesPosition();
       m.className="message info";
       m.textContent="歷史行情暫不可用：價格來源請求失敗或無有效資料。正式 C4 依獨立驗證快照顯示；無有效快照時維持資料不足，不以舊盤中資料替代。";
       return;

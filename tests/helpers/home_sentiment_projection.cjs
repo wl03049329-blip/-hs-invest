@@ -24,6 +24,9 @@ module.exports=function(source){
    const baselineStart=start==="let homeFuturesChangeAvailable="?"async function loadFuturesPosition(":start;
    source=source.replace(block,range(v380,baselineStart,end));
   }
+  const fallback='      renderTop();renderCards();renderWatchDiagnostics();\n      // The existing futures snapshot is independent of ETF price availability.\n      void loadFuturesPosition();\n';
+  assert(source.includes(fallback),'UNREVIEWED_V381_FUTURES_FALLBACK');
+  source=source.replace(fallback,'      renderTop();renderCards();renderWatchDiagnostics();\n');
   assert.equal(source,v380,'UNRELATED_V381_HTML_OR_FINANCIAL_FUNCTION_CHANGED');
  }
  // Phase 4A: verify each reviewed UI-only slice, then require the entire

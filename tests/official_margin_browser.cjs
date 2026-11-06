@@ -48,13 +48,14 @@ async function run(){
           await cnn.locator('svg').waitFor();
           await cnn.locator('g[data-cnn-needle][visibility="visible"]').waitFor();
           await p.evaluate(()=>loadFuturesPosition());
+          await p.evaluate(()=>renderHomeSentimentCards());
           await p.waitForFunction(()=>document.querySelector('#homeMarginBalanceCard b').textContent.includes('5,764.09'));
           const old=await cnn.boundingBox();
           await p.locator('#homeSentiment').screenshot({path:path.join(out,`before-${name}-${width}.png`)});
           await p.goto(origin+'/after/',{waitUntil:'domcontentloaded'});
           await p.waitForFunction(()=>document.querySelector('#homeMarginBalanceCard b').textContent.includes('5,764.09'));
           await cnn.locator('g[data-cnn-needle][visibility="visible"]').waitFor();
-          await p.evaluate(()=>loadFuturesPosition());
+          await p.waitForFunction(()=>document.querySelector('[data-home-foreign-change]').textContent.includes('2,004'));
           assert.equal(await p.locator('#homeSentimentCards > button').count(),5);
           assert.equal(await p.locator('#homeSentimentCards > button').first().getAttribute('id'),'homeCnnCard');
           assert.match(await p.locator('#homeMaintenanceCard').innerText(),/驗證中/);
