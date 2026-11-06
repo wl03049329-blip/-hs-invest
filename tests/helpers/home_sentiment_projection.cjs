@@ -11,6 +11,21 @@ module.exports=function(source){
   assert(a>=0&&b>a,start);
   return s.slice(a,b);
  };
+ if(source.includes("data-home-foreign-change")){
+  const v380=cp.execFileSync('git',['show','9b9d1609f8581f64b8c7e5484dd4c45a096ffac5:index.html'],{maxBuffer:8e6}).toString();
+  for(const [start,end,pin] of [
+   ["  <section id=\"homeSentiment\"","  </section>","80ccadf35df3a8759f590b46625477fc63632ae7965561b71517ea3ea0882c5a"],
+   ["let homeFuturesChangeAvailable=","function positionCard(","39d11a694a317f50304798918bb274e47484087007265da96bf1263273653b16"],
+   ["function renderHomeSentimentCards(","function marketSentimentPresentation(","5bdd53b57f443f03b5324fccf3b0709b4d10973bbb57199ad609fb24a26af759"],
+   ["function renderHomeSentimentDetails(","function combinedSentimentConclusion(","62a25f43805f75aabb447433c2eeeed30023e225ba5108eaacb35c7ba947741e"],
+  ]){
+   const block=range(source,start,end);
+   assert.equal(crypto.createHash('sha256').update(block).digest('hex'),pin,'UNREVIEWED_V381_DISPLAY_CHANGE: '+start);
+   const baselineStart=start==="let homeFuturesChangeAvailable="?"async function loadFuturesPosition(":start;
+   source=source.replace(block,range(v380,baselineStart,end));
+  }
+  assert.equal(source,v380,'UNRELATED_V381_HTML_OR_FINANCIAL_FUNCTION_CHANGED');
+ }
  // Phase 4A: verify each reviewed UI-only slice, then require the entire
  // V3.7 page to match before applying the prior historical projection.
  if(source.includes('id="officialMarginObservation"')){

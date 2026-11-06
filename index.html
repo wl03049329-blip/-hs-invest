@@ -419,10 +419,10 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
     <p id="homeSentimentConclusion" class="homeSentimentConclusion"><b>美股 CNN：載入中</b><span>台股四項：等待資料</span></p>
     <div id="homeSentimentCards" class="homeSentimentCards">
       <button id="homeCnnCard" class="homeSentimentCard" type="button" data-home-chip="mood" aria-controls="cnnFearGreedPanel" aria-label="美股 CNN 恐懼與貪婪指數；查看完整儀表盤"><span class="homeCnnTitle">美股 CNN 恐懼與貪婪指數</span><span class="homeCnnPlot" data-cnn-mini aria-hidden="true"></span><span class="homeCnnReadout"><b>—</b><em>載入中</em></span><small>更新中</small><span class="homeCnnLink" aria-hidden="true">查看完整情緒資訊 ›</span></button>
-      <button id="homeMarginBalanceCard" class="homeSentimentCard" type="button" data-home-chip="official-margin"><span>上市融資餘額</span><b>—</b><small>資料日期 —</small><em>載入中</em></button>
+      <button id="homeMarginBalanceCard" class="homeSentimentCard" type="button" data-home-chip="official-margin"><span>上市融資餘額</span><b>—</b><small>資料日期 —</small><em data-home-margin-change>—</em><small data-home-margin-status>載入中</small></button>
       <button id="homeMaintenanceCard" class="homeSentimentCard" type="button" data-home-chip="official-margin"><span>市場維持率</span><b>驗證中</b><em>新來源口徑未確認</em></button>
-      <button id="homeForeignFuturesCard" class="homeSentimentCard" type="button" data-home-chip="futures"><span>外資台指期</span><b>—</b><em>載入中</em><small hidden>盤後資料</small></button>
-      <button id="homeTmfRatioCard" class="homeSentimentCard" type="button" data-home-chip="futures"><span>散戶微台多空比</span><b>—</b><em>載入中</em><small hidden>非三大法人部位推估</small></button>
+      <button id="homeForeignFuturesCard" class="homeSentimentCard" type="button" data-home-chip="futures"><span>外資台指期</span><b>—</b><em>載入中</em><strong data-home-foreign-change>前日差異待更新</strong><small data-home-futures-note></small><small class="homeFuturesDate">資料日 —</small><time>更新 —</time></button>
+      <button id="homeTmfRatioCard" class="homeSentimentCard" type="button" data-home-chip="futures"><span>散戶微台多空比</span><b>—</b><em>載入中</em><small data-home-futures-note></small><small class="homeFuturesDate">資料日 —</small><time>更新 —</time><small class="homeTmfMethod">非三大法人部位推估</small></button>
     </div>
     <details id="homeSentimentDetails" class="homeSentimentDetails"><summary>展開資料方法與日期</summary><div>資料載入中…</div></details>
   </section>
@@ -2550,6 +2550,7 @@ async function refreshLiveQuotes({force=false}={}){
 }
 let livePublicQuotes=new Map(),liveMarketCacheVersion="",liveCanonicalCoreSnapshots=[],archivedIntradayCoreSnapshots=[],archivedIntradayCoreState={status:"NOT_LOADED",trading_date:"",last_success_at:null,last_attempt_at:null,error:null},liveCoreSourceState={source:"legacy",status:"UNAVAILABLE",reason:null,snapshots:[],market_state:"UNAVAILABLE",trading_date:""};
 async function loadMarketOverview(options={}){return refreshLiveQuotes(options)}
+let homeFuturesChangeAvailable=false,homeFuturesRefreshFailed=false;
 async function loadFuturesPosition(){
   const previous=futuresPosition;
   try{
@@ -2560,8 +2561,11 @@ async function loadFuturesPosition(){
     // Preserve V2 provenance even when a browser retains an older core bundle.
     futuresPosition.sourceStatus=raw.source_status||futuresPosition.sourceStatus||{};
     futuresPosition.snapshot=HSDataFreshnessCore.normalize({value:futuresPosition.foreign_tx?.net,data_date:futuresPosition.dataDate,updated_at:futuresPosition.updatedAt,source:"臺灣期貨交易所 OpenAPI"},{maxTradingDayAge:3});
-  }catch{futuresPosition=previous}
+    homeFuturesChangeAvailable=raw.source_status?.net_change_available===true&&Number.isSafeInteger(raw.foreign_tx?.net_change);
+    homeFuturesRefreshFailed=false;
+  }catch{futuresPosition=previous;homeFuturesRefreshFailed=true;}
   renderFuturesPosition();
+  renderHomeSentimentCards();
 }
 function positionCard(title,subtitle,item,changeAvailable){
   const netTone=item.net>0?"up":item.net<0?"down":"moodFlat",changeTone=item.net_change>0?"up":item.net_change<0?"down":"moodFlat";
@@ -4656,14 +4660,40 @@ function openCnnGauge(event){
 }
 function renderHomeSentimentCards(){
   const foreign=futuresPosition?.foreign_tx,tmf=futuresPosition?.estimated_non_institutional_tmf;
-  const futuresSnapshot=futuresPosition?.snapshot||HSDataFreshnessCore.normalize({});
-
+  const source=futuresPosition?.sourceStatus;
+  const futuresSnapshot=HSDataFreshnessCore.normalize({data_date:futuresPosition?.dataDate,updated_at:futuresPosition?.updatedAt},{maxTradingDayAge:3});
+  const aligned=source?.aligned===true;
   renderHomeCnnGauge();
-  const futuresFreshness=futuresFreshnessLabel(futuresPosition);
-  const futuresNote=futuresFreshness==="最新"?"":` · ${futuresFreshness}`;
-  setHomeSentimentCard("#homeForeignFuturesCard",{value:Number.isFinite(foreign?.net)?`${fmt(Math.abs(foreign.net))} 口`:"—",status:Number.isFinite(foreign?.net)?`${foreign.net>0?"淨多・偏多":foreign.net<0?"淨空・偏空":"淨部位為零"}${futuresNote}`:"資料尚未更新",date:futuresPosition?.dataDate,snapshot:futuresSnapshot});
+  const sourceLabel=futuresFreshnessLabel(futuresPosition);
+  const note=!futuresPosition?"資料尚未更新":!aligned?"資料口徑無法對齊":homeFuturesRefreshFailed?"更新失敗":
+    futuresSnapshot.status!=="LATEST"?HSDataFreshnessCore.label(futuresSnapshot.status):
+    Number(source.lag_trading_days)>0&&["最新","官方備援來源"].includes(sourceLabel)?"官方待更新":sourceLabel==="最新"?"":sourceLabel;
+  const current=aligned&&futuresSnapshot.status==="LATEST"&&(!note||note==="官方備援來源");
+  const foreignValid=aligned&&Number.isFinite(foreign?.net);
+  const foreignLabel=foreignValid?(foreign.net>0?"淨多・偏多":foreign.net<0?"淨空・偏空":"淨部位為零"):"";
   const ratio=Number.isFinite(tmf?.long)&&tmf.long>=0&&Number.isFinite(tmf?.short)&&tmf.short>0?tmf.long/tmf.short:null;
-  setHomeSentimentCard("#homeTmfRatioCard",{value:Number.isFinite(ratio)?ratio.toFixed(2):"—",status:Number.isFinite(ratio)?`${ratio>1.1?"偏多":ratio<.9?"偏空":"中性"}${futuresNote}`:"資料尚未更新",date:futuresPosition?.dataDate,snapshot:futuresSnapshot});
+  const ratioValid=aligned&&Number.isFinite(ratio);
+  const bias=ratio>1.1?"偏多":ratio<.9?"偏空":"中性";
+  const cards=[
+    ["#homeForeignFuturesCard",foreignValid?`${fmt(Math.abs(foreign.net))} 口`:"—",foreignLabel,"flat"],
+    ["#homeTmfRatioCard",ratioValid?ratio.toFixed(2):"—",ratioValid&&current?bias:"",ratioValid&&current?(bias==="偏多"?"rise":bias==="偏空"?"fall":"flat"):"flat"]
+  ];
+  for(const [selector,value,label,tone] of cards){
+    const card=$(selector);
+    card.dataset.homeTone=tone;
+    card.querySelector("b").textContent=value;
+    card.querySelector("em").textContent=label||note||"資料暫缺";
+    const date=card.querySelector(".homeFuturesDate");
+    date.textContent=`資料日 ${futuresSnapshot.data_date?.replaceAll("-","/")||"—"}`;
+    const updated=card.querySelector("time"),stamp=futuresSnapshot.updated_at;
+    updated.textContent=stamp?`更新 ${formatTaipeiDateTime(stamp)}`:"更新 —";
+    if(stamp)updated.dateTime=stamp;else updated.removeAttribute("datetime");
+    card.querySelector("[data-home-futures-note]").textContent=label?note:"";
+  }
+  const change=$("#homeForeignFuturesCard [data-home-foreign-change]");
+  const delta=homeFuturesChangeAvailable&&aligned?foreign?.net_change:null;
+  change.dataset.homeTone=Number.isFinite(delta)&&current?(delta>0?"rise":delta<0?"fall":"flat"):"flat";
+  change.textContent=Number.isFinite(delta)?`較前交易日 ${delta>0?"+":delta<0?"−":""}${fmt(Math.abs(delta))} 口`:"前日差異待更新";
   renderMarketSentimentSummary();
   renderHomeSentimentDetails();
 }
@@ -4683,7 +4713,7 @@ function renderMarketSentimentSummary(){
 }
 function renderHomeSentimentDetails(){
   const target=$("#homeSentimentDetails > div");if(!target)return;
-  const date=selector=>esc($(selector)?.querySelector("small")?.textContent||"資料日期待更新");
+  const date=selector=>esc($(selector)?.querySelector(".homeFuturesDate,small:not([data-home-futures-note])")?.textContent||"資料日期待更新");
   target.innerHTML=`<p>上市融資餘額：以 TWSE 信用交易統計的官方金額為準。增加或減少只表示餘額變動，不代表買賣訊號。</p><p>市場維持率：新來源口徑驗證中，暫不顯示數值。</p><p>外資台指期：${date("#homeForeignFuturesCard")}。期交所盤後淨部位。</p><p>散戶微台多空比：${date("#homeTmfRatioCard")}。期交所非三大法人部位推估，多單÷空單，不等同官方自然人持倉。</p><p>CNN（台北時間）：${esc(cnnPresentationCaption())}。只代表美股情緒，並非買賣訊號。</p>`;
 }
 function combinedSentimentConclusion(){
