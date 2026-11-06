@@ -3,7 +3,10 @@ const assert=require("node:assert/strict"),fs=require("node:fs"),vm=require("nod
 assert.match(workflow,/cron: "15 10,12,14 \* \* 1-5"/);assert.match(workflow,/concurrency:[\s\S]*group: hs-radar-raw-daily[\s\S]*cancel-in-progress: false/);
 assert.match(workflow,/--verify-public/);assert.match(workflow,/steps.collect.outcome != 'success'/);assert.match(workflow,/continue-on-error: true/);
 assert.match(workflow,/pages: write/);assert.match(workflow,/gh api --method POST "repos\/\$GITHUB_REPOSITORY\/pages\/builds"/);
-assert.match(workflow,/steps.publish.outputs.changed == 'true' \|\| inputs.revalidate == true/);
+const publish=workflow.slice(workflow.indexOf('      - name: Request and await'),workflow.indexOf('      - name: Fail closed'));
+assert.doesNotMatch(publish,/steps\.publish\.outputs\.changed/,'a no-op source run must still repair unpublished data');
+assert.match(publish,/--attempts 1; then[\s\S]*NOOP_PUBLIC_ARCHIVES_ALREADY_VERIFIED[\s\S]*exit 0[\s\S]*gh workflow run hs-stable-pages\.yml/);
+assert.match(publish,/gh run watch "\$found" --interval 5 --exit-status[\s\S]*name: Verify actual Pages build/);
 assert.match(workflow,/--revalidate/);assert.match(workflow,/retention-days: 30/);assert.match(workflow,/if: always\(\)/);assert.match(workflow,/git pull --rebase origin main/);
 assert.doesNotMatch(workflow,/force.push|--force|railway|finmind|git add \.|git add -A|git add \*/i);
 const add=workflow.match(/git add -- (.+)/)[1].trim().split(/\s+/);

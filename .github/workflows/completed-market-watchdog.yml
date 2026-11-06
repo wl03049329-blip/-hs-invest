@@ -49,8 +49,9 @@ jobs:
             try { report=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+'/completed-market.json','utf8')); }
             catch { report={healthy:false,reasons:['AUDIT_OR_CALENDAR_UNAVAILABLE']}; }
             if (report.deferred === true) {
-              // A mid-session Pages event is not completed-market evidence.
-              // Do not compete with the live producer or close prior alerts.
+              // Mid-session or bounded daily publication handoff is not healthy.
+              // Do not close prior alerts while awaiting public verification.
+              core.notice(report.waiting || report.reasons.join(', '), {title:'Completed market publication: waiting'});
               await core.summary.addCodeBlock(JSON.stringify(report,null,2),'json').write();
               return;
             }
