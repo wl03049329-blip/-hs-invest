@@ -86,7 +86,9 @@ class Client:
                     payload = json.loads(response.read().decode("utf-8-sig"))
                 break
             except (IncompleteRead, RemoteDisconnected, TimeoutError, URLError, ConnectionError) as exc:
-                if isinstance(exc, HTTPError) and exc.code not in (500, 502, 503, 504): raise
+                # TPEx can return a transient upstream connection timeout
+                # (522). Retry the same official URL, not an alternate source.
+                if isinstance(exc, HTTPError) and exc.code not in (500, 502, 503, 504, 522): raise
                 log("SOURCE_TRANSPORT_FAILURE", url=url, attempt=attempt, maximum=3, reason=str(exc))
                 if attempt == 3: raise
         e = dict(url=url, fetched_at=dt.datetime.now(dt.timezone.utc).isoformat(), payload=payload, sha256=digest(payload))

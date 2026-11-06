@@ -216,6 +216,22 @@ class RadarDailyTests(unittest.TestCase):
                 with self.assertRaises((json.JSONDecodeError,HTTPError)):client.get("https://fixture.invalid/official")
                 self.assertEqual(opener.call_count,1);self.assertEqual(client.entries,{})
 
+    def test_522_retries_same_url_without_caching_failed_response(self):
+        class Response(io.BytesIO): status=200
+        url="https://fixture.invalid/tpex"
+        failure=HTTPError(url,522,"TEST_TIMEOUT",{},None)
+        with patch.object(u.time,"sleep"),patch.object(u,"log"):
+            opener=Mock(side_effect=[failure,Response(b'{"complete":true}')])
+            client=u.Client(self.root/"evidence-522-ok",root=self.root/"checkout",opener=opener)
+            self.assertEqual(client.get(url)["payload"],{"complete":True})
+            self.assertEqual([call.args[0].full_url for call in opener.call_args_list],[url,url])
+            opener=Mock(side_effect=failure)
+            client=u.Client(self.root/"evidence-522-fail",root=self.root/"checkout",opener=opener)
+            with self.assertRaises(HTTPError):client.get(url)
+            self.assertEqual(opener.call_count,3)
+            self.assertEqual(client.entries,{})
+            self.assertEqual(list(client.directory.glob("*.json")),[])
+
     def test_failed_same_day_revalidation_requires_fresh_probe_before_clearing_warning(self):
         self.run_update()
         class Down(FixtureClient):

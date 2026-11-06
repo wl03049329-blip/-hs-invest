@@ -16,7 +16,7 @@ import sys
 import tempfile
 import time
 from urllib.request import urlopen
-from scripts.update_radar_daily import Client, expected_day, TZ
+from scripts.update_radar_daily import Client, expected_day, SYMBOLS, TZ
 
 SITE = "https://wl03049329-blip.github.io/-hs-invest/"
 REPO = "wl03049329-blip/-hs-invest"
@@ -40,8 +40,29 @@ def inspect(expected, quotes, daily, scores):
     if not any(r.get("date") == expected and r.get("finalized") is True for r in scores.get("snapshots", [])):
         reasons.append("CORE_CLOSE_NOT_CURRENT")
     return dict(expected_completed_session=expected, official_source_dates=dates,
-                daily_expected=daily.get("expected_completed_bar"), reasons=reasons,
+                daily_expected=daily.get("expected_completed_bar"),
+                daily_next_expected=daily.get("next_expected_trading_day"), reasons=reasons,
+                daily_unverified={
+                    symbol: {key: row.get(key) for key in ("status", "latest_verified_date", "provider", "reason")}
+                    for symbol, row in symbols.items()
+                    if row.get("status") != "CURRENT" or row.get("latest_verified_date") != expected
+                },
                 healthy=not reasons)
+
+
+def waiting_for_daily_publication(report):
+    """Allow only a bounded handoff from a complete previous daily release."""
+    prior = report["daily_expected"]
+    rows = report["daily_unverified"]
+    return (
+        set(report["reasons"]) == {"DAILY_CALENDAR_NOT_CURRENT", "DAILY_BARS_INCOMPLETE"}
+        and isinstance(prior, str) and prior < report["expected_completed_session"]
+        and report["daily_next_expected"] == report["expected_completed_session"]
+        and len(rows) == len(SYMBOLS) and set(rows) == set(SYMBOLS)
+        and all(row["status"] == "CURRENT" and row["latest_verified_date"] == prior
+                and not row["reason"] for row in rows.values())
+        and report.get("repair") == ["update-radar-daily.yml:PUBLICATION_IN_PROGRESS"]
+    )
 
 
 def public_json(name):
@@ -70,7 +91,15 @@ def repair(now, reasons=None):
     for workflow in workflows:
         raw = subprocess.check_output(["gh", "api", f"repos/{REPO}/actions/workflows/{workflow}/runs?branch=main&per_page=10"], text=True)
         runs = json.loads(raw)["workflow_runs"]
-        if any(r["status"] != "completed" for r in runs):
+        active = [r for r in runs if r["status"] != "completed"]
+        if active:
+            if workflow == "update-radar-daily.yml" and any(
+                r["status"] == "in_progress" and r.get("run_started_at")
+                and 0 <= (now - dt.datetime.fromisoformat(r["run_started_at"].replace("Z", "+00:00"))).total_seconds() < 1200
+                for r in active
+            ):
+                result.append(workflow + ":PUBLICATION_IN_PROGRESS")
+                continue
             result.append(workflow + ":ALREADY_RUNNING")
             continue
         if any(r["event"] == "workflow_dispatch" and (now - dt.datetime.fromisoformat(r["created_at"].replace("Z", "+00:00"))).total_seconds() < 1800 for r in runs):
@@ -103,8 +132,10 @@ def main():
     report = inspect(expected, public_json("market-quotes.json"), public_json("data/radar-history/status-v1.json"), public_json("finalized-core-score-snapshots-v1.json"))
     if args.repair and not report["healthy"]:
         report["repair"] = repair(now, report["reasons"])
+        if os.environ.get("HS_COMPLETED_AUDIT_TRIGGER") == "workflow_run" and waiting_for_daily_publication(report):
+            report.update(healthy=None, deferred=True, waiting="WAIT_DAILY_PUBLICATION")
     print(json.dumps(report, ensure_ascii=False))
-    if not report["healthy"]:
+    if report["healthy"] is False:
         raise SystemExit(1)
 
 

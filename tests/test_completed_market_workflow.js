@@ -33,3 +33,24 @@ assert(!publication.includes("if: steps.quotes.outputs.changed == 'true'"),'chan
 assert(collector.includes('for attempt in 1 2 3')&&collector.includes('test "$published" = true'),'bounded same-commit push retry still fails closed');
 assert(!/continue-on-error: true/.test(publication+collector),'partial failure cannot be green');
 console.log('PASS 9 quote-scope / no-op repair / short writer-lock / bounded push contracts');
+const vm=require('node:vm');
+const reportScript=m.split('          script: |')[1].split('\n      - uses:')[0];
+const marker='<!-- hs-completed-market-v1 -->', mutations=[], notices=[];
+let report;
+const env={
+  require:()=>({readFileSync:()=>JSON.stringify(report)}),process:{env:{RUNNER_TEMP:'/fixture'}},
+  context:{repo:{owner:'fixture',repo:'test'},runId:123},
+  github:{paginate:async()=>[{number:44,user:{login:'github-actions[bot]'},body:marker}],
+    rest:{issues:{listForRepo(){},update:async args=>mutations.push(args)}}},
+  core:{notice:message=>notices.push(message),summary:{addCodeBlock(){return this;},async write(){}}}
+};
+(async()=>{
+  const run=()=>vm.runInNewContext('(async()=>{'+reportScript+'})()',env);
+  report={healthy:null,deferred:true,waiting:'WAIT_DAILY_PUBLICATION'};
+  await run();assert.deepEqual(notices,['WAIT_DAILY_PUBLICATION']);assert.equal(mutations.length,0);
+  report={healthy:false,reasons:['DAILY_BARS_INCOMPLETE']};
+  await run();assert.match(mutations[0].body,/DAILY_BARS_INCOMPLETE/);
+  report={healthy:true,reasons:[]};
+  await run();assert.equal(mutations[1].state,'closed');
+  console.log('PASS watchdog waiting preserves alerts, incomplete reports, and verified recovery closes');
+})().catch(e=>{console.error(e);process.exitCode=1;});

@@ -101,6 +101,39 @@ class CompletedPublication(unittest.TestCase):
             expected.assert_not_called()
             recover.assert_not_called()
 
+    def test_post_pages_waits_only_for_bounded_handoff_from_complete_prior_release(self):
+        from scripts import check_completed_market as monitor
+        from contextlib import redirect_stdout
+        import io
+        now = dt.datetime(2026, 11, 2, 21, 21, tzinfo=monitor.TZ)
+        prior = "2026-10-30"
+        self.d.update(expected_completed_bar=prior, next_expected_trading_day="2026-11-02",
+                      symbols={s: dict(status="CURRENT", latest_verified_date=prior) for s in monitor.SYMBOLS})
+        for event, elapsed, prior_failed, wait in [
+            ("workflow_run", 60, False, True),
+            ("workflow_run", 1200, False, False),
+            ("workflow_run", 60, True, False),
+            ("schedule", 60, False, False),
+        ]:
+            with self.subTest(event=event, elapsed=elapsed, prior_failed=prior_failed):
+                self.d["symbols"]["009815"].update(
+                    status="STALE" if prior_failed else "CURRENT",
+                    reason="HTTP Error 522" if prior_failed else None)
+                runs = [{"status": "in_progress", "run_started_at": (now-dt.timedelta(seconds=elapsed)).isoformat()}]
+                with patch.dict("os.environ", {"HS_COMPLETED_AUDIT_TRIGGER": event}), patch.object(monitor.dt, "datetime", wraps=dt.datetime) as clock, patch.object(monitor, "expected_day", return_value=("2026-11-02", None, None)), patch.object(monitor, "public_json", side_effect=[self.q, self.d, self.s]), patch.object(monitor.subprocess, "check_output", return_value=json.dumps({"workflow_runs": runs})), patch.object(monitor.subprocess, "run") as dispatch, patch("sys.argv", ["check", "--repair"]), redirect_stdout(io.StringIO()) as output:
+                    clock.now.return_value = now
+                    if wait:
+                        monitor.main()
+                    else:
+                        with self.assertRaises(SystemExit) as failure:
+                            monitor.main()
+                        self.assertEqual(failure.exception.code, 1)
+                    report = json.loads(output.getvalue())
+                    self.assertIs(report["healthy"], None if wait else False)
+                    self.assertEqual(report.get("waiting"), "WAIT_DAILY_PUBLICATION" if wait else None)
+                    self.assertEqual(report["daily_unverified"]["009815"]["reason"], "HTTP Error 522" if prior_failed else None)
+                    dispatch.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()
