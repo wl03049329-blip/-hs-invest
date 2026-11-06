@@ -65,8 +65,8 @@ async function run(){
           await anchors.first().waitFor();
           assert.equal(await anchors.count(),2);
           assert.equal(await p.locator('#homeSentimentCards > .homeSentimentCard').count(),5);
-          assert.match(await p.locator('#homeMaintenanceCard').innerText(),/驗證中/);
-          assert.doesNotMatch(await p.locator('#homeMaintenanceCard').innerText(),/\d{2,}|%/);
+          assert.match(await p.locator('#homeTaiexCard').innerText(),/台灣加權指數/);
+          assert.match(await p.locator('#homeRetailNetCard').innerText(),/資料尚未建立/);
           assert.ok(await anchors.evaluateAll(nodes=>nodes.every(n=>!n.closest('button,[data-home-chip]')&&!n.hasAttribute('ping'))));
           await p.evaluate(async()=>{await document.fonts.ready;});
           const [a,b]=await anchors.evaluateAll(nodes=>nodes.map(n=>n.getBoundingClientRect().toJSON()));

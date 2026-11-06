@@ -11,6 +11,20 @@ module.exports=function(source){
   assert(a>=0&&b>a,start);
   return s.slice(a,b);
  };
+ if(source.includes('id="homeTaiexCard"')){
+  const previous=cp.execFileSync('git',['show','90b08d1e97d8e1c0c01be24e4ea3d27c3088576f:index.html'],{maxBuffer:8e6}).toString();
+  for(const [start,end,pin] of [
+   ['  <section id="homeSentiment"','  </section>','165ad595ff3ebceca4b37348460badd9425a5baf4c7a1c83ed971007c1be9352'],
+   ['<script src="official-margin-balance.js','<script src="cnn-gauge.js','dd373150009d4390e294522c94f2d4c90d5e6b0e07eacc9c8618e9144537f432'],
+   ['function renderHomeSentimentCards(','function marketSentimentPresentation(','b709a8b50942689d6f26097b9bc9617e2d1ce0bc1afa3fbebf7125f4aa1b0af6'],
+   ['function renderMarketSentimentSummary(','function combinedSentimentConclusion(','42f4ef822abaaae474843ed18ab895c7b3a1b448701f78720991b04bdb15093e'],
+  ]){
+   const block=range(source,start,end);
+   assert.equal(crypto.createHash('sha256').update(block).digest('hex'),pin,'UNREVIEWED_V390_DISPLAY_CHANGE: '+start);
+   source=source.replace(block,range(previous,start,end));
+  }
+  assert.equal(source,previous,'UNRELATED_V390_HTML_OR_FINANCIAL_FUNCTION_CHANGED');
+ }
  if(source.includes('class="homeMarginExternalLinks"')){
   const start='      <div class="homeSentimentCard homeMarginCardShell">';
   const end='      <button id="homeMaintenanceCard"';

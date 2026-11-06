@@ -54,7 +54,8 @@ check("stale and expired cached data are never advertised as current",()=>{
 });
 check("homepage has five cards with CNN first; focused mood navigation",()=>{
  const cards=html.slice(html.indexOf('id="homeSentimentCards"'),html.indexOf('id="homeSentimentDetails"'));
- assert.equal((cards.match(/data-home-chip=/g)||[]).length,5);assert.equal((cards.match(/data-cnn-mini/g)||[]).length,1);
+ assert.equal((cards.match(/^ {6}<(?:button|div) [^\n]*class="homeSentimentCard\b/gm)||[]).length,5);
+ assert.equal((cards.match(/data-home-chip=/g)||[]).length,4);assert.equal((cards.match(/data-cnn-mini/g)||[]).length,1);
  assert.equal(cards.match(/<button id="([^"]+)"/)[1],"homeCnnCard");
  assert.doesNotMatch(cards,/homeSentimentOverviewCard|<use href=/);
  assert.match(html,/id="cnnFearGreedPanel"[^>]*tabindex="-1"/);assert.match(html,/id="cnnGaugeTitle"/);

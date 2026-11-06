@@ -12,7 +12,7 @@ assert.match(html,/scheduleLongRankRefresh/);
 assert.match(html,/market-quotes-meta\.json\?ts=/);
 assert.doesNotMatch(html,/fetchNoStore\(`(?:market-overview|commodity-quotes|tx-futures-quote)\.json/);
 
-for(const id of ["homeMarginBalanceCard","homeMaintenanceCard","homeCnnCard","homeForeignFuturesCard","homeTmfRatioCard"])assert.match(html,new RegExp(`id="${id}"`));
+for(const id of ["homeMarginBalanceCard","homeTaiexCard","homeCnnCard","homeForeignFuturesCard","homeRetailNetCard"])assert.match(html,new RegExp(`id="${id}"`));
 assert.match(portfolio,/微台多空比＝推估多單÷推估空單/);
 assert.match(css,/homeSentimentWide\{grid-column:1\/-1\}/);
 

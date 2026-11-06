@@ -1,0 +1,32 @@
+name: Update official home TAIEX close
+on:
+  schedule:
+    - cron: "50 8 * * 1-5"
+    - cron: "20 11 * * 1-5"
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: update-home-taiex-main
+  cancel-in-progress: false
+jobs:
+  update:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - run: node --test tests/test_home_taiex.js
+      - run: node scripts/update_home_taiex.cjs
+      - name: Publish verified TAIEX display snapshot only
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- home-taiex.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Update verified home TAIEX close"
+          for attempt in 1 2 3; do
+            if git push origin HEAD:main; then exit 0; fi
+            git pull --rebase origin main
+          done
+          exit 1

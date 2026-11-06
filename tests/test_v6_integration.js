@@ -70,7 +70,7 @@ check("延遲行情更新、節流、退避與背景頁處理", () => {
 
 check("首頁五項情緒精簡卡片可切換籌碼頁", () => {
   assert.match(html, /id="homeCnnCard"/);
-  for (const id of ["homeMarginBalanceCard", "homeMaintenanceCard", "homeForeignFuturesCard", "homeTmfRatioCard"]) assert.match(html, new RegExp(`id="${id}"`));
+  for (const id of ["homeMarginBalanceCard", "homeTaiexCard", "homeForeignFuturesCard", "homeRetailNetCard"]) assert.match(html, new RegExp(`id="${id}"`));
   assert.match(html, /data-home-chip/);
 });
 
