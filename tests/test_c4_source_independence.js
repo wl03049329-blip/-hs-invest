@@ -17,7 +17,9 @@ assert.equal(context.decisionCenterOfficialRows({items:{'0050':{official:{status
 // Exercise the actual asynchronous initializer with every price request rejected.
 (async()=>{const calls=[],elements={message:{},reload:{querySelector:()=>({}),setAttribute(){},removeAttribute(){}}},noop=async()=>{};
  const c={$:s=>elements[s.slice(1)],syncWatchlistState(){},renderWatchlist(){},loadFinalizedCoreScoreHistory:noop,loadResearchC4History:noop,loadResearchC4Outcomes:noop,loadCorporateActionTables:noop,loadEtfValuation:noop,loadLeverageOfficialStatus:noop,renderCards:()=>calls.push('cards'),renderTop:()=>calls.push('official'),renderWatchDiagnostics:()=>calls.push('diagnostic'),rebuildWatchDiagnostics(){},ids:symbols,one:async()=>{throw new Error('TEST_CORS_BLOCKED')},all:[],esc:String};
+ c.loadFuturesPosition=async()=>calls.push('futures');
  vm.createContext(c);vm.runInContext(extract('async function load(){','$("#token").value='),c);await c.load();assert.equal(c.all.length,0);assert.equal(elements.reload.disabled,false);assert.ok(calls.filter(v=>v==='official').length>=3);assert.match(elements.message.textContent,/歷史行情暫不可用/);assert.match(elements.message.textContent,/無有效快照時維持資料不足/);
+ assert.equal(calls.filter(v=>v==='futures').length,1,'independent existing futures cache loads once when all ETF prices fail');
  assert.doesNotMatch(extract('function decisionCenterOfficialRows','function selectDecisionCenterHighest'),/buildFinal|calculate|\.setItem|fetch\(/);
  console.log('PASS C4 price-source independence: actual FINALIZED raw scores/tier/date; rejected version/incomplete/missing/null; real initializer completion without any price item');
 })().catch(e=>{console.error(e);process.exitCode=1});

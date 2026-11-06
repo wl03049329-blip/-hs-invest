@@ -69,7 +69,10 @@
       const latest=view.latest, row=home.latest, state=issue||home.status;
       set("#homeMarginBalanceCard b",row?`${money(row.amount)} 億`:"—");
       set("#homeMarginBalanceCard small",row?`資料日 ${row.date.replaceAll("-","/")}`:"資料日期 —");
-      set("#homeMarginBalanceCard em",row?`${change(row.delta)}${row.delta===null?"":" 億"} · ${labels[state]}`:labels[state]);
+      set("#homeMarginBalanceCard [data-home-margin-change]",row&&row.delta!==null?`${change(row.delta)} 億`:"—");
+      set("#homeMarginBalanceCard [data-home-margin-status]",labels[state]);
+      const delta=doc.querySelector("#homeMarginBalanceCard [data-home-margin-change]");
+      if(delta)delta.dataset.homeTone=row?.delta>0?"rise":row?.delta<0?"fall":"flat";
       const card=doc.querySelector("#homeMarginBalanceCard");if(card)card.dataset.officialState=state;
       set("#officialMarginValue",latest?`${money(latest.amount)} 億元`:"—");
       set("#officialMarginChange",latest&&latest.delta!==null?`較前交易日 ${change(latest.delta)} 億元`:"無同市場前交易日可比資料");
