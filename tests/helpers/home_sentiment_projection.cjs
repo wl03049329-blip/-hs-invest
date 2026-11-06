@@ -11,6 +11,15 @@ module.exports=function(source){
   assert(a>=0&&b>a,start);
   return s.slice(a,b);
  };
+ if(source.includes('class="homeMarginExternalLinks"')){
+  const start='      <div class="homeSentimentCard homeMarginCardShell">';
+  const end='      <button id="homeMaintenanceCard"';
+  const block=range(source,start,end);
+  assert.equal(crypto.createHash('sha256').update(block).digest('hex'),
+   '5429785ab3a687cb719cfa5c00663d2e57be18827131b6bee9cc72000c0bf973','UNREVIEWED_MARGIN_EXTERNAL_LINKS_MARKUP');
+  const prior=cp.execFileSync('git',['show','ffa2ef8ae972b118b0ffddd7101dc556a7b0433e:index.html'],{maxBuffer:8e6}).toString();
+  source=source.replace(block,range(prior,'      <button id="homeMarginBalanceCard"',end));
+ }
  if(source.includes("data-home-foreign-change")){
   const v380=cp.execFileSync('git',['show','9b9d1609f8581f64b8c7e5484dd4c45a096ffac5:index.html'],{maxBuffer:8e6}).toString();
   for(const [start,end,pin] of [

@@ -419,7 +419,13 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
     <p id="homeSentimentConclusion" class="homeSentimentConclusion"><b>美股 CNN：載入中</b><span>台股四項：等待資料</span></p>
     <div id="homeSentimentCards" class="homeSentimentCards">
       <button id="homeCnnCard" class="homeSentimentCard" type="button" data-home-chip="mood" aria-controls="cnnFearGreedPanel" aria-label="美股 CNN 恐懼與貪婪指數；查看完整儀表盤"><span class="homeCnnTitle">美股 CNN 恐懼與貪婪指數</span><span class="homeCnnPlot" data-cnn-mini aria-hidden="true"></span><span class="homeCnnReadout"><b>—</b><em>載入中</em></span><small>更新中</small><span class="homeCnnLink" aria-hidden="true">查看完整情緒資訊 ›</span></button>
-      <button id="homeMarginBalanceCard" class="homeSentimentCard" type="button" data-home-chip="official-margin"><span>上市融資餘額</span><b>—</b><small>資料日期 —</small><em data-home-margin-change>—</em><small data-home-margin-status>載入中</small></button>
+      <div class="homeSentimentCard homeMarginCardShell">
+        <button id="homeMarginBalanceCard" class="homeSentimentCard" type="button" data-home-chip="official-margin"><span>上市融資餘額</span><b>—</b><small>資料日期 —</small><em data-home-margin-change>—</em><small data-home-margin-status>載入中</small></button>
+        <div class="homeMarginExternalLinks">
+          <a href="https://www.wantgoo.com/stock/margin-trading/market-price/taiex" target="_blank" rel="noopener noreferrer" aria-label="玩股網維持率（另開分頁）">玩股網維持率</a>
+          <a href="https://www.twse.com.tw/dashboard/zh/credit/margin.html" target="_blank" rel="noopener noreferrer" aria-label="證交所官方（另開分頁）">證交所官方</a>
+        </div>
+      </div>
       <button id="homeMaintenanceCard" class="homeSentimentCard" type="button" data-home-chip="official-margin"><span>市場維持率</span><b>驗證中</b><em>新來源口徑未確認</em></button>
       <button id="homeForeignFuturesCard" class="homeSentimentCard" type="button" data-home-chip="futures"><span>外資台指期</span><b>—</b><em>載入中</em><strong data-home-foreign-change>前日差異待更新</strong><small data-home-futures-note></small><small class="homeFuturesDate">資料日 —</small><time>更新 —</time></button>
       <button id="homeTmfRatioCard" class="homeSentimentCard" type="button" data-home-chip="futures"><span>散戶微台多空比</span><b>—</b><em>載入中</em><small data-home-futures-note></small><small class="homeFuturesDate">資料日 —</small><time>更新 —</time><small class="homeTmfMethod">非三大法人部位推估</small></button>

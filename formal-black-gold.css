@@ -2325,6 +2325,44 @@ footer{color:#746f67}
 #homeSentiment #homeMarginBalanceCard > small { color:#d3c3a2; font-size:13px; text-align:left; justify-self:start; }
 #homeSentiment #homeMarginBalanceCard > b { font-size:clamp(19px, 5.6vw, 25px); }
 #homeSentiment #homeMarginBalanceCard > [data-home-margin-status] { margin-top:3px; }
+#homeSentiment .homeMarginCardShell {
+  grid-template-rows: 1fr auto;
+  align-content: stretch;
+  gap: 0;
+  padding: 0;
+  cursor: default;
+}
+#homeSentiment .homeMarginCardShell > #homeMarginBalanceCard {
+  border: 0;
+  background: transparent;
+  padding-bottom: 7px;
+}
+#homeSentiment .homeMarginCardShell > #homeMarginBalanceCard:focus-visible { outline-offset: -3px; }
+#homeSentiment .homeMarginExternalLinks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+  padding: 0 7px 7px;
+}
+#homeSentiment .homeMarginExternalLinks > a {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 44px;
+  padding: 3px;
+  border: 1px solid #806239;
+  border-radius: 8px;
+  background: #221a10;
+  color: #f2d69b;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.25;
+  text-align: center;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+#homeSentiment .homeMarginExternalLinks > a:hover { background: #312416; }
+#homeSentiment .homeMarginExternalLinks > a:focus-visible { outline: 2px solid #edca7d; outline-offset: 1px; }
 #homeSentiment :is(#homeForeignFuturesCard,#homeTmfRatioCard) > :is(small,time),
 #homeSentiment #homeForeignFuturesCard > [data-home-foreign-change] {
   display:block; min-width:0; justify-self:start; text-align:left; color:#d3c3a2;
