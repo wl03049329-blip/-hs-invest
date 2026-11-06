@@ -6,7 +6,8 @@ const root=path.resolve(__dirname,'..'),out=process.env.HS_MARGIN_UI_OUT,base=pr
 if(!out||!/^[a-f0-9]{40}$/.test(base||''))throw Error('EVIDENCE_DIR_AND_BASE_REQUIRED');
 fs.mkdirSync(out,{recursive:true});
 const prior=new Map(['index.html','formal-black-gold.css','official-margin-balance.js'].map(file=>[file,cp.execFileSync('git',['show',base+':'+file],{cwd:root,maxBuffer:4e6})]));
-const originalFutures=require('../futures-position.json'), originalMargin=require('../official-margin-balance.json');
+const fixture=file=>JSON.parse(cp.execFileSync('git',['show','9b9d1609f8581f64b8c7e5484dd4c45a096ffac5:'+file],{cwd:root}));
+const originalFutures=fixture('futures-position.json'), originalMargin=fixture('official-margin-balance.json');
 const mime={'.html':'text/html; charset=utf-8','.css':'text/css','.js':'text/javascript','.json':'application/json','.svg':'image/svg+xml','.png':'image/png','.webmanifest':'application/manifest+json'};
 const server=http.createServer((req,res)=>{
   const [,stage,...pieces]=decodeURIComponent(new URL(req.url,'http://local').pathname).split('/');
@@ -56,8 +57,8 @@ async function run(){
           await p.waitForFunction(()=>document.querySelector('#homeMarginBalanceCard b').textContent.includes('5,764.09'));
           await cnn.locator('g[data-cnn-needle][visibility="visible"]').waitFor();
           await p.waitForFunction(()=>document.querySelector('[data-home-foreign-change]').textContent.includes('2,004'));
-          assert.equal(await p.locator('#homeSentimentCards > button').count(),5);
-          assert.equal(await p.locator('#homeSentimentCards > button').first().getAttribute('id'),'homeCnnCard');
+          assert.equal(await p.locator('#homeSentimentCards > .homeSentimentCard').count(),5);
+          assert.equal(await p.locator('#homeSentimentCards > .homeSentimentCard').first().getAttribute('id'),'homeCnnCard');
           assert.match(await p.locator('#homeMaintenanceCard').innerText(),/驗證中/);
           assert.doesNotMatch(await p.locator('#homeMaintenanceCard').innerText(),/\d{2,}|%/);
           const [now,plot,number,date]=await Promise.all([cnn.boundingBox(),cnn.locator('svg').boundingBox(),cnn.locator('b').boundingBox(),cnn.locator('small').boundingBox()]);
@@ -80,7 +81,7 @@ async function run(){
             assert.equal(await c.locator('.homeFuturesDate').textContent(),'資料日 2026/11/05');
             assert.match(await c.locator('time').textContent(),/2026\/11\/05.*23:41/);
           }
-          assert.ok(await p.evaluate(()=>[...document.querySelectorAll('#homeSentimentCards > button > :is(b,em,small,time,strong)')].every(e=>e.scrollWidth<=e.clientWidth+1)));
+          assert.ok(await p.evaluate(()=>[...document.querySelectorAll('#homeSentimentCards button > :is(b,em,small,time,strong)')].every(e=>e.scrollWidth<=e.clientWidth+1)));
           await p.locator('#homeMarginBalanceCard').click();
           const panel=p.locator('#officialMarginObservation');
           await panel.waitFor();
