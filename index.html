@@ -418,9 +418,9 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
     </div>
     <p id="homeSentimentConclusion" class="homeSentimentConclusion"><b>美股 CNN：載入中</b><span>台股四項：等待資料</span></p>
     <div id="homeSentimentCards" class="homeSentimentCards">
-      <button id="homeCnnCard" class="homeSentimentCard" type="button" data-home-chip="mood" aria-controls="cnnFearGreedPanel" aria-label="美股 CNN 恐懼與貪婪指數；查看完整儀表盤"><span>美股 CNN 恐懼與貪婪指數</span><span class="homeCnnPlot" data-cnn-mini aria-hidden="true"></span><b>—</b><em>載入中</em><small>更新中</small><span class="homeCnnLink" aria-hidden="true">查看完整情緒資訊 ›</span></button>
-      <button id="homeMarginBalanceCard" class="homeSentimentCard" type="button" data-home-chip="margin"><span>台股推估融資本金</span><b>—</b><em>載入中</em><small hidden>盤後資料</small></button>
-      <button id="homeMaintenanceCard" class="homeSentimentCard" type="button" data-home-chip="margin"><span>市場推估融資維持率</span><b>—</b><em>載入中</em><small hidden>盤後資料</small></button>
+      <button id="homeCnnCard" class="homeSentimentCard" type="button" data-home-chip="mood" aria-controls="cnnFearGreedPanel" aria-label="美股 CNN 恐懼與貪婪指數；查看完整儀表盤"><span class="homeCnnTitle">美股 CNN 恐懼與貪婪指數</span><span class="homeCnnPlot" data-cnn-mini aria-hidden="true"></span><span class="homeCnnReadout"><b>—</b><em>載入中</em></span><small>更新中</small><span class="homeCnnLink" aria-hidden="true">查看完整情緒資訊 ›</span></button>
+      <button id="homeMarginBalanceCard" class="homeSentimentCard" type="button" data-home-chip="official-margin"><span>上市融資餘額</span><b>—</b><small>資料日期 —</small><em>載入中</em></button>
+      <button id="homeMaintenanceCard" class="homeSentimentCard" type="button" data-home-chip="official-margin"><span>市場維持率</span><b>驗證中</b><em>新來源口徑未確認</em></button>
       <button id="homeForeignFuturesCard" class="homeSentimentCard" type="button" data-home-chip="futures"><span>外資台指期</span><b>—</b><em>載入中</em><small hidden>盤後資料</small></button>
       <button id="homeTmfRatioCard" class="homeSentimentCard" type="button" data-home-chip="futures"><span>散戶微台多空比</span><b>—</b><em>載入中</em><small hidden>非三大法人部位推估</small></button>
     </div>
@@ -598,6 +598,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       <button class="chipSegment active" type="button" role="tab" aria-selected="true" data-chip-tab="overview">總覽</button>
       <button class="chipSegment" type="button" role="tab" aria-selected="false" data-chip-tab="mood">😨 市場情緒</button>
       <button class="chipSegment" type="button" role="tab" aria-selected="false" data-chip-tab="margin">🏦 融資風險</button>
+      <button class="chipSegment" type="button" role="tab" aria-selected="false" data-chip-tab="official-margin" aria-controls="officialMarginObservation">融資觀察</button>
       <button class="chipSegment" type="button" role="tab" aria-selected="false" data-chip-tab="institutions">🏛️ 三大法人</button>
       <button class="chipSegment" type="button" role="tab" aria-selected="false" data-chip-tab="futures">📑 期貨籌碼</button>
       <button class="chipSegment" type="button" role="tab" aria-selected="false" data-chip-tab="events">📅 重大事件</button>
@@ -624,6 +625,23 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
         <div id="fomoContent"><div class="skeleton">載入融資資料中…</div></div>
       </article>
     </div>
+    <section class="chipPanel officialMarginObservation" data-chip-panel="official-margin" id="officialMarginObservation" aria-labelledby="officialMarginHeading" hidden>
+      <h2 id="officialMarginHeading">融資觀察</h2>
+      <div class="officialMarginButtons" role="group" aria-label="市場">
+        <button type="button" data-margin-market="twse" aria-pressed="true">上市</button><button type="button" data-margin-market="tpex" aria-pressed="false">上櫃</button><button type="button" data-margin-market="combined" aria-pressed="false">合計</button>
+      </div>
+      <p id="officialMarginStatus" role="status">載入中</p>
+      <strong id="officialMarginValue">—</strong>
+      <p id="officialMarginChange">—</p>
+      <p id="officialMarginDates">資料日期待更新</p>
+      <div class="officialMarginButtons" role="group" aria-label="歷史交易日">
+        <button type="button" data-margin-limit="20" aria-pressed="true">近 20 日</button><button type="button" data-margin-limit="60" aria-pressed="false">近 60 日</button>
+      </div>
+      <details><summary>融資餘額趨勢</summary><svg viewBox="0 0 320 110" role="img" aria-label="官方融資餘額時間趨勢" hidden><path fill="none" stroke="#e5bf74" stroke-width="2.5"></path></svg><p id="officialMarginChartNote"></p></details>
+      <p id="officialMarginCoverage">維持率尚未啟用。</p>
+      <table><caption>每日官方融資資料（維持率未啟用，以 — 表示）</caption><thead><tr><th scope="col">資料日期</th><th scope="col">餘額<br>億元</th><th scope="col">增減<br>億元</th><th scope="col">維持率<br>%</th></tr></thead><tbody></tbody></table>
+      <p><a href="https://www.twse.com.tw/zh/trading/margin/mi-margn.html" target="_blank" rel="noopener">TWSE 上市信用交易統計</a> · <a href="https://www.tpex.org.tw/zh-tw/market-infomation.html" target="_blank" rel="noopener">TPEx 上櫃市場看板</a></p>
+    </section>
     <div class="chipPanel" data-chip-panel="institutions" hidden>
     <article class="panel chipWide">
       <div class="panelTitle"><div><p class="eyebrow">SMART MONEY</p><h2><span class="headingEmoji" aria-hidden="true">🏛️</span>三大法人</h2></div><small>今日盤後更新</small></div>
@@ -1145,6 +1163,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 <script src="persistence-core.js?v=20260809a"></script>
 <script src="drawdown-price-core.js"></script>
 <script src="margin-risk-core.js"></script>
+<script src="official-margin-balance.js"></script>
 <script src="institutional-flow-core.js"></script>
 <script src="market-events-core.js"></script>
 <script src="data-freshness-core.js"></script>
@@ -4636,12 +4655,8 @@ function openCnnGauge(event){
   requestAnimationFrame(()=>{const panel=$("#cnnFearGreedPanel");panel?.focus({preventScroll:true});panel?.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"});});
 }
 function renderHomeSentimentCards(){
-  const risk=marketChip.marginRisk,values=HSMarginRiskCore.displayValues(risk),foreign=futuresPosition?.foreign_tx,tmf=futuresPosition?.estimated_non_institutional_tmf;
-  const marginSnapshot=risk?.snapshot||HSDataFreshnessCore.normalize({});
-
+  const foreign=futuresPosition?.foreign_tx,tmf=futuresPosition?.estimated_non_institutional_tmf;
   const futuresSnapshot=futuresPosition?.snapshot||HSDataFreshnessCore.normalize({});
-  setHomeSentimentCard("#homeMarginBalanceCard",{value:Number.isFinite(values.financingPrincipal)?formatYi(values.financingPrincipal):"—",status:Number.isFinite(values.financingPrincipal)?risk?.interpretation?.label||"待判讀":"資料尚未更新",date:values.dataDate,snapshot:marginSnapshot});
-  setHomeSentimentCard("#homeMaintenanceCard",{value:Number.isFinite(values.maintenanceRatio)?`${fmt(values.maintenanceRatio)}%`:"—",status:maintenanceDisplayLabel(values.maintenanceRatio),date:values.dataDate,snapshot:marginSnapshot});
 
   renderHomeCnnGauge();
   const futuresFreshness=futuresFreshnessLabel(futuresPosition);
@@ -4661,16 +4676,15 @@ function marketSentimentPresentation(){
   return HSCnnGauge.marketCoverage({values,marginStatus:current(risk?.snapshot,values.dataDate),futures:futuresPosition,futuresStatus:current(futuresPosition?.snapshot,futuresPosition?.dataDate),cnnView:cnnGaugePresentation()});
 }
 function renderMarketSentimentSummary(){
-  const view=marketSentimentPresentation();
   const cnn=cnnGaugePresentation(),summary=$("#homeSentimentConclusion");
   if(!summary)return;
   summary.querySelector("b").textContent=`美股 CNN：${cnn.cnn?`${HSCnnGauge.format(cnn.cnn.score)} · ${cnn.cnn.label} · `:""}${cnn.status.split("｜")[0]}`;
-  summary.querySelector("span").textContent=`台股四項：${view.value}${view.missing.length?`（缺 ${view.missing.length} 項）`:view.outdated.length?`（${view.outdated.length} 項待更新）`:" · 僅指資料完整度"}`;
+  summary.querySelector("span").textContent="台股四項：各自依來源日期顯示 · 維持率驗證中；狀態僅指資料完整度";
 }
 function renderHomeSentimentDetails(){
   const target=$("#homeSentimentDetails > div");if(!target)return;
   const date=selector=>esc($(selector)?.querySelector("small")?.textContent||"資料日期待更新");
-  target.innerHTML=`<p>${esc(combinedSentimentConclusion())}</p><p>台股推估融資本金：${date("#homeMarginBalanceCard")}。沿用 TWSE／TPEx 融資與收盤資料推估，觀察融資資金及市場槓桿壓力。</p><p>市場推估融資維持率：${date("#homeMaintenanceCard")}。是整體市場推估值，不是個人帳戶維持率。</p><p>外資台指期：${date("#homeForeignFuturesCard")}。期交所盤後淨部位。</p><p>散戶微台多空比：${date("#homeTmfRatioCard")}。期交所非三大法人部位推估，多單÷空單，不等同官方自然人持倉。</p><p>CNN（台北時間）：${esc(cnnPresentationCaption())}。只代表美股情緒，並非買賣訊號。</p>`;
+  target.innerHTML=`<p>上市融資餘額：以 TWSE 信用交易統計的官方金額為準。增加或減少只表示餘額變動，不代表買賣訊號。</p><p>市場維持率：新來源口徑驗證中，暫不顯示數值。</p><p>外資台指期：${date("#homeForeignFuturesCard")}。期交所盤後淨部位。</p><p>散戶微台多空比：${date("#homeTmfRatioCard")}。期交所非三大法人部位推估，多單÷空單，不等同官方自然人持倉。</p><p>CNN（台北時間）：${esc(cnnPresentationCaption())}。只代表美股情緒，並非買賣訊號。</p>`;
 }
 function combinedSentimentConclusion(){
   return marketSentimentPresentation().text;
@@ -4704,7 +4718,7 @@ function renderChipOverview(){
   document.querySelectorAll("[data-chip-jump]").forEach(button=>button.addEventListener("click",()=>switchChipTab(button.dataset.chipJump)));
 }
 function switchChipTab(name,{scroll=true}={}){
-  const allowed=["overview","mood","margin","institutions","futures","events"],active=allowed.includes(name)?name:"overview";
+  const allowed=["overview","mood","margin","official-margin","institutions","futures","events"],active=allowed.includes(name)?name:"overview";
   document.querySelectorAll("[data-chip-panel]").forEach(panel=>{panel.hidden=panel.dataset.chipPanel!==active});
   document.querySelectorAll("[data-chip-tab]").forEach(button=>{
     const selected=button.dataset.chipTab===active;button.classList.toggle("active",selected);button.setAttribute("aria-selected",String(selected));
@@ -5246,6 +5260,7 @@ $("#homeSentimentCards").addEventListener("click",event=>{
   switchChipTab(card.dataset.homeChip,{scroll:false});
 });
 renderHomeSentimentCards();
+HSOfficialMargin.start(document,fetch);
 $("#cnnFearGreedContent").addEventListener("click",event=>{if(event.target.closest("[data-cnn-refresh]"))refreshCnnFearGreed({force:true});});
 document.querySelectorAll("[data-radar-view]").forEach(button=>button.addEventListener("click",()=>switchRadarOverviewView(button.dataset.radarView)));
 document.addEventListener("click",event=>{const button=event.target.closest("[data-home-c4-sort]");if(!button)return;homeC4SortMode=["score","change","threshold"].includes(button.dataset.homeC4Sort)?button.dataset.homeC4Sort:"score";renderTop()});
