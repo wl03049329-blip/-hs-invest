@@ -68,8 +68,12 @@ async function run(){
           assert.match(await p.locator('#homeMaintenanceCard').innerText(),/驗證中/);
           assert.doesNotMatch(await p.locator('#homeMaintenanceCard').innerText(),/\d{2,}|%/);
           assert.ok(await anchors.evaluateAll(nodes=>nodes.every(n=>!n.closest('button,[data-home-chip]')&&!n.hasAttribute('ping'))));
-          const [a,b]=await Promise.all([anchors.nth(0).boundingBox(),anchors.nth(1).boundingBox()]);
-          assert.ok(a.height>=44&&b.height>=44&&Math.abs(a.y-b.y)<1&&a.x+a.width<=b.x&&b.x+b.width<=width);
+          await p.evaluate(async()=>{await document.fonts.ready;});
+          const [a,b]=await anchors.evaluateAll(nodes=>nodes.map(n=>n.getBoundingClientRect().toJSON()));
+          if(!(a.height>=44&&b.height>=44&&Math.abs(a.y-b.y)<1&&a.right<=b.left&&b.right<=width)){
+            await home.screenshot({path:path.join(out,name+'-'+width+'-geometry-fail.png')});
+            assert.fail(JSON.stringify({name,width,a,b}));
+          }
           assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
           assert.ok(await anchors.evaluateAll(nodes=>nodes.every(n=>n.scrollWidth<=n.clientWidth+1)));
           assert.deepEqual(hits,[],'no requests to the destinations before user navigation');
