@@ -25,7 +25,15 @@ async function run(){
       for(const width of [320,375,390,430,1280]){
         const context=await browser.newContext({viewport:{width,height:900},isMobile:width<600,hasTouch:width<600,serviceWorkers:'block'});
         try{
-          await context.route('**/*',route=>route.request().url().startsWith(origin)?route.continue():route.abort());
+          await context.route('**/*',route=>{
+            const url=new URL(route.request().url());
+            if(url.origin===origin)return route.continue();
+            // Model an HTTP outage explicitly. Aborting in the harness emits
+            // an unrelated WebKit CORS PageError instead of the app's handled 503.
+            if(['api.finmindtrade.com','hs-invest-production.up.railway.app','mis.twse.com.tw'].includes(url.hostname))
+              return route.fulfill({status:503,headers:{'access-control-allow-origin':'*'},body:''});
+            return route.abort();
+          });
           const p=await context.newPage(),errors=[];
           p.on('pageerror',e=>errors.push(e.message));
           await p.addInitScript(t=>{
@@ -63,6 +71,7 @@ async function run(){
           assert.ok((await panel.locator('tbody td:last-child').allTextContents()).every(x=>x==='—'));
           await panel.locator('summary').click();
           assert.ok((await panel.locator('svg path').getAttribute('d')).includes('L'));
+          assert.ok(await panel.locator('svg').isVisible(),'trend chart must actually be visible');
           const geometry=await p.evaluate(()=>({doc:document.documentElement.scrollWidth, table:document.querySelector('#officialMarginObservation table').getBoundingClientRect().right}));
           assert.ok(geometry.doc<=width+1&&geometry.table<=width+1,'page/table overflow '+JSON.stringify(geometry));
           await panel.screenshot({path:path.join(out,`observation-${name}-${width}.png`)});

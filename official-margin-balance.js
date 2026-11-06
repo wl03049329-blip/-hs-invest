@@ -95,7 +95,7 @@
         const command=pen?"L":"M";pen=true;
         return `${command}${(8+304*i/Math.max(points.length-1,1)).toFixed(2)} ${(ys.length>1&&max!==min?94-76*(p.amount-min)/spread:56).toFixed(2)}`;
       }).join(" "));
-      chart.hidden=ys.length<2;
+      chart.toggleAttribute("hidden",ys.length<2);
       set("#officialMarginChartNote",ys.length>=2?`${points[0].date} 至 ${points.at(-1).date} · ${money(min)}–${money(max)} 億元`:"至少需兩日有效資料");
     }
     async function refresh(){
