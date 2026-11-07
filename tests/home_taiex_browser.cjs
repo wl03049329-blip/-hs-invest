@@ -28,6 +28,7 @@ async function run(){
   await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
   const base = "http://127.0.0.1:"+server.address().port+"/";
   for (const [name,engine] of [["chrome",chromium],["webkit",webkit]]) {
+    if (process.env.HS_TAIEX_ENGINE && process.env.HS_TAIEX_ENGINE !== name) continue;
     const browser = await engine.launch(name==="chrome"?{channel:"chrome"}:{});
     try {
       for (const width of [320,375,390,1280]) {
@@ -102,11 +103,17 @@ async function run(){
           await card.locator("[data-taiex-state]:not([hidden])").waitFor();
           assert.equal((await read())[2],next.trade_date);
           assert.equal(await page.evaluate(key=>Object.keys(localStorage).filter(k=>k.startsWith(key+".")).length,core.key),1);
-          // Windows WebKit reports these deliberately disconnected Railway
-          // requests as page errors. Keep the diagnostics and reject any other error.
+          // Windows WebKit reports deliberately disconnected existing data
+          // transports as page errors. Keep their diagnostics and reject any other error.
           const isolatedTransport = errors.filter(message =>
-            name === "webkit" && /^\/hs-invest-production\.up\.railway\.app\/api\/(?:live-scores|push\/config) due to access control checks\.$/.test(message));
-          if (isolatedTransport.length) console.log("ISOLATED_TRANSPORT",name,width,JSON.stringify(isolatedTransport));
+            name === "webkit" && (
+              /^\/hs-invest-production\.up\.railway\.app\/api\/(?:live-scores|push\/config) due to access control checks\.$/.test(message) ||
+              /^\/api\.finmindtrade\.com\/api\/v4\/data\?dataset=TaiwanStock(?:Price|DividendResult|ParValueChange|SplitPrice)(?:&[^\s]+)? due to access control checks\.$/.test(message)
+            ));
+          if (isolatedTransport.length) {
+            fs.writeFileSync(path.join(out,`transport-${name}-${width}.json`),JSON.stringify(isolatedTransport,null,2));
+            console.log("ISOLATED_TRANSPORT",name,width,isolatedTransport.length);
+          }
           assert.deepEqual(errors.filter(message=>!isolatedTransport.includes(message)),[]);
           console.log("PASS",name,width);
         } finally { await ctx.close(); }
