@@ -11,6 +11,20 @@ module.exports=function(source){
   assert(a>=0&&b>a,start);
   return s.slice(a,b);
  };
+ if(source.includes('src="home-tmf-core.js"')){
+  const previous=cp.execFileSync('git',['show','7dbfefcea827c1c8dc6fdbcb6e97339c100a3481:index.html'],{maxBuffer:8e6}).toString();
+  for(const [start,end,pin] of [
+   ['  <section id="homeSentiment"','  </section>','628a26461d490f9bfc87d228281a1d1505c75b7c2dd389981dd0bf23d64acfd0'],
+   ['<script src="official-margin-balance.js','<script src="cnn-gauge.js','843ea5f3e643f44c22150c161fd2b3d3d4e34c759c2f42bef6ec8d50331087cb'],
+   ['function renderHomeSentimentCards(','function marketSentimentPresentation(','b709a8b50942689d6f26097b9bc9617e2d1ce0bc1afa3fbebf7125f4aa1b0af6'],
+   ['function renderMarketSentimentSummary(','function combinedSentimentConclusion(','97bf595cc0b05c9ba250d0d72cbc79b4a5a54435afc886ef31b26cbf8ce61b95'],
+  ]){
+   const block=range(source,start,end);
+   assert.equal(crypto.createHash('sha256').update(block).digest('hex'),pin,'UNREVIEWED_V391_DISPLAY_CHANGE: '+start);
+   source=source.replace(block,range(previous,start,end));
+  }
+  assert.equal(source,previous,'UNRELATED_V391_HTML_OR_FINANCIAL_FUNCTION_CHANGED');
+ }
  if(source.includes('id="homeTaiexCard"')){
   const previous=cp.execFileSync('git',['show','90b08d1e97d8e1c0c01be24e4ea3d27c3088576f:index.html'],{maxBuffer:8e6}).toString();
   for(const [start,end,pin] of [
