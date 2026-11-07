@@ -11,6 +11,7 @@ if(!out) throw Error('HS_LINKS_TEST_OUT_REQUIRED');
 fs.mkdirSync(out,{recursive:true});
 const production='https://wl03049329-blip.github.io/-hs-invest/';
 const publicMode=process.argv.includes('--public');
+const researchStage=process.env.HS_RESEARCH_STAGE && path.resolve(process.env.HS_RESEARCH_STAGE);
 const links=[
  ['玩股網維持率','https://www.wantgoo.com/stock/margin-trading/market-price/taiex'],
  ['證交所官方','https://www.twse.com.tw/dashboard/zh/credit/margin.html'],
@@ -23,8 +24,14 @@ async function run(){
     const site=build({out:path.join(out,'site')}).out;
     server=http.createServer((req,res)=>{
       const file=path.resolve(site,'.'+decodeURIComponent(new URL(req.url,'http://localhost').pathname));
-      const p=file===site?path.join(site,'index.html'):file;
-      if(!p.startsWith(site+path.sep)||!fs.existsSync(p)||!fs.statSync(p).isFile())return res.writeHead(404).end();
+      let p=file===site?path.join(site,'index.html'):file;
+      if(!p.startsWith(site+path.sep))return res.writeHead(404).end();
+      const relative=path.relative(site,p).split(path.sep).join('/');
+      if(researchStage&&/^data\/lc4-research\/(?:latest\.json|status\.json|snapshots\/[a-z0-9.-]+\.json)$/.test(relative)){
+        const candidate=path.join(researchStage,relative);
+        if(fs.existsSync(candidate))p=candidate;
+      }
+      if(!fs.existsSync(p)||!fs.statSync(p).isFile())return res.writeHead(404).end();
       res.writeHead(200,{'Content-Type':types[path.extname(p)]||'application/octet-stream','Cache-Control':'no-store'}).end(fs.readFileSync(p));
     });
     await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
@@ -60,6 +67,22 @@ async function run(){
             }
           }
           await p.goto(base+'?links='+Date.now(),{waitUntil:'domcontentloaded'});
+          assert.equal(await p.locator('.hsDashboardDetails,#hsTodaySummary,#rankList,#radarCurrentSlot,#radarNextSlot').count(),0);
+          await p.waitForFunction(()=>document.querySelectorAll('#hsDashboardC4Grid [data-c4-symbol]').length===6);
+          for(const mode of ['change','threshold','score']){
+            const sort=p.locator('[data-home-c4-sort='+mode+']');
+            await sort.click();
+            assert.match(await sort.getAttribute('class'),/is-active/);
+            assert.equal(await p.locator('#hsDashboardC4Grid [data-c4-symbol]').count(),6);
+          }
+          await p.locator('#homeDataHealthOpen').click();
+          await p.locator('#homeDataHealthDialog[open]').waitFor();
+          await p.locator('#homeDataHealthClose').click();
+          assert.match(await p.locator('#homeLeverageBrief').innerText(),/描述性研究 · 非買進訊號/);
+          if(researchStage&&!publicMode){
+            await p.waitForFunction(()=>document.querySelector('#lc4-radar-v2 .lc4v2-meta')?.textContent.includes('2026-11-06 收盤'));
+            assert.match(await p.locator('#lc4-radar-v2 .lc4v2-meta').innerText(),/26\.30/);
+          }
           if(publicMode)await p.waitForFunction(()=>self.HSStableApp?.status().phase==='CURRENT',null,{timeout:45000});
           assert.equal(await p.locator('meta[name="hs-app-commit"]').getAttribute('content'),receipt.commit);
           const home=p.locator('.homeMarginCardShell');
