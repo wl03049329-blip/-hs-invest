@@ -38,6 +38,7 @@ async function run(){
     base='http://127.0.0.1:'+server.address().port+'/';
   }
   for(const [name,engine] of [['chrome',chromium],['webkit',webkit]]){
+    if(process.env.HS_LINKS_ENGINE&&name!==process.env.HS_LINKS_ENGINE)continue;
     const browser=await engine.launch(name==='chrome'?{channel:'chrome'}:{});
     try{
       for(const width of publicMode?[390]:[320,375,390,430,1280]){
@@ -72,7 +73,7 @@ async function run(){
           for(const mode of ['change','threshold','score']){
             const sort=p.locator('[data-home-c4-sort='+mode+']');
             await sort.click();
-            assert.match(await sort.getAttribute('class'),/is-active/);
+            await p.locator('[data-home-c4-sort='+mode+'].is-active').waitFor();
             assert.equal(await p.locator('#hsDashboardC4Grid [data-c4-symbol]').count(),6);
           }
           await p.locator('#homeDataHealthOpen').click();
