@@ -46,7 +46,7 @@ async function run(){
           });
           const p=await ctx.newPage();
           const receipt=await (await ctx.request.get(base+'app-release.json?links='+Date.now())).json();
-          assert.equal(receipt.version,'3.9.1');
+          assert.equal(receipt.version,'3.9.2');
           assert.equal(receipt.financial_writer,false);
           if(publicMode){
             const expected=process.env.HS_LINKS_DEPLOYMENT;

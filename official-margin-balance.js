@@ -68,7 +68,7 @@
       const today=dayText(),home=marketView(data,"twse",today),view=marketView(data,market,today,limit);
       const latest=view.latest, row=home.latest, state=issue||home.status;
       set("#homeMarginBalanceCard b",row?`${money(row.amount)} 億`:"—");
-      set("#homeMarginBalanceCard small",row?`資料日 ${row.date.replaceAll("-","/")}`:"資料日期 —");
+      set("#homeMarginDate",row?`資料日 ${row.date.replaceAll("-","/")}`:"資料日 —");
       set("#homeMarginBalanceCard [data-home-margin-change]",row&&row.delta!==null?`${change(row.delta)} 億`:"—");
       set("#homeMarginBalanceCard [data-home-margin-status]",labels[state]);
       const delta=doc.querySelector("#homeMarginBalanceCard [data-home-margin-change]");

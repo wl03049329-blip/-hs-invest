@@ -2246,6 +2246,7 @@ footer{color:#746f67}
 #homeSentiment .homeSentimentCards {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: auto repeat(2, 1fr);
   gap: 8px;
   margin: 0;
 }
@@ -2322,11 +2323,10 @@ footer{color:#746f67}
   white-space: normal;
 }
 #homeSentiment #homeCnnCard > .homeCnnLink { color: #d9ba78; font-size: 13px; }
-#homeSentiment #homeMarginBalanceCard > small { color:#d3c3a2; font-size:13px; text-align:left; justify-self:start; }
 #homeSentiment #homeMarginBalanceCard > b { font-size:clamp(19px, 5.6vw, 25px); }
 #homeSentiment #homeMarginBalanceCard > [data-home-margin-status] { margin-top:3px; }
 #homeSentiment .homeMarginCardShell {
-  grid-template-rows: 1fr auto;
+  grid-template-rows: 1fr auto auto;
   align-content: stretch;
   gap: 0;
   padding: 0;
@@ -2370,6 +2370,40 @@ footer{color:#746f67}
 }
 #homeSentiment #homeForeignFuturesCard > [data-home-futures-note]:empty { display:none; }
 #homeSentiment #homeForeignFuturesCard > [data-home-foreign-change] { font-weight:700; }
+#homeSentiment .homeSentimentCards > .homeSentimentCard:not(#homeCnnCard):not(.homeMarginCardShell) {
+  display:flex;
+  flex-direction:column;
+}
+#homeSentiment :is(#homeMarginBalanceCard,#homeForeignFuturesCard,#homeTaiexCard,#homeTmfRatioCard) > small {
+  color:#b3a385;
+  font-size:11px;
+  font-weight:500;
+  line-height:1.35;
+}
+#homeSentiment .homeSentimentCard > .homeMarketFooter {
+  display:flex;
+  flex-wrap:wrap;
+  align-content:start;
+  align-items:baseline;
+  gap:0 5px;
+  margin-top:auto;
+  min-block-size:29px;
+  color:#b3a385;
+  font-size:11px;
+  font-weight:500;
+  line-height:14px;
+  text-align:left;
+}
+#homeSentiment .homeMarketFooter > :is(small,time) {
+  font-size:inherit;
+  line-height:inherit;
+  color:inherit;
+  white-space:nowrap;
+  font-variant-numeric:tabular-nums;
+}
+#homeSentiment .homeMarketFooter > .homeFuturesDate + time { font-size:10px; }
+#homeSentiment .homeMarginCardShell > .homeMarketFooter { margin:0 12px 12px; }
+#homeSentiment :is(#homeForeignFuturesCard,#homeTmfRatioCard) > [data-home-tone="flat"] { color:#b3a385; }
 #homeSentiment #homeMarginBalanceCard > [data-home-tone="rise"],
 #homeSentiment #homeForeignFuturesCard > [data-home-tone="rise"],
 #homeSentiment #homeTmfRatioCard > [data-home-tone="rise"],
@@ -2378,14 +2412,13 @@ footer{color:#746f67}
 #homeSentiment #homeForeignFuturesCard > [data-home-tone="fall"],
 #homeSentiment #homeTmfRatioCard > [data-home-tone="fall"],
 #homeSentiment #homeTaiexCard > [data-home-tone="fall"] { color:#79d9ad; }
-#homeSentiment :is(#homeTaiexCard,#homeTmfRatioCard) > strong {
-  font-size: 13px;
+#homeSentiment :is(#homeTaiexCard,#homeTmfRatioCard,#homeForeignFuturesCard) > strong {
+  font-size: 14px;
   line-height: 1.35;
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
 #homeSentiment :is(#homeTaiexCard,#homeTmfRatioCard) > [hidden] { display:none; }
-#homeSentiment :is(#homeTaiexCard,#homeTmfRatioCard) > time:not([hidden]) { margin-top:auto; }
 .officialMarginObservation { min-width:0; padding:12px; border:1px solid #594526; border-radius:14px; background:#14110d; color:#f3e8d3; }
 .officialMarginObservation[hidden], .officialMarginObservation svg[hidden] { display:none; }
 .officialMarginObservation h2 { margin:0 0 10px; }

@@ -420,15 +420,16 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
     <div id="homeSentimentCards" class="homeSentimentCards">
       <button id="homeCnnCard" class="homeSentimentCard" type="button" data-home-chip="mood" aria-controls="cnnFearGreedPanel" aria-label="美股 CNN 恐懼與貪婪指數；查看完整儀表盤"><span class="homeCnnTitle">美股 CNN 恐懼與貪婪指數</span><span class="homeCnnPlot" data-cnn-mini aria-hidden="true"></span><span class="homeCnnReadout"><b>—</b><em>載入中</em></span><small>更新中</small><span class="homeCnnLink" aria-hidden="true">查看完整情緒資訊 ›</span></button>
       <div class="homeSentimentCard homeMarginCardShell">
-        <button id="homeMarginBalanceCard" class="homeSentimentCard" type="button" data-home-chip="official-margin"><span>上市融資餘額</span><b>—</b><small>資料日期 —</small><em data-home-margin-change>—</em><small data-home-margin-status>載入中</small></button>
+        <button id="homeMarginBalanceCard" class="homeSentimentCard" type="button" data-home-chip="official-margin" aria-describedby="homeMarginDate"><span>上市融資餘額</span><b>—</b><em data-home-margin-change>—</em><small data-home-margin-status>載入中</small></button>
         <div class="homeMarginExternalLinks">
           <a href="https://www.wantgoo.com/stock/margin-trading/market-price/taiex" target="_blank" rel="noopener noreferrer" aria-label="玩股網維持率（另開分頁）">玩股網維持率</a>
           <a href="https://www.twse.com.tw/dashboard/zh/credit/margin.html" target="_blank" rel="noopener noreferrer" aria-label="證交所官方（另開分頁）">證交所官方</a>
         </div>
+        <div class="homeMarketFooter"><small id="homeMarginDate">資料日 —</small></div>
       </div>
-      <div id="homeTaiexCard" class="homeSentimentCard"><span>台灣加權指數</span><b>—</b><strong hidden></strong><small data-taiex-state>資料尚未建立</small><time hidden></time></div>
-      <button id="homeForeignFuturesCard" class="homeSentimentCard" type="button" data-home-chip="futures"><span>外資台指期</span><b>—</b><em>載入中</em><strong data-home-foreign-change>前日差異待更新</strong><small data-home-futures-note></small><small class="homeFuturesDate">資料日 —</small><time>更新 —</time></button>
-      <button id="homeTmfRatioCard" class="homeSentimentCard" type="button" data-home-chip="futures"><span>微台散戶淨留倉</span><b>—</b><strong hidden></strong><small class="homeTmfMethod">非三大法人部位推估</small><small data-tmf-state>資料尚未建立</small><time hidden></time></button>
+      <div id="homeTaiexCard" class="homeSentimentCard"><span>台灣加權指數</span><b>—</b><strong hidden></strong><small>證交所官方收盤</small><small data-taiex-state>資料尚未建立</small><div class="homeMarketFooter"><time>資料日 —</time></div></div>
+      <button id="homeForeignFuturesCard" class="homeSentimentCard" type="button" data-home-chip="futures"><span>外資台指期</span><b>—</b><em>載入中</em><strong data-home-foreign-change>前日差異待更新</strong><small data-home-futures-note></small><span class="homeMarketFooter"><small class="homeFuturesDate">資料日 —</small><time>更新 —</time></span></button>
+      <button id="homeTmfRatioCard" class="homeSentimentCard" type="button" data-home-chip="futures"><span>微台散戶淨留倉</span><b>—</b><strong hidden></strong><small class="homeTmfMethod">非三大法人部位推估</small><small data-tmf-state>資料尚未建立</small><span class="homeMarketFooter"><time>資料日 —</time></span></button>
     </div>
     <details id="homeSentimentDetails" class="homeSentimentDetails"><summary>展開資料方法與日期</summary><div>資料載入中…</div></details>
   </section>
@@ -4688,12 +4689,13 @@ function renderHomeSentimentCards(){
     card.dataset.homeTone=tone;
     card.querySelector("b").textContent=value;
     card.querySelector("em").textContent=label||note||"資料暫缺";
+    card.querySelector("em").dataset.homeTone=foreignValid?(foreign.net>0?"rise":foreign.net<0?"fall":"flat"):"flat";
     const date=card.querySelector(".homeFuturesDate");
     date.textContent=`資料日 ${futuresSnapshot.data_date?.replaceAll("-","/")||"—"}`;
     const updated=card.querySelector("time"),stamp=futuresSnapshot.updated_at;
     updated.textContent=stamp?`更新 ${formatTaipeiDateTime(stamp)}`:"更新 —";
     if(stamp)updated.dateTime=stamp;else updated.removeAttribute("datetime");
-    card.querySelector("[data-home-futures-note]").textContent=label?note:"";
+    card.querySelector("[data-home-futures-note]").textContent=label?(note||"期交所官方"):"";
   }
   const change=$("#homeForeignFuturesCard [data-home-foreign-change]");
   const delta=homeFuturesChangeAvailable&&aligned?foreign?.net_change:null;

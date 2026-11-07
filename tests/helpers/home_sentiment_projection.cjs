@@ -11,6 +11,18 @@ module.exports=function(source){
   assert(a>=0&&b>a,start);
   return s.slice(a,b);
  };
+ if(source.includes('class="homeMarketFooter"')){
+  const previous=cp.execFileSync('git',['show','aa1d607b985c5215ffa244915e0fbd2b6b8965ac:index.html'],{maxBuffer:8e6}).toString();
+  for(const [start,end,pin] of [
+   ['  <section id="homeSentiment"','  </section>','d1f7a44382985841282e55b5623765e4a6d24c8023b0dc96e03bcea343435475'],
+   ['function renderHomeSentimentCards(','function marketSentimentPresentation(','d7dc4ec283a45b60efaf85f80110e0ebea527dd5f70aed646099601e44639095'],
+  ]){
+   const block=range(source,start,end);
+   assert.equal(crypto.createHash('sha256').update(block).digest('hex'),pin,'UNREVIEWED_V392_DISPLAY_CHANGE: '+start);
+   source=source.replace(block,range(previous,start,end));
+  }
+  assert.equal(source,previous,'UNRELATED_V392_HTML_OR_FINANCIAL_FUNCTION_CHANGED');
+ }
  if(source.includes('src="home-tmf-core.js"')){
   const previous=cp.execFileSync('git',['show','7dbfefcea827c1c8dc6fdbcb6e97339c100a3481:index.html'],{maxBuffer:8e6}).toString();
   for(const [start,end,pin] of [
