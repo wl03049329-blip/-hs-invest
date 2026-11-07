@@ -201,11 +201,14 @@ class ExactRecoveryTests(unittest.TestCase):
         self.assertEqual(len(daily.pending_integrity_reviews(self.root,records)),7)
         self.assertFalse(bridge.approved(generation['recovery_records']))
 
-    def test_fresh_clock_after_completed_new_day_rejected(self):
+    def test_relabelled_old_evidence_after_completed_new_day_rejected(self):
         evidence=copy.deepcopy(self.evidence);now=at('2026-10-19','18:00:00')
         evidence['captured_at']=now.isoformat()
         for receipt in evidence['receipts']:receipt['retrieved_at']=now.isoformat()
-        with self.assertRaisesRegex(daily.Error,'CURRENT_TARGET_OUTSIDE_SCOPE'):self.simulate(evidence=evidence,now=now)
+        # New dates need actual new source coverage, not rewritten timestamps.
+        with self.assertRaisesRegex(daily.Error,'EXACT_REQUIRED_FRESH_SOURCE_MISSING'):
+            self.simulate(evidence=evidence,now=now)
+        self.assertFalse((self.output/'TEST_ONLY-committed-generation.json').exists());self.unchanged()
 
     def test_company_action_and_bridge_limit_still_enforced(self):
         for mutation in ('action','missing_actions','bridge_limit','revision'):
