@@ -72,7 +72,8 @@ async function run(){
           await p.waitForFunction(()=>document.querySelectorAll('#hsDashboardC4Grid [data-c4-symbol]').length===6);
           for(const mode of ['change','threshold','score']){
             const sort=p.locator('[data-home-c4-sort='+mode+']');
-            await sort.click();
+            await sort.evaluate(button=>button.scrollIntoView({behavior:'instant',block:'center'}));
+            if(mobile)await sort.tap();else await sort.click();
             await p.locator('[data-home-c4-sort='+mode+'].is-active').waitFor();
             assert.equal(await p.locator('#hsDashboardC4Grid [data-c4-symbol]').count(),6);
           }
