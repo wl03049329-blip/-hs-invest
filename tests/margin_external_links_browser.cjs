@@ -54,7 +54,7 @@ async function run(){
           });
           const p=await ctx.newPage();
           const receipt=await (await ctx.request.get(base+'app-release.json?links='+Date.now())).json();
-          assert.equal(receipt.version,'3.9.2');
+          assert.equal(receipt.version,'3.9.3');
           assert.equal(receipt.financial_writer,false);
           if(publicMode){
             const expected=process.env.HS_LINKS_DEPLOYMENT;
@@ -85,7 +85,11 @@ async function run(){
             await p.waitForFunction(()=>document.querySelector('#lc4-radar-v2 .lc4v2-meta')?.textContent.includes('2026-11-06 收盤'));
             assert.match(await p.locator('#lc4-radar-v2 .lc4v2-meta').innerText(),/26\.30/);
           }
-          if(publicMode)await p.waitForFunction(()=>self.HSStableApp?.status().phase==='CURRENT',null,{timeout:45000});
+          if(publicMode){
+            await p.waitForFunction(()=>self.HSStableApp?.status().phase==='CURRENT',null,{timeout:45000});
+            const date=process.env.HS_LINKS_RESEARCH_DATE;
+            if(date)await p.waitForFunction(d=>document.querySelector('#lc4-radar-v2 .lc4v2-meta')?.textContent.includes(d+' 收盤'),date);
+          }
           assert.equal(await p.locator('meta[name="hs-app-commit"]').getAttribute('content'),receipt.commit);
           const home=p.locator('.homeMarginCardShell');
           const anchors=home.locator('.homeMarginExternalLinks > a');
