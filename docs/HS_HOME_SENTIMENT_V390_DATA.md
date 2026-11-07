@@ -1,4 +1,4 @@
-# HS V3.9 雙指標驗收（未發布）
+# HS V3.9 Phase A／Phase B 資料契約
 
 ## 已驗證：加權指數
 
@@ -15,4 +15,4 @@ HS 的 futures-position.json / estimated_non_institutional_tmf 是一般交易�
 
 [期交所各期貨契約三大法人資料](https://www.taifex.com.tw/cht/3/futContractsDate) 不含自然人欄位；[期交所觀測站](https://www.taifex.com.tw/eventTaifexTradingCenter/cht/index.do) 的三大法人／大額交易人不是自然人分類。[期交所專題](https://www.sfb.gov.tw/uploaddowndoc?file=publication%2F202503201812170.pdf&filedisplay=04-%E5%B0%88%E9%A1%8C%E4%B8%80.pdf&flag=doc) 曾分析自然人未沖銷淨額，但不構成可持續每日取用的公開資料來源。未找到可驗證、可持續且可公開轉載的自然人逐日口數資料。
 
-候選頁面保留空值、顯示「資料尚未建立」；既有籌碼頁的推估資料與金融功能不變。雙指標正式發布 **NO-GO**。解鎖需提供具使用權的 TMF 自然人每日未平倉多、空（或淨額）來源、涵蓋契約及交易時段，並能核對前一有效交易日。
+Phase A 僅替換加權指數卡；正式首頁保留原散戶微台多空比名稱、推估標示及計算方式。Phase B **BLOCKED**，不顯示散戶淨留單口數。解鎖需提供具使用權的 TMF 自然人每日未平倉多、空（或淨額）來源、涵蓋契約及交易時段，並能核對前一有效交易日。原雙卡候選及研究保存於本機 d0511719。

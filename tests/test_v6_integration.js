@@ -23,7 +23,7 @@ check("產品版本由單一 SemVer 來源提供與五個正式分頁", () => {
   assert.match(html, /HS｜ETF股市雷達/);
   assert.match(html, /data-hs-version/);
   assert.match(html, /app-version\.js/);
-  assert.match(fs.readFileSync(path.join(root, "version.json"), "utf8"), /"version"\s*:\s*"3\.8\.2"/);
+  assert.match(fs.readFileSync(path.join(root, "version.json"), "utf8"), /"version"\s*:\s*"3\.9\.0"/);
   assert.match(html, /data-tab="signals"[^>]*>[\s\S]*?<span>ETF雷達<\/span><\/button>/);
   for (const tab of ["today", "signals", "portfolio", "sentiment", "more"]) {
     assert.match(html, new RegExp(`data-tab="${tab}"`));
@@ -70,7 +70,7 @@ check("延遲行情更新、節流、退避與背景頁處理", () => {
 
 check("首頁五項情緒精簡卡片可切換籌碼頁", () => {
   assert.match(html, /id="homeCnnCard"/);
-  for (const id of ["homeMarginBalanceCard", "homeTaiexCard", "homeForeignFuturesCard", "homeRetailNetCard"]) assert.match(html, new RegExp(`id="${id}"`));
+  for (const id of ["homeMarginBalanceCard", "homeTaiexCard", "homeForeignFuturesCard", "homeTmfRatioCard"]) assert.match(html, new RegExp(`id="${id}"`));
   assert.match(html, /data-home-chip/);
 });
 

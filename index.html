@@ -428,7 +428,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       </div>
       <div id="homeTaiexCard" class="homeSentimentCard"><span>台灣加權指數</span><b>—</b><strong hidden></strong><small data-taiex-state>資料尚未建立</small><time hidden></time></div>
       <button id="homeForeignFuturesCard" class="homeSentimentCard" type="button" data-home-chip="futures"><span>外資台指期</span><b>—</b><em>載入中</em><strong data-home-foreign-change>前日差異待更新</strong><small data-home-futures-note></small><small class="homeFuturesDate">資料日 —</small><time>更新 —</time></button>
-      <button id="homeRetailNetCard" class="homeSentimentCard" type="button" data-home-chip="futures"><span>散戶淨留單</span><b>—</b><small>資料尚未建立</small></button>
+      <button id="homeTmfRatioCard" class="homeSentimentCard" type="button" data-home-chip="futures"><span>散戶微台多空比</span><b>—</b><em>載入中</em><small data-home-futures-note></small><small class="homeFuturesDate">資料日 —</small><time>更新 —</time><small class="homeTmfMethod">非三大法人部位推估</small></button>
     </div>
     <details id="homeSentimentDetails" class="homeSentimentDetails"><summary>展開資料方法與日期</summary><div>資料載入中…</div></details>
   </section>
@@ -4667,7 +4667,7 @@ function openCnnGauge(event){
   requestAnimationFrame(()=>{const panel=$("#cnnFearGreedPanel");panel?.focus({preventScroll:true});panel?.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"});});
 }
 function renderHomeSentimentCards(){
-  const foreign=futuresPosition?.foreign_tx;
+  const foreign=futuresPosition?.foreign_tx,tmf=futuresPosition?.estimated_non_institutional_tmf;
   const source=futuresPosition?.sourceStatus;
   const futuresSnapshot=HSDataFreshnessCore.normalize({data_date:futuresPosition?.dataDate,updated_at:futuresPosition?.updatedAt},{maxTradingDayAge:3});
   const aligned=source?.aligned===true;
@@ -4679,8 +4679,12 @@ function renderHomeSentimentCards(){
   const current=aligned&&futuresSnapshot.status==="LATEST"&&(!note||note==="官方備援來源");
   const foreignValid=aligned&&Number.isFinite(foreign?.net);
   const foreignLabel=foreignValid?(foreign.net>0?"淨多・偏多":foreign.net<0?"淨空・偏空":"淨部位為零"):"";
+  const ratio=Number.isFinite(tmf?.long)&&tmf.long>=0&&Number.isFinite(tmf?.short)&&tmf.short>0?tmf.long/tmf.short:null;
+  const ratioValid=aligned&&Number.isFinite(ratio);
+  const bias=ratio>1.1?"偏多":ratio<.9?"偏空":"中性";
   const cards=[
-    ["#homeForeignFuturesCard",foreignValid?`${fmt(Math.abs(foreign.net))} 口`:"—",foreignLabel,"flat"]
+    ["#homeForeignFuturesCard",foreignValid?`${fmt(Math.abs(foreign.net))} 口`:"—",foreignLabel,"flat"],
+    ["#homeTmfRatioCard",ratioValid?ratio.toFixed(2):"—",ratioValid&&current?bias:"",ratioValid&&current?(bias==="偏多"?"rise":bias==="偏空"?"fall":"flat"):"flat"]
   ];
   for(const [selector,value,label,tone] of cards){
     const card=$(selector);
@@ -4718,7 +4722,7 @@ function renderMarketSentimentSummary(){
 function renderHomeSentimentDetails(){
   const target=$("#homeSentimentDetails > div");if(!target)return;
   const date=selector=>esc($(selector)?.querySelector(".homeFuturesDate,small:not([data-home-futures-note])")?.textContent||"資料日期待更新");
-  target.innerHTML=`<p>上市融資餘額：以 TWSE 信用交易統計的官方金額為準。增加或減少只表示餘額變動，不代表買賣訊號。</p><p>台灣加權指數：證交所每日市場成交資訊；以前一交易日收盤作為日變動基準。</p><p>外資台指期：${date("#homeForeignFuturesCard")}。期交所盤後淨部位。</p><p>散戶淨留單：尚無可驗證的自然人未平倉口數；不以非三大法人推估值替代。</p><p>CNN（台北時間）：${esc(cnnPresentationCaption())}。只代表美股情緒，並非買賣訊號。</p>`;
+  target.innerHTML=`<p>上市融資餘額：以 TWSE 信用交易統計的官方金額為準。增加或減少只表示餘額變動，不代表買賣訊號。</p><p>台灣加權指數：證交所每日市場成交資訊；以前一交易日收盤作為日變動基準。</p><p>外資台指期：${date("#homeForeignFuturesCard")}。期交所盤後淨部位。</p><p>散戶微台多空比：${date("#homeTmfRatioCard")}。期交所非三大法人部位推估，多單÷空單，不等同官方自然人持倉。</p><p>CNN（台北時間）：${esc(cnnPresentationCaption())}。只代表美股情緒，並非買賣訊號。</p>`;
 }
 function combinedSentimentConclusion(){
   return marketSentimentPresentation().text;

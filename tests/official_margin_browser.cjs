@@ -60,13 +60,12 @@ async function run(){
           assert.equal(await p.locator('#homeSentimentCards > .homeSentimentCard').count(),5);
           assert.equal(await p.locator('#homeSentimentCards > .homeSentimentCard').first().getAttribute('id'),'homeCnnCard');
           assert.match(await p.locator('#homeTaiexCard').innerText(),/台灣加權指數/);
-          assert.match(await p.locator('#homeRetailNetCard').innerText(),/資料尚未建立/);
           const [now,plot,number,date]=await Promise.all([cnn.boundingBox(),cnn.locator('svg').boundingBox(),cnn.locator('b').boundingBox(),cnn.locator('small').boundingBox()]);
           await p.locator('#homeSentiment').screenshot({path:path.join(out,`after-${name}-${width}.png`)});
           assert.ok(plot.x+plot.width<=number.x+1&&plot.y+plot.height<=date.y+1,'plot/readout/date overlap '+JSON.stringify({now,plot,number,date}));
           assert.ok(Math.abs(now.height-old.height)<=1,'CNN layout changed');
           assert.ok(await p.evaluate(w=>document.documentElement.scrollWidth<=w+1,width));
-          const foreign=p.locator('#homeForeignFuturesCard'),retail=p.locator('#homeRetailNetCard'),homeMargin=p.locator('#homeMarginBalanceCard');
+          const foreign=p.locator('#homeForeignFuturesCard'),tmf=p.locator('#homeTmfRatioCard'),homeMargin=p.locator('#homeMarginBalanceCard');
           const color=loc=>loc.evaluate(e=>getComputedStyle(e).color);
           const red='rgb(255, 133, 133)',green='rgb(121, 217, 173)';
           const delta=foreign.locator('[data-home-foreign-change]'),mDelta=homeMargin.locator('[data-home-margin-change]');
@@ -75,10 +74,12 @@ async function run(){
           assert.equal(await color(mDelta),green);
           assert.equal(await homeMargin.locator('[data-home-margin-status]').textContent(),'官方資料已核對');
           assert.ok((await homeMargin.locator('[data-home-margin-status]').boundingBox()).y >= (await mDelta.boundingBox()).y+(await mDelta.boundingBox()).height+2);
-          const retailMissing=async()=>assert.equal(await retail.locator('b').textContent(),'—');
-          await retailMissing();
-          assert.equal(await foreign.locator('.homeFuturesDate').textContent(),'資料日 2026/11/05');
-          assert.match(await foreign.locator('time').textContent(),/2026\/11\/05.*23:41/);
+          assert.equal(await color(tmf.locator('b')),red);assert.equal(await color(tmf.locator('em')),red);
+          assert.match(await tmf.innerText(),/非三大法人部位推估/);
+          for(const c of [foreign,tmf]){
+            assert.equal(await c.locator('.homeFuturesDate').textContent(),'資料日 2026/11/05');
+            assert.match(await c.locator('time').textContent(),/2026\/11\/05.*23:41/);
+          }
           assert.ok(await p.evaluate(()=>[...document.querySelectorAll('#homeSentimentCards button > :is(b,em,small,time,strong)')].every(e=>e.scrollWidth<=e.clientWidth+1)));
           await p.locator('#homeMarginBalanceCard').click();
           const panel=p.locator('#officialMarginObservation');
@@ -106,26 +107,27 @@ async function run(){
             await refresh();
             assert.match(await delta.textContent(),/\+1,234 口/);
             assert.equal(await color(delta),red);
-            await retailMissing();
+            assert.equal(await color(tmf.locator('b')),green);
+            assert.equal(await color(tmf.locator('em')),green);
             assert.match(await foreign.locator('time').textContent(),/2026\/11\/06.*00:10/);
             future.foreign_tx.net_change=0;
             future.estimated_non_institutional_tmf={long:10,short:10,net:0,net_change:0};
             await refresh();assert.match(await delta.textContent(),/ 0 口/);
             assert.equal(await delta.getAttribute('data-home-tone'),'flat');
-            await retailMissing();
+            assert.match(await tmf.locator('em').textContent(),/中性/);
             future.foreign_tx.net_change=null;
             await refresh();assert.equal(await delta.textContent(),'前日差異待更新');
             future.foreign_tx.net_change=-2004;future.source_status.net_change_available=false;
             await refresh();assert.equal(await delta.textContent(),'前日差異待更新');
             future.source_status.freshness='SOURCE_NOT_READY';future.source_status.lag_trading_days=1;
-            await refresh();assert.equal(await delta.getAttribute('data-home-tone'),'flat');
-            await retailMissing();
+            await refresh();assert.equal(await tmf.getAttribute('data-home-tone'),'flat');
+            assert.equal(await tmf.locator('em').textContent(),'官方待更新');
             future.data_date='2026-10-20';future.updated_at='2026-10-20T15:00:00Z';
-            await refresh();assert.match(await foreign.locator('[data-home-futures-note]').textContent(),/過期/);
+            await refresh();assert.match(await tmf.locator('em').textContent(),/過期/);
             future.source_status.aligned=false;
-            await refresh();assert.equal(await foreign.locator('b').textContent(),'—');await retailMissing();
+            await refresh();assert.equal(await tmf.locator('b').textContent(),'—');
             future=structuredClone(originalFutures);future.updated_at=null;
-            await refresh();assert.equal(await foreign.locator('b').textContent(),'—');await retailMissing();
+            await refresh();assert.equal(await tmf.locator('b').textContent(),'—');
             const rows=margin.twse,previous=rows.at(-2).amount_ntd;
             for(const [amount,tone] of [[previous+100000000,'rise'],[previous,'flat']]){
               rows.at(-1).amount_ntd=amount;

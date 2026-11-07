@@ -4,6 +4,7 @@ const {chromium,webkit}=require('playwright-core');
 const assert=require('node:assert/strict'),crypto=require('node:crypto');
 const fs=require('node:fs'),http=require('node:http'),path=require('node:path');
 const {build}=require('../scripts/build_stable_app.cjs');
+const taiex=require('../home-taiex-core.js');
 const out=process.env.HS_LINKS_TEST_OUT;
 if(!out) throw Error('HS_LINKS_TEST_OUT_REQUIRED');
 fs.mkdirSync(out,{recursive:true});
@@ -44,13 +45,13 @@ async function run(){
           });
           const p=await ctx.newPage();
           const receipt=await (await ctx.request.get(base+'app-release.json?links='+Date.now())).json();
-          assert.equal(receipt.version,'3.8.2');
+          assert.equal(receipt.version,'3.9.0');
           assert.equal(receipt.financial_writer,false);
           if(publicMode){
             const expected=process.env.HS_LINKS_DEPLOYMENT;
             assert.ok(expected&&receipt.deployment_commit===expected,'unexpected deployment commit');
-            const assets=receipt.assets.filter(a=>/^(index\.html|formal-black-gold\.css|push-service-worker\.js)\?/.test(a.url));
-            assert.equal(assets.length,3);
+            const assets=receipt.assets.filter(a=>/^(index\.html|formal-black-gold\.css|push-service-worker\.js|home-taiex-(?:core|display)\.js)\?/.test(a.url));
+            assert.equal(assets.length,5);
             for(const a of assets){
               const resp=await ctx.request.get(base+a.url);assert.ok(resp.ok());
               const bytes=await resp.body();assert.equal(bytes.length,a.bytes);
@@ -66,7 +67,21 @@ async function run(){
           assert.equal(await anchors.count(),2);
           assert.equal(await p.locator('#homeSentimentCards > .homeSentimentCard').count(),5);
           assert.match(await p.locator('#homeTaiexCard').innerText(),/台灣加權指數/);
-          assert.match(await p.locator('#homeRetailNetCard').innerText(),/資料尚未建立/);
+          assert.match(await p.locator('#homeTmfRatioCard').innerText(),/散戶微台多空比/);
+          if(publicMode){
+            const response=await ctx.request.get(base+'home-taiex.json?verify='+Date.now());
+            assert.ok(response.ok());
+            const snapshot=await response.json(),view=taiex.view(snapshot);
+            assert.ok(view,'published official snapshot must be valid');
+            await p.waitForFunction(d=>document.querySelector('#homeTaiexCard time')?.dateTime===d,view.date);
+            const card=p.locator('#homeTaiexCard');
+            assert.equal(await card.locator('b').textContent(),view.value);
+            assert.equal(await card.locator('strong').textContent(),view.change);
+            assert.equal(await card.locator('strong').getAttribute('data-home-tone'),view.tone);
+            assert.match(await p.locator('#homeTmfRatioCard').innerText(),/非三大法人部位推估/);
+            await p.locator('#homeSentiment').screenshot({path:path.join(out,name+'-'+width+'-sentiment.png')});
+            console.log('TAIEX',JSON.stringify(view));
+          }
           assert.ok(await anchors.evaluateAll(nodes=>nodes.every(n=>!n.closest('button,[data-home-chip]')&&!n.hasAttribute('ping'))));
           await p.evaluate(async()=>{await document.fonts.ready;});
           const [a,b]=await anchors.evaluateAll(nodes=>nodes.map(n=>n.getBoundingClientRect().toJSON()));

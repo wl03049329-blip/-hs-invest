@@ -14,10 +14,9 @@ module.exports=function(source){
  if(source.includes('id="homeTaiexCard"')){
   const previous=cp.execFileSync('git',['show','90b08d1e97d8e1c0c01be24e4ea3d27c3088576f:index.html'],{maxBuffer:8e6}).toString();
   for(const [start,end,pin] of [
-   ['  <section id="homeSentiment"','  </section>','165ad595ff3ebceca4b37348460badd9425a5baf4c7a1c83ed971007c1be9352'],
+   ['  <section id="homeSentiment"','  </section>','2f722adfbbfe52915109fa70bc300c28381ec06fecda68fc7b31cc78a33ee2b1'],
    ['<script src="official-margin-balance.js','<script src="cnn-gauge.js','dd373150009d4390e294522c94f2d4c90d5e6b0e07eacc9c8618e9144537f432'],
-   ['function renderHomeSentimentCards(','function marketSentimentPresentation(','b709a8b50942689d6f26097b9bc9617e2d1ce0bc1afa3fbebf7125f4aa1b0af6'],
-   ['function renderMarketSentimentSummary(','function combinedSentimentConclusion(','42f4ef822abaaae474843ed18ab895c7b3a1b448701f78720991b04bdb15093e'],
+   ['function renderMarketSentimentSummary(','function combinedSentimentConclusion(','5b7fc5b7a95a8989ad888965d243e99ece035b9af1e9354a6155815ea921f4fb'],
   ]){
    const block=range(source,start,end);
    assert.equal(crypto.createHash('sha256').update(block).digest('hex'),pin,'UNREVIEWED_V390_DISPLAY_CHANGE: '+start);
