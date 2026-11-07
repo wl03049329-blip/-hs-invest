@@ -5,7 +5,7 @@
 const assert=require('assert/strict'),cp=require('child_process'),crypto=require('crypto');
 module.exports=function(source){
  if(!source.includes('class="hsDashboardDetails"')&&source.includes('id="hsDashboardC4Grid"')){
-  assert.equal(crypto.createHash('sha256').update(source).digest('hex'),'6955e85d748598e1835a9f4b599522b1c76ee6b918dc1f73e5836839507109fe','UNREVIEWED_LEGACY_RETIREMENT_CHANGE');
+  assert.equal(crypto.createHash('sha256').update(source).digest('hex'),'4727a274ef0876d08278b9478c0a7af527062eb0c2e0699039fdbf28e7f49d2a','UNREVIEWED_LEGACY_RETIREMENT_CHANGE');
   source=cp.execFileSync('git',['show','ad1bb29a16cd1a13ad07e1746676f0e80f92abef:index.html'],{maxBuffer:8e6}).toString();
  }
  if(!source.includes('data-sentiment-layout="five"'))return source;

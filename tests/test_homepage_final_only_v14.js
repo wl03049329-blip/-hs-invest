@@ -62,14 +62,16 @@ console.log("PASS 7B local formal and invalid-version objects cannot cross the F
 
 assert.match(html,/C4 今日盤中追蹤/);
 assert.match(html,/正式分數 <i>OFFICIAL<\/i>/);
-assert.match(html,/不使用舊盤中快照/);
-assert.match(html,/正式來源｜盤後收盤定稿/);
-console.log("PASS 8 homepage primary score status remains FINAL-only while the secondary rail is explicitly non-official");
+assert.doesNotMatch(html,/id="radarNextSlot"/);
+assert.doesNotMatch(html,/id="radarCurrentSlot"/);
+assert.match(html,/盤後正式.*FINAL/);
+console.log("PASS 8 homepage primary score status remains FINAL-only after legacy rail removal");
 
 assert.match(html,/const LONG_RADAR_SCORED_CODES=new Set\(\["0050","00662","00757","00830","00935"\]\)/);
 assert.doesNotMatch(html.match(/const LONG_RADAR_SCORED_CODES[^\n]+/)?.[0]||"",/009815|00631L/);
 assert.match(html,/009815 目前維持 WAIT_NATIVE/);
-assert.match(html,/00631L · HS LEVERAGE/);
+assert.match(html,/00631L 正二雷達/);
+assert.match(html,/描述性研究，非正式買進訊號/);
 console.log("PASS 9 WAIT_NATIVE and 00631L isolation remain intact");
 
 assert.match(html,/function officialCoreScoreHistory/);

@@ -78,7 +78,7 @@ async function run(){
           await p.locator('#homeDataHealthOpen').click();
           await p.locator('#homeDataHealthDialog[open]').waitFor();
           await p.locator('#homeDataHealthClose').click();
-          assert.match(await p.locator('#homeLeverageBrief').innerText(),/描述性研究 · 非買進訊號/);
+          assert.match(await p.locator('#homeLeverageBrief').innerText(),/描述性研究，非正式買進訊號/);
           if(researchStage&&!publicMode){
             await p.waitForFunction(()=>document.querySelector('#lc4-radar-v2 .lc4v2-meta')?.textContent.includes('2026-11-06 收盤'));
             assert.match(await p.locator('#lc4-radar-v2 .lc4v2-meta').innerText(),/26\.30/);

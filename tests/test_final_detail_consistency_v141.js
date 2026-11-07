@@ -48,7 +48,8 @@ console.log("PASS 4 actual missing FINAL detail remains unavailable");
 assert.match(html,/resolveFinalOnly\(\{finalizedArtifact:finalizedCoreScoreHistoryArtifact/);
 assert.doesNotMatch(html.match(/function currentCanonicalCoreSnapshot[\s\S]*?\n\}/)?.[0]||"",/intradaySnapshots|localStorage/);
 assert.match(html,/009815 目前維持 WAIT_NATIVE/);
-assert.match(html,/00631L · HS LEVERAGE/);
+assert.match(html,/00631L 正二雷達/);
+assert.match(html,/描述性研究，非正式買進訊號/);
 console.log("PASS 5 intraday authority disabled; WAIT_NATIVE and HS LEVERAGE unchanged");
 
 for(const [symbol,score,label] of [["0050",7,"一般持有"],["00662",9,"一般持有"],["00757",5,"一般持有"],["00830",62,"正式加碼訊號"],["00935",20,"一般持有"]]){

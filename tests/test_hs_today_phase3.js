@@ -10,7 +10,7 @@ assert.match(html, /const longIds=new Set\(\["0050","00830","00662","00757","009
 for (const key of ["score", "change", "threshold"]) assert.match(html, new RegExp('data-home-c4-sort="' + key + '"'));
 assert.match(html, /renderHomeDataHealth\(dualTrack,health\)/);
 assert.match(html, /id="lc4-radar-v2"/);
-assert.match(html, /描述性研究 · 非買進訊號/);
+assert.match(html, /描述性研究，非正式買進訊號/);
 assert.match(html, /radarOverviewCurrent/);
 assert.deepEqual(decision.NEXT_THRESHOLDS, [30, 40, 45, 50, 65, 70, 80, 90]);
 console.log("Legacy homepage retired; current C4, validation and research contracts: PASS");
