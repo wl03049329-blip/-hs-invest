@@ -102,7 +102,12 @@ async function run(){
           await card.locator("[data-taiex-state]:not([hidden])").waitFor();
           assert.equal((await read())[2],next.trade_date);
           assert.equal(await page.evaluate(key=>Object.keys(localStorage).filter(k=>k.startsWith(key+".")).length,core.key),1);
-          assert.deepEqual(errors,[]);
+          // Windows WebKit reports these deliberately disconnected Railway
+          // requests as page errors. Keep the diagnostics and reject any other error.
+          const isolatedTransport = errors.filter(message =>
+            name === "webkit" && /^\/hs-invest-production\.up\.railway\.app\/api\/(?:live-scores|push\/config) due to access control checks\.$/.test(message));
+          if (isolatedTransport.length) console.log("ISOLATED_TRANSPORT",name,width,JSON.stringify(isolatedTransport));
+          assert.deepEqual(errors.filter(message=>!isolatedTransport.includes(message)),[]);
           console.log("PASS",name,width);
         } finally { await ctx.close(); }
       }
