@@ -1,7 +1,6 @@
 "use strict";
-(() => {
-  const core = window.HSHomeTaiex;
-  const card = document.getElementById("homeTaiexCard");
+function mountHomeOfficialDisplay({core,id,file,source,fields}) {
+  const card = document.getElementById(id);
   if (!card || !core) return;
   const prefix = core.key + ".";
   let snapshot = null, pending = false;
@@ -26,7 +25,7 @@
   }
   function render(verified) {
     const view = core.view(snapshot);
-    const state = card.querySelector("[data-taiex-state]");
+    const state = card.querySelector("[data-taiex-state],[data-tmf-state]");
     if (!view) return;
     const delta = card.querySelector("strong"), time = card.querySelector("time");
     card.querySelector("b").textContent = view.value;
@@ -34,7 +33,7 @@
     delta.textContent = view.change;
     time.dateTime = view.date;
     time.textContent = "資料日 " + view.date.replaceAll("-", "/");
-    time.title = "證交所 FMTQIK；取得時間 " + new Intl.DateTimeFormat("zh-TW", {
+    time.title = source + "；取得時間 " + new Intl.DateTimeFormat("zh-TW", {
       timeZone: "Asia/Taipei", dateStyle: "short", timeStyle: "short"
     }).format(new Date(snapshot.retrieved_at));
     state.textContent = verified ? "" : "沿用已驗證資料";
@@ -49,14 +48,14 @@
     const deadline = setTimeout(() => abort.abort(), 8000);
     try {
       local();
-      const response = await fetch("home-taiex.json?ts=" + Date.now(), {cache: "no-store", signal: abort.signal});
+      const response = await fetch(file + "?ts=" + Date.now(), {cache: "no-store", signal: abort.signal});
       if (!response.ok) throw Error("HTTP");
       const incoming = await response.json();
       if (!core.valid(incoming)) throw Error("INVALID");
       local();
       snapshot = core.select(snapshot, incoming);
       persist();
-      render(["trade_date","previous_trade_date","close_cents","previous_close_cents","change_cents"]
+      render(["trade_date","previous_trade_date",...fields]
         .every(key => snapshot[key] === incoming[key]));
     } catch {
       local();
@@ -74,4 +73,8 @@
   document.addEventListener("visibilitychange", () => { if (!document.hidden) refresh(); });
   setInterval(() => { if (!document.hidden && navigator.onLine) refresh(); }, 300000);
   refresh();
-})();
+}
+mountHomeOfficialDisplay({core:window.HSHomeTaiex,id:"homeTaiexCard",file:"home-taiex.json",
+  source:"證交所 FMTQIK",fields:["close_cents","previous_close_cents","change_cents"]});
+mountHomeOfficialDisplay({core:window.HSHomeTmf,id:"homeTmfRatioCard",file:"home-tmf-net.json",
+  source:"期交所 TMF 一般交易時段",fields:["net","net_change"]});

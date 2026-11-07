@@ -2363,29 +2363,29 @@ footer{color:#746f67}
 }
 #homeSentiment .homeMarginExternalLinks > a:hover { background: #312416; }
 #homeSentiment .homeMarginExternalLinks > a:focus-visible { outline: 2px solid #edca7d; outline-offset: 1px; }
-#homeSentiment :is(#homeForeignFuturesCard,#homeTmfRatioCard) > :is(small,time),
+#homeSentiment #homeForeignFuturesCard > :is(small,time),
 #homeSentiment #homeForeignFuturesCard > [data-home-foreign-change] {
   display:block; min-width:0; justify-self:start; text-align:left; color:#d3c3a2;
   font-size:13px; line-height:1.3; white-space:normal; overflow-wrap:anywhere; overflow:visible;
 }
-#homeSentiment :is(#homeForeignFuturesCard,#homeTmfRatioCard) > [data-home-futures-note]:empty { display:none; }
+#homeSentiment #homeForeignFuturesCard > [data-home-futures-note]:empty { display:none; }
 #homeSentiment #homeForeignFuturesCard > [data-home-foreign-change] { font-weight:700; }
 #homeSentiment #homeMarginBalanceCard > [data-home-tone="rise"],
 #homeSentiment #homeForeignFuturesCard > [data-home-tone="rise"],
-#homeSentiment #homeTmfRatioCard[data-home-tone="rise"] > :is(b,em),
+#homeSentiment #homeTmfRatioCard > [data-home-tone="rise"],
 #homeSentiment #homeTaiexCard > [data-home-tone="rise"] { color:#ff8585; }
 #homeSentiment #homeMarginBalanceCard > [data-home-tone="fall"],
 #homeSentiment #homeForeignFuturesCard > [data-home-tone="fall"],
-#homeSentiment #homeTmfRatioCard[data-home-tone="fall"] > :is(b,em),
+#homeSentiment #homeTmfRatioCard > [data-home-tone="fall"],
 #homeSentiment #homeTaiexCard > [data-home-tone="fall"] { color:#79d9ad; }
-#homeSentiment #homeTaiexCard > strong {
+#homeSentiment :is(#homeTaiexCard,#homeTmfRatioCard) > strong {
   font-size: 13px;
   line-height: 1.35;
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
-#homeSentiment #homeTaiexCard > [hidden] { display:none; }
-#homeSentiment #homeTaiexCard > time:not([hidden]) { margin-top:auto; }
+#homeSentiment :is(#homeTaiexCard,#homeTmfRatioCard) > [hidden] { display:none; }
+#homeSentiment :is(#homeTaiexCard,#homeTmfRatioCard) > time:not([hidden]) { margin-top:auto; }
 .officialMarginObservation { min-width:0; padding:12px; border:1px solid #594526; border-radius:14px; background:#14110d; color:#f3e8d3; }
 .officialMarginObservation[hidden], .officialMarginObservation svg[hidden] { display:none; }
 .officialMarginObservation h2 { margin:0 0 10px; }

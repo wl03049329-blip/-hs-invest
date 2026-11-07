@@ -43,7 +43,7 @@ async function run(){
           p.on('pageerror',e=>errors.push(e.message));
           await p.addInitScript(t=>{
             const D=Date;window.Date=class extends D{constructor(...a){super(...(a.length?a:[t]));}static now(){return t;}};
-          },Math.max(fixed,Date.parse('2026-11-05T17:00:00Z')));
+          },Math.max(fixed,Date.parse(require('../home-tmf-net.json').retrieved_at)+1000));
           await p.goto(origin+'/before/',{waitUntil:'domcontentloaded'});
           const cnn=p.locator('#homeCnnCard');
           await cnn.locator('svg').waitFor();
@@ -74,9 +74,11 @@ async function run(){
           assert.equal(await color(mDelta),green);
           assert.equal(await homeMargin.locator('[data-home-margin-status]').textContent(),'官方資料已核對');
           assert.ok((await homeMargin.locator('[data-home-margin-status]').boundingBox()).y >= (await mDelta.boundingBox()).y+(await mDelta.boundingBox()).height+2);
-          assert.equal(await color(tmf.locator('b')),red);assert.equal(await color(tmf.locator('em')),red);
+          await tmf.locator('time[datetime]').waitFor();
+          assert.equal(await tmf.locator('strong').getAttribute('data-home-tone'),'fall');
+          assert.equal(await color(tmf.locator('strong')),green);
           assert.match(await tmf.innerText(),/非三大法人部位推估/);
-          for(const c of [foreign,tmf]){
+          for(const c of [foreign]){
             assert.equal(await c.locator('.homeFuturesDate').textContent(),'資料日 2026/11/05');
             assert.match(await c.locator('time').textContent(),/2026\/11\/05.*23:41/);
           }
@@ -107,27 +109,25 @@ async function run(){
             await refresh();
             assert.match(await delta.textContent(),/\+1,234 口/);
             assert.equal(await color(delta),red);
-            assert.equal(await color(tmf.locator('b')),green);
-            assert.equal(await color(tmf.locator('em')),green);
+            assert.equal(await tmf.locator('strong').getAttribute('data-home-tone'),'fall');
             assert.match(await foreign.locator('time').textContent(),/2026\/11\/06.*00:10/);
             future.foreign_tx.net_change=0;
             future.estimated_non_institutional_tmf={long:10,short:10,net:0,net_change:0};
             await refresh();assert.match(await delta.textContent(),/ 0 口/);
             assert.equal(await delta.getAttribute('data-home-tone'),'flat');
-            assert.match(await tmf.locator('em').textContent(),/中性/);
+            assert.equal(await tmf.locator('strong').getAttribute('data-home-tone'),'fall');
             future.foreign_tx.net_change=null;
             await refresh();assert.equal(await delta.textContent(),'前日差異待更新');
             future.foreign_tx.net_change=-2004;future.source_status.net_change_available=false;
             await refresh();assert.equal(await delta.textContent(),'前日差異待更新');
             future.source_status.freshness='SOURCE_NOT_READY';future.source_status.lag_trading_days=1;
-            await refresh();assert.equal(await tmf.getAttribute('data-home-tone'),'flat');
-            assert.equal(await tmf.locator('em').textContent(),'官方待更新');
+            await refresh();assert.equal(await delta.getAttribute('data-home-tone'),'flat');
             future.data_date='2026-10-20';future.updated_at='2026-10-20T15:00:00Z';
-            await refresh();assert.match(await tmf.locator('em').textContent(),/過期/);
+            await refresh();assert.match(await foreign.locator('[data-home-futures-note]').textContent(),/過期/);
             future.source_status.aligned=false;
-            await refresh();assert.equal(await tmf.locator('b').textContent(),'—');
+            await refresh();assert.equal(await foreign.locator('b').textContent(),'—');
             future=structuredClone(originalFutures);future.updated_at=null;
-            await refresh();assert.equal(await tmf.locator('b').textContent(),'—');
+            await refresh();assert.equal(await foreign.locator('b').textContent(),'—');
             const rows=margin.twse,previous=rows.at(-2).amount_ntd;
             for(const [amount,tone] of [[previous+100000000,'rise'],[previous,'flat']]){
               rows.at(-1).amount_ntd=amount;

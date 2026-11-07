@@ -4,6 +4,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs"), http = require("node:http"), path = require("node:path");
 const core = require("../home-taiex-core");
 const known = require("../home-taiex.json");
+const tmf = require("../home-tmf-net.json");
 const { build } = require("../scripts/build_stable_app.cjs");
 const out = process.env.HS_TAIEX_TEST_OUT;
 if (!out) throw Error("HS_TAIEX_TEST_OUT_REQUIRED");
@@ -17,6 +18,10 @@ const server = http.createServer((req,res) => {
     return res.writeHead(payload ? 200 : 503, {"Content-Type":"application/json","Cache-Control":"no-store"})
       .end(JSON.stringify(payload));
   }
+  if (file === path.join(site,"home-tmf-net.json")) {
+    return res.writeHead(payload ? 200 : 503,{"Content-Type":"application/json","Cache-Control":"no-store"})
+      .end(JSON.stringify(payload===known?tmf:payload===next?nextTmf:{...tmf,net_change:null}));
+  }
   const target = file === site ? path.join(site,"index.html") : file;
   if (!target.startsWith(site+path.sep) || !fs.existsSync(target) || !fs.statSync(target).isFile()) return res.writeHead(404).end();
   res.writeHead(200,{"Content-Type":types[path.extname(target)] || "application/octet-stream"}).end(fs.readFileSync(target));
@@ -24,6 +29,12 @@ const server = http.createServer((req,res) => {
 const next = {...known, trade_date:"2026-11-09", previous_trade_date:known.trade_date,
   close_cents:known.close_cents+30000, previous_close_cents:known.close_cents, change_cents:30000,
   retrieved_at:"2026-11-09T09:00:00.000Z", updated_at:"2026-11-09T09:00:00.000Z"};
+const prevTmf=tmf.observations[1], currentTmf=structuredClone(prevTmf);
+currentTmf.date=next.trade_date; currentTmf.net++;
+currentTmf.institutional["投信"]={long:0,short:1,net:-1};
+currentTmf.evidence.forEach(e=>e.url=e.url.replace("11%2F06","11%2F09"));
+const nextTmf={...tmf,trade_date:next.trade_date,previous_trade_date:tmf.trade_date,
+  retrieved_at:next.retrieved_at,net:currentTmf.net,net_change:1,observations:[prevTmf,currentTmf]};
 async function run(){
   await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
   const base = "http://127.0.0.1:"+server.address().port+"/";
@@ -47,8 +58,10 @@ async function run(){
           await idle();
           const read = () => card.evaluate(e=>[e.querySelector("b").textContent,e.querySelector("strong").textContent,e.querySelector("time").dateTime]);
           const waitDate = date=>page.waitForFunction(d=>document.querySelector("#homeTaiexCard time").dateTime===d,date);
+          const waitTmf = date=>page.waitForFunction(d=>document.querySelector("#homeTmfRatioCard time").dateTime===d,date);
+          const tmfRead = () => retail.evaluate(e=>[e.querySelector("b").textContent,e.querySelector("strong").textContent,e.querySelector("time").dateTime]);
           assert.match(await card.innerText(),/資料尚未建立/);
-          assert.match(await retail.innerText(),/散戶微台多空比/);
+          assert.match(await retail.innerText(),/微台散戶淨留倉/);
           assert.match(await retail.innerText(),/非三大法人部位推估/);
           const refresh = async () => {
             await idle();
@@ -62,6 +75,10 @@ async function run(){
           payload=known;
           await refresh();
           await waitDate(known.trade_date);
+          await waitTmf(tmf.trade_date);
+          const tmfBefore=await tmfRead();
+          assert.deepEqual(tmfBefore,["+45,584 口","▼ 較前交易日 −21,659 口","2026-11-06"]);
+          assert.equal(await retail.locator("strong").evaluate(e=>getComputedStyle(e).color),"rgb(121, 217, 173)");
           const before=await read();
           assert.deepEqual(before,["39,701.64","▼ −1,873.08 點（−4.51%）","2026-11-06"]);
           assert.equal(await card.locator("strong").evaluate(e=>getComputedStyle(e).color),"rgb(121, 217, 173)");
@@ -77,11 +94,14 @@ async function run(){
           await refresh();
           await card.locator("[data-taiex-state]:not([hidden])").waitFor();
           assert.deepEqual(await read(),before);
+          assert.deepEqual(await tmfRead(),tmfBefore);
           payload=null;
           await page.reload({waitUntil:"domcontentloaded"});
           await waitDate(known.trade_date);
           assert.deepEqual(await read(),before);
           assert.match(await card.innerText(),/沿用已驗證資料/);
+          await waitTmf(tmf.trade_date);
+          assert.deepEqual(await tmfRead(),tmfBefore);
           await ctx.setOffline(true);
           if (name === "chrome") {
             await page.reload({waitUntil:"domcontentloaded"});
@@ -96,6 +116,9 @@ async function run(){
           payload=next;
           await ctx.setOffline(false);
           await waitDate(next.trade_date);
+          await waitTmf(next.trade_date);
+          assert.deepEqual(await tmfRead(),["+45,585 口","▲ 較前交易日 +1 口","2026-11-09"]);
+          assert.equal(await retail.locator("strong").evaluate(e=>getComputedStyle(e).color),"rgb(255, 133, 133)");
           assert.deepEqual(await read(),["40,001.64","▲ +300.00 點（+0.76%）","2026-11-09"]);
           assert.equal(await card.locator("strong").evaluate(e=>getComputedStyle(e).color),"rgb(255, 133, 133)");
           payload=known;

@@ -5,6 +5,7 @@ const assert=require('node:assert/strict'),crypto=require('node:crypto');
 const fs=require('node:fs'),http=require('node:http'),path=require('node:path');
 const {build}=require('../scripts/build_stable_app.cjs');
 const taiex=require('../home-taiex-core.js');
+const tmf=require('../home-tmf-core.js');
 const out=process.env.HS_LINKS_TEST_OUT;
 if(!out) throw Error('HS_LINKS_TEST_OUT_REQUIRED');
 fs.mkdirSync(out,{recursive:true});
@@ -45,13 +46,13 @@ async function run(){
           });
           const p=await ctx.newPage();
           const receipt=await (await ctx.request.get(base+'app-release.json?links='+Date.now())).json();
-          assert.equal(receipt.version,'3.9.0');
+          assert.equal(receipt.version,'3.9.1');
           assert.equal(receipt.financial_writer,false);
           if(publicMode){
             const expected=process.env.HS_LINKS_DEPLOYMENT;
             assert.ok(expected&&receipt.deployment_commit===expected,'unexpected deployment commit');
-            const assets=receipt.assets.filter(a=>/^(index\.html|formal-black-gold\.css|push-service-worker\.js|home-taiex-(?:core|display)\.js)\?/.test(a.url));
-            assert.equal(assets.length,5);
+            const assets=receipt.assets.filter(a=>/^(index\.html|formal-black-gold\.css|push-service-worker\.js|home-taiex-(?:core|display)\.js|home-tmf-core\.js)\?/.test(a.url));
+            assert.equal(assets.length,6);
             for(const a of assets){
               const resp=await ctx.request.get(base+a.url);assert.ok(resp.ok());
               const bytes=await resp.body();assert.equal(bytes.length,a.bytes);
@@ -67,7 +68,7 @@ async function run(){
           assert.equal(await anchors.count(),2);
           assert.equal(await p.locator('#homeSentimentCards > .homeSentimentCard').count(),5);
           assert.match(await p.locator('#homeTaiexCard').innerText(),/台灣加權指數/);
-          assert.match(await p.locator('#homeTmfRatioCard').innerText(),/散戶微台多空比/);
+          assert.match(await p.locator('#homeTmfRatioCard').innerText(),/微台散戶淨留倉/);
           if(publicMode){
             const response=await ctx.request.get(base+'home-taiex.json?verify='+Date.now());
             assert.ok(response.ok());
@@ -79,6 +80,16 @@ async function run(){
             assert.equal(await card.locator('strong').textContent(),view.change);
             assert.equal(await card.locator('strong').getAttribute('data-home-tone'),view.tone);
             assert.match(await p.locator('#homeTmfRatioCard').innerText(),/非三大法人部位推估/);
+            const tmfResponse=await ctx.request.get(base+'home-tmf-net.json?verify='+Date.now());
+            assert.ok(tmfResponse.ok());
+            const t=tmf.view(await tmfResponse.json());
+            assert.ok(t,'published official TMF snapshot must be valid');
+            await p.waitForFunction(d=>document.querySelector('#homeTmfRatioCard time')?.dateTime===d,t.date);
+            const retail=p.locator('#homeTmfRatioCard');
+            assert.equal(await retail.locator('b').textContent(),t.value);
+            assert.equal(await retail.locator('strong').textContent(),t.change);
+            assert.equal(await retail.locator('strong').getAttribute('data-home-tone'),t.tone);
+            console.log('TMF',JSON.stringify(t));
             await p.locator('#homeSentiment').screenshot({path:path.join(out,name+'-'+width+'-sentiment.png')});
             console.log('TAIEX',JSON.stringify(view));
           }
