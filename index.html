@@ -443,16 +443,10 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
     <div class="hsC4SortTabs" role="group" aria-label="C4 排序方式"><button class="is-active" type="button" data-home-c4-sort="score">目前分數</button><button type="button" data-home-c4-sort="change">今日變化</button><button type="button" data-home-c4-sort="threshold">接近門檻</button></div>
     <div id="homeEtfBriefSummary" class="homeEtfBriefSummary">買點資料載入中…</div>
     <div id="hsDashboardC4Grid" class="hsDashboardC4Grid" aria-live="polite"><div class="skeleton">載入正式 C4 排名中…</div></div>
-    <details class="hsDashboardDetails">
-      <summary>查看完整長期加碼決策</summary>
-      <section id="hsTodaySummary" class="hsTodaySummary" aria-live="polite"><div class="hsTodayLoading">今日決策摘要載入中…</div></section>
-      <div class="radarSchedule" aria-label="正式分數與盤中預估資料狀態"><span id="radarCurrentSlot">正式來源｜盤後收盤定稿</span><span id="radarNextSlot">盤中預估｜僅供當日參考</span><span>正式依據｜<b>最新合法盤後定稿</b></span></div>
-      <div id="rankList" class="rankList"><div class="skeleton">載入排名中…</div></div>
-    </details>
   </section>
 
   <section id="homeLeverageBrief" class="panel homeLeverageBrief" data-tab-section="today" aria-labelledby="homeLeverageBriefTitle">
-    <div class="panelTitle compactTitle"><div><p class="eyebrow">HS LEVERAGE</p><h2 id="homeLeverageBriefTitle"><svg aria-hidden="true"><use href="#i-chip"/></svg>00631L 正二雷達</h2><span class="hsLeverageIsolation">急跌機會與歷史統計｜不納入 C4 排名</span></div><small>描述性研究 · 非買進訊號</small></div>
+    <div class="panelTitle compactTitle"><div><p class="eyebrow">HS LEVERAGE</p><h2 id="homeLeverageBriefTitle"><svg aria-hidden="true"><use href="#i-chip"/></svg>00631L 正二雷達</h2><span class="hsLeverageIsolation">急跌機會與歷史統計｜不納入 C4 排名</span></div><small>描述性研究，非正式買進訊號</small></div>
     <div id="homeLeverageCard" hidden aria-hidden="true"><div class="skeleton">載入 00631L 槓桿戰術資料中…</div></div>
     <div id="lc4-radar-v2" class="lc4v2" aria-live="polite"><p>正在核驗研究資料…</p></div>
     <button type="button" class="lc4r-entry" data-lc4-research-open>00631L 查看完整研究 › <small>樣本、方法與風險限制</small></button>
@@ -2896,10 +2890,9 @@ function buyPlanHtml(x){
   return `<section class="buyPlanMap"><h4>分批買進地圖｜${esc(x.buyPlan.label)}模式</h4>${x.buyPlan.steps.map(step=>`<div><b>${step.ratio}%</b><span>${esc(step.label)}：${esc(step.condition)}</span></div>`).join("")}${isHighVolatilityType(x.strategyType)?'<p>槓桿／反向 ETF 單檔比例上限為一般模型的 50%。</p>':""}</section>`;
 }
 function renderTop(){
-  const homeItems=itemsForList(watchlist.length?watchlist:DEFAULT_WATCHLIST),ranked=[...homeItems].sort(scoreSort),medals=["1.","2.","3."];
+  const homeItems=itemsForList(watchlist.length?watchlist:DEFAULT_WATCHLIST);
   const sourceLabel=watchlist.length?"我的自選":"弘昇精選",strong=homeItems.filter(x=>["near","first","staged"].includes(x.buyStage?.key)).length,bounce=homeItems.filter(x=>x.direction==="回升"&&(x.stopConfirmation?.score??0)>=50).length;
   $("#homeEtfBriefSummary").textContent=homeItems.length?`${sourceLabel}：${strong}／${homeItems.length} 檔進入買點區，${bounce} 檔出現止跌回升。`:`我的自選尚未加入 ETF，點此進入 ETF雷達。`;
-  $("#rankList").innerHTML=ranked.length?ranked.slice(0,3).map((x,i)=>`<div class="rankItem buyRankItem"><div class="rankNo">${medals[i]}</div><div class="buyRankBody"><div class="buyRankHead"><b>${x.id}</b><span>${esc(x.name)}</span><em class="${scoreTone(x.score)}">${esc(activeScoreLabel(x))} ${metricScore(x.score)}</em></div><div>技術低檔 ${metricScore(x.technicalLow?.score)}｜止跌確認 ${metricScore(x.stopConfirmation?.score)}｜估值 ${esc(valuationScoreLabel(x))}</div><div>${esc(x.buyStage.label)}｜${esc(x.buyStage.conclusion)}${x.scoreMode==="intraday"?`｜${esc(intradayDeltaText(x))}`:""}</div></div></div>`).join(""):'<div class="newsEmpty">尚無自選 ETF。</div>';
   const radar=activeRadarItems(),sorted=[...radar].sort(scoreSort),low=[...radar].sort((a,b)=>a.j-b.j)[0],best=sorted.find(x=>Number.isFinite(x.score)),radarStrong=radar.filter(x=>x.j<20).length,radarBounce=radar.filter(x=>x.direction==="回升").length,deep=radar.filter(x=>x.j<0).length;
   $("#snapshotGrid").innerHTML=(best||low)?`<div class="snapshot"><span>最佳同模型買點</span><b>${best?`${best.id} · ${scoreText(best)}`:"模型資料不足"}</b></div><div class="snapshot"><span>最低週 J 值</span><b>${low?`${low.id} · ${fmt(low.j)}`:"—"}</b></div><div class="snapshot"><span>進入加碼條件</span><b>${radarStrong} / ${radar.length}</b></div><div class="snapshot"><span>週 J 值回升</span><b>${radarBounce} 檔</b></div><div class="snapshot"><span>週 J 值低於 0</span><b>${deep} 檔</b></div><div class="snapshot"><span>融資 FOMO</span><b>${marketChip.margin?marketChip.margin.score+" 分":"尚未更新"}</b></div>`:'<div class="newsEmpty">此清單尚無可分析 ETF。</div>';
   $("#updatedTop").textContent="週 KD 依最近完成資料或目前週線試算";
@@ -3380,36 +3373,9 @@ function buildHSTodayDecisionInput(item){
   const baseline=canonical?.source_status==="FINALIZED_EOD"?hsTodayFinalizedBaseline(item.id,tradingDate):hsTodayIntradayBaseline(item.id,snapshot)||hsTodayFinalizedBaseline(item.id,tradingDate);
   return {symbol:item.id,score:canonical.display_score??canonical.score,sourceStatus,asOf:canonical.market_as_of||item.intraday?.asOf||null,currentFactors:hsTodayFactorAdapter(canonical.core_factors),baseline:baseline||{type:"NONE"}};
 }
-function hsTodayDecisionFor(item,index){
-  const interpreter=window.HSDecisionLayerV1;
-  if(!interpreter?.interpret)return {item,index,decision:{symbol:item?.id||"",source_status:"FAIL_CLOSED",decision_stage:null,score:null}};
-  try{return {item,index,decision:interpreter.interpret(buildHSTodayDecisionInput(item))};}catch{return {item,index,decision:{symbol:item?.id||"",source_status:"FAIL_CLOSED",decision_stage:null,score:null}};}
-}
-function hsTodayStageRank(stage){return Math.max(-1,(window.HSDecisionLayerV1?.STAGES||[]).findIndex(row=>row.stage===stage));}
-function selectHSTodayCandidate(rows){
-  return rows.filter(row=>row.item?.id!=="00631L"&&row.decision?.source_status==="SUCCESS"&&row.decision?.decision_stage).sort((a,b)=>hsTodayStageRank(a.decision.decision_stage)-hsTodayStageRank(b.decision.decision_stage)||Number(a.decision.distance_to_next_stage)-Number(b.decision.distance_to_next_stage)||Number(b.decision.score)-Number(a.decision.score)||a.index-b.index)[0]||null;
-}
-function hsTodayHeadline(decision){
-  if(decision?.decision_stage==="GENERAL")return"今天暫無額外加碼訊號";
-  return decision?.decision_label_zh?`今天已有 ETF 進入「${decision.decision_label_zh}」`:`資料尚未齊備，暫不提供今日決策摘要`;
-}
 function hsTodayStageLabel(stage){return (window.HSDecisionLayerV1?.STAGES||[]).find(row=>row.stage===stage)?.label||"下一階段";}
 function hsTodayPosture(posture){return {PRESERVE_CASH:"保留主要資金",PREPARE_CAPITAL:"準備資金，等待條件成熟",DEPLOY_SMALL:"可小額部署，保留後續資金",DEPLOY_IN_STAGES:"依紀律分批部署",RARE_EVENT:"罕見行情，仍需分批與保留資金"}[posture]||"保留主要資金";}
 function hsTodayDriverLabel(driver){return {DD52:"中期回檔幅度",WEEKLY_J:"短期超賣程度",CRASH:"急跌程度"}[driver]||null;}
-function hsTodayLeverageHtml(item){
-  const state=leverageV1State(item),available=state?.available&&Number.isFinite(Number(state.value))&&Number.isFinite(Number(state.threshold)),label=state?.trigger?"急跌條件已觸發":available?"戰術待命":"資料尚未齊備",metric=available?`${fmt(state.value)} / ${state.threshold}`:"資料暫缺";
-  return `<aside class="hsTodayLeverage ${state?.trigger?"is-trigger":""}"><span>00631L · HS LEVERAGE</span><b>${label}</b><small>Crash Velocity ${esc(metric)}｜Forward Shadow 驗證中</small></aside>`;
-}
-function renderHSToday(longs){
-  const host=$("#hsTodaySummary");if(!host)return;
-  const rows=longs.map((item,index)=>hsTodayDecisionFor(item,index)),candidate=selectHSTodayCandidate(rows),leverage=hsTodayLeverageHtml(all.find(item=>item.id==="00631L"));
-  if(!candidate){host.innerHTML=`<div class="hsTodayHead"><span>HS TODAY</span><b>今日決策摘要</b></div><strong class="hsTodayHeadline">${hsTodayHeadline(null)}</strong>${leverage}`;return;}
-  const decision=candidate.decision,nextLabel=hsTodayStageLabel(decision.next_stage),distance=Number.isFinite(Number(decision.distance_to_next_stage))?(decision.distance_to_next_stage>0?`距${nextLabel} ${formatC4Score(decision.distance_to_next_stage)} 分`:"已進入最高決策摘要區"):"目前無距離資料",driver=hsTodayDriverLabel(decision.primary_driver),driverText=driver?`今天主要因${driver}${Number(decision.primary_driver_delta)>=0?"增加":"走弱"}而變化`:(decision.comparison_basis==="NONE"?"主要原因：目前無可比較基準":decision.explanation_text_zh);
-  host.innerHTML=`<div class="hsTodayHead"><span>HS TODAY</span><b>今日決策摘要</b></div><strong class="hsTodayHeadline">${esc(hsTodayHeadline(decision))}</strong><div class="hsTodayCandidate"><div><span>最接近買點</span><b>${esc(candidate.item.id)} <em>${decision.score}｜${esc(decision.decision_label_zh)}</em></b></div><div><span>下一階段</span><b>${esc(distance)}</b></div><div><span>今日主要變化</span><b>${esc(driverText)}</b></div><div><span>資金姿態</span><b>${esc(hsTodayPosture(decision.capital_posture))}</b></div></div>${leverage}`;
-}
-
-// HS DECISION CENTER V1 PHASE 2: pure summary selectors. They only read
-// Phase 1 dual-track output and existing production decision contracts.
 function decisionCenterMarketLabel(state){
   return {PREMARKET:"尚未開盤",OPEN:"交易中",CLOSED:"已收盤",HOLIDAY:"今日休市",STALE:"盤中資料異常"}[state]||"市場狀態待確認";
 }
@@ -3670,12 +3636,10 @@ function renderTop(){
   const swings=all.filter(x=>swingIds.has(x.id)).sort((a,b)=>(displayScore(b,strategyModeFor(b))??-1)-(displayScore(a,strategyModeFor(a))??-1));
   const longCount=rankedLongs.filter(x=>(homepageFinalDecision(x)?.score??0)>=60).length;
   const swingCount=swings.filter(x=>(strategyDecisionFor(x,strategyModeFor(x))?.stage?.number??0)>0||["first","confirmed"].includes(strategyDecisionFor(x,strategyModeFor(x))?.stage?.key)).length;
-  const snapshotAsOf=intradayLongRankAsOf(longs),snapshotSlot=intradayLongRankSlot(longs,snapshotAsOf),saved=previousLongRanks(),canonicalActive=rankedLongs.length===LONG_RADAR_SCORED_CODES.size&&rankedLongs.every(item=>Boolean(item.intraday?.canonical)),candidateSnapshot=canonicalActive?null:(snapshotAsOf?createLongRankSnapshot(rankedLongs,liveMarketCacheVersion||"",snapshotAsOf,snapshotSlot):null),verifiedSnapshot=canonicalActive?null:(isVerifiedLongRankSnapshot(liveRadarRefresh,candidateSnapshot)?candidateSnapshot:null),previous=canonicalActive?{}:comparisonLongRanks(saved,verifiedSnapshot),snapshotIdentity=longRankSnapshotIdentity(verifiedSnapshot);
+  const snapshotAsOf=intradayLongRankAsOf(longs),snapshotSlot=intradayLongRankSlot(longs,snapshotAsOf),saved=previousLongRanks(),canonicalActive=rankedLongs.length===LONG_RADAR_SCORED_CODES.size&&rankedLongs.every(item=>Boolean(item.intraday?.canonical)),candidateSnapshot=canonicalActive?null:(snapshotAsOf?createLongRankSnapshot(rankedLongs,liveMarketCacheVersion||"",snapshotAsOf,snapshotSlot):null),verifiedSnapshot=canonicalActive?null:(isVerifiedLongRankSnapshot(liveRadarRefresh,candidateSnapshot)?candidateSnapshot:null),snapshotIdentity=longRankSnapshotIdentity(verifiedSnapshot);
   const homeOfficialRows=decisionCenterOfficialRows(dualTrack,longs).sort((a,b)=>b.score-a.score||a.symbol.localeCompare(b.symbol));
   $("#homeEtfBriefSummary").textContent=homeOfficialRows.length>=2?`正式最高：${homeOfficialRows[0].symbol}｜${homeC4DisplayNumber(homeOfficialRows[0].score)}　次順位：${homeOfficialRows[1].symbol}｜${homeC4DisplayNumber(homeOfficialRows[1].score)}`:"正式 C4 資料不足。";
   renderDecisionCenter(displayedLongs,dualTrack,leverageV1State(all.find(x=>x.id==="00631L")));
-  renderHSToday(rankedLongs);
-  const rankList=$("#rankList");rankList.classList.add("hsLiveGrid");rankList.innerHTML=displayedLongs.map((x,index)=>longRankRow(x,index,previous,rankedLongs.indexOf(x)>=0?rankedLongs.indexOf(x)+1:null,dualTrack?.items?.[x.id]||null)).join("")||'<div class="newsEmpty">資料載入中</div>';
   const liveReadScore=$("#hsLiveReadScore");if(liveReadScore)liveReadScore.dataset.readCoreScore=rankedLongs[0]?.id||"0050";
   $("#homeLeverageCard").innerHTML=leverageHomeCompactCard(all.find(x=>x.id==="00631L"));
   if(verifiedSnapshot&&snapshotIdentity&&snapshotIdentity!==lastRankSnapshotIdentity){localStorage.setItem(LONG_RANK_STORAGE_KEY,JSON.stringify(longRankSnapshot(rankedLongs,saved,snapshotIdentity,snapshotAsOf,snapshotSlot)));lastRankSnapshotIdentity=snapshotIdentity}
@@ -3683,8 +3647,6 @@ function renderTop(){
   $("#snapshotGrid").innerHTML=(best||low)?`<div class="snapshot"><span>最高策略分數</span><b>${best?`${best.id}｜${c4DecisionScoreText(best)} 分`:"資料不足"}</b></div><div class="snapshot"><span>最低週 J 值</span><b>${low?`${low.id}｜${fmt(low.j)}`:"—"}</b></div><div class="snapshot"><span>長期加碼區</span><b>${longCount} 檔</b></div><div class="snapshot"><span>波段已確認</span><b>${swingCount} 檔</b></div>`:'<div class="newsEmpty">尚無 ETF 資料。</div>';
   const schedule=longRankScheduleStatus(),radarDisplay=intradayRadarDisplayState(snapshotSlot,schedule,liveRadarRefreshAttempt,liveRadarCompleteness),actualSnapshotTime=radarDisplay.current,failedAttempt=radarDisplay.failed,finalDate=homeOfficialRows.map(row=>row.date).sort().at(-1)||"";
   $("#updatedTop").textContent=finalDate?`盤後正式 ${esc(finalDate)}｜FINAL`:`盤後正式分數暫不可用`;
-  $("#radarCurrentSlot").textContent=finalDate?`目前顯示 盤後正式 ${finalDate}`:"盤後正式分數暫不可用";
-  $("#radarNextSlot").textContent="不使用舊盤中快照";
   if($("#radarOverviewCurrent"))$("#radarOverviewCurrent").textContent=`資料更新｜${actualSnapshotTime}${failedAttempt?`｜${failedAttempt}`:""}`;
   if($("#radarOverviewNext"))$("#radarOverviewNext").textContent=`下次更新｜${radarDisplay.next.replace(/^下一次更新\s*/,"")}`;
   if(radarMode==="my")renderWatchDiagnostics();
