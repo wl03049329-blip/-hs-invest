@@ -22,6 +22,7 @@ async function run(){
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   const origin='http://127.0.0.1:'+server.address().port;
   for(const [name,engine] of [['chrome',chromium],['webkit',webkit]]){
+    if(process.env.HS_MARGIN_UI_ENGINE&&name!==process.env.HS_MARGIN_UI_ENGINE)continue;
     const browser=await engine.launch(name==='chrome'?{channel:'chrome'}:{});
     try{
       for(const width of [320,375,390,430,1280]){
@@ -159,7 +160,10 @@ async function run(){
           // WebKit can surface the deliberately isolated FinMind transport as
           // a PageError even when the route supplies 503. Keep it in evidence,
           // but require zero unrelated/app errors (same rule as the PWA suite).
-          const transport=errors.filter(x=>/^\/api\.finmindtrade\.com\/api\/v4\/data\?dataset=TaiwanStock(?:Price|DividendResult)&[^\n]+ due to access control checks\.$/.test(x));
+          const beforePath=new URL('/before/futures-position.json',origin);
+          const cancelledBaseline=x=>name==='webkit'&&x.startsWith('/'+beforePath.host+beforePath.pathname+'?ts=')&&
+            /\?ts=\d+ due to access control checks\.$/.test(x);
+          const transport=errors.filter(x=>cancelledBaseline(x)||/^\/api\.finmindtrade\.com\/api\/v4\/data\?dataset=TaiwanStock(?:Price|DividendResult)&[^\n]+ due to access control checks\.$/.test(x));
           assert.deepEqual(errors.filter(x=>!transport.includes(x)),[]);
           results.push({name,width,before:old.height,after:now.height,reduction:1-now.height/old.height,
             expectedIsolatedTransport:transport});
