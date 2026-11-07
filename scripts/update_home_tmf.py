@@ -104,14 +104,19 @@ def parse(day, institutional, daily):
     expiry = next(start.replace(day=n) for n in range(15,22) if start.replace(day=n).weekday() == 2)
     while expiry.weekday() >= 5 or expiry.isoformat() in TAIWAN_MARKET_HOLIDAYS:
         expiry += timedelta(days=1)
-    allowed = [delivery(base)] if start < expiry else [delivery(base+1)]
-    if start == expiry:
-        allowed.append(delivery(base))
+    allowed = [delivery(base if start <= expiry else base+1)]
     if set(months) not in allowed:
         raise ValueError("expected six standard TMF delivery months; retain previous verified snapshot")
-    total = sum(months.values())
-    if str(total) != rows[-1][idx].replace(",", ""):
+    raw_total = sum(months.values())
+    if str(raw_total) != rows[-1][idx].replace(",", ""):
         raise ValueError("market month rows do not reconcile with official total")
+    settlement = {}
+    if start == expiry:
+        # The market table may retain the pre-settlement OI row. TAIFEX's
+        # institutional publication explicitly excludes the expiring month.
+        month = day[:7].replace("-", "")
+        settlement = {"excluded_expiry": {"month": month, "open_interest": months.pop(month), "raw_total": raw_total}}
+    total = sum(months.values())
     long = sum(row["long"] for row in positions.values())
     short = sum(row["short"] for row in positions.values())
     totals = [r for r in inst[0] if len(r) == 13 and r[0] == "期貨合計"]
@@ -120,7 +125,7 @@ def parse(day, institutional, daily):
     if not total or max(long, short) > total:
         raise ValueError("institutional and market scopes do not reconcile")
     return {"date": day, "months": months, "institutional": positions, "market_open_interest": total,
-            "net": short - long,
+            "net": short - long, **settlement,
             "evidence": [{"url": url(kind, day), "sha256": hashlib.sha256(blob).hexdigest()}
                          for kind, blob in zip(KINDS, (institutional, daily))]}
 

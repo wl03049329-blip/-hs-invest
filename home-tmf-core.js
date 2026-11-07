@@ -8,9 +8,12 @@
   function observation(o,date){
     if(!o||o.date!==date||!o.months||!o.institutional||!int(o.net))return false;
     const months=Object.entries(o.months);
-    if(months.length!==6||!months.every(([m,n])=>/^\d{4}(?:0[1-9]|1[0-2])$/.test(m)&&count(n)))return false;
+    const excluded=o.excluded_expiry;
+    if(months.length!==(excluded?5:6)||!months.every(([m,n])=>/^\d{4}(?:0[1-9]|1[0-2])$/.test(m)&&count(n)))return false;
     const total=months.reduce((a,[,n])=>a+n,0);
     if(!int(total)||!total||total!==o.market_open_interest)return false;
+    if(excluded&&(excluded.month!==date.slice(0,7).replace("-","")||Object.hasOwn(o.months,excluded.month)||
+      !count(excluded.open_interest)||!int(excluded.raw_total)||excluded.raw_total!==total+excluded.open_interest))return false;
     if(Object.keys(o.institutional).length!==3)return false;
     const groups=["自營商","投信","外資及陸資"].map(k=>o.institutional[k]);
     if(!groups.every(p=>p&&count(p.long)&&count(p.short)&&int(p.net)&&p.long-p.short===p.net))return false;

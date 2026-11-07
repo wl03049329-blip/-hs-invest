@@ -37,3 +37,15 @@ test("net direction never controls movement color, zero is neutral",()=>{
   assert.equal(core.view(y,now).tone,"flat");
   assert.match(core.view(y,now).change,/較前交易日 0 口/);
 });
+test("settlement exclusion retains and reconciles official market total",()=>{
+  const x=structuredClone(snapshot), o=x.observations[1];
+  const month=x.trade_date.slice(0,7).replace("-",""),n=o.months[month];
+  delete o.months[month];
+  o.excluded_expiry={month,open_interest:n,raw_total:o.market_open_interest};
+  o.market_open_interest-=n;
+  // Model a distribution whose compared post-settlement market covers both sides.
+  o.months["202612"]+=100000;o.market_open_interest+=100000;o.excluded_expiry.raw_total+=100000;
+  assert.equal(core.valid(x,now),true);
+  o.excluded_expiry.raw_total++;
+  assert.equal(core.valid(x,now),false);
+});
