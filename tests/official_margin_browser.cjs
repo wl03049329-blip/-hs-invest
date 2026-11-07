@@ -5,7 +5,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
 const root=path.resolve(__dirname,'..'),out=process.env.HS_MARGIN_UI_OUT,base=process.env.HS_MARGIN_UI_BASE;
 if(!out||!/^[a-f0-9]{40}$/.test(base||''))throw Error('EVIDENCE_DIR_AND_BASE_REQUIRED');
 fs.mkdirSync(out,{recursive:true});
-const prior=new Map(['index.html','formal-black-gold.css','official-margin-balance.js'].map(file=>[file,cp.execFileSync('git',['show',base+':'+file],{cwd:root,maxBuffer:4e6})]));
+const prior=new Map(['index.html','formal-black-gold.css','official-margin-balance.js','home-taiex-display.js'].map(file=>[file,cp.execFileSync('git',['show',base+':'+file],{cwd:root,maxBuffer:4e6})]));
 const fixture=file=>JSON.parse(cp.execFileSync('git',['show','9b9d1609f8581f64b8c7e5484dd4c45a096ffac5:'+file],{cwd:root}));
 const originalFutures=fixture('futures-position.json'), originalMargin=fixture('official-margin-balance.json');
 const mime={'.html':'text/html; charset=utf-8','.css':'text/css','.js':'text/javascript','.json':'application/json','.svg':'image/svg+xml','.png':'image/png','.webmanifest':'application/manifest+json'};
@@ -22,6 +22,7 @@ async function run(){
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   const origin='http://127.0.0.1:'+server.address().port;
   for(const [name,engine] of [['chrome',chromium],['webkit',webkit]]){
+    if(process.env.HS_MARGIN_UI_ENGINE&&name!==process.env.HS_MARGIN_UI_ENGINE)continue;
     const browser=await engine.launch(name==='chrome'?{channel:'chrome'}:{});
     try{
       for(const width of [320,375,390,430,1280]){
@@ -51,16 +52,31 @@ async function run(){
           await p.evaluate(()=>loadFuturesPosition());
           await p.evaluate(()=>renderHomeSentimentCards());
           await p.waitForFunction(()=>document.querySelector('#homeMarginBalanceCard b').textContent.includes('5,764.09'));
+          await p.waitForFunction(()=>document.querySelector('#homeTmfRatioCard time').dateTime && document.querySelector('#homeTaiexCard time').dateTime);
           const old=await cnn.boundingBox();
           await p.locator('#homeSentiment').screenshot({path:path.join(out,`before-${name}-${width}.png`)});
           await p.goto(origin+'/after/',{waitUntil:'domcontentloaded'});
           await p.waitForFunction(()=>document.querySelector('#homeMarginBalanceCard b').textContent.includes('5,764.09'));
           await cnn.locator('g[data-cnn-needle][visibility="visible"]').waitFor();
           await p.waitForFunction(()=>document.querySelector('[data-home-foreign-change]').textContent.includes('2,004'));
+          await p.waitForFunction(()=>document.querySelector('#homeTmfRatioCard time').dateTime && document.querySelector('#homeTaiexCard time').dateTime);
           assert.equal(await p.locator('#homeSentimentCards > .homeSentimentCard').count(),5);
           assert.equal(await p.locator('#homeSentimentCards > .homeSentimentCard').first().getAttribute('id'),'homeCnnCard');
           assert.match(await p.locator('#homeTaiexCard').innerText(),/台灣加權指數/);
           const [now,plot,number,date]=await Promise.all([cnn.boundingBox(),cnn.locator('svg').boundingBox(),cnn.locator('b').boundingBox(),cnn.locator('small').boundingBox()]);
+          const cards=await p.locator('#homeSentimentCards > .homeSentimentCard:not(#homeCnnCard)').evaluateAll(nodes=>nodes.map(node=>{
+            const footer=node.querySelector('.homeMarketFooter'), r=node.getBoundingClientRect(), f=footer.getBoundingClientRect();
+            const d=footer.firstElementChild;
+            return {h:r.height, y:r.y, bottomGap:r.bottom-f.bottom,dateY:d.getBoundingClientRect().y,
+              footerHeight:f.height,dateSize:getComputedStyle(d).fontSize, hasDate:/資料日 \d{4}\/\d{2}\/\d{2}/.test(d.textContent),
+              fits:[...footer.children].every(el=>el.getBoundingClientRect().right<=f.right+1&&el.scrollWidth<=el.clientWidth+1),
+              noOverlap: [...node.children].filter(el=>el!==footer&&el.getClientRects().length).every(el=>el.getBoundingClientRect().bottom<=f.top+1)};
+          }));
+          for(const card of cards){
+            assert.ok(Math.abs(card.h-cards[0].h)<1 && Math.abs(card.bottomGap-cards[0].bottomGap)<1 &&
+              Math.abs(card.dateY-card.y-(cards[0].dateY-cards[0].y))<1 && card.fits && card.noOverlap &&
+              card.hasDate && card.dateSize==='11px','four-card geometry '+JSON.stringify({name,width,cards}));
+          }
           await p.locator('#homeSentiment').screenshot({path:path.join(out,`after-${name}-${width}.png`)});
           assert.ok(plot.x+plot.width<=number.x+1&&plot.y+plot.height<=date.y+1,'plot/readout/date overlap '+JSON.stringify({now,plot,number,date}));
           assert.ok(Math.abs(now.height-old.height)<=1,'CNN layout changed');
@@ -71,12 +87,14 @@ async function run(){
           const delta=foreign.locator('[data-home-foreign-change]'),mDelta=homeMargin.locator('[data-home-margin-change]');
           assert.match(await delta.textContent(),/−2,004 口/);
           assert.equal(await color(delta),green);
+          assert.equal(await color(foreign.locator('em')),green);
           assert.equal(await color(mDelta),green);
           assert.equal(await homeMargin.locator('[data-home-margin-status]').textContent(),'官方資料已核對');
           assert.ok((await homeMargin.locator('[data-home-margin-status]').boundingBox()).y >= (await mDelta.boundingBox()).y+(await mDelta.boundingBox()).height+2);
           await tmf.locator('time[datetime]').waitFor();
           assert.equal(await tmf.locator('strong').getAttribute('data-home-tone'),'fall');
           assert.equal(await color(tmf.locator('strong')),green);
+          assert.equal(await color(tmf.locator('b')),red);
           assert.match(await tmf.innerText(),/非三大法人部位推估/);
           for(const c of [foreign]){
             assert.equal(await c.locator('.homeFuturesDate').textContent(),'資料日 2026/11/05');
@@ -104,11 +122,14 @@ async function run(){
           if(width===375){
             const refresh=()=>p.evaluate(()=>loadFuturesPosition());
             future.foreign_tx.net_change=1234;
+            future.foreign_tx.net=Math.abs(future.foreign_tx.net);
+            future.foreign_tx.long=future.foreign_tx.short+future.foreign_tx.net;
             future.updated_at='2026-11-05T16:10:00Z';
             future.estimated_non_institutional_tmf={long:8,short:10,net:-2,net_change:0};
             await refresh();
             assert.match(await delta.textContent(),/\+1,234 口/);
             assert.equal(await color(delta),red);
+            assert.equal(await color(foreign.locator('em')),red);
             assert.equal(await tmf.locator('strong').getAttribute('data-home-tone'),'fall');
             assert.match(await foreign.locator('time').textContent(),/2026\/11\/06.*00:10/);
             future.foreign_tx.net_change=0;
@@ -139,7 +160,10 @@ async function run(){
           // WebKit can surface the deliberately isolated FinMind transport as
           // a PageError even when the route supplies 503. Keep it in evidence,
           // but require zero unrelated/app errors (same rule as the PWA suite).
-          const transport=errors.filter(x=>/^\/api\.finmindtrade\.com\/api\/v4\/data\?dataset=TaiwanStock(?:Price|DividendResult)&[^\n]+ due to access control checks\.$/.test(x));
+          const beforePath=new URL('/before/futures-position.json',origin);
+          const cancelledBaseline=x=>name==='webkit'&&x.startsWith('/'+beforePath.host+beforePath.pathname+'?ts=')&&
+            /\?ts=\d+ due to access control checks\.$/.test(x);
+          const transport=errors.filter(x=>cancelledBaseline(x)||/^\/api\.finmindtrade\.com\/api\/v4\/data\?dataset=TaiwanStock(?:Price|DividendResult)&[^\n]+ due to access control checks\.$/.test(x));
           assert.deepEqual(errors.filter(x=>!transport.includes(x)),[]);
           results.push({name,width,before:old.height,after:now.height,reduction:1-now.height/old.height,
             expectedIsolatedTransport:transport});

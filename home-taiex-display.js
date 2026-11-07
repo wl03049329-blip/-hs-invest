@@ -1,5 +1,5 @@
 "use strict";
-function mountHomeOfficialDisplay({core,id,file,source,fields}) {
+function mountHomeOfficialDisplay({core,id,file,source,fields,position=false}) {
   const card = document.getElementById(id);
   if (!card || !core) return;
   const prefix = core.key + ".";
@@ -28,7 +28,9 @@ function mountHomeOfficialDisplay({core,id,file,source,fields}) {
     const state = card.querySelector("[data-taiex-state],[data-tmf-state]");
     if (!view) return;
     const delta = card.querySelector("strong"), time = card.querySelector("time");
-    card.querySelector("b").textContent = view.value;
+    const value = card.querySelector("b");
+    value.textContent = view.value;
+    if (position) value.dataset.homeTone = snapshot.net > 0 ? "rise" : snapshot.net < 0 ? "fall" : "flat";
     delta.dataset.homeTone = view.tone;
     delta.textContent = view.change;
     time.dateTime = view.date;
@@ -77,4 +79,4 @@ function mountHomeOfficialDisplay({core,id,file,source,fields}) {
 mountHomeOfficialDisplay({core:window.HSHomeTaiex,id:"homeTaiexCard",file:"home-taiex.json",
   source:"證交所 FMTQIK",fields:["close_cents","previous_close_cents","change_cents"]});
 mountHomeOfficialDisplay({core:window.HSHomeTmf,id:"homeTmfRatioCard",file:"home-tmf-net.json",
-  source:"期交所 TMF 一般交易時段",fields:["net","net_change"]});
+  source:"期交所 TMF 一般交易時段",fields:["net","net_change"],position:true});
