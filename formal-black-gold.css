@@ -2372,11 +2372,20 @@ footer{color:#746f67}
 #homeSentiment #homeForeignFuturesCard > [data-home-foreign-change] { font-weight:700; }
 #homeSentiment #homeMarginBalanceCard > [data-home-tone="rise"],
 #homeSentiment #homeForeignFuturesCard > [data-home-tone="rise"],
-#homeSentiment #homeTmfRatioCard[data-home-tone="rise"] > :is(b,em) { color:#ff8585; }
+#homeSentiment #homeTmfRatioCard[data-home-tone="rise"] > :is(b,em),
+#homeSentiment #homeTaiexCard > [data-home-tone="rise"] { color:#ff8585; }
 #homeSentiment #homeMarginBalanceCard > [data-home-tone="fall"],
 #homeSentiment #homeForeignFuturesCard > [data-home-tone="fall"],
-#homeSentiment #homeTmfRatioCard[data-home-tone="fall"] > :is(b,em) { color:#79d9ad; }
-#homeSentiment #homeMaintenanceCard > b { font-size:clamp(20px, 6vw, 26px); }
+#homeSentiment #homeTmfRatioCard[data-home-tone="fall"] > :is(b,em),
+#homeSentiment #homeTaiexCard > [data-home-tone="fall"] { color:#79d9ad; }
+#homeSentiment #homeTaiexCard > strong {
+  font-size: 13px;
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+#homeSentiment #homeTaiexCard > [hidden] { display:none; }
+#homeSentiment #homeTaiexCard > time:not([hidden]) { margin-top:auto; }
 .officialMarginObservation { min-width:0; padding:12px; border:1px solid #594526; border-radius:14px; background:#14110d; color:#f3e8d3; }
 .officialMarginObservation[hidden], .officialMarginObservation svg[hidden] { display:none; }
 .officialMarginObservation h2 { margin:0 0 10px; }

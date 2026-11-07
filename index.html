@@ -426,7 +426,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
           <a href="https://www.twse.com.tw/dashboard/zh/credit/margin.html" target="_blank" rel="noopener noreferrer" aria-label="證交所官方（另開分頁）">證交所官方</a>
         </div>
       </div>
-      <button id="homeMaintenanceCard" class="homeSentimentCard" type="button" data-home-chip="official-margin"><span>市場維持率</span><b>驗證中</b><em>新來源口徑未確認</em></button>
+      <div id="homeTaiexCard" class="homeSentimentCard"><span>台灣加權指數</span><b>—</b><strong hidden></strong><small data-taiex-state>資料尚未建立</small><time hidden></time></div>
       <button id="homeForeignFuturesCard" class="homeSentimentCard" type="button" data-home-chip="futures"><span>外資台指期</span><b>—</b><em>載入中</em><strong data-home-foreign-change>前日差異待更新</strong><small data-home-futures-note></small><small class="homeFuturesDate">資料日 —</small><time>更新 —</time></button>
       <button id="homeTmfRatioCard" class="homeSentimentCard" type="button" data-home-chip="futures"><span>散戶微台多空比</span><b>—</b><em>載入中</em><small data-home-futures-note></small><small class="homeFuturesDate">資料日 —</small><time>更新 —</time><small class="homeTmfMethod">非三大法人部位推估</small></button>
     </div>
@@ -1170,6 +1170,8 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 <script src="drawdown-price-core.js"></script>
 <script src="margin-risk-core.js"></script>
 <script src="official-margin-balance.js"></script>
+<script src="home-taiex-core.js"></script>
+<script defer src="home-taiex-display.js"></script>
 <script src="institutional-flow-core.js"></script>
 <script src="market-events-core.js"></script>
 <script src="data-freshness-core.js"></script>
@@ -4715,12 +4717,12 @@ function renderMarketSentimentSummary(){
   const cnn=cnnGaugePresentation(),summary=$("#homeSentimentConclusion");
   if(!summary)return;
   summary.querySelector("b").textContent=`美股 CNN：${cnn.cnn?`${HSCnnGauge.format(cnn.cnn.score)} · ${cnn.cnn.label} · `:""}${cnn.status.split("｜")[0]}`;
-  summary.querySelector("span").textContent="台股四項：各自依來源日期顯示 · 維持率驗證中；狀態僅指資料完整度";
+  summary.querySelector("span").textContent="台股四項各自標示資料日；資料完整度不代表買賣訊號。";
 }
 function renderHomeSentimentDetails(){
   const target=$("#homeSentimentDetails > div");if(!target)return;
   const date=selector=>esc($(selector)?.querySelector(".homeFuturesDate,small:not([data-home-futures-note])")?.textContent||"資料日期待更新");
-  target.innerHTML=`<p>上市融資餘額：以 TWSE 信用交易統計的官方金額為準。增加或減少只表示餘額變動，不代表買賣訊號。</p><p>市場維持率：新來源口徑驗證中，暫不顯示數值。</p><p>外資台指期：${date("#homeForeignFuturesCard")}。期交所盤後淨部位。</p><p>散戶微台多空比：${date("#homeTmfRatioCard")}。期交所非三大法人部位推估，多單÷空單，不等同官方自然人持倉。</p><p>CNN（台北時間）：${esc(cnnPresentationCaption())}。只代表美股情緒，並非買賣訊號。</p>`;
+  target.innerHTML=`<p>上市融資餘額：以 TWSE 信用交易統計的官方金額為準。增加或減少只表示餘額變動，不代表買賣訊號。</p><p>台灣加權指數：證交所每日市場成交資訊；以前一交易日收盤作為日變動基準。</p><p>外資台指期：${date("#homeForeignFuturesCard")}。期交所盤後淨部位。</p><p>散戶微台多空比：${date("#homeTmfRatioCard")}。期交所非三大法人部位推估，多單÷空單，不等同官方自然人持倉。</p><p>CNN（台北時間）：${esc(cnnPresentationCaption())}。只代表美股情緒，並非買賣訊號。</p>`;
 }
 function combinedSentimentConclusion(){
   return marketSentimentPresentation().text;

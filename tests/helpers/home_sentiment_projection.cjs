@@ -11,6 +11,19 @@ module.exports=function(source){
   assert(a>=0&&b>a,start);
   return s.slice(a,b);
  };
+ if(source.includes('id="homeTaiexCard"')){
+  const previous=cp.execFileSync('git',['show','90b08d1e97d8e1c0c01be24e4ea3d27c3088576f:index.html'],{maxBuffer:8e6}).toString();
+  for(const [start,end,pin] of [
+   ['  <section id="homeSentiment"','  </section>','2f722adfbbfe52915109fa70bc300c28381ec06fecda68fc7b31cc78a33ee2b1'],
+   ['<script src="official-margin-balance.js','<script src="cnn-gauge.js','dd373150009d4390e294522c94f2d4c90d5e6b0e07eacc9c8618e9144537f432'],
+   ['function renderMarketSentimentSummary(','function combinedSentimentConclusion(','5b7fc5b7a95a8989ad888965d243e99ece035b9af1e9354a6155815ea921f4fb'],
+  ]){
+   const block=range(source,start,end);
+   assert.equal(crypto.createHash('sha256').update(block).digest('hex'),pin,'UNREVIEWED_V390_DISPLAY_CHANGE: '+start);
+   source=source.replace(block,range(previous,start,end));
+  }
+  assert.equal(source,previous,'UNRELATED_V390_HTML_OR_FINANCIAL_FUNCTION_CHANGED');
+ }
  if(source.includes('class="homeMarginExternalLinks"')){
   const start='      <div class="homeSentimentCard homeMarginCardShell">';
   const end='      <button id="homeMaintenanceCard"';

@@ -59,8 +59,7 @@ async function run(){
           await p.waitForFunction(()=>document.querySelector('[data-home-foreign-change]').textContent.includes('2,004'));
           assert.equal(await p.locator('#homeSentimentCards > .homeSentimentCard').count(),5);
           assert.equal(await p.locator('#homeSentimentCards > .homeSentimentCard').first().getAttribute('id'),'homeCnnCard');
-          assert.match(await p.locator('#homeMaintenanceCard').innerText(),/驗證中/);
-          assert.doesNotMatch(await p.locator('#homeMaintenanceCard').innerText(),/\d{2,}|%/);
+          assert.match(await p.locator('#homeTaiexCard').innerText(),/台灣加權指數/);
           const [now,plot,number,date]=await Promise.all([cnn.boundingBox(),cnn.locator('svg').boundingBox(),cnn.locator('b').boundingBox(),cnn.locator('small').boundingBox()]);
           await p.locator('#homeSentiment').screenshot({path:path.join(out,`after-${name}-${width}.png`)});
           assert.ok(plot.x+plot.width<=number.x+1&&plot.y+plot.height<=date.y+1,'plot/readout/date overlap '+JSON.stringify({now,plot,number,date}));
