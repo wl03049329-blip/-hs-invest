@@ -5227,7 +5227,10 @@ function switchTab(name,{scroll=true}={}){
   document.querySelectorAll("[data-tab-intro]").forEach(el=>el.classList.toggle("active",el.dataset.tabIntro===name));
   sessionStorage.setItem("hsRadar.activeTab",name);
   if(name==="today"||name==="sentiment")renderCnnPresentationViews();
-  if(name==="portfolio")window.dispatchEvent(new Event("hs:portfolio-visible"));
+  if(name==="portfolio")requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    // Let the selected tab paint before its large market payload starts.
+    if(!$("#portfolio").classList.contains("tabHidden"))window.dispatchEvent(new Event("hs:portfolio-visible"));
+  }));
   if(name==="signals")mountRadarHistoryChart($("#cards .signalCard.is-selected"));
   if(scroll)document.querySelector(".topTabs")?.scrollIntoView({behavior:"smooth",block:"start"});
 }
