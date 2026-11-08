@@ -3625,10 +3625,20 @@ host.innerHTML=`<div class="hsCoreDecisionHero"><div class="hsCoreIdentity"><spa
   document.querySelectorAll("[data-home-c4-sort]").forEach(button=>button.classList.toggle("is-active",button.dataset.homeC4Sort===homeC4SortMode));
   liveDiagnosticRecord("render_decision",{market_state:currentFrontendDiagnosticMarketState(dualTrack),render_state_after:currentFrontendDiagnosticRenderState(dualTrack),selected_snapshot_time:window.HSLiveDiagnostics?.latestSnapshotTime(liveCanonicalCoreSnapshots),triggered_rerender:"YES"});
 }
+let lastPublishedFormalCoreView;
+function publishFormalCoreView(dualTrack){
+  // Compare the complete adapter result, including unavailable reasons, dates
+  // and LIVE/FINAL transitions. Presentation-only redraws are not data updates.
+  const select=window.HSCanonicalScoreResolver?.selectFormalCoreScore;
+  const key=JSON.stringify([...LONG_RADAR_SCORED_CODES].map(symbol=>select?.(dualTrack,symbol)));
+  if(key===lastPublishedFormalCoreView)return;
+  lastPublishedFormalCoreView=key;
+  window.dispatchEvent(new CustomEvent("hs:formal-core-score-updated"));
+}
 function renderTop(){
   const longIds=new Set(["0050","00830","00662","00757","009815","00935"]),swingIds=new Set(["00733","006201"]);
   const dualTrack=currentDualTrackCoreView(taipeiToday(),new Date());
-  window.dispatchEvent(new CustomEvent("hs:formal-core-score-updated"));
+  publishFormalCoreView(dualTrack);
   const longs=all.filter(x=>longIds.has(x.id)).sort(longRankComparator);
   const rankedLongs=longs.filter(item=>LONG_RADAR_SCORED_CODES.has(item.id)&&Boolean(homepageFinalDecision(item)));
   const waitingLongs=longs.filter(item=>!rankedLongs.includes(item));
@@ -5216,7 +5226,6 @@ function switchTab(name,{scroll=true}={}){
   document.querySelectorAll(".appNavButton").forEach(btn=>{const active=btn.dataset.tab===name;btn.classList.toggle("active",active);btn.setAttribute("aria-current",active?"page":"false")});
   document.querySelectorAll("[data-tab-intro]").forEach(el=>el.classList.toggle("active",el.dataset.tabIntro===name));
   sessionStorage.setItem("hsRadar.activeTab",name);
-  renderCnnPresentationViews();
   if(name==="signals")mountRadarHistoryChart($("#cards .signalCard.is-selected"));
   if(scroll)document.querySelector(".topTabs")?.scrollIntoView({behavior:"smooth",block:"start"});
 }
