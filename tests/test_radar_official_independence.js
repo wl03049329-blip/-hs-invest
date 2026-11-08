@@ -30,6 +30,6 @@ assert.ok(body.indexOf('renderTop();')<body.indexOf('ids.map(one)'),'home C4 mus
 assert.doesNotMatch(html.slice(start,end),/applyAssetModel|refreshDecisionModel|recordForward|\.push\(x\).*all|localStorage\.setItem/);
 assert.match(body,/if\(!all.length\)\{\s*renderTop\(\);renderCards\(\);renderWatchDiagnostics\(\);/,'empty price results rerender independent C4 and price diagnostics');
 assert.match(body,/歷史行情暫不可用/,'unavailable historical prices remain explicitly unavailable');
-assert.match(body,/await Promise\.all\(\[loadFinalizedCoreScoreHistory\(\),loadResearchC4History\(\)\]\)/,'shared request ordering is unchanged');
+assert.match(body,/await loadFinalizedCoreScoreHistory\(\);[\s\S]*?renderTop\(\);\s*await loadResearchC4History\(\);\s*renderCards\(\);/,'home FINAL does not wait for research; radar alerts still receive research before their first render');
 assert.match(html,/const longs=all\.filter\(x=>longIds\.has\(x\.id\)\)/,'home renderer does not consume radar-only records');
 console.log('PASS real FINALIZED survives price failure in radar and home, WAIT_NATIVE stays null, price-derived records remain separate');
