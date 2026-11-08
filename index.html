@@ -5226,6 +5226,7 @@ function switchTab(name,{scroll=true}={}){
   document.querySelectorAll(".appNavButton").forEach(btn=>{const active=btn.dataset.tab===name;btn.classList.toggle("active",active);btn.setAttribute("aria-current",active?"page":"false")});
   document.querySelectorAll("[data-tab-intro]").forEach(el=>el.classList.toggle("active",el.dataset.tabIntro===name));
   sessionStorage.setItem("hsRadar.activeTab",name);
+  if(name==="today"||name==="sentiment")renderCnnPresentationViews();
   if(name==="portfolio")window.dispatchEvent(new Event("hs:portfolio-visible"));
   if(name==="signals")mountRadarHistoryChart($("#cards .signalCard.is-selected"));
   if(scroll)document.querySelector(".topTabs")?.scrollIntoView({behavior:"smooth",block:"start"});

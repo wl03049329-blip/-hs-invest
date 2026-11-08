@@ -96,6 +96,7 @@ check("expiry uses current time and the existing single timer, without erasing c
  const future=structuredClone(fixture);future.updated_at=future.source_updated_at=new Date(now+7*3600000).toISOString();assert.equal(sandbox.validateCnnFearGreed(future),null);
  assert.match(extract("renderChipOverview"),/cnnView=cnnGaugePresentation\(\),cnn=cnnView\.cnn/);
  for(const name of ["switchTab","switchChipTab","refreshCnnFearGreed"])assert.match(extract(name),/renderCnnPresentationViews\(\)/,name+" must invalidate cached presentation on entry");
+ assert.match(extract("switchTab"),/if\(name==="today"\|\|name==="sentiment"\)renderCnnPresentationViews\(\)/,"only the tabs with CNN panels rerender them on entry");
 });
 (async()=>{
  sandbox.p=sandbox.validateCnnFearGreed(fixture);vm.runInContext("cnnFearGreed=p;cnnGaugeLoadState={phase:'ready'}",sandbox);
