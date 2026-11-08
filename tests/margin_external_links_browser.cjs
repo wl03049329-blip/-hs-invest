@@ -80,12 +80,17 @@ async function run(){
             return fields.every(n=>{const r=n.getBoundingClientRect();return r.left>=rect.left-1&&r.right<=rect.right+1&&r.width>0&&r.top>=rect.top&&r.bottom<=rect.bottom+1&&n.scrollWidth<=n.clientWidth+1;});
           });
           assert.ok(await statusFit(),'compact status must fit one row');
-          await disclosure.locator('summary').click();
+          const toggle=async()=>{
+            const summary=disclosure.locator('summary');
+            await summary.evaluate(el=>el.scrollIntoView({block:'center',behavior:'instant'}));
+            if(mobile)await summary.tap();else await summary.click();
+          };
+          await toggle();
           await p.locator('#hsDecisionRoomGrid .hsCoreDecisionHero').waitFor({state:'visible'});
           await p.locator('#hsOnboardingOpenHome').click();
           await p.locator('#hsBeginnerGuidePanel, #hsBeginnerGuide .hsBeginnerGuidePanel').first().waitFor({state:'visible'});
           await p.locator('#hsBeginnerGuideClose').click();
-          await disclosure.locator('summary').click();
+          await toggle();
           assert.equal(await disclosure.getAttribute('open'),null);
           for(const mode of ['change','threshold','score']){
             const sort=p.locator('[data-home-c4-sort='+mode+']');
