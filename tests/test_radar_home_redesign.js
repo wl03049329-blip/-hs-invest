@@ -7,7 +7,7 @@ const html=read("index.html"),css=read("v62-tech.css"),portfolio=read("portfolio
 
 assert.doesNotMatch(html,/id="homeMarketOverview"|id="marketOverviewCards"/);
 assert.doesNotMatch(html,/scheduleLiveQuotePoll|liveQuoteTimer/);
-assert(html.indexOf('id="hsDecisionRoom"')<html.indexOf('id="homeSentiment"')&&html.indexOf('id="homeSentiment"')<html.indexOf('id="homeEtfBrief"')&&html.indexOf('id="homeEtfBrief"')<html.indexOf('id="homeLeverageBrief"'));
+assert(html.indexOf('id="hsDecisionRoom"')<html.indexOf('id="homeEtfBrief"')&&html.indexOf('id="homeEtfBrief"')<html.indexOf('id="homeSentiment"')&&html.indexOf('id="homeSentiment"')<html.indexOf('id="homeLeverageBrief"'));
 assert.match(html,/scheduleLongRankRefresh/);
 assert.match(html,/market-quotes-meta\.json\?ts=/);
 assert.doesNotMatch(html,/fetchNoStore\(`(?:market-overview|commodity-quotes|tx-futures-quote)\.json/);

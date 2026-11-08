@@ -4,6 +4,10 @@
 // portfolio code remain under the original byte-for-byte assertions.
 const assert=require('assert/strict'),cp=require('child_process'),crypto=require('crypto');
 module.exports=function(source){
+ if(source.includes('id="hsDecisionDisclosure"')){
+  assert.equal(crypto.createHash('sha256').update(source).digest('hex'),'71f89eaefdb44540143adc0d5a0b5b8403336c71ff6315d9974d7d48514004f4','UNREVIEWED_HOME_COMPACT_CHANGE');
+  source=cp.execFileSync('git',['show','ea6b5b5a097d2e4ee58f57134b02268346be23c8:index.html'],{maxBuffer:8e6}).toString();
+ }
  if(source.includes('let lastPublishedFormalCoreView;')){
   assert.equal(crypto.createHash('sha256').update(source).digest('hex'),'0adc00ffecff6a2839a1460e5d250c5fdf0ef48135e9cc3e1496df01a5f43e9b','UNREVIEWED_MOBILE_PERFORMANCE_CHANGE');
   source=cp.execFileSync('git',['show','d050b9fd51c3d153ab2b7872c278e16c206d140e:index.html'],{maxBuffer:8e6}).toString();

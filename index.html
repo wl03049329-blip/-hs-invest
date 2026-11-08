@@ -380,12 +380,14 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
 
   <div id="message" class="message info">正在取得最新資料…</div>
   <div id="homeDataHealth" class="hsHomeDataHealth" data-tab-section="today" aria-live="polite">
-    <span><b data-health-overall>資料確認中</b><small id="homeDataHealthContext">等待資料驗證</small></span>
+    <span><small id="homeHealthUpdate">更新 —</small><b data-health-overall>資料確認中</b><small id="homeHealthFinal">FINAL —</small></span>
     <button id="homeDataHealthOpen" type="button" aria-haspopup="dialog" aria-controls="homeDataHealthDialog">健康細節 <span aria-hidden="true">›</span></button>
   </div>
   <dialog id="homeDataHealthDialog" class="hsHomeHealthDialog" aria-labelledby="homeDataHealthTitle">
     <header><h2 id="homeDataHealthTitle">資料健康細節</h2><button type="button" id="homeDataHealthClose" aria-label="關閉資料健康細節">×</button></header>
     <p class="hsHomeHealthOffline" hidden>目前離線，以下為最後一次檢查結果，不代表最新資料。</p>
+    <p id="homeHealthUpdateDetail">資料更新｜—</p>
+    <p id="homeDataHealthContext">等待資料驗證</p>
     <div id="homeDataHealthContent">資料確認中，請稍候。</div>
   </dialog>
 
@@ -407,8 +409,22 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       <div><p class="eyebrow">TODAY'S CORE DECISION</p><h2 id="hsDecisionRoomTitle"><svg aria-hidden="true"><use href="#i-radar"/></svg>今日核心決策</h2></div>
       <small id="hsDecisionMarketCaption">市場狀態確認中 · 掌握下一步佈局</small>
     </div>
-    <button class="hsOnboardingEntry" id="hsOnboardingOpenHome" type="button">第一次使用？用 7 步認識 HS <span aria-hidden="true">→</span></button>
-    <div id="hsDecisionRoomGrid" class="hsDecisionRoomGrid" aria-live="polite"><div class="skeleton">彙整今日市場狀態中…</div></div>
+    <details id="hsDecisionDisclosure">
+      <summary><span id="hsDecisionCompact" aria-live="polite">彙整今日市場狀態中…</span><span aria-hidden="true">⌄</span></summary>
+      <button class="hsOnboardingEntry" id="hsOnboardingOpenHome" type="button">第一次使用？用 7 步認識 HS <span aria-hidden="true">→</span></button>
+      <div id="hsDecisionRoomGrid" class="hsDecisionRoomGrid" aria-live="polite"><div class="skeleton">彙整今日市場狀態中…</div></div>
+    </details>
+  </section>
+
+  <section id="homeEtfBrief" class="panel homeEtfBrief hsLivePanel" data-tab-section="today" aria-labelledby="homeEtfBriefTitle">
+    <div class="panelTitle compactTitle">
+      <div><p class="eyebrow">盤中分數追蹤</p><h2 id="homeEtfBriefTitle"><svg aria-hidden="true"><use href="#i-radar"/></svg>C4 今日盤中追蹤</h2></div>
+      <button id="hsLiveReadScore" class="hsLiveReadScore" type="button" data-read-core-score="0050">讀懂你的分數</button>
+      <small id="updatedTop">載入最新排名</small>
+    </div>
+    <div class="hsC4SortTabs" role="group" aria-label="C4 排序方式"><button class="is-active" type="button" data-home-c4-sort="score">目前分數</button><button type="button" data-home-c4-sort="change">今日變化</button><button type="button" data-home-c4-sort="threshold">接近門檻</button></div>
+    <div id="homeEtfBriefSummary" class="homeEtfBriefSummary">買點資料載入中…</div>
+    <div id="hsDashboardC4Grid" class="hsDashboardC4Grid" aria-live="polite"><div class="skeleton">載入正式 C4 排名中…</div></div>
   </section>
 
   <section id="homeSentiment" class="panel homeSentiment" data-sentiment-layout="five" data-tab-section="today" aria-labelledby="homeSentimentTitle">
@@ -432,17 +448,6 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
       <button id="homeTmfRatioCard" class="homeSentimentCard" type="button" data-home-chip="futures"><span>微台散戶淨留倉</span><b>—</b><strong hidden></strong><small class="homeTmfMethod">非三大法人部位推估</small><small data-tmf-state>資料尚未建立</small><span class="homeMarketFooter"><time>資料日 —</time></span></button>
     </div>
     <details id="homeSentimentDetails" class="homeSentimentDetails"><summary>展開資料方法與日期</summary><div>資料載入中…</div></details>
-  </section>
-
-  <section id="homeEtfBrief" class="panel homeEtfBrief hsLivePanel" data-tab-section="today" aria-labelledby="homeEtfBriefTitle">
-    <div class="panelTitle compactTitle">
-      <div><p class="eyebrow">盤中分數追蹤</p><h2 id="homeEtfBriefTitle"><svg aria-hidden="true"><use href="#i-radar"/></svg>C4 今日盤中追蹤</h2></div>
-      <button id="hsLiveReadScore" class="hsLiveReadScore" type="button" data-read-core-score="0050">讀懂你的分數</button>
-      <small id="updatedTop">載入最新排名</small>
-    </div>
-    <div class="hsC4SortTabs" role="group" aria-label="C4 排序方式"><button class="is-active" type="button" data-home-c4-sort="score">目前分數</button><button type="button" data-home-c4-sort="change">今日變化</button><button type="button" data-home-c4-sort="threshold">接近門檻</button></div>
-    <div id="homeEtfBriefSummary" class="homeEtfBriefSummary">買點資料載入中…</div>
-    <div id="hsDashboardC4Grid" class="hsDashboardC4Grid" aria-live="polite"><div class="skeleton">載入正式 C4 排名中…</div></div>
   </section>
 
   <section id="homeLeverageBrief" class="panel homeLeverageBrief" data-tab-section="today" aria-labelledby="homeLeverageBriefTitle">
@@ -2158,7 +2163,13 @@ function formalCloseMarketAsOf(items){
 }
 function recordSuccessfulMarketAsOf(asOf){latestSuccessfulMarketAsOf=newerSuccessfulMarketAsOf(latestSuccessfulMarketAsOf,asOf);return latestSuccessfulMarketAsOf}
 function headerMarketUpdateText(asOf,failedCount=0){return`資料更新｜${formatHeaderMarketAsOf(asOf)}${failedCount?`｜${failedCount} 檔沿用最後資料`:""}`}
-function renderHeaderMarketUpdate(failedCount=0){const node=$("#message");if(node&&latestSuccessfulMarketAsOf){node.className="message info";node.textContent=headerMarketUpdateText(latestSuccessfulMarketAsOf,failedCount)}}
+function renderHeaderMarketUpdate(failedCount=0){
+  const node=$("#message");if(!node||!latestSuccessfulMarketAsOf)return;
+  const text=headerMarketUpdateText(latestSuccessfulMarketAsOf,failedCount),update=$("#homeHealthUpdate"),detail=$("#homeHealthUpdateDetail");
+  node.className=failedCount?"message info":"message info hsHomeMarketAsOf";node.textContent=text;
+  if(update){update.textContent="更新 "+formatHeaderMarketAsOf(latestSuccessfulMarketAsOf).slice(11,16);update.title=text;update.setAttribute("aria-label",text);}
+  if(detail)detail.textContent=text;
+}
 function marketValueText(item){
   if(!item||!Number.isFinite(item.value))return"—";
   return new Intl.NumberFormat("zh-TW",{minimumFractionDigits:item.key==="tsmc"?0:2,maximumFractionDigits:2}).format(item.value);
@@ -3524,6 +3535,8 @@ function renderHomeDataHealth(dualTrack,health){
   const track=presentation.isLive?"LIVE":source?.status==="今日正式分數待更新"?`今日正式分數待更新 · 沿用 ${health.officialDate} FINAL`:health.officialDate&&source?.level!=="ERROR"?`${source?.level==="WARNING"?"最後 FINAL":health.officialDate< (dualTrack?.target_date||taipeiToday())?"前日 FINAL":"FINAL"} ${health.officialDate}`:"正式資料待確認";
   context.textContent=`${track} · ${decisionCenterMarketLabel(health.marketState)}${health.marketState==="OPEN"&&!presentation.isLive?" · 盤中資料待確認":""}`;
   context.title=[source?.detail,live?.detail].filter(Boolean).join("；");
+  const final=$("#homeHealthFinal"),date=source&&source.level!=="ERROR"&&/^\d{4}-\d{2}-\d{2}$/.test(health.officialDate||"")?health.officialDate:"";
+  if(final){final.textContent=date?"FINAL "+date.slice(5).replace("-","/"):"FINAL —";final.title=date?"正式 FINAL 資料日 "+date:"正式 FINAL 資料日期待確認";final.setAttribute("aria-label",final.title);}
   content.innerHTML=decisionCenterHealthHtml(health);const details=content.querySelector("details");if(details)details.open=true;
   syncHomeHealthConnectivity();
 }
@@ -3617,6 +3630,8 @@ function renderDecisionCenter(longs,dualTrack,leverageState){
   const focusRows=sortDecisionCenterC4Rows(decisionCenterC4Rows(dashboardOfficialRows,longs,dualTrack),"score"),focus=focusRows[0],focusNext=focus?.next,focusDistance=focusNext?.highest?"最高決策區":Number.isFinite(focusNext?.distance)?`${decisionCenterDistanceText(focusNext.distance)} 分`:"—",focusStatus=!Number.isFinite(focus?.score)?"UNAVAILABLE":focus?.useLive?"LIVE":health.marketState==="PREMARKET"?"前日 FINAL":"FINAL",focusThreshold=focusNext?.highest?"已在最高決策區":Number.isFinite(focusNext?.distance)?`距${focusNext.nextLabel||"下一級"}僅 ${focusDistance}`:"門檻資料暫缺",focusThresholdDetail=focusNext?.highest?"維持紀律，等待布局":Number.isFinite(focusNext?.distance)?`再增加 ${focusDistance}即進入下一級`:focus?.unavailableReason||"維持觀察 · 等待時機";
   const lastUpdate=liveReady?(formatHomeQuoteTime(latestLive)||"—"):Number.isFinite(focus?.score)?(formatHomeQuoteTime(highest?.asOf)||highest?.date||"—"):"尚無今日有效盤中資料";
   const leverage=decisionCenterLeverageSummary(leverageState),cnnView=cnnGaugePresentation(),healthTone=health.level==="HEALTHY"?"is-ok":"is-warning";
+  const compact=$("#hsDecisionCompact");
+  if(compact)compact.textContent=`${focus?.symbol||highest?.symbol||"—"} · ${Number.isFinite(focus?.score)?focus.score+" 分":"—"} · ${focus?.tier||highest?.tier||"資料更新中"}`;
 host.innerHTML=`<div class="hsCoreDecisionHero"><div class="hsCoreIdentity"><span>${esc(focus?.symbol||highest?.symbol||"—")}</span><b>${esc(focus?.name||"正式資料暫不可用")}</b><small>${esc(focus?.tier||highest?.tier||"資料更新中")} ｜ 長期趨勢</small></div><div class="hsCoreHeroScore"><span>目前分數 <i>${focusStatus}</i></span><b>${Number.isFinite(focus?.score)?focus.score:"—"}<small>分</small></b><strong>${esc(focus?.tier||highest?.tier||"UNAVAILABLE")}</strong></div><div class="hsCoreThreshold"><span>距下一級門檻</span><b>${esc(focusThreshold)}</b><small>${esc(focusThresholdDetail)}</small></div></div>`;
   renderHomeDataHealth(dualTrack,health);
   const caption=$("#hsDecisionMarketCaption");if(caption)caption.textContent=health.marketState==="PREMARKET"?"目前顯示前一交易日收盤資料":`${decisionCenterMarketLabel(health.marketState)} · 掌握下一步佈局`;

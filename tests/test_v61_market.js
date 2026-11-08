@@ -62,7 +62,7 @@ check("三項正式行情資料保留，首頁改以四個決策區塊呈現", (
   const brief = html.indexOf('id="homeEtfBrief"');
   const sentiment = html.indexOf('id="homeSentiment"');
   const summary = html.indexOf('class="panel marketPanel"');
-  assert.ok(highlights < sentiment && sentiment < brief && brief < summary);
+  assert.ok(highlights < brief && brief < sentiment && sentiment < summary);
   assert.doesNotMatch(html + css + quoteUi, /即時行情|即時報價|零延遲/);
 });
 

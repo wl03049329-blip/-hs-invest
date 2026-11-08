@@ -23,7 +23,7 @@ check("產品版本由單一 SemVer 來源提供與五個正式分頁", () => {
   assert.match(html, /HS｜ETF股市雷達/);
   assert.match(html, /data-hs-version/);
   assert.match(html, /app-version\.js/);
-  assert.match(fs.readFileSync(path.join(root, "version.json"), "utf8"), /"version"\s*:\s*"3\.9\.4"/);
+  assert.match(fs.readFileSync(path.join(root, "version.json"), "utf8"), /"version"\s*:\s*"3\.9\.5"/);
   assert.match(html, /data-tab="signals"[^>]*>[\s\S]*?<span>ETF雷達<\/span><\/button>/);
   for (const tab of ["today", "signals", "portfolio", "sentiment", "more"]) {
     assert.match(html, new RegExp(`data-tab="${tab}"`));
@@ -79,8 +79,8 @@ check("首頁固定四區順序且市場摘要移至我的頁", () => {
   const sentimentIndex = html.indexOf('id="homeSentiment"');
   const briefIndex = html.indexOf('id="homeEtfBrief"');
   const swingIndex = html.indexOf('id="homeLeverageBrief"');
-  assert.ok(highlightsIndex > 0 && highlightsIndex < sentimentIndex);
-  assert.ok(sentimentIndex < briefIndex && briefIndex < swingIndex);
+  assert.ok(highlightsIndex > 0 && highlightsIndex < briefIndex);
+  assert.ok(briefIndex < sentimentIndex && sentimentIndex < swingIndex);
   assert.match(html, /class="dashboard tabHidden" data-tab-section="more"/);
 });
 

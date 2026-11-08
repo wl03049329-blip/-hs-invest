@@ -49,7 +49,7 @@ console.log("PASS HS Decision Center Phase 2 summary and responsive contract");
 
 for(const marker of ["今日核心決策","市場情緒快覽","C4 今日盤中追蹤","00631L 正二雷達","hsDashboardC4Grid","homeDataHealthDialog"])assert.ok(html.includes(marker),`${marker} must remain on the homepage`);
 assert.ok(!html.includes('class="hsDecisionStatusRail"'),"duplicate four-card home presentation is retired; full health diagnostics remain in the dialog");
-const order=["id=\"hsDecisionRoom\"","id=\"homeSentiment\"","id=\"homeEtfBrief\"","id=\"homeLeverageBrief\""].map(marker=>html.indexOf(marker));
+const order=["id=\"hsDecisionRoom\"","id=\"homeEtfBrief\"","id=\"homeSentiment\"","id=\"homeLeverageBrief\""].map(marker=>html.indexOf(marker));
 assert.ok(order.every((value,index)=>value>0&&(index===0||value>order[index-1])),"homepage operations flow must be Hero -> Sentiment -> C4 -> 00631L");
 assert.match(html,/function decisionCenterC4Rows[\s\S]*?selectDecisionCenterOpportunity\(\[\{symbol,score:rawScore\}\]\)/);
 assert.match(html,/HS_DASHBOARD_C4_SYMBOLS=Object\.freeze\(\["0050","00662","00757","00830","00935","009815"\]\)/);
