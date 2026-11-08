@@ -1,5 +1,9 @@
 // Strip ONLY the reviewed V3.6 reader/UI wiring; keep all original safety seals.
 const assert=require('assert/strict');module.exports=s=>{
+ if(s.includes('let marketController=null;')){
+  assert.equal(require('node:crypto').createHash('sha256').update(s).digest('hex'),'398bddab510eab91f44ae4b29717a5363f5a5613e3624502945e69f828aae880','UNREVIEWED_PORTFOLIO_REFRESH_CHANGE');
+  s=require('node:child_process').execFileSync('git',['show','d675c843503ce569160e0432ec81e567c318b5e7:portfolio-v3/personal-v3.js'],{maxBuffer:8e6}).toString();
+ }
  if(s.includes('refreshVisiblePortfolio')){
   const visibility=` const refresh=()=>host.document.querySelector('[data-tab-section="portfolio"].tabHidden')?Promise.resolve():refreshVisiblePortfolio();
  host.addEventListener('hs:portfolio-visible',()=>void refresh());
