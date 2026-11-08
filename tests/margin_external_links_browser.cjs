@@ -54,7 +54,7 @@ async function run(){
           });
           const p=await ctx.newPage();
           const receipt=await (await ctx.request.get(base+'app-release.json?links='+Date.now())).json();
-          assert.equal(receipt.version,'3.9.4');
+          assert.equal(receipt.version,'3.9.5');
           assert.equal(receipt.financial_writer,false);
           if(publicMode){
             const expected=process.env.HS_LINKS_DEPLOYMENT;
@@ -70,6 +70,28 @@ async function run(){
           await p.goto(base+'?links='+Date.now(),{waitUntil:'domcontentloaded'});
           assert.equal(await p.locator('.hsDashboardDetails,#hsTodaySummary,#rankList,#radarCurrentSlot,#radarNextSlot').count(),0);
           await p.waitForFunction(()=>document.querySelectorAll('#hsDashboardC4Grid [data-c4-symbol]').length===6);
+          const disclosure=p.locator('#hsDecisionDisclosure');
+          assert.equal(await disclosure.getAttribute('open'),null);
+          assert.equal(await p.locator('#hsOnboardingOpenHome').isVisible(),false);
+          assert.match(await p.locator('#hsDecisionCompact').textContent(),/\b\d{4,6}[A-Z]?\s*·\s*\d+(?:\.\d+)? 分\s*·\s*\S/);
+          assert.ok(await p.locator('#homeEtfBrief').evaluate(el=>el.nextElementSibling.id==='homeSentiment'));
+          const statusFit=()=>p.locator('#homeDataHealth').evaluate(el=>{
+            const rect=el.getBoundingClientRect(),fields=[...el.querySelectorAll('small,b,button')];
+            return fields.every(n=>{const r=n.getBoundingClientRect();return r.left>=rect.left-1&&r.right<=rect.right+1&&r.width>0&&r.top>=rect.top&&r.bottom<=rect.bottom+1&&n.scrollWidth<=n.clientWidth+1;});
+          });
+          assert.ok(await statusFit(),'compact status must fit one row');
+          const toggle=async()=>{
+            const summary=disclosure.locator('summary');
+            await summary.evaluate(el=>el.scrollIntoView({block:'center',behavior:'instant'}));
+            if(mobile)await summary.tap();else await summary.click();
+          };
+          await toggle();
+          await p.locator('#hsDecisionRoomGrid .hsCoreDecisionHero').waitFor({state:'visible'});
+          await p.locator('#hsOnboardingOpenHome').click();
+          await p.locator('#hsBeginnerGuidePanel, #hsBeginnerGuide .hsBeginnerGuidePanel').first().waitFor({state:'visible'});
+          await p.locator('#hsBeginnerGuideClose').click();
+          await toggle();
+          assert.equal(await disclosure.getAttribute('open'),null);
           for(const mode of ['change','threshold','score']){
             const sort=p.locator('[data-home-c4-sort='+mode+']');
             await sort.evaluate(button=>button.scrollIntoView({behavior:'instant',block:'center'}));

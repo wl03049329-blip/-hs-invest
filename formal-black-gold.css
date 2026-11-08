@@ -2469,9 +2469,15 @@ footer{color:#746f67}
 @media(prefers-reduced-motion:reduce){#home .hsHeaderState.is-live b::before{animation:none;opacity:1}}
 /* Compact home-only health entry; diagnostics stay outside document flow. */
 .hsHomeDataHealth{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 2px 8px;min-width:0;color:#e2d8c4}
-.hsHomeDataHealth>span{display:flex;flex-wrap:wrap;align-items:baseline;gap:3px 7px;min-width:0}.hsHomeDataHealth b{font-size:14px}.hsHomeDataHealth small{font-size:12px;line-height:1.5;color:#c1b7a4;overflow-wrap:anywhere}.hsHomeDataHealth .is-ok{color:#83d6aa}.hsHomeDataHealth .is-warning{color:#edc36c}
+.hsHomeDataHealth>span{display:flex;align-items:baseline;gap:clamp(4px,1vw,7px);min-width:0;white-space:nowrap}.hsHomeDataHealth b{min-width:0;font-size:14px;overflow:hidden;text-overflow:ellipsis}.hsHomeDataHealth small{flex:none;font-size:12px;line-height:1.5;color:#c1b7a4}.hsHomeDataHealth .is-ok{color:#83d6aa}.hsHomeDataHealth .is-warning{color:#edc36c}
 .hsHomeDataHealth button{flex-shrink:0;min-height:44px;padding:4px 8px;border:0;background:transparent;color:#e9cd8d;font:inherit;font-size:14px;cursor:pointer}
 body:has(#homeDataHealth:not(.tabHidden)) #message.message{margin:0 2px;padding:2px 0;font-size:13px;line-height:1.5}
+body:has(#homeDataHealth:not(.tabHidden)) #message.hsHomeMarketAsOf{display:none}
+#hsDecisionDisclosure>summary{display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:44px;list-style:none;color:#e9cd8d;cursor:pointer}
+#hsDecisionDisclosure>summary::-webkit-details-marker{display:none}
+#hsDecisionCompact{min-width:0;overflow-wrap:anywhere}
+#hsDecisionDisclosure[open]>summary>span:last-child{transform:rotate(180deg)}
+@media(max-width:340px){.hsHomeDataHealth{gap:4px}.hsHomeDataHealth button{padding-inline:2px;white-space:nowrap}}
 .hsHomeHealthDialog{box-sizing:border-box;width:min(680px,calc(100% - 24px));max-height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 32px);margin:auto;padding:14px;border:1px solid #78633d;border-radius:18px;background:#14130f;color:#eee2c9;overflow-y:auto;overscroll-behavior:contain}
 .hsHomeHealthDialog::backdrop{background:rgba(0,0,0,.72)}.hsHomeHealthDialog>header{display:flex;align-items:center;justify-content:space-between;gap:12px}.hsHomeHealthDialog h2{margin:0;font-size:19px}.hsHomeHealthDialog>header button{min-width:44px;min-height:44px;border:1px solid #76613c;border-radius:50%;background:#211e16;color:#f2e5cc;font-size:26px;cursor:pointer}
 .hsHomeHealthDialog .hsHomeSystemDetails{margin:0}.hsHomeHealthDialog .hsHomeSystemDetails>summary{display:none}.hsHomeHealthDialog .hsSystemHealthDetail{margin:8px 0 0;padding:0;border:0;background:none}.hsHomeHealthDialog .hsSystemHealthRow>span>b{font-size:14px}.hsHomeHealthDialog .hsSystemHealthRow>span>small,.hsHomeHealthDialog .hsSystemHealthRow>strong,.hsHomeHealthDialog .hsSystemHealthRow>p,.hsHomeHealthDialog .hsSystemHealthDetail>p{font-size:13px;line-height:1.6;color:#c7bdab}.hsHomeHealthDialog .hsSystemHealthRow.is-warning>strong,.hsHomeHealthOffline{color:#edc36c}.hsHomeHealthDialog .hsSystemHealthRow.is-error>strong{color:#f0a69d}

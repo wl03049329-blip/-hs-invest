@@ -37,7 +37,7 @@ assert.match(portfolio,/openPortfolioModal\(button\.dataset\.mobileHolding\)/);
 assert.match(portfolio,/openPortfolioModal\(button\.dataset\.editHolding\)/);
 assert.doesNotMatch(portfolio,/ledger\?openLedger\(\):openPortfolioModal/);
 
-const visibleHomeOrder = ["hsDecisionRoom","homeSentiment","homeEtfBrief","homeLeverageBrief"];
+const visibleHomeOrder = ["hsDecisionRoom","homeEtfBrief","homeSentiment","homeLeverageBrief"];
 let cursor = -1;
 for (const id of visibleHomeOrder) {
   const next = html.indexOf(`id="${id}"`);
