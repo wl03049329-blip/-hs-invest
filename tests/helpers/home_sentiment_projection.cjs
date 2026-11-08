@@ -4,6 +4,10 @@
 // portfolio code remain under the original byte-for-byte assertions.
 const assert=require('assert/strict'),cp=require('child_process'),crypto=require('crypto');
 module.exports=function(source){
+ if(source.includes('let lastPublishedFormalCoreView;')){
+  assert.equal(crypto.createHash('sha256').update(source).digest('hex'),'c6ee7a425310b1e9d8fc1e1049e15bd9ce4e808d39a492364952de2f14f5747d','UNREVIEWED_MOBILE_PERFORMANCE_CHANGE');
+  source=cp.execFileSync('git',['show','d050b9fd51c3d153ab2b7872c278e16c206d140e:index.html'],{maxBuffer:8e6}).toString();
+ }
  if(!source.includes('class="hsDashboardDetails"')&&source.includes('id="hsDashboardC4Grid"')){
   assert.equal(crypto.createHash('sha256').update(source).digest('hex'),'4727a274ef0876d08278b9478c0a7af527062eb0c2e0699039fdbf28e7f49d2a','UNREVIEWED_LEGACY_RETIREMENT_CHANGE');
   source=cp.execFileSync('git',['show','ad1bb29a16cd1a13ad07e1746676f0e80f92abef:index.html'],{maxBuffer:8e6}).toString();
