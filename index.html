@@ -5226,6 +5226,7 @@ function switchTab(name,{scroll=true}={}){
   document.querySelectorAll(".appNavButton").forEach(btn=>{const active=btn.dataset.tab===name;btn.classList.toggle("active",active);btn.setAttribute("aria-current",active?"page":"false")});
   document.querySelectorAll("[data-tab-intro]").forEach(el=>el.classList.toggle("active",el.dataset.tabIntro===name));
   sessionStorage.setItem("hsRadar.activeTab",name);
+  if(name==="portfolio")window.dispatchEvent(new Event("hs:portfolio-visible"));
   if(name==="signals")mountRadarHistoryChart($("#cards .signalCard.is-selected"));
   if(scroll)document.querySelector(".topTabs")?.scrollIntoView({behavior:"smooth",block:"start"});
 }
@@ -5292,9 +5293,12 @@ $("#drawdownForm").addEventListener("submit",async event=>{
 async function load(){
   const m=$("#message"),b=$("#reload"),buttonLabel=b.querySelector("span");syncWatchlistState();renderWatchlist();m.className="message info";m.textContent="正在更新最新資料…";b.disabled=true;b.setAttribute("aria-busy","true");if(buttonLabel)buttonLabel.textContent="更新中…";
   try{
-    await Promise.all([loadFinalizedCoreScoreHistory(),loadResearchC4History()]);
-    // Radar-only display can render verified FINALIZED history without market prices.
-    renderCards();renderTop();
+    await loadFinalizedCoreScoreHistory();
+    // Home FINAL can render without research. Radar alert evaluation still
+    // waits for the same validated research inputs before its first render.
+    renderTop();
+    await loadResearchC4History();
+    renderCards();
     await loadResearchC4Outcomes();
     await Promise.all([loadCorporateActionTables(),loadEtfValuation(),loadLeverageOfficialStatus()]);
     renderTop();
