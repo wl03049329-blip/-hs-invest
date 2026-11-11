@@ -8,8 +8,8 @@
   "volume_unit": "SHARES",
   "verified": true,
   "requested_start": "2018-12-01",
-  "requested_end": "2026-11-10",
-  "fetched_at": "2026-11-10T12:37:25.280757+00:00",
+  "requested_end": "2026-11-11",
+  "fetched_at": "2026-11-11T15:29:00.995316+00:00",
   "base_source_sha256": null,
   "base_last_date": null,
   "overlap": {
@@ -17332,12 +17332,21 @@
       "min": 133.25,
       "close": 134.5,
       "Trading_Volume": 1532935
+    },
+    {
+      "date": "2026-11-11",
+      "stock_id": "00757",
+      "open": 134.45,
+      "max": 135.2,
+      "min": 133.9,
+      "close": 135.2,
+      "Trading_Volume": 1076073
     }
   ],
   "dividends": [],
   "action_coverage": {
     "start": "2018-12-01",
-    "end": "2026-11-10"
+    "end": "2026-11-11"
   },
   "evidence": [
     {
@@ -18074,6 +18083,16 @@
       "url": "https://www.twse.com.tw/exchangeReport/FMTQIK?response=json&date=20261101",
       "fetched_at": "2026-11-10T12:37:09.230920+00:00",
       "sha256": "26215cbe70326e83344e60112558e6636d7852b7f076b330e8ea823db0f660ac"
+    },
+    {
+      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20261101&stockNo=00757",
+      "fetched_at": "2026-11-11T15:29:00.995316+00:00",
+      "sha256": "6c5bd04be1160cef62f9cdc7d6e4e66e9c4af08138cb4ef9dcb97cd237158435"
+    },
+    {
+      "url": "https://www.twse.com.tw/exchangeReport/FMTQIK?response=json&date=20261101",
+      "fetched_at": "2026-11-11T15:28:45.846223+00:00",
+      "sha256": "e3f29b925d2a1704fcda07629884f021b081b274c66f5ef9025d1b74dcff8e38"
     }
   ],
   "action_evidence": [
@@ -18201,6 +18220,11 @@
       "url": "https://www.twse.com.tw/exchangeReport/TWT49U?response=json&startDate=20261101&endDate=20261110",
       "fetched_at": "2026-11-10T12:37:16.617490+00:00",
       "sha256": "df499c47fd534cd5b376c1b56e1cbe636b9fa397a5ebc0028198bbf43f33a896"
+    },
+    {
+      "url": "https://www.twse.com.tw/exchangeReport/TWT49U?response=json&startDate=20261101&endDate=20261111",
+      "fetched_at": "2026-11-11T15:28:53.434590+00:00",
+      "sha256": "7c7213bbf5d949cfc51cf8bb3cd4ab8a59bc8224a1ffcaba2ae5ef2dbe2d2300"
     }
   ],
   "missing_observed_sessions": [],
@@ -18208,7 +18232,7 @@
   "listing_reference": "https://www.twse.com.tw/staticFiles/product/publication/0002000167.pdf",
   "incremental_verification": {
     "start": "2026-11-01",
-    "end": "2026-11-10",
+    "end": "2026-11-11",
     "sessions": [
       "2026-11-02",
       "2026-11-03",
@@ -18216,19 +18240,20 @@
       "2026-11-05",
       "2026-11-06",
       "2026-11-09",
-      "2026-11-10"
+      "2026-11-10",
+      "2026-11-11"
     ],
     "provider": "TWSE/STOCK_DAY",
-    "overlap_count": 6,
-    "parent_content_sha256": "6fab882ec8966e3223ddcaf692235a18ab9beaed5df013610451bff6b230cfda",
+    "overlap_count": 7,
+    "parent_content_sha256": "a0ad58cfe79afee18e3aeb7e1f42f28070c1ff408e6671ab2b6171962ef76222",
     "corporate_actions": "VERIFIED",
     "calendar_evidence": [
       {
         "url": "https://www.twse.com.tw/exchangeReport/FMTQIK?response=json&date=20261101",
-        "fetched_at": "2026-11-10T12:37:09.230920+00:00",
-        "sha256": "26215cbe70326e83344e60112558e6636d7852b7f076b330e8ea823db0f660ac"
+        "fetched_at": "2026-11-11T15:28:45.846223+00:00",
+        "sha256": "e3f29b925d2a1704fcda07629884f021b081b274c66f5ef9025d1b74dcff8e38"
       }
     ]
   },
-  "content_sha256": "a0ad58cfe79afee18e3aeb7e1f42f28070c1ff408e6671ab2b6171962ef76222"
+  "content_sha256": "9c6daf14462c091001b881c404e453e32f98e2055d8f3e20c24e48125e4b55f7"
 }
