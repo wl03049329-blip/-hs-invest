@@ -1,6 +1,6 @@
 /* Homepage research presentation only. Legacy renderer/data remain intact. */
 #homeLeverageBrief #homeLeverageCard{display:none!important}
-#homeLeverageBrief .panelTitle{align-items:flex-start}
+#homeLeverageBrief .panelTitle{display:none}
 #homeLeverageBrief .panelTitle h2{font-size:clamp(19px,4.8vw,25px);line-height:1.35}
 #homeLeverageBrief .panelTitle>small{display:none}
 .lc4v2{color:#eee9dd;line-height:1.5;min-width:0;font-variant-numeric:tabular-nums}
@@ -41,3 +41,7 @@
 @media(min-width:768px){.lc4v2-wins strong{font-size:32px}.lc4v2-crash .lc4v2-big{font-size:46px}.lc4v2-rail{max-width:640px}.lc4v2-peaks{max-width:640px}.lc4v2-tabs{max-width:400px}}
 @media(max-width:340px){.lc4v2-wins{gap:5px}.lc4v2-wins strong{font-size:20px}.lc4v2 .lc4r-row{font-size:13px}}
 @media(prefers-reduced-motion:reduce){.lc4v2 *{animation:none!important;scroll-behavior:auto!important}}
+.lradar-home{display:grid;gap:3px;padding:8px 12px;border:1px solid #5d4b30;border-radius:13px;background:#15120d;color:#e9d8b2;line-height:1.35}
+.lradar-home h3,.lradar-home p{margin:0}.lradar-home h3{font-size:16px}.lradar-home strong{color:#efd09a;font-size:16px}.lradar-home p,.lradar-home small{font-size:12px;color:#d6c4a2}
+.lradar-home>div{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px}
+.lradar-home button{min-height:44px;border:1px solid #6c5635;background:#20180e;color:#f2daaa;border-radius:8px;padding:0 8px;font:inherit;font-size:13px}

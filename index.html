@@ -19,6 +19,7 @@ html[data-hs-v3-boot="ready"] #hs-v3-boot-panel{display:none!important}
 <link rel="stylesheet" href="lc4-research.css">
 <link rel="stylesheet" href="lc4-radar-v2.css">
 <script defer src="lc4-radar-core.js"></script>
+<script defer src="lradar-core.js"></script>
 <script defer src="lc4-research.js"></script>
 <meta name="theme-color" content="#050505" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -453,8 +454,12 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
   <section id="homeLeverageBrief" class="panel homeLeverageBrief" data-tab-section="today" aria-labelledby="homeLeverageBriefTitle">
     <div class="panelTitle compactTitle"><div><p class="eyebrow">HS LEVERAGE</p><h2 id="homeLeverageBriefTitle"><svg aria-hidden="true"><use href="#i-chip"/></svg>00631L 正二雷達</h2><span class="hsLeverageIsolation">急跌機會與歷史統計｜不納入 C4 排名</span></div><small>描述性研究，非正式買進訊號</small></div>
     <div id="homeLeverageCard" hidden aria-hidden="true"><div class="skeleton">載入 00631L 槓桿戰術資料中…</div></div>
-    <div id="lc4-radar-v2" class="lc4v2" aria-live="polite"><p>正在核驗研究資料…</p></div>
-    <button type="button" class="lc4r-entry" data-lc4-research-open>00631L 查看完整研究 › <small>樣本、方法與風險限制</small></button>
+    <section id="lc4-radar-v2" class="lradar-home" data-state="DATA_UNAVAILABLE" aria-labelledby="lradar-title">
+      <h3 id="lradar-title">00631L 急跌反彈雷達</h3>
+      <strong>資料不足，暫不判斷</strong>
+      <p>缺少已驗證的盤中 K 線，無法判斷跌勢是否回穩。</p>
+      <div><small id="lradar-home-time" aria-live="polite">非即時 · 歷史日線 2026-11-05</small><button type="button" data-lc4-research-open>查看詳細分析 ›</button></div>
+    </section>
   </section>
 
   <section id="hsStoryEntry" class="hsStoryEntry tabHidden" data-tab-section="more" aria-labelledby="hsStoryEntryTitle">
