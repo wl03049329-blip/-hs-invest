@@ -27,3 +27,10 @@ and absence from both dated reports support the two 00662 no-score rows.
 No 11-11 or 11-12 FINAL or ranking is generated. If the supplement fails
 validation or cannot load, the formal view remains usable and the supplement
 is not presented as official or substituted into any gap.
+
+The history chart presents observations in a separate dashed series with
+hollow marks. Only the immediately preceding official point can anchor that
+visual segment; it is not duplicated as an observation marker or used to
+bridge a gap. A same-date FINAL takes precedence. The solid official series,
+statistics, raw candles, and signal consumers still use their original
+inputs. Suspension dates may be selected for their notice only.

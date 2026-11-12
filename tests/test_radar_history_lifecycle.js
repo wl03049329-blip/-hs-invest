@@ -133,9 +133,9 @@ const V=window.HSRadarHistoryView,args=symbol=>({symbol,name:symbol,artifact,con
   assert.equal(labels(charts.at(-1)).length,1);assert.equal(labels(charts.at(-1))[0].pane,0);
   assert.match(failed.querySelector('.radarHistoryCanvas').children.at(-1).textContent,/收盤：資料不足/);
   V.unmount();console.log("PASS source failure preserves independent finalized C4 and never invents candles");
-  sourceMode="NORMAL";const reference=new Host();await V.mount(reference,args("009815"));assert.match(reference.querySelector(".radarHistoryDetail").innerHTML,/尚無正式分數/);assert.match(reference.querySelector(".radarHistoryDetail").innerHTML,/已驗證 RAW_UNADJUSTED/);
+  sourceMode="NORMAL";const reference=new Host();await V.mount(reference,args("009815"));assert.match(reference.querySelector(".radarHistoryDetail").innerHTML,/該日未發布正式 C4/);assert.match(reference.querySelector(".radarHistoryDetail").innerHTML,/已驗證 RAW_UNADJUSTED/);
   assert.equal(labels(charts.at(-1)).length,1);assert.equal(labels(charts.at(-1))[0].pane,1);
-  assert.match(reference.querySelector('.radarHistoryCanvas').children.at(-1).textContent,/無正式 C4/);V.unmount();
+  assert.match(reference.querySelector('.radarHistoryCanvas').children.at(-1).textContent,/該日未發布正式 C4/);V.unmount();
   console.log("PASS no official score still renders independent verified price");
   const {Source:RealSource}=require("../radar-history-source"),requests=[];
   const api=new RealSource({fetcher:async url=>{const p=new URL(url).searchParams;requests.push(p.get("dataset"));const y=p.get("start_date").slice(0,4);return{ok:true,json:async()=>({status:200,data:p.get("dataset")==="TaiwanStockPrice"?[{stock_id:"0050",date:y+"-10-13",open:100,max:102,min:99,close:101,Trading_Volume:1000}]:[]})}},now:()=>new Date("2026-10-13T12:00Z")});
