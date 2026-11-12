@@ -4,6 +4,21 @@
 // portfolio code remain under the original byte-for-byte assertions.
 const assert=require('assert/strict'),cp=require('child_process'),crypto=require('crypto');
 module.exports=function(source){
+ if(source.includes('details.dataset.healthMarket=')){
+  for(const [after,before] of [
+   ['function renderHomeDataHealth(dualTrack,health,leverageState){','function renderHomeDataHealth(dualTrack,health){'],
+   ['  renderHomeDataHealth(dualTrack,health,leverageState);','  renderHomeDataHealth(dualTrack,health);'],
+   [`  content.innerHTML=decisionCenterHealthHtml(health);const details=content.querySelector("details");
+  if(details){
+    details.dataset.healthMarket=health.marketState;
+    details.dataset.healthLeverage=leverageState?.available===true&&leverageState.trigger!==true?"waiting":"";
+    details.open=true;
+  }`,'  content.innerHTML=decisionCenterHealthHtml(health);const details=content.querySelector("details");if(details)details.open=true;'],
+  ]){
+   assert.equal(source.split(after).length-1,1,'UNREVIEWED_HEALTH_DIALOG_PRESENTATION');
+   source=source.replace(after,before);
+  }
+ }
  if(source.includes('<script defer src="lradar-core.js"></script>')){
   const script='<script defer src="lradar-core.js"></script>\n';
   const card=`    <section id="lc4-radar-v2" class="lradar-home" data-state="DATA_UNAVAILABLE" aria-labelledby="lradar-title">
