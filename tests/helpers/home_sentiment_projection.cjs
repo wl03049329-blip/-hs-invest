@@ -4,6 +4,18 @@
 // portfolio code remain under the original byte-for-byte assertions.
 const assert=require('assert/strict'),cp=require('child_process'),crypto=require('crypto');
 module.exports=function(source){
+ if(source.includes('<script defer src="lradar-core.js"></script>')){
+  const script='<script defer src="lradar-core.js"></script>\n';
+  const card=`    <section id="lc4-radar-v2" class="lradar-home" data-state="DATA_UNAVAILABLE" aria-labelledby="lradar-title">
+      <h3 id="lradar-title">00631L 急跌反彈雷達</h3>
+      <strong>資料不足，暫不判斷</strong>
+      <p>缺少已驗證的盤中 K 線，無法判斷跌勢是否回穩。</p>
+      <div><small id="lradar-home-time" aria-live="polite">非即時 · 歷史日線 2026-11-05</small><button type="button" data-lc4-research-open>查看詳細分析 ›</button></div>
+    </section>
+`;
+  assert.equal(source.split(script).length-1,1);assert.equal(source.split(card).length-1,1);
+  source=source.replace(script,'').replace(card,'    <div id="lc4-radar-v2" class="lc4v2" aria-live="polite"><p>正在核驗研究資料…</p></div>\n    <button type="button" class="lc4r-entry" data-lc4-research-open>00631L 查看完整研究 › <small>樣本、方法與風險限制</small></button>\n');
+ }
  if(source.includes('id="hsDecisionDisclosure"')){
   assert.equal(crypto.createHash('sha256').update(source).digest('hex'),'71f89eaefdb44540143adc0d5a0b5b8403336c71ff6315d9974d7d48514004f4','UNREVIEWED_HOME_COMPACT_CHANGE');
   source=cp.execFileSync('git',['show','ea6b5b5a097d2e4ee58f57134b02268346be23c8:index.html'],{maxBuffer:8e6}).toString();
