@@ -1,5 +1,6 @@
 "use strict";
 const test=require("node:test"),assert=require("node:assert/strict");
+const fs=require("node:fs"),vm=require("node:vm");
 const core=require("../home-tmf-core"), snapshot=require("../home-tmf-net.json");
 const now=Date.parse(snapshot.retrieved_at)+86400000;
 test("validated official positions derive both numbers on a coherent pair of sessions",()=>{
@@ -20,22 +21,43 @@ test("fail closed on missing source, incorrect market balance, mixed dates and i
   assert.equal(core.select(snapshot,null,now),snapshot);
   assert.equal(core.select(null,null,now),null);
 });
-test("net direction never controls movement color, zero is neutral",()=>{
+function colorFixture(previous,net){
   const x=structuredClone(snapshot),[prev,current]=x.observations;
-  current.institutional["投信"]={long:current.net+1,short:0,net:-0};
-  current.institutional["投信"].net=current.institutional["投信"].long;
-  x.net=current.net=-1;x.net_change=current.net-prev.net;
-  assert.match(core.view(x,now).value,/^−1 口$/);
-  assert.equal(core.view(x,now).tone,"fall");
-  const y=structuredClone(snapshot);
-  const p=y.observations[0];
-  p.institutional["投信"]={long:p.net-y.net+1,short:0,net:p.net-y.net+1};
-  p.net=y.net-1;y.net_change=1;
-  assert.equal(core.view(y,now).tone,"rise");
-  assert.match(core.view(y,now).change,/▲ 較前交易日 \+1 口/);
-  p.institutional["投信"].long--;p.institutional["投信"].net--;p.net++;y.net_change=0;
-  assert.equal(core.view(y,now).tone,"flat");
-  assert.match(core.view(y,now).change,/較前交易日 0 口/);
+  for(const [row,value] of [[prev,previous],[current,net]]){
+    // Synthetic tiny positions preserve the real report dates and market totals.
+    // No expectation depends on the latest published net or its direction.
+    row.net=value;
+    for(const key of Object.keys(row.institutional))row.institutional[key]={long:0,short:0,net:0};
+    row.institutional["投信"]={long:Math.max(0,-value),short:Math.max(0,value),net:-value};
+  }
+  x.net=net;x.net_change=net-previous;
+  assert.equal(core.valid(x,now),true);
+  return x;
+}
+const positions=[[-1,"fall","−1 口"],[0,"flat","0 口"],[1,"rise","+1 口"]];
+const movements=[[-1,"fall","▼ 較前交易日 −1 口"],[0,"flat","較前交易日 0 口"],[1,"rise","▲ 較前交易日 +1 口"]];
+test("movement color, arrow and sign follow only the delta across all position signs",()=>{
+  for(const [net,,label] of positions)for(const [delta,tone,change] of movements){
+    const x=colorFixture(net-delta,net),view=core.view(x,now);
+    assert.deepEqual(view,{value:label,change,tone,date:x.trade_date});
+  }
+});
+test("homepage renders net and movement colors independently",async()=>{
+  const source=fs.readFileSync(require.resolve("../home-taiex-display"),"utf8");
+  for(const [net,positionTone,label] of positions)for(const [delta,deltaTone,change] of movements){
+    const x=colorFixture(net-delta,net),nodes=Object.fromEntries(["b","strong","time","[data-taiex-state],[data-tmf-state]"].map(k=>[k,{dataset:{}}]));
+    const card={querySelector:k=>nodes[k],setAttribute(){}};
+    const context={window:{HSHomeTmf:{...core,valid:v=>core.valid(v,now),select:(a,b)=>core.select(a,b,now),view:v=>core.view(v,now)}},
+      document:{getElementById:id=>id==="homeTmfRatioCard"?card:null,addEventListener(){}},
+      localStorage:{getItem:()=>null,setItem(){},removeItem(){}},addEventListener(){},setInterval(){},setTimeout,clearTimeout,AbortController,
+      fetch:async()=>({ok:true,json:async()=>x})};
+    vm.runInNewContext(source,context);
+    await new Promise(resolve=>setImmediate(resolve));
+    assert.equal(nodes.b.textContent,label);
+    assert.equal(nodes.b.dataset.homeTone,positionTone);
+    assert.equal(nodes.strong.textContent,change);
+    assert.equal(nodes.strong.dataset.homeTone,deltaTone);
+  }
 });
 test("settlement exclusion retains and reconciles official market total",()=>{
   const x=structuredClone(snapshot), o=x.observations[1];
