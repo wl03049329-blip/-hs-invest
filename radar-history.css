@@ -11,12 +11,11 @@
 .radarHistorySettings summary{cursor:pointer;font-size:14px}.radarHistorySettings>div{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 6px;padding-top:12px}
 .radarHistorySettings label{font-size:13px;display:flex;align-items:center;gap:4px}.radarHistorySettings input{accent-color:#c8a459;width:18px;height:18px}
 .radarHistoryStatus,.radarHistoryHint{font-size:12px;line-height:1.6;color:#c6b99c;overflow-wrap:anywhere}
-.radarCloseObservations{border:1px solid #645437;border-radius:10px;padding:0 10px;color:#e1d5bb;font-size:13px;line-height:1.5}
-.radarCloseObservations[hidden]{display:none}
-.radarCloseObservations summary{min-height:44px;line-height:44px;color:#e8c367;cursor:pointer}
-.radarCloseObservations p,.radarCloseObservations ul{margin:0 0 10px;padding:0}
-.radarCloseObservations li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;align-items:baseline;border-top:1px solid #645437;padding:6px 0;overflow-wrap:anywhere}
-.radarCloseObservations time{font-variant-numeric:tabular-nums}
+.radarObservationLegend{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;color:#f2dbad;font-size:12px;line-height:1.5}
+.radarObservationLegend[hidden]{display:none}
+.radarLegendFinal::before,.radarLegendObservation::before{content:'';display:inline-block;width:16px;margin-right:5px;vertical-align:middle;border-top:2px solid #e8c367}
+.radarLegendObservation::before{border-top:2px dashed #f2dbad}
+.radarObservationLegend button{min-width:44px;min-height:44px;border:1px solid #645437;border-radius:8px;background:#17120b;color:inherit;padding:0 6px;font:inherit}
 .radarHistoryCanvas{width:100%;height:560px;min-width:0;touch-action:pan-y;contain:layout paint}
 .radarHistoryCanvas{position:relative}
 .radarHistoryMissingLabel{position:absolute;top:8px;left:8px;max-width:calc(100% - 88px);pointer-events:none;z-index:1;padding:4px 6px;border:1px solid #574324;border-radius:4px;background:#100e0aeb;color:#d6c6a0;font-size:11px;overflow-wrap:anywhere}

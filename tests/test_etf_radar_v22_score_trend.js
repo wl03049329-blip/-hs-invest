@@ -17,7 +17,7 @@ assert.match(html,/snapshot\?\.finalized!==true/);
 const historyCore=require(path.join(root,"radar-history-core.js")),production=require(path.join(root,"final-core-production.js"));
 assert.deepEqual(historyCore.scores(null,"0050",production,()=>true).rows,[]);
 assert.deepEqual(historyCore.scores(require(path.join(root,"finalized-core-score-snapshots-v1.json")),"009815",production,()=>true).rows,[]);
-assert.match(fs.readFileSync(path.join(root,"radar-history-view.js"),"utf8"),/尚無正式分數/);
+assert.match(fs.readFileSync(path.join(root,"radar-history-view.js"),"utf8"),/該日未發布正式 C4/);
 assert.match(css,/\.radarTrendP4Prices\{display:grid;grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
 assert.match(css,/@media\(max-width:600px\)[\s\S]*\.radarTrendP4Prices\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
 assert.match(css,/\.radarTrendPhase4 \.radarTrendP4Chart svg\{display:block;width:100%/);

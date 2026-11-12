@@ -6,20 +6,19 @@
   const num=v=>C.finite(v)?String(Number(v.toFixed(4))):'—',signed=v=>C.finite(v)?(v>0?'+':'')+num(v):'—';
   const scoreNum=v=>root.HSC4Display.score(v),scoreSigned=v=>root.HSC4Display.signed(v);
   const observationDates=['2026-11-11','2026-11-12'],observationSymbols=['0050','00662','00757','00830','00935'];
-  function observationMarkup(artifact,symbol,asOf){
+  function observationRows(artifact,symbol,asOf){
     if(!observationSymbols.includes(symbol)||artifact?.schema!=='HS_INDIVIDUAL_C4_CLOSE_OBSERVATIONS_V1'||
       artifact.official_final!==false||artifact.production_eligible!==false||artifact.score_version!=='FINAL_CORE_WEIGHT_V1'||
-      artifact.calculation_timezone!=='UTC'||!Array.isArray(artifact.sessions)||artifact.sessions.length!==2)return '';
+      artifact.calculation_timezone!=='UTC'||!Array.isArray(artifact.sessions)||artifact.sessions.length!==2)return [];
     const rows=[];
     for(const day of observationDates){
       if(day>asOf)continue;
       const matches=artifact.sessions.filter(s=>s?.date===day),s=matches[0],r=s?.symbols?.[symbol];
       if(matches.length!==1||s.source!=='https://www.twse.com.tw/exchangeReport/MI_INDEX?response=json&date='+day.replace(/-/g,'')+'&type=ALLBUT0999'||
         !/^[0-9a-f]{64}$/.test(s.source_sha256||'')||!r)continue;
-      const date='<time datetime="'+day+'">'+day.replace(/-/g,'/')+'</time>';
       if(symbol==='00662'){
         if(r.status==='OFFICIAL_SUSPENSION'&&r.reason==='ETF_SPLIT'&&r.last_final_date==='2026-11-10'&&!('score' in r))
-          rows.push('<li>'+date+'<span>分割停牌・無分數<br><small>最後有效 FINAL：2026/11/10</small></span></li>');
+          rows.push({time:day,halt:true,lastFinal:r.last_final_date});
         continue;
       }
       const weights={weekly_j:30,dd52:55,crash:15};
@@ -32,20 +31,47 @@
         total+=f[1]*weight/100;
       }
       if(!valid||Math.abs(total-r.score)>1e-8)continue;
-      rows.push('<li>'+date+'<span><b>'+esc(scoreNum(r.score))+' 分</b> · '+esc(r.tier)+'</span></li>');
+      rows.push({time:day,value:r.score,tier:r.tier});
     }
-    return rows.length?'<summary>獨立收盤觀察</summary><p>非正式 FINAL、不列入排名；分級僅為歷史觀察，不是買進訊號。</p><ul>'+rows.join('')+'</ul>':'';
+    return rows;
+  }
+  const observationAt=(s,time)=>s.score?.rows.some(r=>r.time===time)?null:s.observations?.find(r=>r.time===time);
+  const selectable=s=>C.selectionDates(s.score.rows,[...s.prices,...(s.observations||[])]);
+  const observationText='獨立收盤觀察｜非正式 FINAL';
+  function observationSegments(axis,formal,observations){
+    const official=new Map(formal.map(r=>[r.time,r.value])),rows=observations.filter(r=>C.finite(r.value)&&!official.has(r.time));
+    return C.segments(axis,rows).map(points=>{
+      const prior=axis[axis.indexOf(points[0].time)-1];
+      return {data:official.has(prior)?[{time:prior,value:official.get(prior)},...points]:points,points};
+    });
+  }
+  function hollowPoints(chart,series,points){
+    let coordinates=[];
+    const view={update(){coordinates=points.map(p=>[chart.timeScale().timeToCoordinate(p.time),series.priceToCoordinate(p.value)]).filter(([x,y])=>C.finite(x)&&C.finite(y));},
+      renderer(){return {draw(target){target.useMediaCoordinateSpace(({context:ctx})=>{
+        ctx.save();ctx.lineWidth=1.6;ctx.strokeStyle='#f2dbad';ctx.fillStyle='#090806';
+        for(const [x,y] of coordinates){ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fill();ctx.stroke();}
+        ctx.restore();
+      });}};}};
+    return {attached(){},detached(){},updateAllViews:()=>view.update(),paneViews:()=>[view]};
   }
   async function loadObservations(s){
-    const panel=s.host.querySelector('.radarCloseObservations');
-    if(!panel||!observationSymbols.includes(s.symbol))return;
-    panel.hidden=true;panel.innerHTML='';
+    const legend=s.host.querySelector('.radarObservationLegend');
+    if(!legend||!observationSymbols.includes(s.symbol))return;
+    legend.hidden=true;legend.innerHTML='';
     try{
       const response=await root.fetch('data/c4-close-observations-v1.json',{signal:s.abort.signal,cache:'no-store'});
       if(!response.ok)return;
-      const markup=observationMarkup(await response.json(),s.symbol,cutoff(new Date(),13,30));
-      if(active!==s||s.abort.signal.aborted||!markup)return;
-      panel.innerHTML=markup;panel.hidden=false;
+      const rows=observationRows(await response.json(),s.symbol,cutoff(new Date(),13,30));
+      if(active!==s||s.abort.signal.aborted||!rows.length)return;
+      s.observations=rows;
+      legend.innerHTML='<span class="radarLegendFinal">正式 FINAL</span>'+(rows[0].halt?'<span>分割停牌・無分數</span>':'<span class="radarLegendObservation">'+observationText+'</span>')+
+        rows.map(r=>'<button type="button" data-observation-date="'+r.time+'" aria-label="查看 '+displayDate(r.time)+' '+(r.halt?'停牌':'獨立收盤觀察')+'">'+displayDate(r.time).slice(5)+'</button>').join('');
+      legend.hidden=false;
+      if(s.chart){
+        const range=s.chart.timeScale().getVisibleLogicalRange();
+        draw(s,Boolean(range&&range.to<s.axis.length-1));
+      }
     }catch{/* Observations never block or fill formal chart history. */}
   }
   const sourceMessage=reason=>({'TWSE_ARCHIVE_STALE':'官方日 K 尚未更新至應有交易日','OFFICIAL_UPDATE_OVERDUE':'收盤更新流程逾期，資料待更新','PUBLICATION_VERSION_MISMATCH':'公開行情與更新狀態版本未同步，保留已驗證資料','DAILY_UPDATE_STATUS_UNAVAILABLE':'更新狀態暫時無法取得','SOURCE_HTTP_402':'行情來源額度已達上限，暫停重試','SOURCE_HTTP_429':'行情來源限制請求，暫停重試','SOURCE_COOLDOWN':'來源冷卻中，稍後再試；未繞過供應商限制','Failed to fetch':'來源無法連線或不允許瀏覽器讀取，原因尚無法由瀏覽器確認'}[reason]||reason);
@@ -61,15 +87,15 @@
     <header><h3>近期趨勢與訊號 2.0</h3><small class="radarHistoryIdentity">${esc(symbol)}｜正式 C4 × 原始日 K</small></header>
     <nav class="radarHistoryRanges" aria-label="圖表時間區間">${C.RANGES.map(r=>`<button type="button" data-history-range="${r}">${r==='ALL'?'全部':r}</button>`).join('')}</nav>
     <div class="radarHistorySelection"><div class="radarHistoryDetail" aria-live="polite"></div><button type="button" data-history-action="details">查看 C4 詳細資訊</button></div>
+    <div class="radarObservationLegend" aria-label="C4 圖例與觀察日期" hidden></div>
     <div class="radarHistoryCanvas" aria-label="上圖 C4 正式分數；下圖原始日 K，共用交易日期" tabindex="0"></div>
     <div class="radarHistoryTools"><button type="button" data-history-action="latest">最新</button><button type="button" data-history-action="older">載入更早歷史</button><button type="button" data-history-action="zoom-in" aria-label="放大圖表">＋</button><button type="button" data-history-action="zoom-out" aria-label="縮小圖表">−</button><button type="button" data-history-action="retry">重新取得</button></div>
     <details class="radarHistorySettings"><summary>圖表設定</summary><div>${Object.entries({score:'C4 折線',price:'原始 K 線',extrema:'高低點標記',ma5:'MA5',ma10:'MA10',ma20:'MA20',ma60:'MA60',volume:'成交量',thresholds:'正式門檻線'}).map(([key,label])=>`<label><input type="checkbox" data-history-pref="${key}"> ${label}</label>`).join('')}</div></details>
     <div class="radarHistoryExtrema"></div><p class="radarHistoryStatus" role="status">載入已驗證歷史資料…</p>
-    <details class="radarCloseObservations" hidden></details>
     <p class="radarHistoryHint">上：C4 分數（金線）｜下：原始日 K（紅漲綠跌）<br>點選／長按查日期 · 拖曳看歷史 · 雙指縮放 · 上下滑動捲頁</p>
     <small class="radarHistorySource">原始價格報酬不含配息；不與下方既有還原價格表現混用。<br>Charts by <a href="https://www.tradingview.com/" target="_blank" rel="noopener">TradingView</a> · Lightweight Charts™ 5.0.9</small></section>`;}
 function cutoff(now,closeHour=18,closeMinute=0){const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(now),v=Object.fromEntries(parts.map(p=>[p.type,p.value])),day=`${v.year}-${v.month}-${v.day}`;return Number(v.hour)*60+Number(v.minute)>=closeHour*60+closeMinute?day:new Date(Date.parse(day+'T00:00:00Z')-86400000).toISOString().slice(0,10);}
-function unmount(){if(active){closeSheet(active,false);active.sheet?.remove();active.labelStatus?.remove();clearSelectionLabels(active);active.abort.abort();document.removeEventListener("visibilitychange",active.resume);root.removeEventListener("pageshow",active.resume);active.resize?.disconnect();active.chart?.remove();active.host.removeEventListener('click',active.click);active.host.removeEventListener('change',active.change);for(const type of INPUT_EVENTS)active.host.removeEventListener(type,active.input,true);active=null;}}
+function unmount(){if(active){closeSheet(active,false);active.sheet?.remove();active.labelStatus?.remove();clearSelectionLabels(active);clearObservationMarkers(active);active.abort.abort();document.removeEventListener("visibilitychange",active.resume);root.removeEventListener("pageshow",active.resume);active.resize?.disconnect();active.chart?.remove();active.host.removeEventListener('click',active.click);active.host.removeEventListener('change',active.change);for(const type of INPUT_EVENTS)active.host.removeEventListener(type,active.input,true);active=null;}}
   async function mount(host,{symbol,name,artifact,contract,thresholds,completed,headers}){
     if(active?.host===host&&active.symbol===symbol)return;
     unmount();if(!host||!root.LightweightCharts)return;
@@ -80,7 +106,7 @@ function unmount(){if(active){closeSheet(active,false);active.sheet?.remove();ac
     if(typeof location!=='undefined'&&new URLSearchParams(location.search).get('radarLayoutDebug')==='1'&&!host.querySelector('.radarHistoryDiagnostics')){const d=document.createElement('details');d.className='radarHistoryDiagnostics';d.innerHTML='<summary>版面診斷（唯讀）</summary><button type="button" data-history-action="measure">量測版面</button><pre></pre>';host.append(d);}
     host.querySelector('.radarHistoryIdentity').textContent=s.symbol+' '+s.name+'｜正式 C4 × 原始日 K';
     s.status=text=>{if(active===s)host.querySelector('.radarHistoryStatus').textContent=text;};
-    s.click=async e=>{const button=e.target.closest('button');if(!button)return;try{if(button.dataset.historyRange){s.prefs.range=button.dataset.historyRange;savePreferences(s.prefs);if(s.prefs.range==='ALL')await loadAll(s);else if(['1Y','120D'].includes(s.prefs.range)&&s.years.size===1)await older(s);setRange(s);}
+    s.click=async e=>{const button=e.target.closest('button');if(!button)return;try{if(button.dataset.observationDate){if(s.chart)selectDate(s,button.dataset.observationDate,true);return;}if(button.dataset.historyRange){s.prefs.range=button.dataset.historyRange;savePreferences(s.prefs);if(s.prefs.range==='ALL')await loadAll(s);else if(['1Y','120D'].includes(s.prefs.range)&&s.years.size===1)await older(s);setRange(s);}
       const action=button.dataset.historyAction;if(action==='details'){openSheet(s,button);return;}if(action==='measure'){host.querySelector('.radarHistoryDiagnostics pre').textContent=JSON.stringify(layoutDiagnostics(),null,2);return;}if(action==='latest'){s.selected=null;setRange(s);}if(action==='older')await older(s);if(action==='retry'){source.invalidate?.(symbol);source.cache.clear();unmount();await mount(host,{symbol,name,artifact,contract,thresholds,completed,headers});}if(action?.startsWith('zoom-')){const r=s.chart?.timeScale().getVisibleLogicalRange();if(r){const center=(r.from+r.to)/2,half=(r.to-r.from)/2*(action==='zoom-in'?.75:1.35);s.chart.timeScale().setVisibleLogicalRange({from:center-half,to:center+half});}}}catch(error){if(active===s)s.status('資料不足｜'+error.message+'；既有已驗證資料保留，未補值。');}};
     s.change=e=>{const key=e.target.dataset.historyPref;if(!key)return;s.prefs[key]=e.target.checked;savePreferences(s.prefs);draw(s,true);};host.addEventListener('click',s.click);host.addEventListener('change',s.change);
     s.inputEpoch=0;s.consumedInputEpoch=0;
@@ -112,23 +138,24 @@ s.score=C.scores(artifact,symbol,contract,date=>completed(date)&&date<=cutoff(ne
     return '—';
   }
   function dataState(s,d){
-    const states=[];
+    const states=[],o=observationAt(s,d.time);
     if(s.score.invalid.includes(d.time)||s.invalid.includes(d.time))states.push('資料驗證失敗');
-    if(!d.score)states.push('無正式 C4 紀錄');
+    if(o)states.push(o.halt?'分割停牌・無分數｜最後有效 FINAL '+displayDate(o.lastFinal):observationText);
+    else if(!d.score)states.push('該日未發布正式 C4');
     else if(d.score.factors.some(f=>f.raw===null||f.weight===null||f.contribution===null))states.push('正式分項未保存');
     else states.push('正式紀錄完整');
-    if(!d.price)states.push(d.time>(s.prices.at(-1)?.time||'')?'股價尚未更新':'原始行情缺失');
+    if(!d.price&&!o?.halt)states.push(d.time>(s.prices.at(-1)?.time||'')?'股價尚未更新':'原始行情缺失');
     return states;
   }
   function cells(entries){return entries.map(([a,b])=>`<div><dt>${esc(a)}</dt><dd>${esc(b)}</dd></div>`).join('');}
   function showDetail(s,time){
     if(!time||!s.axis.includes(time))return;s.selected=time;s.host.dataset.selectedDate=time;
-    const d=C.detail(time,s.dates,s.score.rows,s.prices,s.events),p=d.price,c=d.score;
+    const d=C.detail(time,s.dates,s.score.rows,s.prices,s.events),p=d.price,c=d.score,o=observationAt(s,time);
     s.host.querySelector('.radarHistoryDetail').innerHTML=`
       <header><time datetime="${esc(time)}">${displayDate(time)}</time><b>${esc(s.symbol)} ${esc(s.name)}</b></header>
-      <div class="radarHistorySummary"><strong>${c?scoreNum(c.value)+' 分':'尚無正式分數'}</strong><span>${esc(c?.tier||'無正式 C4 紀錄')}</span><span>${c&&c.delta!==null?(c.delta>0?'↑ ':c.delta<0?'↓ ':'→ ')+scoreSigned(c.delta):'暫無前筆正式比較'}</span></div>
-      <small>C4 前筆 ${c?.previousDate?displayDate(c.previousDate)+'｜'+scoreNum(c.previousValue)+' 分':'資料不足'}</small>
-      <div class="radarHistoryContributions">${C.FACTORS.map(({key,label})=>{const f=c?.factors.find(f=>f.key===key);return`<span>${label}${f?.weight!=null?' '+num(f.weight)+'%':''} <b>${scoreNum(f?.contribution)}</b></span>`;}).join('')}</div>
+      <div class="radarHistorySummary"><strong>${o?(o.halt?'分割停牌・無分數':scoreNum(o.value)+' 分'):c?scoreNum(c.value)+' 分':'該日未發布正式 C4'}</strong><span>${esc(o?.tier||c?.tier||'')}</span><span>${o?(o.halt?'最後有效 FINAL：'+displayDate(o.lastFinal):observationText):c&&c.delta!==null?(c.delta>0?'↑ ':c.delta<0?'↓ ':'→ ')+scoreSigned(c.delta):'暫無前筆正式比較'}</span></div>
+      ${o?'':`<small>C4 前筆 ${c?.previousDate?displayDate(c.previousDate)+'｜'+scoreNum(c.previousValue)+' 分':'資料不足'}</small>
+      <div class="radarHistoryContributions">${C.FACTORS.map(({key,label})=>{const f=c?.factors.find(f=>f.key===key);return`<span>${label}${f?.weight!=null?' '+num(f.weight)+'%':''} <b>${scoreNum(f?.contribution)}</b></span>`;}).join('')}</div>`}
       <div class="radarHistoryPrice"><b>原始收盤 ${num(p?.close)}</b><span>${signed(d.change)}（${d.returnPct===null?'—':signed(d.returnPct)+'%'}）</span></div>
       <div class="radarHistoryOHLC">${[['O',p?.open],['H',p?.high],['L',p?.low],['C',p?.close]].map(([k,v])=>`<span>${k} <b>${num(v)}</b></span>`).join('')}</div>
       <small>股價前筆 ${displayDate(d.previousPriceDate)}｜${esc(dataState(s,d).join(' · '))}</small>
@@ -140,9 +167,13 @@ s.score=C.scores(artifact,symbol,contract,date=>completed(date)&&date<=cutoff(ne
     for(const entry of Object.values(s.selectionLabels||{}))entry.series.detachPrimitive(entry.primitive);
     s.selectionLabels={};
   }
+  function clearObservationMarkers(s){
+    for(const {series,primitive} of s.observationMarkers||[])series.detachPrimitive(primitive);
+    s.observationMarkers=[];s.observationLines=[];
+  }
   function syncSelectionLabels(s){
     if(!s.chart||s.rendering||!s.selected)return;
-    const c=s.score.rows.find(r=>r.time===s.selected),p=s.prices.find(r=>r.time===s.selected);
+    const c=s.score.rows.find(r=>r.time===s.selected),p=s.prices.find(r=>r.time===s.selected),o=observationAt(s,s.selected);
     const line=s.scoreLines?.find(series=>series.data().some(r=>r.time===s.selected));
     s.selectionLabels??={};
     for(const [key,series,value,title,color] of [['score',line,c?.value,'C4：','#e8c367'],['price',s.priceSeries,p?.close,'收盤：','#b7cfe5']]){
@@ -176,7 +207,7 @@ s.score=C.scores(artifact,symbol,contract,date=>completed(date)&&date<=cutoff(ne
     }
     const canvas=s.host.querySelector('.radarHistoryCanvas');
     if(!s.labelStatus){s.labelStatus=document.createElement('div');s.labelStatus.className='radarHistoryMissingLabel';s.labelStatus.setAttribute('role','status');canvas.append(s.labelStatus);}
-    s.labelStatus.textContent=[!c?'C4：無正式 C4':'',!p?'收盤：資料不足':''].filter(Boolean).join(' · ');
+    s.labelStatus.textContent=[o?(o.halt?'分割停牌・無分數':'觀察 C4：'+scoreNum(o.value)+'（非正式 FINAL）'):!c?'該日未發布正式 C4':'',!p&&!o?.halt?'收盤：資料不足':''].filter(Boolean).join(' · ');
     s.labelStatus.hidden=Boolean(c&&p);
     canvas.dataset.selectionDate=s.selected;
     canvas.dataset.selectedC4=c?String(c.value):'';
@@ -185,14 +216,15 @@ s.score=C.scores(artifact,symbol,contract,date=>completed(date)&&date<=cutoff(ne
   function syncCursor(s){
     if(!s.chart||!s.selected||s.syncingCursor||s.rendering)return;
     syncSelectionLabels(s);
-    const p=s.prices.find(p=>p.time===s.selected),c=s.score.rows.find(c=>c.time===s.selected);
+    const p=s.prices.find(p=>p.time===s.selected),c=s.score.rows.find(c=>c.time===s.selected),o=observationAt(s,s.selected);
     const line=s.scoreLines?.find(line=>line.data().some(r=>r.time===s.selected));
+    const observation=s.observationLines?.find(line=>line.data().some(r=>r.time===s.selected));
     s.syncingCursor=true;
-    try{if(p)s.chart.setCrosshairPosition(p.close,s.selected,s.priceSeries);else if(c&&line)s.chart.setCrosshairPosition(c.value,s.selected,line);else s.chart.clearCrosshairPosition();}
+    try{if(o&&observation&&s.prefs.score)s.chart.setCrosshairPosition(o.value,s.selected,observation);else if(p)s.chart.setCrosshairPosition(p.close,s.selected,s.priceSeries);else if(c&&line)s.chart.setCrosshairPosition(c.value,s.selected,line);else s.chart.clearCrosshairPosition();}
     finally{s.syncingCursor=false;}
   }
   function selectDate(s,time,reveal=false){
-    if(active!==s||!C.selectionDates(s.score.rows,s.prices).includes(time))return;
+    if(active!==s||!selectable(s).includes(time))return;
     showDetail(s,time);
     if(reveal){const scale=s.chart.timeScale(),r=scale.getVisibleLogicalRange(),next=C.revealRange(r,s.axis.indexOf(time),s.axis.length);if(next!==r)scale.setVisibleLogicalRange(next);}
     syncCursor(s);
@@ -215,9 +247,9 @@ s.score=C.scores(artifact,symbol,contract,date=>completed(date)&&date<=cutoff(ne
         if(!['previous','next'].includes(action)||s.navigating)return;
         s.navigating=true;
         try{
-          let time=C.adjacent(C.selectionDates(s.score.rows,s.prices),s.selected,action==='previous'?-1:1);
+          let time=C.adjacent(selectable(s),s.selected,action==='previous'?-1:1);
           // Load earlier verified chunks only when crossing the loaded boundary.
-          while(!time&&action==='previous'&&!s.busy&&s.nextYear>=s.firstYear&&active===s){await older(s);time=C.adjacent(C.selectionDates(s.score.rows,s.prices),s.selected,-1);}
+          while(!time&&action==='previous'&&!s.busy&&s.nextYear>=s.firstYear&&active===s){await older(s);time=C.adjacent(selectable(s),s.selected,-1);}
           if(time)selectDate(s,time,true);
         }catch(error){if(active===s)s.status('更早資料取得失敗｜'+sourceMessage(error.message));}
         finally{s.navigating=false;if(active===s)updateSheet(s,C.detail(s.selected,s.dates,s.score.rows,s.prices,s.events));}
@@ -235,11 +267,12 @@ s.score=C.scores(artifact,symbol,contract,date=>completed(date)&&date<=cutoff(ne
   }
   function updateSheet(s,d){
     if(!s.sheet)return;
-    const c=d.score,p=d.price,dates=C.selectionDates(s.score.rows,s.prices);
+    const c=d.score,p=d.price,dates=selectable(s),o=observationAt(s,d.time);
     s.sheet.querySelector('h2 time').textContent=displayDate(d.time)+'｜'+s.symbol+' '+s.name;
     s.sheet.querySelector('[data-sheet-action="previous"]').disabled=!C.adjacent(dates,d.time,-1)&&(s.nextYear<s.firstYear||s.busy);
     s.sheet.querySelector('[data-sheet-action="next"]').disabled=!C.adjacent(dates,d.time,1);
     s.sheet.querySelector('.radarHistorySheetBody').innerHTML=`
+      ${o?`<h3>${o.halt?'分割停牌・無分數':observationText}</h3><dl>${cells(o.halt?[['最後有效 FINAL',displayDate(o.lastFinal)]]:[['日期',displayDate(d.time)],['觀察分數',scoreNum(o.value)+' 分'],['分級',o.tier]])}</dl>`:''}
       <h3>正式 C4</h3><dl>${cells([['正式總分',c?scoreNum(c.value)+' 分':'無正式 C4 紀錄'],['正式級距',c?.tier||'—'],['前筆正式分數',scoreNum(c?.previousValue)],['分數增減',scoreSigned(c?.delta)],['比較日期',displayDate(c?.previousDate)]])}</dl>
       <h3>三項正式因子</h3>${!c||c.factors.some(f=>f.raw===null||f.weight===null||f.contribution===null)?'<p>該日未保存正式分項資料</p>':''}
       <table><thead><tr><th>指標／權重</th><th>原始值</th><th>加權貢獻</th></tr></thead><tbody>${C.FACTORS.map(({key,label})=>{const f=c?.factors.find(f=>f.key===key);return`<tr><th>${label}<small>${f?.weight!=null?num(f.weight)+'%':'權重未保存'}</small></th><td>${num(f?.raw)}</td><td>${scoreNum(f?.contribution)}</td></tr>`;}).join('')}</tbody></table>
@@ -264,7 +297,11 @@ s.score=C.scores(artifact,symbol,contract,date=>completed(date)&&date<=cutoff(ne
     if(r.from<2&&s.prices.length&&!s.busy&&s.nextYear>=s.firstYear&&s.prefs.range!=='ALL')older(s).catch(error=>s.status('更早資料取得失敗｜'+error.message));
   }
   function draw(s,preserve){
-    if(active!==s)return;const L=root.LightweightCharts,oldRange=s.chart?.timeScale().getVisibleRange(),oldAxis=s.axis;s.axis=C.axis(s.dates,s.score.rows,s.prices);s.host.querySelector('.radarHistoryCanvas').hidden=!s.axis.length;if(!s.axis.length){s.status('歷史資料不足；可載入更早歷史或重新取得。');return;}s.rendering=true;
+    if(active!==s)return;const L=root.LightweightCharts,oldRange=s.chart?.timeScale().getVisibleRange(),oldAxis=s.axis;
+    const observations=s.observations||[],baseAxis=C.axis(s.dates,s.score.rows,s.prices);
+    const observedDays=observations.map(r=>r.time),last=observedDays.at(-1);
+    s.axis=last?[...new Set([...baseAxis,...observedDays,...s.dates.filter(d=>d>baseAxis.at(-1)&&d<=last)])].sort():baseAxis;
+    s.host.querySelector('.radarHistoryCanvas').hidden=!s.axis.length;if(!s.axis.length){s.status('歷史資料不足；可載入更早歷史或重新取得。');return;}s.rendering=true;
     if(!s.chart){s.chart=L.createChart(s.host.querySelector('.radarHistoryCanvas'),{height:560,localization:{timeFormatter:formatChartDate},layout:{background:{color:'#090806'},textColor:'#c7baa2',fontSize:12,attributionLogo:true,panes:{separatorColor:'#574324',enableResize:false}},grid:{vertLines:{color:'#201c14'},horzLines:{color:'#201c14'}},rightPriceScale:{minimumWidth:64,autoScale:true},timeScale:{borderColor:'#574324',rightOffset:0,lockVisibleTimeRangeOnResize:true,minBarSpacing:.01,timeVisible:false},crosshair:{mode:L.CrosshairMode.Normal,horzLine:{visible:false,labelVisible:false}},handleScroll:{mouseWheel:false,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:false},handleScale:{mouseWheel:false,pinch:true,axisPressedMouseMove:true},trackingMode:{exitMode:L.TrackingModeExitMode.OnNextTap}});
       s.chart.subscribeCrosshairMove(param=>{
         if(param.time)s.lastCrosshair={time:param.time,sourceEvent:Boolean(param.sourceEvent)};
@@ -282,6 +319,7 @@ s.score=C.scores(artifact,symbol,contract,date=>completed(date)&&date<=cutoff(ne
       s.priceSeries=s.chart.addSeries(L.CandlestickSeries,{upColor:'#ed786f',downColor:'#64c593',borderUpColor:'#ed786f',borderDownColor:'#64c593',wickUpColor:'#ed786f',wickDownColor:'#64c593',lastValueVisible:false,priceLineVisible:false},1);s.priceMarkers=L.createSeriesMarkers(s.priceSeries,[]);s.chart.panes()[0].setHeight(230);s.chart.panes()[1].setHeight(300);
     }
     clearSelectionLabels(s);
+    clearObservationMarkers(s);
     for(const m of s.scoreMarkers||[])m.api.detach();s.scoreMarkers=[];
     for(const series of s.series)s.chart.removeSeries(series);s.series=[];
     const priceByDate=new Map(s.prices.map(r=>[r.time,r]));
@@ -289,11 +327,16 @@ s.score=C.scores(artifact,symbol,contract,date=>completed(date)&&date<=cutoff(ne
     const addLines=(segments,options,pane)=>{const added=[];for(const data of segments){const series=s.chart.addSeries(L.LineSeries,{priceLineVisible:false,lastValueVisible:false,...options},pane);series.setData(data);s.series.push(series);added.push(series);}return added;};
     const scoreSeries=addLines(C.segments(s.axis,s.score.rows),{color:'#e8c367',priceFormat:{type:'custom',formatter:scoreNum,minMove:.1},lineWidth:2,pointMarkersVisible:true,pointMarkersRadius:2,visible:s.prefs.score},0);
     s.scoreLines=scoreSeries;
+    for(const segment of observationSegments(s.axis,s.score.rows,observations)){
+      const [series]=addLines([segment.data],{color:'#f2dbad',lineStyle:L.LineStyle?.Dashed??2,lineWidth:2,priceFormat:{type:'custom',formatter:scoreNum,minMove:.1},visible:s.prefs.score},0);
+      if(s.prefs.score){const primitive=hollowPoints(s.chart,series,segment.points);series.attachPrimitive(primitive);s.observationMarkers.push({series,primitive});}
+      s.observationLines.push(series);
+    }
     s.scoreMarkers=scoreSeries.map(series=>({api:L.createSeriesMarkers(series,[]),times:new Set(series.data().map(r=>r.time))}));
     if(s.prefs.thresholds&&s.prefs.score&&scoreSeries[0])for(const t of s.thresholds)scoreSeries[0].createPriceLine({price:t.value,title:t.label,color:'#786442',lineWidth:1,lineStyle:2,axisLabelVisible:true});
     for(const [i,period] of [5,10,20,60].entries())if(!s.observedOnly&&s.prefs['ma'+period])addLines(C.segments(s.axis,C.movingAverage(s.axis,s.prices,period)),{color:['#d9c597','#9fbaed','#c29bcf','#80b9b0'][i],lineWidth:1},1);
     if(s.prefs.volume){const series=s.chart.addSeries(L.HistogramSeries,{priceScaleId:'volume',priceFormat:{type:'volume'},priceLineVisible:false,lastValueVisible:false},1);series.priceScale().applyOptions({scaleMargins:{top:.85,bottom:0}});series.setData(s.prices.map(p=>({time:p.time,value:p.volume,color:p.close>=p.open?'#ed786f55':'#64c59355'})));s.series.push(series);}
     if(preserve&&oldRange&&oldAxis?.length)s.chart.timeScale().setVisibleRange(oldRange);else setRange(s);visible(s,s.chart.timeScale().getVisibleLogicalRange());syncControls(s);showDetail(s,s.selected&&s.axis.includes(s.selected)?s.selected:s.axis.at(-1));s.rendering=false;syncCursor(s);
   }
-  root.HSRadarHistoryView={html,mount,unmount,layoutDiagnostics,observationMarkup};
+  root.HSRadarHistoryView={html,mount,unmount,layoutDiagnostics,observationRows,observationSegments};
 })(window);
