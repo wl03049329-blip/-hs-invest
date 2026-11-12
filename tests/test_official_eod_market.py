@@ -61,3 +61,24 @@ print("PASS five required ETF completeness and 009815 non-blocking")
 result = eod.resolve("2026-08-25", stale_primary, state(eod.FALLBACK_PROVIDER, items("2026-08-24")), True, fetched)
 assert result["status"] == "NO_TRADING_DAY"
 print("PASS holiday/no-trading day is a safe no-op")
+
+for day in ("2026-11-11", "2026-11-12"):
+    partial_primary = state(eod.PRIMARY_PROVIDER, items(day, missing="00662"))
+    partial_fallback = state(eod.FALLBACK_PROVIDER, items(day, missing="00662"))
+    blocked = eod.resolve(day, partial_primary, partial_fallback, False, fetched)
+    assert blocked["status"] == "SOURCE_NOT_READY"
+    assert blocked["items"] == {} and blocked["provider"] is None
+    assert all(s["observed_dates"] == [day] and s["missing_symbols"] == ["00662"]
+               and s["off_date_symbols"] == {} for s in blocked["sources"])
+    ready = eod.resolve(day, partial_primary, state(eod.FALLBACK_PROVIDER, items(day)), False, fetched)
+    assert ready["status"] == "READY" and ready["fallback_used"] is True
+    assert len(ready["items"]) == 5 and ready["source_date"] == day
+print("PASS two consecutive incomplete sessions stay closed; same-date complete recovery is accepted")
+
+mixed = items("2026-11-12")
+mixed["00662"]["date"] = "2026-11-10"
+blocked = eod.resolve("2026-11-12", state(eod.PRIMARY_PROVIDER, mixed), state(eod.FALLBACK_PROVIDER, {}), False, fetched)
+assert blocked["status"] == "SOURCE_NOT_READY" and blocked["items"] == {}
+assert blocked["sources"][0]["off_date_symbols"] == {"00662": "2026-11-10"}
+assert blocked["sources"][0]["missing_symbols"] == []
+print("PASS last trade cannot substitute for the current date; diagnostics distinguish stale from missing")
