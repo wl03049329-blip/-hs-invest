@@ -100,11 +100,17 @@
  }
  async function load(){if(S.loading)return;S.loading=true;S.renderedAt=0;refresh.disabled=true;try{
    const {value:p}=await json('data/lc4-research/latest.json');
+   if(!dialog.open)return;
    if(p.schema!=='HS_LC4_RESEARCH_POINTER_V1'||!/^snapshots\/[0-9a-z.-]+\.json$/.test(p.path)||!/^[a-f0-9]{64}$/.test(p.sha256))throw Error('RESEARCH_POINTER_INVALID');
-   const {value:b,text}=await json('data/lc4-research/'+p.path),bytes=new TextEncoder().encode(text),hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),n=>n.toString(16).padStart(2,'0')).join('');
+   const {value:b,text}=await json('data/lc4-research/'+p.path);
+   if(!dialog.open)return;
+   const bytes=new TextEncoder().encode(text),hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),n=>n.toString(16).padStart(2,'0')).join('');
+   if(!dialog.open)return;
    if(hash!==p.sha256||bytes.length!==p.bytes)throw Error('RESEARCH_HASH_MISMATCH');verify(b,p);
    let shadow=null,operation=null;try{shadow=(await json('research/hs_leverage/forward/daily-status.json')).value;}catch{}
+   if(!dialog.open)return;
    try{operation=(await json('data/lc4-research/status.json')).value;if(operation.bundle_sha256!==p.sha256)operation=null;}catch{}
+   if(!dialog.open)return;
    const stats=HSLC4RadarV2.describe(b.history);if(stats.asof!==b.asof||Math.abs(stats.close-b.description.radar.stabilization.close)>1e-8||Math.abs(stats.return5-b.description.radar.opportunity.return5)>1e-12)throw Error('RESEARCH_HISTORY_SNAPSHOT_MISMATCH');
    if(!dialog.open)return;
    S.bundle=b;S.pointer=p;S.stats=stats;render(shadow,operation);S.renderedAt=Date.now();
