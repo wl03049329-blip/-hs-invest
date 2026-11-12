@@ -3532,7 +3532,7 @@ function syncHomeHealthConnectivity(){
   if(offline){if(label.textContent!=="離線 · 更新待確認"){label.dataset.onlineLabel=label.textContent;label.dataset.onlineClass=label.className;}label.textContent="離線 · 更新待確認";label.className="is-warning";}
   const notice=document.querySelector(".hsHomeHealthOffline");if(notice)notice.hidden=!offline;
 }
-function renderHomeDataHealth(dualTrack,health){
+function renderHomeDataHealth(dualTrack,health,leverageState){
   const label=document.querySelector("#homeDataHealth [data-health-overall]"),context=$("#homeDataHealthContext"),content=$("#homeDataHealthContent");
   if(!label||!context||!content)return;
   label.textContent=health.label;label.className=health.level==="HEALTHY"?"is-ok":"is-warning";delete label.dataset.onlineLabel;delete label.dataset.onlineClass;
@@ -3542,7 +3542,12 @@ function renderHomeDataHealth(dualTrack,health){
   context.title=[source?.detail,live?.detail].filter(Boolean).join("；");
   const final=$("#homeHealthFinal"),date=source&&source.level!=="ERROR"&&/^\d{4}-\d{2}-\d{2}$/.test(health.officialDate||"")?health.officialDate:"";
   if(final){final.textContent=date?"FINAL "+date.slice(5).replace("-","/"):"FINAL —";final.title=date?"正式 FINAL 資料日 "+date:"正式 FINAL 資料日期待確認";final.setAttribute("aria-label",final.title);}
-  content.innerHTML=decisionCenterHealthHtml(health);const details=content.querySelector("details");if(details)details.open=true;
+  content.innerHTML=decisionCenterHealthHtml(health);const details=content.querySelector("details");
+  if(details){
+    details.dataset.healthMarket=health.marketState;
+    details.dataset.healthLeverage=leverageState?.available===true&&leverageState.trigger!==true?"waiting":"";
+    details.open=true;
+  }
   syncHomeHealthConnectivity();
 }
 function initHomeHealthDialog(){
@@ -3638,7 +3643,7 @@ function renderDecisionCenter(longs,dualTrack,leverageState){
   const compact=$("#hsDecisionCompact");
   if(compact)compact.textContent=`${focus?.symbol||highest?.symbol||"—"} · ${Number.isFinite(focus?.score)?focus.score+" 分":"—"} · ${focus?.tier||highest?.tier||"資料更新中"}`;
 host.innerHTML=`<div class="hsCoreDecisionHero"><div class="hsCoreIdentity"><span>${esc(focus?.symbol||highest?.symbol||"—")}</span><b>${esc(focus?.name||"正式資料暫不可用")}</b><small>${esc(focus?.tier||highest?.tier||"資料更新中")} ｜ 長期趨勢</small></div><div class="hsCoreHeroScore"><span>目前分數 <i>${focusStatus}</i></span><b>${Number.isFinite(focus?.score)?focus.score:"—"}<small>分</small></b><strong>${esc(focus?.tier||highest?.tier||"UNAVAILABLE")}</strong></div><div class="hsCoreThreshold"><span>距下一級門檻</span><b>${esc(focusThreshold)}</b><small>${esc(focusThresholdDetail)}</small></div></div>`;
-  renderHomeDataHealth(dualTrack,health);
+  renderHomeDataHealth(dualTrack,health,leverageState);
   const caption=$("#hsDecisionMarketCaption");if(caption)caption.textContent=health.marketState==="PREMARKET"?"目前顯示前一交易日收盤資料":`${decisionCenterMarketLabel(health.marketState)} · 掌握下一步佈局`;
   renderDecisionCenterHeader(dualTrack,health);
   const c4Grid=$("#hsDashboardC4Grid");if(c4Grid)c4Grid.innerHTML=decisionCenterC4Cards(dashboardOfficialRows,longs,dualTrack)||'<div class="newsEmpty">正式 C4 資料暫不可用。</div>';
