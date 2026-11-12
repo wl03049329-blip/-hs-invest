@@ -23,6 +23,7 @@ from scripts.fetch_official_eod_market import HOLIDAY_URL, iso_date
 from scripts.collect_radar_twse import digest, months, parse_month, roc, number
 from scripts.audit_radar_calendar import parse_market
 from scripts.audit_radar_tpex import monthly, daily
+from scripts import radar_split_gate as split_gate
 
 ROOT = Path(__file__).resolve().parents[1]
 SYMBOLS = ("0050", "00662", "00757", "00830", "00935", "009815")
@@ -74,16 +75,18 @@ class Client:
             if dt.datetime.fromisoformat(e["fetched_at"]).astimezone(TZ).date() == today:
                 self.entries[e["url"]] = e
 
-    def get(self, url):
+    def get(self, url, *, html=False):
         if url in self.entries: return self.entries[url]
         for attempt in range(1, 4):
             if self.requests >= 120: raise ValueError("BOUNDED_REQUEST_BUDGET_EXCEEDED")
             self.requests += 1
             time.sleep(self.delay * attempt)
             try:
-                with self.opener(Request(url, headers={"User-Agent": "HS-Radar-Official-Daily/1", "Accept": "application/json"}), timeout=30) as response:
+                with self.opener(Request(url, headers={"User-Agent": "HS-Radar-Official-Daily/1", "Accept": "text/html" if html else "application/json", "Cache-Control": "no-cache"}), timeout=30) as response:
                     if response.status != 200: raise ValueError("SOURCE_HTTP_" + str(response.status))
-                    payload = json.loads(response.read().decode("utf-8-sig"))
+                    if html and response.geturl() != url: raise ValueError("OFFICIAL_NOTICE_REDIRECT")
+                    body = response.read().decode("utf-8-sig")
+                    payload = body if html else json.loads(body)
                 break
             except (IncompleteRead, RemoteDisconnected, TimeoutError, URLError, ConnectionError) as exc:
                 # TPEx can return a transient upstream connection timeout
@@ -197,7 +200,7 @@ def unique_refs(original, added):
         if key not in seen: out.append(e); seen.add(key)
     return out
 
-def update_symbol(root, client, symbol, target, holiday_ref, repair_from=None):
+def update_symbol(root, client, symbol, target, holiday_ref, repair_from=None, *, write=True):
     old = verify_archive(root, symbol)
     if old["requested_end"] > target: return old, False, "VERIFIED_NEWER_THAN_REQUEST"
     # A replay of an already verified date must be byte-identical (no timestamps).
@@ -210,12 +213,16 @@ def update_symbol(root, client, symbol, target, holiday_ref, repair_from=None):
     queried = list(months(start, target))
     if len(queried) > 24: raise ValueError("REPAIR_WINDOW_TOO_LARGE")
     rows, sessions, refs, calendar_refs = [], [], [], []
+    review_split = symbol == split_gate.SYMBOL and start <= split_gate.RESUME and target >= split_gate.START
+    split_notice = split_gate.schedule(client) if review_split else None
+    split_proof = None
     for month in queried:
         dates, calendar_ref = official_sessions(client, exchange, month, target)
         calendar_refs.append(calendar_ref); sessions.extend(dates)
         if exchange == "twse":
             e = client.get(f"https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date={month}01&stockNo={symbol}")
-            rows.extend(parse_month(e["payload"], symbol, month, target)); refs.append(ref(e))
+            options = {"reviewed_split_date": split_gate.RESUME} if review_split else {}
+            rows.extend(parse_month(e["payload"], symbol, month, target, **options)); refs.append(ref(e))
         else:
             e = client.get(f"https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=009815&date={month[:4]}%2F{month[4:]}%2F01&response=json")
             monthly_rows = monthly(e["payload"], month); refs.append(ref(e))
@@ -244,6 +251,23 @@ def update_symbol(root, client, symbol, target, holiday_ref, repair_from=None):
         elif not old.get("base_last_date") or row["date"] > old["base_last_date"]:
             previous[row["date"]] = row
     missing = [d for d in sessions if (not old.get("base_last_date") or d > old["base_last_date"]) and d not in previous]
+    if review_split:
+        halted = [d for d in sessions if split_gate.START <= d < split_gate.RESUME]
+        if any(d in previous for d in halted): raise ValueError("00662_UNEXPECTED_TRADE_DURING_SUSPENSION")
+        halt_refs = [ref(split_gate.daily(client, d)) for d in halted]
+        missing = [d for d in missing if d not in halted]
+        if split_gate.LAST not in previous: raise ValueError("00662_RESUMPTION_ANCHOR_UNVERIFIED")
+        reference, before, after = split_gate.reference(client, previous[split_gate.LAST]["close"])
+        if not missing and target < split_gate.RESUME:
+            return old, False, "OFFICIAL_SUSPENSION"
+        if not missing:
+            resume = next((r for r in rows if r["date"] == split_gate.RESUME), None)
+            if resume is None or split_gate.LAST not in previous:
+                raise ValueError("00662_RESUMPTION_ANCHOR_UNVERIFIED")
+            trade = split_gate.daily(client, split_gate.RESUME, resume)
+            split_proof = dict(date=split_gate.RESUME, before_price=before, after_price=after,
+                               last_ohlc=previous[split_gate.LAST], resume_ohlc=resume, excluded_sessions=halted,
+                               evidence=[ref(split_notice), *halt_refs, ref(trade), ref(reference)])
     if missing: raise ValueError("OFFICIAL_SESSION_MISSING:" + ",".join(missing))
     action_start = old["requested_start"] if exchange == "tpex" else start
     events, action_refs, checks = tpex_actions(client, action_start, target) if exchange == "tpex" else twse_actions(client, symbol, start, target)
@@ -268,8 +292,9 @@ def update_symbol(root, client, symbol, target, holiday_ref, repair_from=None):
     result["incremental_verification"] = dict(start=start, end=target, sessions=sessions,
         provider=old["provider"], overlap_count=overlap, parent_content_sha256=old["content_sha256"],
         corporate_actions="VERIFIED", calendar_evidence=calendar_refs)
+    if split_proof is not None: result["reviewed_split_20261117"] = split_proof
     del result["content_sha256"]; result["content_sha256"] = digest(result)
-    atomic_json(path_for(root, symbol), result)
+    if write: atomic_json(path_for(root, symbol), result)
     return result, True, "UPDATED"
 
 def run(root, client, now, as_of=None, repair_from=None):
@@ -320,7 +345,9 @@ def run(root, client, now, as_of=None, repair_from=None):
             if previous_status is not None and previous_status.get("symbols",{}).get(symbol,{}).get("status") != "CURRENT":
                 symbol_repair = symbol_repair or target[:7] + "-01"
             archive, changed, operation = update_symbol(root, client, symbol, target, holiday_ref, symbol_repair)
-            row = dict(status="CURRENT", reason=None, provider=archive["provider"], latest_verified_date=archive["price"][-1]["date"],
+            suspended = operation == "OFFICIAL_SUSPENSION"
+            row = dict(status="OFFICIAL_SUSPENSION" if suspended else "CURRENT",
+                       reason="00662_OFFICIAL_SPLIT_SUSPENSION" if suspended else None, provider=archive["provider"], latest_verified_date=archive["price"][-1]["date"],
                        verified_at=archive["fetched_at"], archive_sha256=archive["content_sha256"])
             log("SYMBOL_VERIFIED", symbol=symbol, operation=operation, changed=changed, **row)
         except Exception as exc:
@@ -335,7 +362,9 @@ def run(root, client, now, as_of=None, repair_from=None):
         result["symbols"][symbol] = row
     result["content_sha256"] = digest(result)
     atomic_json(root / PUBLIC_STATUS, result)
-    log("RADAR_DAILY_RESULT", expected_completed_bar=target, price_cutoff=cutoff, result="PARTIAL" if failed else "VERIFIED_6_OF_6")
+    suspended = any(row["status"] == "OFFICIAL_SUSPENSION" for row in result["symbols"].values())
+    log("RADAR_DAILY_RESULT", expected_completed_bar=target, price_cutoff=cutoff,
+        result="PARTIAL" if failed else "VERIFIED_WITH_OFFICIAL_SUSPENSION" if suspended else "VERIFIED_6_OF_6")
     return result, not failed
 
 def verify_publication(root, base_url, attempts=6, delay=20, fetcher=urlopen):
@@ -359,11 +388,29 @@ def verify_publication(root, base_url, attempts=6, delay=20, fetcher=urlopen):
 
 if __name__ == "__main__":
     p=argparse.ArgumentParser();p.add_argument("--as-of");p.add_argument("--from-date");p.add_argument("--revalidate",action="store_true");p.add_argument("--evidence-dir");p.add_argument("--verify-public")
+    p.add_argument("--eod-split-proof", type=Path, help="Write only a private proof for the FINAL job")
     args=p.parse_args()
     if args.verify_public:
         raise SystemExit(0 if verify_publication(ROOT,args.verify_public) else 1)
     if not args.evidence_dir: p.error("--evidence-dir is required outside the public checkout")
     try:
+        if args.eod_split_proof:
+            now = dt.datetime.now(dt.timezone.utc)
+            client = Client(args.evidence_dir)
+            target, _, holiday_ref = expected_day(client, now, args.as_of, minimum_time=(13,30))
+            if target != args.as_of or target < split_gate.RESUME:
+                raise ValueError("00662_EOD_PROOF_DATE_MISMATCH")
+            archive = verify_archive(ROOT, split_gate.SYMBOL)
+            proof = archive.get("reviewed_split_20261117")
+            if not proof:
+                archive, _, _ = update_symbol(ROOT, client, split_gate.SYMBOL, split_gate.RESUME, holiday_ref,
+                                              "2026-11-01", write=False)
+                proof = archive.get("reviewed_split_20261117")
+            if not proof: raise ValueError("00662_EOD_SPLIT_PROOF_MISSING")
+            output = args.eod_split_proof.resolve()
+            if output.parent != client.directory: raise ValueError("00662_EOD_PROOF_MUST_BE_PRIVATE")
+            atomic_json(output, proof)
+            raise SystemExit(0)
         _, ok=run(ROOT,Client(args.evidence_dir),dt.datetime.now(dt.timezone.utc),args.as_of,"LATEST_MONTH" if args.revalidate else args.from_date)
         raise SystemExit(0 if ok else 1)
     except Exception as error:

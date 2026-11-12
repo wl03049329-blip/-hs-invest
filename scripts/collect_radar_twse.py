@@ -42,7 +42,7 @@ def number(value, integer=False):
     return int(n) if n.is_integer() else n
 
 
-def parse_month(payload, symbol, month, cutoff):
+def parse_month(payload, symbol, month, cutoff, *, reviewed_split_date=None):
     if payload.get("stat") != "OK" or payload.get("date") != month + "01" or payload.get("fields") != FIELDS:
         raise ValueError("MONTH_SCHEMA")
     if not re.search(r"\b" + re.escape(symbol) + r"\b", payload.get("title", "")):
@@ -63,7 +63,7 @@ def parse_month(payload, symbol, month, cutoff):
         row = dict(date=date, stock_id=symbol, open=number(raw[3]), max=number(raw[4]), min=number(raw[5]), close=number(raw[6]), Trading_Volume=number(raw[1], True))
         if not row["min"] <= min(row["open"], row["close"]) <= max(row["open"], row["close"]) <= row["max"]:
             raise ValueError("OHLC_BOUNDS:" + date)
-        if "**" in raw[9]:
+        if "**" in raw[9] and date != reviewed_split_date:
             raise ValueError("UNREVIEWED_SPLIT:" + date)
         rows.append(row)
     if not rows:
