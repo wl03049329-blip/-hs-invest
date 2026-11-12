@@ -5,6 +5,49 @@
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const num=v=>C.finite(v)?String(Number(v.toFixed(4))):'—',signed=v=>C.finite(v)?(v>0?'+':'')+num(v):'—';
   const scoreNum=v=>root.HSC4Display.score(v),scoreSigned=v=>root.HSC4Display.signed(v);
+  const observationDates=['2026-11-11','2026-11-12'],observationSymbols=['0050','00662','00757','00830','00935'];
+  function observationMarkup(artifact,symbol,asOf){
+    if(!observationSymbols.includes(symbol)||artifact?.schema!=='HS_INDIVIDUAL_C4_CLOSE_OBSERVATIONS_V1'||
+      artifact.official_final!==false||artifact.production_eligible!==false||artifact.score_version!=='FINAL_CORE_WEIGHT_V1'||
+      artifact.calculation_timezone!=='UTC'||!Array.isArray(artifact.sessions)||artifact.sessions.length!==2)return '';
+    const rows=[];
+    for(const day of observationDates){
+      if(day>asOf)continue;
+      const matches=artifact.sessions.filter(s=>s?.date===day),s=matches[0],r=s?.symbols?.[symbol];
+      if(matches.length!==1||s.source!=='https://www.twse.com.tw/exchangeReport/MI_INDEX?response=json&date='+day.replace(/-/g,'')+'&type=ALLBUT0999'||
+        !/^[0-9a-f]{64}$/.test(s.source_sha256||'')||!r)continue;
+      const date='<time datetime="'+day+'">'+day.replace(/-/g,'/')+'</time>';
+      if(symbol==='00662'){
+        if(r.status==='OFFICIAL_SUSPENSION'&&r.reason==='ETF_SPLIT'&&r.last_final_date==='2026-11-10'&&!('score' in r))
+          rows.push('<li>'+date+'<span>分割停牌・無分數<br><small>最後有效 FINAL：2026/11/10</small></span></li>');
+        continue;
+      }
+      const weights={weekly_j:30,dd52:55,crash:15};
+      if(r.status!=='VERIFIED_OBSERVATION'||!Number.isFinite(r.close)||r.close<=0||!Number.isFinite(r.score)||r.score<0||r.score>100||
+        typeof r.tier!=='string'||r.tier!==root.HSFinalCoreProduction?.labelFor(r.score)?.label)continue;
+      let total=0,valid=true;
+      for(const [key,weight] of Object.entries(weights)){
+        const f=r.factors?.[key];
+        if(!Array.isArray(f)||f.length!==2||!f.every(Number.isFinite)||f[1]<0||f[1]>100){valid=false;break;}
+        total+=f[1]*weight/100;
+      }
+      if(!valid||Math.abs(total-r.score)>1e-8)continue;
+      rows.push('<li>'+date+'<span><b>'+esc(scoreNum(r.score))+' 分</b> · '+esc(r.tier)+'</span></li>');
+    }
+    return rows.length?'<summary>獨立收盤觀察</summary><p>非正式 FINAL、不列入排名；分級僅為歷史觀察，不是買進訊號。</p><ul>'+rows.join('')+'</ul>':'';
+  }
+  async function loadObservations(s){
+    const panel=s.host.querySelector('.radarCloseObservations');
+    if(!panel||!observationSymbols.includes(s.symbol))return;
+    panel.hidden=true;panel.innerHTML='';
+    try{
+      const response=await root.fetch('data/c4-close-observations-v1.json',{signal:s.abort.signal,cache:'no-store'});
+      if(!response.ok)return;
+      const markup=observationMarkup(await response.json(),s.symbol,cutoff(new Date(),13,30));
+      if(active!==s||s.abort.signal.aborted||!markup)return;
+      panel.innerHTML=markup;panel.hidden=false;
+    }catch{/* Observations never block or fill formal chart history. */}
+  }
   const sourceMessage=reason=>({'TWSE_ARCHIVE_STALE':'官方日 K 尚未更新至應有交易日','OFFICIAL_UPDATE_OVERDUE':'收盤更新流程逾期，資料待更新','PUBLICATION_VERSION_MISMATCH':'公開行情與更新狀態版本未同步，保留已驗證資料','DAILY_UPDATE_STATUS_UNAVAILABLE':'更新狀態暫時無法取得','SOURCE_HTTP_402':'行情來源額度已達上限，暫停重試','SOURCE_HTTP_429':'行情來源限制請求，暫停重試','SOURCE_COOLDOWN':'來源冷卻中，稍後再試；未繞過供應商限制','Failed to fetch':'來源無法連線或不允許瀏覽器讀取，原因尚無法由瀏覽器確認'}[reason]||reason);
   function layoutDiagnostics(){
     const selectors=['#radarOverview','#radarDetailStickyNav','#cards','.signalCard.is-selected','.signalCard.is-selected .signalCardDetails','.signalCard.is-selected .detailTabs','.signalCard.is-selected [data-detail-panel="score"]','.signalCard.is-selected [data-detail-panel="drawdown"]','.signalCard.is-selected .radarHistoryCanvas'];
@@ -22,6 +65,7 @@
     <div class="radarHistoryTools"><button type="button" data-history-action="latest">最新</button><button type="button" data-history-action="older">載入更早歷史</button><button type="button" data-history-action="zoom-in" aria-label="放大圖表">＋</button><button type="button" data-history-action="zoom-out" aria-label="縮小圖表">−</button><button type="button" data-history-action="retry">重新取得</button></div>
     <details class="radarHistorySettings"><summary>圖表設定</summary><div>${Object.entries({score:'C4 折線',price:'原始 K 線',extrema:'高低點標記',ma5:'MA5',ma10:'MA10',ma20:'MA20',ma60:'MA60',volume:'成交量',thresholds:'正式門檻線'}).map(([key,label])=>`<label><input type="checkbox" data-history-pref="${key}"> ${label}</label>`).join('')}</div></details>
     <div class="radarHistoryExtrema"></div><p class="radarHistoryStatus" role="status">載入已驗證歷史資料…</p>
+    <details class="radarCloseObservations" hidden></details>
     <p class="radarHistoryHint">上：C4 分數（金線）｜下：原始日 K（紅漲綠跌）<br>點選／長按查日期 · 拖曳看歷史 · 雙指縮放 · 上下滑動捲頁</p>
     <small class="radarHistorySource">原始價格報酬不含配息；不與下方既有還原價格表現混用。<br>Charts by <a href="https://www.tradingview.com/" target="_blank" rel="noopener">TradingView</a> · Lightweight Charts™ 5.0.9</small></section>`;}
 function cutoff(now,closeHour=18,closeMinute=0){const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(now),v=Object.fromEntries(parts.map(p=>[p.type,p.value])),day=`${v.year}-${v.month}-${v.day}`;return Number(v.hour)*60+Number(v.minute)>=closeHour*60+closeMinute?day:new Date(Date.parse(day+'T00:00:00Z')-86400000).toISOString().slice(0,10);}
@@ -31,6 +75,7 @@ function unmount(){if(active){closeSheet(active,false);active.sheet?.remove();ac
     unmount();if(!host||!root.LightweightCharts)return;
     if(!source)source=new root.HSRadarHistorySource.Source({headers});
     const s={host,symbol,name,artifact,contract,thresholds,completed,prefs:readPreferences(),abort:new AbortController(),prices:[],events:[],invalid:[],dates:[],series:[],markers:[],years:new Set(),warnings:new Set(),firstYear:null,busy:false,dividendStatus:'VERIFIED',selected:null};active=s;
+    void loadObservations(s);
     // Opt-in, DOM-only evidence. No API calls, scores, credentials or user holdings.
     if(typeof location!=='undefined'&&new URLSearchParams(location.search).get('radarLayoutDebug')==='1'&&!host.querySelector('.radarHistoryDiagnostics')){const d=document.createElement('details');d.className='radarHistoryDiagnostics';d.innerHTML='<summary>版面診斷（唯讀）</summary><button type="button" data-history-action="measure">量測版面</button><pre></pre>';host.append(d);}
     host.querySelector('.radarHistoryIdentity').textContent=s.symbol+' '+s.name+'｜正式 C4 × 原始日 K';
@@ -250,5 +295,5 @@ s.score=C.scores(artifact,symbol,contract,date=>completed(date)&&date<=cutoff(ne
     if(s.prefs.volume){const series=s.chart.addSeries(L.HistogramSeries,{priceScaleId:'volume',priceFormat:{type:'volume'},priceLineVisible:false,lastValueVisible:false},1);series.priceScale().applyOptions({scaleMargins:{top:.85,bottom:0}});series.setData(s.prices.map(p=>({time:p.time,value:p.volume,color:p.close>=p.open?'#ed786f55':'#64c59355'})));s.series.push(series);}
     if(preserve&&oldRange&&oldAxis?.length)s.chart.timeScale().setVisibleRange(oldRange);else setRange(s);visible(s,s.chart.timeScale().getVisibleLogicalRange());syncControls(s);showDetail(s,s.selected&&s.axis.includes(s.selected)?s.selected:s.axis.at(-1));s.rendering=false;syncCursor(s);
   }
-  root.HSRadarHistoryView={html,mount,unmount,layoutDiagnostics};
+  root.HSRadarHistoryView={html,mount,unmount,layoutDiagnostics,observationMarkup};
 })(window);

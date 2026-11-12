@@ -1,0 +1,35 @@
+{
+  "schema": "HS_INDIVIDUAL_C4_CLOSE_OBSERVATIONS_V1",
+  "official_final": false,
+  "production_eligible": false,
+  "score_version": "FINAL_CORE_WEIGHT_V1",
+  "calculation_timezone": "UTC",
+  "history_source": "FinMind TaiwanStockPrice / TaiwanStockDividendResult / TaiwanStockSplitPrice, as-of cutoff per row",
+  "golden_baseline": {"date":"2026-11-10","publication_commit":"c2867edae7f012d85b29b5b4033fb15b8f6e47b4","matched_symbols":5},
+  "sessions": [
+    {
+      "date":"2026-11-11",
+      "source":"https://www.twse.com.tw/exchangeReport/MI_INDEX?response=json&date=20261111&type=ALLBUT0999",
+      "source_sha256":"5bcd8bfc7f1027a5b2b30f8992bee4438cc18b6799fe2cc7d4533cc1a04e904f",
+      "symbols":{
+        "0050":{"status":"VERIFIED_OBSERVATION","close":103.2,"score":30.303539823008848,"tier":"回檔訊號出現","factors":{"weekly_j":[29.101610489615567,24],"dd52":[-11.492281303602049,38],"crash":[-8.672566371681413,14.69026548672565]}},
+        "00662":{"status":"OFFICIAL_SUSPENSION","last_final_date":"2026-11-10","reason":"ETF_SPLIT"},
+        "00757":{"status":"VERIFIED_OBSERVATION","close":135.2,"score":45.836927223719684,"tier":"試探加碼","factors":{"weekly_j":[2.0090389436794425,90],"dd52":[-8.986873106698102,30],"crash":[-8.89487870619947,15.579514824797883]}},
+        "00830":{"status":"VERIFIED_OBSERVATION","close":75.25,"score":76.96303099885189,"tier":"強力加碼訊號","factors":{"weekly_j":[8.90955653767827,78],"dd52":[-26.369863013698634,88],"crash":[-13.605051664753153,34.420206659012614]}},
+        "00935":{"status":"VERIFIED_OBSERVATION","close":51.35,"score":59.824380165289256,"tier":"正式加碼訊號","factors":{"weekly_j":[17.28302265593895,60],"dd52":[-19.450980392156858,65],"crash":[-15.123966942148758,40.49586776859503]}}
+      }
+    },
+    {
+      "date":"2026-11-12",
+      "source":"https://www.twse.com.tw/exchangeReport/MI_INDEX?response=json&date=20261112&type=ALLBUT0999",
+      "source_sha256":"cde27d4eba9c726529527afaada2c6be837d46625751a7fb8ca36e542ff76668",
+      "symbols":{
+        "0050":{"status":"VERIFIED_OBSERVATION","close":100.95,"score":37.44823008849557,"tier":"回檔訊號出現","factors":{"weekly_j":[23.0775141040734,31],"dd52":[-13.421955403087471,45],"crash":[-10.663716814159285,22.65486725663714]}},
+        "00662":{"status":"OFFICIAL_SUSPENSION","last_final_date":"2026-11-10","reason":"ETF_SPLIT"},
+        "00757":{"status":"VERIFIED_OBSERVATION","close":134.85,"score":47.42843665768194,"tier":"試探加碼","factors":{"weekly_j":[0.613027547668068,93],"dd52":[-9.222484012117139,31],"crash":[-9.130727762803236,16.522911051212944]}},
+        "00830":{"status":"VERIFIED_OBSERVATION","close":74.5,"score":79.7796785304248,"tier":"強力加碼訊號","factors":{"weekly_j":[6.724787498976653,82],"dd52":[-27.10371819960862,90],"crash":[-14.466130884041329,37.864523536165315]}},
+        "00935":{"status":"VERIFIED_OBSERVATION","close":49.59,"score":70.4198347107438,"tier":"強力加碼訊號","factors":{"weekly_j":[10.892318226018844,73],"dd52":[-22.211764705882352,74],"crash":[-18.033057851239665,52.13223140495866]}}
+      }
+    }
+  ]
+}
