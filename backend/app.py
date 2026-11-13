@@ -7,7 +7,7 @@ import os
 from contextlib import asynccontextmanager, suppress
 from datetime import datetime
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict
 
@@ -18,6 +18,8 @@ from .scheduler import ShadowScheduler, bucket_run_id
 from .push_service import PushConfigurationError, PushRateLimitError, PushService, PushValidationError
 from .push_store import PushSubscriptionStore
 from .state_store import StateStore
+from .c4_observation import ObservationScheduler
+from .trading_calendar import TradingCalendar
 
 MODE = resolve_backend_mode()
 
@@ -56,10 +58,14 @@ def create_app(
     backend_mode: str | None = None,
     push_service: PushService | None = None,
     background_evaluator: BackgroundAlertEvaluator | None = None,
+    observation_scheduler: ObservationScheduler | None = None,
 ) -> FastAPI:
     active_mode = resolve_backend_mode(backend_mode)
     active_store = state_store or StateStore()
     active_scheduler = shadow_scheduler or ShadowScheduler(active_store, mode=active_mode)
+    observation = observation_scheduler
+    if observation is None and os.getenv("HS_INTRADAY_OBSERVATION_ENABLED") == "1":
+        observation = ObservationScheduler(active_store.root, TradingCalendar())
     active_push_service = push_service or PushService(PushSubscriptionStore(active_store.root))
     active_background_evaluator = background_evaluator or BackgroundAlertEvaluator(active_push_service)
     if active_scheduler.mode != active_mode:
@@ -72,12 +78,15 @@ def create_app(
         if os.getenv("HS_LIVE_DISABLE_SCHEDULER") != "1":
             task = asyncio.create_task(active_scheduler.run_forever(), name=f"hs-live-{active_mode}-scheduler")
         _.state.scheduler_task = task
-        yield
-        for running in (task, alert_task):
-            if running:
-                running.cancel()
-                with suppress(asyncio.CancelledError):
-                    await running
+        observation_task = asyncio.create_task(observation.run_forever(), name="hs-intraday-observation") if observation else None
+        try:
+            yield
+        finally:
+            for running in (task, alert_task, observation_task):
+                if running:
+                    running.cancel()
+                    with suppress(asyncio.CancelledError):
+                        await running
 
     instance = FastAPI(title="HS Live Backend V1", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
     instance.state.scheduler_task = None
@@ -88,6 +97,13 @@ def create_app(
     @instance.get("/api/live-scores")
     def live_scores() -> dict:
         return active_store.public_state(datetime.now(TAIPEI), expected_mode=active_mode)
+
+    @instance.get("/api/intraday-observation")
+    def intraday_observation(response: Response) -> dict:
+        if observation is None:
+            raise HTTPException(status_code=404, detail="OBSERVATION_DISABLED", headers={"Cache-Control":"no-store"})
+        response.headers["Cache-Control"] = "no-store"
+        return observation.store.public(observation.clock())
 
     @instance.get("/healthz")
     def healthz() -> dict:

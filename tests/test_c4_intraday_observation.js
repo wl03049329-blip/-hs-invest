@@ -3,6 +3,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { observations } = require("../backend/c4_observation_bridge.js");
 const adapter = require("../hs-live-source-adapter.js");
+const front = require("../c4-intraday-observation.js");
 
 const four = ["0050","00757","00830","00935"];
 const date = "2026-11-13";
@@ -38,7 +39,7 @@ for(const [change,expected] of [
   [q=>q["0050"].quote_time="09:32:00","QUOTE_TIME_INVALID"],
   [q=>q["0050"].date="2026-11-12","QUOTE_DATE_INVALID"],
   [q=>q["0050"].volume=0,"WAITING_FIRST_TRADE"],
-  [q=>q["0050"].price_field="pz","QUOTE_SOURCE_INVALID"],
+  [q=>q["0050"].price_field="y","QUOTE_SOURCE_INVALID"],
 ]){
   test("only the affected symbol is rejected: "+expected,()=>{
     const f=fixture();change(f.rows);const out=observations(f);
@@ -54,4 +55,18 @@ test("stale history, close and next-date payload are not promoted",()=>{
   const next=observations({...f,tradingDate:"2026-11-17",now:"2026-11-17T09:30:00+08:00"});
   assert.equal(next.items["00662"].status,"SPLIT_RESUMPTION_UNVERIFIED");
   assert.equal(next.items["00757"].status,"QUOTE_DATE_INVALID");
+});
+test("two or all missing, then recover without mixing dates or formal authority",()=>{
+  const f=fixture(), now=Date.parse(f.now);
+  for(const count of [2,4]){
+    const rows={...f.rows};
+    for(const s of four.slice(0,count))delete rows[s];
+    const o=observations({...f,rows});
+    assert.equal(Object.values(front.validate(o,now,date)).filter(r=>r.status==="OBSERVED").length,4-count);
+    assert.equal(front.validate(o,now,"2026-11-16"),null);
+    assert.equal(front.validate({...o,formal_eligible:true},now,date),null);
+  }
+  const o=observations(f);
+  assert.equal(front.validate(o,now+421000,date)["0050"].status,"QUOTE_STALE");
+  assert.equal(front.validate(o,now,date)["0050"].status,"OBSERVED");
 });

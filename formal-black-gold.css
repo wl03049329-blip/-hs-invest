@@ -2491,6 +2491,10 @@ body:has(#homeDataHealth:not(.tabHidden)) #message.hsHomeMarketAsOf{display:none
 #homeDataHealthDialog .hsHomeSystemDetails:is([data-health-market="PREMARKET"],[data-health-market="CLOSED"],[data-health-market="HOLIDAY"]) [data-health-key="live"].is-healthy>strong,
 #homeDataHealthDialog .hsHomeSystemDetails[data-health-leverage="waiting"] [data-health-key="leverage"].is-healthy>strong{color:#c7bdab}
 #homeEtfBrief .hsDashboardC4Card>.hsC4OfficialReference{grid-column:1/-1;grid-row:5;min-width:0;margin:0;color:#c7bdab;font-size:11px;line-height:1.45;overflow-wrap:normal}
+#hsIntradayObservation:not([hidden]){margin:0 0 10px;padding:9px 10px;border:1px solid #514327;border-radius:8px;color:#d9c9a6;font-size:12px}
+#hsIntradayObservation ul{list-style:none;margin:5px 0 0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 8px}
+#hsIntradayObservation li{display:flex;gap:4px 7px;align-items:baseline;flex-wrap:wrap;min-width:0}
+#hsIntradayObservation li strong{color:#efd177}
 @media(max-width:700px){
   #homeEtfBrief .hsDashboardC4Card.is-leader>.hsC4OfficialReference{grid-row:3}
 }
