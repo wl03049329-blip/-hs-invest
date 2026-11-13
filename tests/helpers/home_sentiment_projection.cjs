@@ -4,6 +4,11 @@
 // portfolio code remain under the original byte-for-byte assertions.
 const assert=require('assert/strict'),cp=require('child_process'),crypto=require('crypto');
 module.exports=function(source){
+ const liveDiagnosticArgument='freshnessCheck:diagnostics.freshness_check,reason:liveCoreSourceState?.reason})';
+ if(source.includes(liveDiagnosticArgument)){
+  assert.equal(source.split(liveDiagnosticArgument).length-1,1);
+  source=source.replace(liveDiagnosticArgument,'freshnessCheck:diagnostics.freshness_check})');
+ }
  if(source.includes('details.dataset.healthMarket=')){
   for(const [after,before] of [
    ['function renderHomeDataHealth(dualTrack,health,leverageState){','function renderHomeDataHealth(dualTrack,health){'],

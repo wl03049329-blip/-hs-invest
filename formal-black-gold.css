@@ -2490,3 +2490,7 @@ body:has(#homeDataHealth:not(.tabHidden)) #message.hsHomeMarketAsOf{display:none
 #homeDataHealthDialog .hsSystemHealthRow.is-error>strong{color:#ff8585}
 #homeDataHealthDialog .hsHomeSystemDetails:is([data-health-market="PREMARKET"],[data-health-market="CLOSED"],[data-health-market="HOLIDAY"]) [data-health-key="live"].is-healthy>strong,
 #homeDataHealthDialog .hsHomeSystemDetails[data-health-leverage="waiting"] [data-health-key="leverage"].is-healthy>strong{color:#c7bdab}
+#homeEtfBrief .hsDashboardC4Card>.hsC4OfficialReference{grid-column:1/-1;grid-row:5;min-width:0;margin:0;color:#c7bdab;font-size:11px;line-height:1.45;overflow-wrap:normal}
+@media(max-width:700px){
+  #homeEtfBrief .hsDashboardC4Card.is-leader>.hsC4OfficialReference{grid-row:3}
+}
