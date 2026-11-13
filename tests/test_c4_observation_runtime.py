@@ -10,10 +10,11 @@ from backend import c4_observation as ob
 class ObservationRuntime(unittest.TestCase):
     def test_api_separate_from_formal_endpoint_and_no_store(self):
         from fastapi.testclient import TestClient
-        from backend.app import create_app
         from backend.state_store import StateStore
         now = datetime.fromisoformat("2026-11-13T09:31:00+08:00")
         with tempfile.TemporaryDirectory() as root:
+            with patch.dict("os.environ", {"HS_LIVE_VOLUME_PATH":root}):
+                from backend.app import create_app
             store = StateStore(root)
             observation = SimpleNamespace(clock=lambda:now,store=ob.ObservationStore(root))
             api = TestClient(create_app(state_store=store,observation_scheduler=observation))
