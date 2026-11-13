@@ -58,6 +58,7 @@ jobs:
           node --test tests/test_c4_intraday_observation.js
           node tests/test_frontend_live_diagnostics.js
           python3 -m unittest discover -s tests -p test_c4_source_ready.py
+          python3 -m unittest discover -s tests -p test_trading_calendar_rollover.py
           python3 -m unittest discover -s tests -p test_completed_market.py
           node tests/test_radar_history_lifecycle.js
           node tests/test_lradar_v1.js

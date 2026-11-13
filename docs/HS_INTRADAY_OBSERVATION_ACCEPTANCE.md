@@ -25,3 +25,18 @@ Record candidate commit, production FINAL and live contract hashes, and
 Chrome/WebKit and PWA results. A fixture is TEST; a proven historical payload
 is REPLAY only. No 11/13 qualifying historical capture is established.
 Do not promote if any required symbol or pipeline link lacks genuine evidence.
+
+## 11/16 preflight
+
+TWSE's annual selector uses `date=20260101`, not `queryYear=115`.
+Confirm the target-year response before enabling an isolated trial; this is
+scheduled-calendar evidence, not today's completed OHLC. Keep the Railway
+production feature flag off and do not change shared Fugle settings.
+For each bucket record the sanitized scheduler attempt/status/reason,
+per-symbol publication evidence and browser-rendered values. Verify a
+transient failure retries in the same bucket (at most three attempts,
+at least 20 seconds between attempts), a completed bucket does not repeat
+after restart, and an expired bucket cannot publish late. If MIS does not
+provide valid evidence for any symbol, mark it unavailable and retain the
+observations for the remaining symbols; do not treat a partial acceptance
+as the required four-symbol release gate.

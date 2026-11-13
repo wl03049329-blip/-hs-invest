@@ -98,12 +98,15 @@ def create_app(
     def live_scores() -> dict:
         return active_store.public_state(datetime.now(TAIPEI), expected_mode=active_mode)
 
-    @instance.get("/api/intraday-observation")
-    def intraday_observation(response: Response) -> dict:
-        if observation is None:
-            raise HTTPException(status_code=404, detail="OBSERVATION_DISABLED", headers={"Cache-Control":"no-store"})
-        response.headers["Cache-Control"] = "no-store"
-        return observation.store.public(observation.clock())
+    if observation is not None:
+        @instance.get("/api/intraday-observation")
+        def intraday_observation(response: Response) -> dict:
+            response.headers["Cache-Control"] = "no-store"
+            result = observation.store.public(observation.clock())
+            diagnostic = observation.diagnostics() if hasattr(observation, "diagnostics") else {}
+            if diagnostic.get("bucket","").startswith(result["trading_date"]+"T"):
+                result["scheduler"] = diagnostic
+            return result
 
     @instance.get("/healthz")
     def healthz() -> dict:

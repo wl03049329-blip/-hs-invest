@@ -8,6 +8,47 @@ from backend import c4_observation as ob
 
 
 class ObservationRuntime(unittest.TestCase):
+    def test_retry_paced_and_bounded_across_restart(self):
+        now = datetime.fromisoformat("2026-11-13T09:31:00+08:00")
+        calendar = SimpleNamespace(check=lambda _:SimpleNamespace(status="TRADING_DAY"))
+        with tempfile.TemporaryDirectory() as root:
+            def scheduler():
+                return ob.ObservationScheduler(root,calendar,clock=lambda:now)
+            first = scheduler()
+            with patch.object(ob.ObservationScheduler,"_collect",side_effect=ValueError("MIS_UNAVAILABLE:secret")) as collect:
+                first.tick()
+                self.assertEqual(first.diagnostics()["status"],"RETRY")
+                self.assertNotIn("secret",str(first.diagnostics()))
+                first.tick()
+                self.assertEqual(collect.call_count,1)
+                for i in range(3):
+                    now += timedelta(seconds=20)
+                    restarted = scheduler()
+                    restarted.tick()
+                self.assertEqual(collect.call_count,3)
+                self.assertEqual(restarted.diagnostics()["status"],"EXHAUSTED")
+
+    def test_calendar_and_mis_transient_recover_in_same_bucket(self):
+        now = datetime.fromisoformat("2026-11-13T09:31:00+08:00")
+        with tempfile.TemporaryDirectory() as root:
+            calendar = SimpleNamespace(check=lambda _:SimpleNamespace(status=market))
+            market = "UNKNOWN"
+            scheduler = ob.ObservationScheduler(root,calendar,clock=lambda:now)
+            scheduler.tick()
+            self.assertEqual(scheduler.diagnostics()["reason"],"CALENDAR_UNAVAILABLE")
+            market = "TRADING_DAY"
+            now += timedelta(seconds=20)
+            record = dict(ob.blank(now,"QUOTE_UNAVAILABLE"),bucket=ob.slot_at(now),calculated_at=now.isoformat())
+            with patch.object(scheduler,"_collect",side_effect=[ValueError("MIS_UNAVAILABLE"),record]) as collect:
+                scheduler.tick()
+                self.assertEqual(scheduler.diagnostics()["reason"],"MIS_UNAVAILABLE")
+                now += timedelta(seconds=20)
+                scheduler.tick()
+                scheduler.tick()
+                self.assertEqual(collect.call_count,2)
+            self.assertEqual(scheduler.diagnostics()["status"],"PUBLISHED")
+            self.assertEqual(scheduler.store.load(),record)
+
     def test_api_separate_from_formal_endpoint_and_no_store(self):
         from fastapi.testclient import TestClient
         from backend.state_store import StateStore
