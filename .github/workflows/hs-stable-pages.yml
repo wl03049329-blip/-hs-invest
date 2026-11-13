@@ -55,6 +55,10 @@ jobs:
           node --test tests/test_home_taiex.js
           node --test tests/test_home_tmf.js
           node tests/test_c4_close_observations.js
+          node --test tests/test_c4_intraday_observation.js
+          node tests/test_frontend_live_diagnostics.js
+          python3 -m unittest discover -s tests -p test_c4_source_ready.py
+          python3 -m unittest discover -s tests -p test_completed_market.py
           node tests/test_radar_history_lifecycle.js
           node tests/test_lradar_v1.js
           node tests/test_lc4_research_integration.js
