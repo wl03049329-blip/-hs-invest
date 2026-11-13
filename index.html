@@ -425,6 +425,7 @@ footer{text-align:center;color:var(--muted);padding:28px 0 8px}
     </div>
     <div class="hsC4SortTabs" role="group" aria-label="C4 排序方式"><button class="is-active" type="button" data-home-c4-sort="score">目前分數</button><button type="button" data-home-c4-sort="change">今日變化</button><button type="button" data-home-c4-sort="threshold">接近門檻</button></div>
     <div id="homeEtfBriefSummary" class="homeEtfBriefSummary">買點資料載入中…</div>
+    <div id="hsIntradayObservation" hidden aria-label="盤中觀察｜非正式 FINAL"></div>
     <div id="hsDashboardC4Grid" class="hsDashboardC4Grid" aria-live="polite"><div class="skeleton">載入正式 C4 排名中…</div></div>
   </section>
 
@@ -2350,7 +2351,7 @@ function currentFormalCoreScoreForSymbol(symbol,targetDate=taipeiToday(),now=new
 window.HSFormalCoreScoreAdapter=Object.freeze({scoreFor:currentFormalCoreScoreForSymbol,isFormalC4Symbol:symbol=>LONG_RADAR_SCORED_CODES.has(String(symbol||"").trim().toUpperCase())});
 function currentFrontendLiveRenderState(dualTrack=currentDualTrackCoreView(taipeiToday(),new Date())){
   const marketState=decisionCenterEffectiveMarketState(dualTrack),selectedSnapshotTime=window.HSLiveDiagnostics?.latestSnapshotTime(liveCanonicalCoreSnapshots),diagnostics=liveCoreSourceState?.diagnostics||{};
-  return window.HSLiveDiagnostics?.classifyRenderState({marketState,sourceStatus:liveCoreSourceState?.status,transportError:liveCoreSourceState?.transport_error===true,pending:Boolean(liveQuoteInFlight),liveSnapshotCount:liveCanonicalCoreSnapshots.length,selectedSnapshotTime,freshnessCheck:diagnostics.freshness_check})||"FRONTEND_STATE_PENDING";
+  return window.HSLiveDiagnostics?.classifyRenderState({marketState,sourceStatus:liveCoreSourceState?.status,transportError:liveCoreSourceState?.transport_error===true,pending:Boolean(liveQuoteInFlight),liveSnapshotCount:liveCanonicalCoreSnapshots.length,selectedSnapshotTime,freshnessCheck:diagnostics.freshness_check,reason:liveCoreSourceState?.reason})||"FRONTEND_STATE_PENDING";
 }
 function currentArchiveDiagnostics(targetDate=taipeiToday()){
   return window.HSLiveDiagnostics?.archiveSummary(archivedIntradayCoreSnapshots,targetDate)||{total:0,today:0,archive_date:targetDate,latest_today_snapshot_time:null};
@@ -5433,5 +5434,6 @@ initHomeHealthDialog();
 <script src="app-version.js"></script>
 <script defer src="app-update.js"></script>
 <script src="beginner-guide.js"></script>
+<script defer src="c4-intraday-observation.js"></script>
 </body>
 </html>

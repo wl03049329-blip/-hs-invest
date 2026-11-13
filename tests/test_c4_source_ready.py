@@ -15,6 +15,18 @@ class CalendarClient:
             {'Date':'20261009','Name':'國慶補假','Description':'休市'}]}
 
 class SourceReady(unittest.TestCase):
+    def test_rolled_calendar_requires_positive_exact_session(self):
+        fixture = {'url':'holiday','fetched_at':'2026-11-13T01:00:00Z','sha256':'a'*64,
+                   'payload':[{'Date':'1160101','Description':'放假'}]}
+        client = CalendarClient()
+        with patch.object(client,'get',return_value=fixture):
+            stamp = dt.datetime.fromisoformat('2026-11-13T09:33:00+08:00')
+            with patch.object(daily,'official_sessions',return_value=(['2026-11-11','2026-11-12'],{'url':'FMTQIK'})) as market:
+                self.assertEqual(daily.expected_day(client,stamp),('2026-11-12','2026-11-12',{'url':'FMTQIK'}))
+                market.assert_called_once_with(client,'twse','202611','2026-11-12')
+            with patch.object(daily,'official_sessions',return_value=(['2026-11-11'],{})):
+                with self.assertRaisesRegex(ValueError,'HOLIDAY_CALENDAR_COVERAGE'):
+                    daily.expected_day(client,stamp)
     def day(self, stamp, **kwargs):
         return daily.expected_day(CalendarClient(),dt.datetime.fromisoformat(stamp),**kwargs)[0]
     def test_early_final_does_not_change_raw_1800_policy(self):
