@@ -144,7 +144,7 @@ class RecoveryAdapter:
         for relative in (daily.INCIDENTS, *policy["paths"].values()):
             daily.require(shadow.validate_hash_chain(staging / relative)["status"] == "PASS",
                           "ADAPTER_GENERATION_CHAIN_INVALID")
-        snapshot = frontend.build(staging, exact.TARGET)
+        snapshot = frontend.build(staging, plan['contract']['actual_latest_completed_session'])
         files["00631l-leverage-status-v1.json"] = shadow.canonical(snapshot).encode()
         _write(staging / "00631l-leverage-status-v1.json", files["00631l-leverage-status-v1.json"])
         return files
@@ -184,7 +184,8 @@ class RecoveryAdapter:
                     policy["paths"]["outcomes_ledger"]: self.plan["outcome_ledger"].encode()}
         daily.require(all(files.get(p) == raw for p, raw in expected.items()),
                       "ADAPTER_GENERATION_NOT_APPROVED_CONTENT")
-        expected["00631l-leverage-status-v1.json"] = shadow.canonical(frontend.build(directory, exact.TARGET)).encode()
+        expected["00631l-leverage-status-v1.json"] = shadow.canonical(
+            frontend.build(directory,self.plan['contract']['actual_latest_completed_session'])).encode()
         daily.require(files == expected, "ADAPTER_GENERATION_NOT_APPROVED_CONTENT")
         return pointer, files
 

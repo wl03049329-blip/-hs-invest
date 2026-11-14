@@ -13,12 +13,15 @@ requires separate Owner approval.
    its workflow; the exact contract continues checking its existing module SHAs.
 2. An authorized operator manually runs `operation=capture` on main. The existing
    fresh-evidence collector fetches public TWSE calendar + Jan–Oct official
-   monthly OHLC + three whole Yahoo responses + four action datasets. All **18**
-   responses must succeed and their original bytes are preserved as base64 with
+   monthly OHLC + three whole Yahoo responses + four target action datasets.
+   Preserve the original **18** responses. When actual latest session exceeds
+   10/16, also capture four independent post-target action receipts and any
+   additional current-year official months. Every required response must succeed;
+   original bytes are preserved as base64 with
    raw SHA, URL, HTTP status, coverage and capture time. Missing/402/conflict =>
    fail-closed; no retries beyond the existing collector's bounded Yahoo budget.
 3. The run uploads `exact-recovery-review-input` containing root `bundle.json`
-   (unsigned envelope + 18 receipts) and `packaging-receipt.json`. No approval or
+   (unsigned envelope + all required receipts) and `packaging-receipt.json`. No approval or
    pin is invented. Capture output is **not** accepted by formal Recovery.
 4. Owner/independent trust administrator download and inspect that artifact.
    Independently verify the source run's successful conclusion, manual event,
@@ -103,26 +106,60 @@ packager does not accept arbitrary URLs, ZIP uploads or remote shell commands;
 it downloads an independently pinned Actions artifact and reads an independently
 pinned GitHub issue comment in this repository only.
 
-## 10/19 and later: intentionally BLOCKED
+## Historical-date compatibility: contract revision 2
 
-The existing exact context requires current latest completed day == 2026/10/16.
-This PR deliberately does **not** weaken it. When 10/19 is completed, capture
-returns no usable manifest and Packaging fails closed. Merely re-fetching data
-or changing timestamps cannot fix that.
+`actual_latest_completed_session` is computed from the REAL validation time and
+official calendar; `recovery_target` stays 2026/10/16 and `anchor_date` 2026/10/13.
+Capture time is never replaced with a fake 10/16/17 timestamp. If latest session
+changes between capture and execution (even within six hours on the same day),
+require new evidence/manifest/approval; do not promote an existing contract.
 
-Minimum **separate** review proposal (not implemented here): split exact historical
-target from latest-day freshness, continue validating current source/calendar,
-bound candidate/action/incident scope strictly to 10/16, and independently assess
-later sessions/P0/revisions without authorizing their publication. Such a change
-needs explicit approval, code tests, a new deployed SHA, entirely fresh evidence,
-a new contract/digest and seven new exact approvals. No target auto-extension.
+Normal Daily retains its original expected_day/date cutoff and public collect
+signature. Only its price-validation body is shared via a private helper, called
+by the exact historical path AFTER explicit scope/calendar/follow-on checks.
+No Daily target override, publication permission or Recovery enable was added.
+
+Historical candidate appends ONLY 10/14..16; all persisted rows through 10/13
+remain verbatim after fresh price/factor checks. Ten-session bridge origin and
+all old OHLC/revision/action/P0 guards remain. Post-10/16 sessions require fully
+valid single-payload Yahoo primary OHLC/volume/adjusted close, factor one, TWSE
+session/OHLC cross-check and all four independent action receipts from 10/13 to
+actual latest. Missing data/actions/unknown conflicts fail closed; no post-target
+fallback or prices are published. Volume discrepancies retain the existing rule.
+
+The base four action receipts cover 10/13..16; four additional `post-*` receipts
+cover 10/13..actual latest. Their source URLs and raw SHA are separately bound.
+The original October 18 receipts remain; after 10/19 there are 22 (plus one per
+extra official month if needed). ParValueChange remains all-market/no data_id
+and checks stock_id. No empty-array substitution or source-limit bypass.
+
+Contract revision 2 binds actual session, fixed target/anchor, follow-on proof,
+candidate SHA/version, ALL receipts, unchanged seven incident items/base and
+historical-scope module SHA. It uses the same deny-isolated Recovery record mode
+to avoid accidentally entering legacy generic review handling. Old revision,
+program/base/target/latest/SHA mismatches are rejected even with new test pins.
+The Reader also requires revision 2 and a completed, separately pinned receipt.
+New deployed SHA means new evidence, contract digest and seven new real approvals.
+
+After actual latest advances, generated status is
+`HISTORICAL_RECOVERY_ONLY_NO_BACKFILL`; frontend expected date is actual latest,
+price date stays 10/16 and freshness is STALE. It does not claim CURRENT or a
+new observation. Packaging, Adapter, external Pins/Registry and manual protected
+environment gates are unchanged. No automatic approval or signal backfill.
+
+Cross-year recovery is intentionally BLOCKED with an explicit review requirement:
+the current collector attests one complete official calendar year. This patch
+does not guess multi-year calendars/sessions or silently broaden capture scope.
 
 ## Tests and known limits
 
-Run only `python -m unittest discover -s research/hs_leverage -p test_phase_l7_packaging.py -v`.
+Packaging regression: `python -m unittest discover -s research/hs_leverage -p test_phase_l7_packaging.py -v`.
+Historical date tests: `python -m unittest discover -s research/hs_leverage -p test_phase_l7_historical_scope.py -v`.
+The date change also needs the directly affected Daily/source/Bridge, Exact,
+Adapter/Reader workflow and Snapshot regressions; no live market diagnosis.
 Tests use isolated fixtures, never actual approvals or market recovery. The
 original positive boundary unit test remains explicitly mocked. Additional
-integration tests invoke the **unmodified real production_plan and _plan** with
+integration tests invoke the **real production_plan and _plan, not mocks**, with
 an isolated Git/data fixture and a controlled datetime clock, not a mocked
 Planner. Production-shaped synthetic approval objects and test pins exist only
 in test memory/temporary outputs, never in real Production inputs or Secrets.
@@ -130,6 +167,15 @@ They verify positive planning, each of seven missing approvals, a wrong pin,
 expired evidence, same-Taipei-day cutoff within six hours, and TEST_ONLY refusal.
 Every case checks unchanged isolated formal files. No fixture result grants
 formal authorization.
+
+Historical tests cover before/after the real 16:30 completion cutoff, 10/19,
+10/20 and later dates, weekends/explicit fixture holidays, recap at a changed
+latest session, missing post-source rows/actions, raw SHA/URL substitution,
+historical revisions, new P0 (including incorrectly unset review flag), missing
+individual approvals/pins, old revision, and a six-stage TEST_ONLY rerun whose
+six-file generation stays STALE and preserves signals/capital/history. Two old
+date-only rejection tests now assert the real missing fresh-source coverage,
+retaining rejection/no-write assertions instead of forbidding valid new dates.
 
 ### P2 clock correction
 

@@ -479,6 +479,19 @@ def collect(historical, prior, policy, now, fetcher=fetch_json, root=shadow.ROOT
     holidays = calendar_days(holidays_payload, local.year)
     expected = expected_day(now, holidays)
     require(expected[:4] == str(local.year), "CALENDAR_YEAR_BOUNDARY_REVIEW_REQUIRED")
+    return _validated_session(historical, prior, policy, now, expected, holidays_payload, holidays,
+                              fetcher, root, allow_official_bridge, bridge_review_required, progress)
+
+
+def _validated_session(historical, prior, policy, now, expected, holidays_payload, holidays,
+                       fetcher, root, allow_official_bridge, bridge_review_required, progress):
+    """Shared validation only, not a publication/approval or a Daily date override.
+
+    Daily always supplies its real expected_day above. Exact historical recovery
+    independently checks its immutable target, actual session and post-target
+    evidence before calling this private validator with the REAL capture time.
+    """
+    local = now.astimezone(TAIPEI)
     start = int(datetime(2014, 10, 23, tzinfo=TAIPEI).timestamp())
     url = (f"https://query1.finance.yahoo.com/v8/finance/chart/00631L.TW?period1={start}"
            f"&period2={int(now.timestamp())}&interval=1d&events=div%2Csplits")
