@@ -1,14 +1,13 @@
 {
   "schema_version": 1,
   "price_type": "RAW_UNADJUSTED",
-  "price_cutoff": "2026-11-12",
-  "expected_completed_bar": "2026-11-12",
-  "next_expected_trading_day": "2026-11-13",
-  "cutoff_policy": "18:00 Asia/Taipei; official completed sessions only",
+  "price_cutoff": "2026-11-13",
+  "expected_completed_bar": null,
+  "next_expected_trading_day": null,
   "symbols": {
     "0050": {
-      "status": "CURRENT",
-      "reason": null,
+      "status": "STALE",
+      "reason": "CALENDAR_GATE_UNAVAILABLE:HOLIDAY_CALENDAR_COVERAGE",
       "provider": "TWSE/STOCK_DAY",
       "latest_verified_date": "2026-11-12",
       "verified_at": "2026-11-12T10:56:27.284110+00:00",
@@ -16,44 +15,44 @@
     },
     "00662": {
       "status": "STALE",
-      "reason": "OFFICIAL_SESSION_MISSING:2026-11-11,2026-11-12",
+      "reason": "CALENDAR_GATE_UNAVAILABLE:HOLIDAY_CALENDAR_COVERAGE",
       "provider": "TWSE/STOCK_DAY",
       "latest_verified_date": "2026-11-10",
       "verified_at": "2026-11-10T12:37:21.309101+00:00",
       "archive_sha256": "edd85841248afcd16b64ac5b49a96aac35941035f5a591941879ba976a2280cf"
     },
     "00757": {
-      "status": "CURRENT",
-      "reason": null,
+      "status": "STALE",
+      "reason": "CALENDAR_GATE_UNAVAILABLE:HOLIDAY_CALENDAR_COVERAGE",
       "provider": "TWSE/STOCK_DAY",
       "latest_verified_date": "2026-11-12",
       "verified_at": "2026-11-12T10:56:34.593981+00:00",
       "archive_sha256": "4fef06b3dfbb2c9885647b6028017697f5b232ce06e51cd692bf0424465ce1b7"
     },
     "00830": {
-      "status": "CURRENT",
-      "reason": null,
+      "status": "STALE",
+      "reason": "CALENDAR_GATE_UNAVAILABLE:HOLIDAY_CALENDAR_COVERAGE",
       "provider": "TWSE/STOCK_DAY",
       "latest_verified_date": "2026-11-12",
       "verified_at": "2026-11-12T10:56:38.383840+00:00",
       "archive_sha256": "b72121d2496b5b15cae65e9d279688941e5a840a061bb3f8714bd991e0160621"
     },
     "00935": {
-      "status": "CURRENT",
-      "reason": null,
+      "status": "STALE",
+      "reason": "CALENDAR_GATE_UNAVAILABLE:HOLIDAY_CALENDAR_COVERAGE",
       "provider": "TWSE/STOCK_DAY",
       "latest_verified_date": "2026-11-12",
       "verified_at": "2026-11-12T10:56:42.305841+00:00",
       "archive_sha256": "532455e79598b64911c28c6fab8baa4d095995764bcc1bf834fb8ccd4a5c47ba"
     },
     "009815": {
-      "status": "CURRENT",
-      "reason": null,
+      "status": "STALE",
+      "reason": "CALENDAR_GATE_UNAVAILABLE:HOLIDAY_CALENDAR_COVERAGE",
       "provider": "TPEx/dailyQuotes",
       "latest_verified_date": "2026-11-12",
       "verified_at": "2026-11-12T10:59:31.728079+00:00",
       "archive_sha256": "29f2ed1ec7d32af5ad5a709543b402c8196206f5326188a6a05cda58bead8bbb"
     }
   },
-  "content_sha256": "1520f9edd91dc5e45f0b771e581959d05e462b242339d81f3636a43970b2d0aa"
+  "content_sha256": "61a6021fd941edbb23185c4cce525e64bc32cf4f9a84abc521c40e1c72273ab3"
 }
