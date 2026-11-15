@@ -176,7 +176,14 @@ def resolve(expected: str, primary: dict[str, Any], fallback: dict[str, Any], no
         if source.get("complete") and str(source.get("source_date")) > expected:
             raise LookAheadRejected(f"future_source_{source['provider']}_{source['source_date']}_after_{expected}")
     ready = [source for source in (primary, fallback) if source.get("complete") and source.get("source_date") == expected]
-    diagnostics = [{key: source.get(key) for key in ("provider", "status", "source_date", "complete", "symbols", "error")} for source in (primary, fallback)]
+    diagnostics = []
+    for source in (primary, fallback):
+        rows = source.get("items", {})
+        entry = {key: source.get(key) for key in ("provider", "status", "source_date", "complete", "symbols", "error")}
+        entry["observed_dates"] = sorted({row["date"] for row in rows.values()})
+        entry["missing_symbols"] = [symbol for symbol in REQUIRED_SYMBOLS if symbol not in rows]
+        entry["off_date_symbols"] = {symbol: row["date"] for symbol, row in rows.items() if row["date"] != expected}
+        diagnostics.append(entry)
     if no_trading_day:
         if ready:
             raise SourceConflict(f"calendar_marks_no_trading_but_source_ready_{expected}")
@@ -229,6 +236,9 @@ def main() -> None:
     payload = collect(expected)
     write_atomic(Path(args.output).resolve(), payload)
     print(f"OFFICIAL_EOD_{payload['status']} expected={expected} provider={payload.get('provider')} source_date={payload.get('source_date')} fallback_used={payload.get('fallback_used')}")
+    if payload["status"] == "SOURCE_NOT_READY":
+        for diagnostic in payload["sources"]:
+            print("OFFICIAL_EOD_SOURCE_DIAGNOSTIC " + json.dumps(diagnostic, ensure_ascii=False, sort_keys=True))
 
 
 if __name__ == "__main__":
