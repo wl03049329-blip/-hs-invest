@@ -20,7 +20,8 @@ ALL = (*SYMBOLS, "00662", "009815")
 VERSION = "FINAL_CORE_WEIGHT_V1"
 MAX_BUCKET_ATTEMPTS = 3
 RETRY_AFTER_SECONDS = 20
-LOG = logging.getLogger(__name__)
+# Uvicorn configures this logger in the deployed container.
+LOG = logging.getLogger("uvicorn.error.hs_c4_observation")
 SOURCES = {"MIS_Z", "MIS_PZ", "FUGLE_LAST_TRADE"}
 REASONS = {"OBSERVED","QUOTE_UNAVAILABLE","QUOTE_STALE","QUOTE_SOURCE_INVALID",
            "QUOTE_DATE_INVALID","QUOTE_TIME_INVALID","WAITING_FIRST_TRADE",
@@ -43,13 +44,28 @@ def market_sessions(day):
 
 def live_rows(now, *, batch=mis.fetch_mis_batch, fallback=fetch_fugle_quote,
               clock=lambda: datetime.now(TAIPEI), fallback_enabled=False):
-    raw = batch([f"tse_{symbol}.tw" for symbol in SYMBOLS])
+    def diagnostic(symbol, reason):
+        LOG.info("observation_mis date=%s bucket=%s symbol=%s reason=%s",
+                 now.date(), slot_at(now), symbol, reason)
+
+    try:
+        raw = batch([f"tse_{symbol}.tw" for symbol in SYMBOLS])
+    except Exception as exc:
+        for symbol in SYMBOLS:
+            diagnostic(symbol, "BATCH_" + type(exc).__name__)
+        raise
     if not raw:
+        for symbol in SYMBOLS:
+            diagnostic(symbol, "EMPTY_BATCH")
         raise ValueError("MIS_UNAVAILABLE")
     rows = {}
     for symbol in SYMBOLS:
         matches = [row for row in raw if row.get("c") == symbol]
-        if len(matches) != 1 or matches[0].get("ex") != "tse":
+        if len(matches) != 1:
+            diagnostic(symbol, "NO_SYMBOL_ROW" if not matches else "DUPLICATE_SYMBOL_ROWS")
+            continue
+        if matches[0].get("ex") != "tse":
+            diagnostic(symbol, "MARKET_MISMATCH")
             continue
         source = matches[0]
         parsed, reason = mis.parse_mis_row(source, required=True)
@@ -59,9 +75,14 @@ def live_rows(now, *, batch=mis.fetch_mis_batch, fallback=fetch_fugle_quote,
             except Exception as exc:
                 if "429" in str(exc) or "RATE_LIMIT" in str(exc):
                     fallback_enabled = False
+                diagnostic(symbol, "FALLBACK_REJECTED")
                 continue
         if parsed is not None:
             rows[symbol] = parsed
+            diagnostic(symbol, "PARSED_" + ("MIS_PZ" if parsed.get("price_field") == "pz"
+                       else "MIS_Z" if parsed.get("price_field") == "z" else "FUGLE"))
+        else:
+            diagnostic(symbol, reason or "PARSER_REJECTED")
     return rows
 
 
@@ -282,6 +303,10 @@ class ObservationScheduler:
                                "histories":histories,"previousSession":previous})
         except Exception:
             raise ValueError("CALCULATION_FAILED") from None
+        for symbol in SYMBOLS:
+            status = record.get("items", {}).get(symbol, {}).get("status")
+            LOG.info("observation_validation bucket=%s symbol=%s status=%s",
+                     bucket, symbol, status if status in REASONS else "UNKNOWN")
         return {**record,"bucket":bucket} if slot_at(self.clock()) == bucket else None
 
     async def run_forever(self):

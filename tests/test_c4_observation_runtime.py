@@ -123,3 +123,15 @@ class ObservationRuntime(unittest.TestCase):
         result = ob.live_rows(now,batch=lambda _:raw,fallback=backup,clock=lambda:now,fallback_enabled=True)
         self.assertEqual(set(result),{"0050","00935"})
         self.assertEqual(result["0050"]["quote_source"],"FUGLE_LAST_TRADE")
+
+    def test_mis_logs_per_symbol_reason_without_raw_payload(self):
+        now = datetime.fromisoformat("2026-11-16T09:31:00+08:00")
+        raw = [{"c":"0050","ex":"tse","z":"-","pz":"-","n":"NEVER_LOG_RAW"},
+               {"c":"00757","ex":"otc"},{"c":"00830","ex":"tse"},{"c":"00830","ex":"tse"}]
+        with self.assertLogs(ob.LOG, level="INFO") as log:
+            self.assertEqual(ob.live_rows(now, batch=lambda _: raw), {})
+        output = "\n".join(log.output)
+        for detail in ("0050 reason=missing_price", "00757 reason=MARKET_MISMATCH",
+                       "00830 reason=DUPLICATE_SYMBOL_ROWS", "00935 reason=NO_SYMBOL_ROW"):
+            self.assertIn(detail, output)
+        self.assertNotIn("NEVER_LOG_RAW", output)
