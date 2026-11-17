@@ -8,8 +8,8 @@
   "volume_unit": "SHARES",
   "verified": true,
   "requested_start": "2026-09-01",
-  "requested_end": "2026-11-12",
-  "fetched_at": "2026-11-12T10:56:38.383840+00:00",
+  "requested_end": "2026-11-17",
+  "fetched_at": "2026-11-17T15:05:32.695858+00:00",
   "base_source_sha256": "b4d85b5f156b032abd0581a8de3bff4822799c6bd4e16b7864b2baecb5e87836",
   "base_last_date": "2026-09-18",
   "overlap": {
@@ -324,12 +324,39 @@
       "min": 74.5,
       "close": 74.5,
       "Trading_Volume": 16093371
+    },
+    {
+      "date": "2026-11-13",
+      "stock_id": "00830",
+      "open": 77.05,
+      "max": 77.6,
+      "min": 75.7,
+      "close": 76.1,
+      "Trading_Volume": 9070531
+    },
+    {
+      "date": "2026-11-16",
+      "stock_id": "00830",
+      "open": 74,
+      "max": 74,
+      "min": 71.9,
+      "close": 72,
+      "Trading_Volume": 13280630
+    },
+    {
+      "date": "2026-11-17",
+      "stock_id": "00830",
+      "open": 70.2,
+      "max": 71.8,
+      "min": 69.7,
+      "close": 71,
+      "Trading_Volume": 11022892
     }
   ],
   "dividends": [],
   "action_coverage": {
     "start": "2026-09-01",
-    "end": "2026-11-12"
+    "end": "2026-11-17"
   },
   "evidence": [
     {
@@ -528,6 +555,21 @@
       "url": "https://www.twse.com.tw/exchangeReport/FMTQIK?response=json&date=20261101",
       "fetched_at": "2026-11-12T10:56:19.693314+00:00",
       "sha256": "43856ca5faaa3578c1129c193d15f6b124b8fe685ddc4090ebe0b71697875dad"
+    },
+    {
+      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20261101&stockNo=00830",
+      "fetched_at": "2026-11-17T15:05:32.695858+00:00",
+      "sha256": "e1e51200cdd5b938c60abc2885f45215087cb959beb1b06df3b43faed3ad2fbc"
+    },
+    {
+      "url": "https://www.twse.com.tw/exchangeReport/FMTQIK?response=json&date=20261101",
+      "fetched_at": "2026-11-17T15:04:44.869379+00:00",
+      "sha256": "08efa0392e1dc578e09b503b7568294b4c3f4ccc26efb62dee0b6334b9a45bd6"
+    },
+    {
+      "url": "https://www.twse.com.tw/rwd/zh/holidaySchedule/holidaySchedule?response=json&date=20260101",
+      "fetched_at": "2026-11-17T15:04:41.038609+00:00",
+      "sha256": "0cbf32b50409ba1ae47044501f754b7c761dab77c430bd4fd405a92b68eec507"
     }
   ],
   "action_evidence": [
@@ -625,6 +667,11 @@
       "url": "https://www.twse.com.tw/exchangeReport/TWT49U?response=json&startDate=20261101&endDate=20261112",
       "fetched_at": "2026-11-12T10:56:27.284110+00:00",
       "sha256": "db12358af5919d9875cc0d9b0cf914da41d1015389f8e89d5f113a1215776971"
+    },
+    {
+      "url": "https://www.twse.com.tw/exchangeReport/TWT49U?response=json&startDate=20261101&endDate=20261117",
+      "fetched_at": "2026-11-17T15:04:51.921798+00:00",
+      "sha256": "3fe6e7bbf13a966ddc36debc716e0231508f7d458dd462406bd44b1ab095bb90"
     }
   ],
   "missing_observed_sessions": [],
@@ -632,7 +679,7 @@
   "listing_reference": null,
   "incremental_verification": {
     "start": "2026-11-01",
-    "end": "2026-11-12",
+    "end": "2026-11-17",
     "sessions": [
       "2026-11-02",
       "2026-11-03",
@@ -642,19 +689,22 @@
       "2026-11-09",
       "2026-11-10",
       "2026-11-11",
-      "2026-11-12"
+      "2026-11-12",
+      "2026-11-13",
+      "2026-11-16",
+      "2026-11-17"
     ],
     "provider": "TWSE/STOCK_DAY",
-    "overlap_count": 8,
-    "parent_content_sha256": "f72df94e64d27a1a4d74e468c5e6c83d37b21229a8a65b13539ce0666fac06c1",
+    "overlap_count": 9,
+    "parent_content_sha256": "b72121d2496b5b15cae65e9d279688941e5a840a061bb3f8714bd991e0160621",
     "corporate_actions": "VERIFIED",
     "calendar_evidence": [
       {
         "url": "https://www.twse.com.tw/exchangeReport/FMTQIK?response=json&date=20261101",
-        "fetched_at": "2026-11-12T10:56:19.693314+00:00",
-        "sha256": "43856ca5faaa3578c1129c193d15f6b124b8fe685ddc4090ebe0b71697875dad"
+        "fetched_at": "2026-11-17T15:04:44.869379+00:00",
+        "sha256": "08efa0392e1dc578e09b503b7568294b4c3f4ccc26efb62dee0b6334b9a45bd6"
       }
     ]
   },
-  "content_sha256": "b72121d2496b5b15cae65e9d279688941e5a840a061bb3f8714bd991e0160621"
+  "content_sha256": "27f47048e4ee03a94ba70b997c0d1db28cbc5fac6c9f5e779e84982c2563d6f8"
 }

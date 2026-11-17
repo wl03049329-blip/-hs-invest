@@ -8,8 +8,8 @@
   "volume_unit": "SHARES",
   "verified": true,
   "requested_start": "2018-12-01",
-  "requested_end": "2026-11-12",
-  "fetched_at": "2026-11-12T10:56:34.593981+00:00",
+  "requested_end": "2026-11-17",
+  "fetched_at": "2026-11-17T15:05:29.165724+00:00",
   "base_source_sha256": null,
   "base_last_date": null,
   "overlap": {
@@ -17350,12 +17350,39 @@
       "min": 134.55,
       "close": 134.85,
       "Trading_Volume": 861320
+    },
+    {
+      "date": "2026-11-13",
+      "stock_id": "00757",
+      "open": 136.05,
+      "max": 136.45,
+      "min": 135.2,
+      "close": 135.4,
+      "Trading_Volume": 510018
+    },
+    {
+      "date": "2026-11-16",
+      "stock_id": "00757",
+      "open": 134.05,
+      "max": 134.65,
+      "min": 133.35,
+      "close": 133.35,
+      "Trading_Volume": 1090078
+    },
+    {
+      "date": "2026-11-17",
+      "stock_id": "00757",
+      "open": 130.1,
+      "max": 131.5,
+      "min": 129.9,
+      "close": 130.9,
+      "Trading_Volume": 1368579
     }
   ],
   "dividends": [],
   "action_coverage": {
     "start": "2018-12-01",
-    "end": "2026-11-12"
+    "end": "2026-11-17"
   },
   "evidence": [
     {
@@ -18112,6 +18139,21 @@
       "url": "https://www.twse.com.tw/exchangeReport/FMTQIK?response=json&date=20261101",
       "fetched_at": "2026-11-12T10:56:19.693314+00:00",
       "sha256": "43856ca5faaa3578c1129c193d15f6b124b8fe685ddc4090ebe0b71697875dad"
+    },
+    {
+      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20261101&stockNo=00757",
+      "fetched_at": "2026-11-17T15:05:29.165724+00:00",
+      "sha256": "a0d7358a0a02bd2bd145c8b3e15eb493831ea5a2e43b13bb60d2dba3d6122dd2"
+    },
+    {
+      "url": "https://www.twse.com.tw/exchangeReport/FMTQIK?response=json&date=20261101",
+      "fetched_at": "2026-11-17T15:04:44.869379+00:00",
+      "sha256": "08efa0392e1dc578e09b503b7568294b4c3f4ccc26efb62dee0b6334b9a45bd6"
+    },
+    {
+      "url": "https://www.twse.com.tw/rwd/zh/holidaySchedule/holidaySchedule?response=json&date=20260101",
+      "fetched_at": "2026-11-17T15:04:41.038609+00:00",
+      "sha256": "0cbf32b50409ba1ae47044501f754b7c761dab77c430bd4fd405a92b68eec507"
     }
   ],
   "action_evidence": [
@@ -18249,6 +18291,11 @@
       "url": "https://www.twse.com.tw/exchangeReport/TWT49U?response=json&startDate=20261101&endDate=20261112",
       "fetched_at": "2026-11-12T10:56:27.284110+00:00",
       "sha256": "db12358af5919d9875cc0d9b0cf914da41d1015389f8e89d5f113a1215776971"
+    },
+    {
+      "url": "https://www.twse.com.tw/exchangeReport/TWT49U?response=json&startDate=20261101&endDate=20261117",
+      "fetched_at": "2026-11-17T15:04:51.921798+00:00",
+      "sha256": "3fe6e7bbf13a966ddc36debc716e0231508f7d458dd462406bd44b1ab095bb90"
     }
   ],
   "missing_observed_sessions": [],
@@ -18256,7 +18303,7 @@
   "listing_reference": "https://www.twse.com.tw/staticFiles/product/publication/0002000167.pdf",
   "incremental_verification": {
     "start": "2026-11-01",
-    "end": "2026-11-12",
+    "end": "2026-11-17",
     "sessions": [
       "2026-11-02",
       "2026-11-03",
@@ -18266,19 +18313,22 @@
       "2026-11-09",
       "2026-11-10",
       "2026-11-11",
-      "2026-11-12"
+      "2026-11-12",
+      "2026-11-13",
+      "2026-11-16",
+      "2026-11-17"
     ],
     "provider": "TWSE/STOCK_DAY",
-    "overlap_count": 8,
-    "parent_content_sha256": "9c6daf14462c091001b881c404e453e32f98e2055d8f3e20c24e48125e4b55f7",
+    "overlap_count": 9,
+    "parent_content_sha256": "4fef06b3dfbb2c9885647b6028017697f5b232ce06e51cd692bf0424465ce1b7",
     "corporate_actions": "VERIFIED",
     "calendar_evidence": [
       {
         "url": "https://www.twse.com.tw/exchangeReport/FMTQIK?response=json&date=20261101",
-        "fetched_at": "2026-11-12T10:56:19.693314+00:00",
-        "sha256": "43856ca5faaa3578c1129c193d15f6b124b8fe685ddc4090ebe0b71697875dad"
+        "fetched_at": "2026-11-17T15:04:44.869379+00:00",
+        "sha256": "08efa0392e1dc578e09b503b7568294b4c3f4ccc26efb62dee0b6334b9a45bd6"
       }
     ]
   },
-  "content_sha256": "4fef06b3dfbb2c9885647b6028017697f5b232ce06e51cd692bf0424465ce1b7"
+  "content_sha256": "8317958ea78d2f3da0e09bc762f38a50dce24220892b4b48928b2b614ca334bb"
 }
