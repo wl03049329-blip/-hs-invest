@@ -3,6 +3,35 @@
 .radarHistoryV2>header{display:flex;gap:8px;align-items:baseline;justify-content:space-between;flex-wrap:wrap}
 .radarHistoryV2 h3{font-size:19px;margin:0 0 12px}.radarHistoryV2 small{color:#b5a88f;font-size:12px}
 .radarHistoryRanges{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px}
+.radarV4Toolbar{position:sticky;top:max(4px,env(safe-area-inset-top));z-index:8;display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px;padding:6px 8px;background:#100e09;border:1px solid #5a4628;border-radius:12px}
+.radarV4Toolbar nav{display:flex;gap:4px}.radarV4Toolbar button,.radarV4Picker button,.radarV4MiniButton{min-height:44px;min-width:44px;max-width:100%;padding:6px 10px;color:#f0d799;background:#181309;border:1px solid #665031;border-radius:8px;font:inherit;cursor:pointer;overflow-wrap:anywhere}
+.radarV4Toolbar button[aria-pressed=true]{background:#423014;border-color:#e0b96d}
+.radarV4Toolbar.is-compact>button span{display:none}
+#signals:has(.is-selected[data-radar-v4])>#radarDetailStickyNav{display:none}
+.radarMobileV4 .signalCardDetails{overflow:visible}
+.radarMobileV4 [hidden]{display:none!important}
+.radarV4Card,.radarMobileV4 [data-radar-v4-fold]{margin:10px 0;padding:14px;min-width:0;border:1px solid #5a4628;border-radius:12px;background:#110e09;overflow-wrap:anywhere}
+.radarV4Card h3{font-size:16px;margin:0 0 8px}.radarV4Card p{font-size:15px;margin:8px 0}
+.radarV4Score{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;color:#f5d884}
+.radarV4Score strong{font-size:clamp(32px,9vw,38px);line-height:1.1;font-variant-numeric:tabular-nums}
+.radarV4Score span{font-size:17px;font-weight:700}.radarV4DD b{font-size:23px;color:#eed69b}
+.radarV4Risk{color:#ffba79;border-inline-start:2px solid #c78847;padding-inline-start:8px}
+.radarV4Tier{color:#f2d18c}.radarV4Card footer,.radarV4Card small{font-size:13px;color:#c9b791}
+.radarV4MiniButton{width:100%;text-align:left;margin-bottom:6px}.radarV4MiniButton svg{display:block;width:100%;height:112px}
+.radarV4Final{stroke:#e8c367;fill:#e8c367}.radarV4Obs{stroke:#f2dbad;fill:#100e09}
+.radarV4MiniButton polyline{fill:none;stroke-width:1.8}.radarV4MiniButton polyline.radarV4Obs{stroke-dasharray:5 4}
+.radarMobileV4 [data-radar-v4-fold]>summary{min-height:44px;cursor:pointer}
+.radarMobileV4 [data-radar-v4-fold]>summary small{display:block;color:#c6b99c;margin-top:5px}
+.radarV4Picker{position:fixed;inset:auto 0 0;margin:0 auto;width:min(100%,520px);max-height:min(75dvh,620px);max-width:100%;box-sizing:border-box;overflow:auto;padding:12px 12px max(12px,env(safe-area-inset-bottom));color:#ead7a8;background:#100e09;border:1px solid #665031;border-radius:16px 16px 0 0}
+.radarV4Picker::backdrop{background:#0009}.radarV4Picker header{display:flex;align-items:center;justify-content:space-between;gap:10px}.radarV4Picker>button{display:block;text-align:left;width:100%;margin:6px 0}.radarV4Picker [aria-current=true]{border-color:#ebc873}
+.radarHistoryRanges{display:flex;overflow-x:auto;overscroll-behavior-inline:contain}
+.radarHistoryRanges button{flex:0 0 auto;min-width:44px;min-height:44px}
+.radarHistoryCustom{min-width:0;margin:8px 0}.radarHistoryCustom summary{min-height:44px;cursor:pointer;padding-block:10px}
+.radarHistoryCustom label{display:inline-flex;align-items:center;gap:5px;margin:4px 8px 4px 0;flex-wrap:wrap}
+.radarHistoryCustom input{color-scheme:dark;max-width:100%;min-height:44px}
+.radarHistoryV2.radarHistoryFullscreen{position:fixed;inset:0;z-index:10000;overflow:auto;overscroll-behavior:contain;border-radius:0;padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}
+.radarHistoryFullscreen [data-history-action=fullscreen]{position:fixed;top:max(6px,env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right));z-index:2;background:#201809;min-height:44px}
+.radarHistoryFullscreen>header{padding-inline-end:94px}
 .radarHistoryV2 button{min-height:38px;border:1px solid #574324;border-radius:8px;background:#131009;color:#d6c6a0;font:inherit;font-size:13px;cursor:pointer;padding:6px}
 .radarHistoryV2 button.active{color:#ffe6a0;border-color:#d2a852;background:#38280f}
 .radarHistoryV2 button:focus-visible,.radarHistoryCanvas:focus-visible{outline:2px solid #dfb858;outline-offset:2px}

@@ -56,6 +56,10 @@ const document={...bus(),visibilityState:"visible",documentElement:{style:{overf
 const storage=new Map(),context={window,document,console,AbortController,Intl,Date:class extends Date{constructor(...args){super(...(args.length?args:["2026-10-13T12:00:00Z"]))}static now(){return Date.parse("2026-10-13T12:00:00Z")}},ResizeObserver:class{observe(){}disconnect(){}},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)}};
 vm.runInNewContext(fs.readFileSync(require.resolve("../radar-history-view"),"utf8"),require("./c4-display-context")(context));
 const V=window.HSRadarHistoryView,args=symbol=>({symbol,name:symbol,artifact,contract:P,thresholds:[],completed:()=>true,headers:()=>({})});
+assert.equal(V.customRange(dates,dates[1],dates[0]),null);
+assert.equal(V.customRange(dates,"2026-02-30",dates[1]),null);
+assert.equal(V.customRange(dates,"2026-10-11",dates[1]),null);
+assert.equal(JSON.stringify(V.customRange(dates,dates[0],dates[1])),JSON.stringify({from:0,to:1}));
 (async()=>{
   const h=new Host();await V.mount(h,args("0050"));
   assert.equal(charts.length,1);assert.equal(charts[0].series.filter(s=>s.type==="candle"&&s.pane===1).length,1);

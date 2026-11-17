@@ -3986,7 +3986,7 @@ function coreScoreHistoryState(ticker,history=loadDailyLongRankHistory()){
   return{kind:rows.length?"ready":"empty",rows,source,seriesSource,officialCount:officialRows.length,range:"10D"};
 }
 // HS_FINAL_SOURCE_REFRESH_V1_BEGIN — public FINAL data only, no financial writes.
-let finalSourceRefreshFlight=null;
+let finalSourceRefreshFlight=null,finalSourceRefreshIssue=false;
 async function loadFinalizedCoreScoreHistory(){
   try{
     const response=await fetch("finalized-core-score-snapshots-v1.json",{cache:"no-store",signal:AbortSignal.timeout(15000)});
@@ -3998,12 +3998,12 @@ async function loadFinalizedCoreScoreHistory(){
     const latest=payload.snapshots.find(row=>row.date===verified.trading_date);
     if(![...LONG_RADAR_SCORED_CODES].every(symbol=>Number.isFinite(latest.rows.find(row=>row.symbol===symbol)?.final_core_score)))throw new Error("FINAL_SOURCE_SCORE_INVALID");
     for(const old of finalizedCoreScoreHistoryArtifact.snapshots||[]){if(!payload.snapshots.some(row=>row.date===old.date&&JSON.stringify(row)===JSON.stringify(old)))throw new Error("FINAL_SOURCE_ROLLBACK_OR_REWRITE");}
-    const changed=JSON.stringify(finalizedCoreScoreHistoryArtifact)!==JSON.stringify(payload);finalizedCoreScoreHistoryArtifact=payload;return changed;
-  }catch{return false;} // Retain the last verified artifact and its REAL date.
+    const changed=JSON.stringify(finalizedCoreScoreHistoryArtifact)!==JSON.stringify(payload);finalizedCoreScoreHistoryArtifact=payload;finalSourceRefreshIssue=false;return changed;
+  }catch{finalSourceRefreshIssue=true;return false;} // Retain the last verified artifact and its REAL date.
 }
 function refreshFinalizedCoreScoreHistory(){
   if(document.hidden)return Promise.resolve(false);if(finalSourceRefreshFlight)return finalSourceRefreshFlight;
-  finalSourceRefreshFlight=loadFinalizedCoreScoreHistory().then(changed=>{if(changed){const canonical=currentCanonicalCoreSnapshot();if(canonical)applyCanonicalCoreSnapshot(canonical);renderTop();renderCards();renderTable();}return changed;}).finally(()=>{finalSourceRefreshFlight=null;});return finalSourceRefreshFlight;
+  finalSourceRefreshFlight=loadFinalizedCoreScoreHistory().then(changed=>{if(changed){const canonical=currentCanonicalCoreSnapshot();if(canonical)applyCanonicalCoreSnapshot(canonical);renderTop();renderCards();renderTable();}document.querySelectorAll?.("[data-radar-v4-refresh]").forEach(el=>el.hidden=!finalSourceRefreshIssue);return changed;}).finally(()=>{finalSourceRefreshFlight=null;});return finalSourceRefreshFlight;
 }
 window.addEventListener("pageshow",()=>void refreshFinalizedCoreScoreHistory());
 window.addEventListener("online",()=>void refreshFinalizedCoreScoreHistory());
@@ -4457,11 +4457,79 @@ function radarHistoricalResearchHtml(x){
   return`<details class="radarResearchHub" data-radar-research-hub><summary aria-expanded="false"><span><b>歷史研究</b><small>歷史位置 ${esc(position)} · 20日後 ${esc(outcome)} · ${esc(sample)}</small></span><i aria-hidden="true">⌄</i></summary><div class="radarResearchHubBody">${radarHistoryPhase6Html(x)}${radarOutcomePhase7BHtml(x)}</div></details>`;
 }
 function detailAdvancedHtml(x){if(x.officialDisplayOnly)return`${radarHistoricalResearchHtml(x)}<section class="detailSection"><h4>行情資料不足</h4><p>價格、均線與即時漲跌暫不可用。正式 C4 依其資料日期獨立顯示；歷史圖僅呈現已驗證的保存日線，不代表今日行情。</p></section>`;return`${radarHistoricalResearchHtml(x)}<details class="detailAdvanced"><summary aria-expanded="false">其他詳細資料</summary>${valuationDetailsHtml(x)}${legacyComparisonHtml(x)}<section class="detailSection"><h4>歷史相似訊號統計</h4>${similarStatsHtml(x.historyStats.sameEnvironment,`相同市場環境｜${x.environment}`)}${similarStatsHtml(x.historyStats.allEnvironments,"全部市場環境")}</section>${buyPlanHtml(x)}</details>`}
+const radarMobileV4={tab:"quick",open:new Set()};
+function radarV4Card(x,cardClass,decision,dailyPair,presentation,longRank){
+  const artifact=finalizedCoreScoreHistoryArtifact, contract=window.HSFinalCoreProduction;
+  const finals=window.HSRadarHistory.scores(artifact,x.id,contract,isCompletedTradingDate).rows;
+  const current=finals.at(-1),previous=finals.at(-2),pair=radarOfficialFactorPair(x.id,artifact);
+  const exact=Boolean(current&&pair.current?.date===current.time&&pair.current?.rawTotal===current.value);
+  const attribution=exact&&pair.previous?.date===previous?.time?radarFactorAttribution(pair):null;
+  const priorTier=previous&&contract.labelFor(previous.value).label,tier=current&&contract.labelFor(current.value).label;
+  const change=current&&previous?current.value-previous.value:null;
+  const dd=current?.factors.find(f=>f.key==="dd52")?.raw,market=radarMarketPhase5State(x);
+  const bars=current?radarTrendPhase4PriceRows(x,current.time).slice(-252):[],close=bars.at(-1)?.close;
+  const high=bars.length===252&&bars.every(r=>Number.isFinite(r.max)&&r.max>0)?bars.reduce((a,b)=>a.max>=b.max?a:b):null;
+  const basis=high&&Number.isFinite(dd)&&Math.abs((close/high.max-1)*100-dd)<1e-8
+    ?"調整後收盤 "+fmt(close)+"（"+current.time+"）；高點 "+fmt(high.max)+"（"+high.date+"）。":"同口徑高點與收盤價格明細暫缺，不用原始價格替代。";
+  const risk=market.date===current?.time&&market.mas?.filter(m=>Number.isFinite(m.distance)).length===4&&market.mas.every(m=>m.distance<0)
+    ?"股價低於主要均線；不代表已確認止跌。":"機會分數不等於止跌或未來報酬。";
+  const state=radarOutcomePhase7BState(x);
+  const count=state.kind==="READY"&&Number.isInteger(state.sample?.total_records)?state.sample.total_records:null;
+  const live=currentDualTrackCoreView(taipeiToday(),new Date()),slot=live?.market_state==="OPEN"?live.items?.[x.id]?.live:null;
+  const liveLine=slot?.display_eligible===true&&Number.isFinite(slot.score)&&slot.trading_date===taipeiToday()?"今日盤中 "+formatC4Score(slot.score)+" 分 · "+(formatHomeQuoteTime(slot.market_as_of)||""):"暫無即時行情";
+  const stale=!current||!exact||live?.market_state==="CLOSED"&&current.time<taipeiToday();
+  const fold=(id,title,summary,body)=>'<details data-radar-v4-fold="'+id+'"'+(radarMobileV4.open.has(id)?' open':'')+'><summary><b>'+title+'</b><small>'+esc(summary)+'</small></summary>'+body+'</details>';
+  const options=radarDisplayItems().map(item=>'<button type="button" data-radar-v4-pick="'+esc(item.id)+'"'+(item.id===x.id?' aria-current="true"':'')+'><b>'+esc(item.id)+'</b> '+esc(item.name)+(item.id===x.id?' <span>目前選取</span>':'')+'</button>').join("");
+  return '<article class="'+cardClass+' radarFlowCard radarMobileV4" data-etf-id="'+esc(x.id)+'" data-radar-ux-phase="8.5" data-radar-v4><div class="signalCardDetails"><div class="radarV4Sentinel"></div><div class="radarV4Toolbar"><button type="button" data-radar-v4-action="back" aria-label="返回 ETF 雷達總覽">←</button><button type="button" data-radar-v4-action="picker" aria-haspopup="dialog"><b>'+esc(x.id)+'</b> <span>'+esc(x.name)+'</span> <small>更換 ETF ▾</small></button><nav aria-label="ETF 雷達閱讀模式"><button type="button" data-radar-v4-tab="quick">快速看</button><button type="button" data-radar-v4-tab="deep">深入分析</button></nav></div>'+
+    '<dialog class="radarV4Picker" aria-label="更換 ETF"><header>更換 ETF <button type="button" data-radar-v4-action="close">關閉</button></header>'+options+'</dialog>'+
+    '<div data-radar-v4-pane="quick"><section class="radarV4Card"><h3>機會評分與風險</h3><div class="radarV4Score"><strong>'+ (current?formatC4Score(current.value):"—")+'</strong><span>'+esc(tier||(x.id==="009815"?"等待原生資料":"正式資料不足"))+'</span></div>'+
+    '<p>'+(Number.isFinite(change)?(change>0?"↑ ":change<0?"↓ ":"→ ")+"較上次正式 "+formatC4Signed(change)+" 分":"暫無比較資料")+'</p>'+
+    (priorTier&&priorTier!==tier?'<p class="radarV4Tier">'+(change>0?"機會等級升級":"機會等級下降")+'</p>':'')+
+    '<p class="radarV4DD">近 52 週高點回落 <b>'+(Number.isFinite(dd)?dd.toFixed(2)+"%":"資料不足")+'</b></p>'+
+    '<p>'+esc(radarExplainSummary(attribution).replace(/^今天/,"此次"))+'</p><p class="radarV4Risk"><b>風險提醒：</b>'+esc(risk)+'</p>'+
+    '<footer>'+esc(liveLine)+'<br>'+ (current?'正式收盤 '+esc(current.time):"尚無已驗證正式分數")+(stale?' · 最新資料尚待確認':'')+'<small data-radar-v4-refresh'+(finalSourceRefreshIssue?'':' hidden')+'> · 更新暫不可用，保留已驗證資料</small></footer></section>'+
+    '<section class="radarV4Card"><h3>近期 C4 走勢</h3><button type="button" data-radar-v4-tab="deep" class="radarV4MiniButton" aria-label="開啟完整 C4 走勢"><div data-radar-v4-mini>正在確認歷史日期</div><span>查看完整走勢 ›</span></button><small>金色實線：正式收盤 · 淡金虛線：獨立觀察</small></section></div>'+
+    '<div data-radar-v4-pane="deep" hidden>'+window.HSRadarHistoryView.html(x.id)+
+    fold("factors","為什麼得到這個分數？",radarExplainSummary(attribution).replace(/^今天/,"此次"),radarWhyScoreHtml(x,decision))+
+    fold("price","目前股價的位置",market.trendSummary||"正式日線資料尚未齊備。",'<p>52 週回落取正式資料日 '+esc(current?.time||"—")+' 的還原收盤，對最近 252 日還原後的盤中最高價。'+(Number.isFinite(dd)?" 回落 "+dd.toFixed(2)+"%。":"")+' '+esc(basis)+'</p>'+radarScoreTrendHtml(x).slice(window.HSRadarHistoryView.html(x.id).length)+radarMarketPositionHtml(x)+radarDetailCoreStatusHtml(x,decision,current?.value,dailyPair,presentation,longRank)+radarDecisionSummaryHtml(x)+longTermDrawdownTableHtml(x))+
+    fold("research","過去有類似機會嗎？",count===null?"目前沒有可用樣本結論。":count+" 筆樣本"+(count<30?"，參考性有限":"，僅供歷史參考")+"；不是未來上漲機率。",detailAdvancedHtml(x))+
+    '</div></div></article>';
+}
+function syncRadarV4(card){
+  if(!card?.hasAttribute("data-radar-v4"))return;
+  card.querySelectorAll("[data-radar-v4-pane]").forEach(p=>p.hidden=p.dataset.radarV4Pane!==radarMobileV4.tab);
+  card.querySelectorAll("nav [data-radar-v4-tab]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.radarV4Tab===radarMobileV4.tab)));
+  card.querySelectorAll("[data-radar-v4-fold]").forEach(d=>d.open=radarMobileV4.open.has(d.dataset.radarV4Fold));
+}
+document.addEventListener("toggle",e=>{
+  if(!e.target.matches?.(".is-selected [data-radar-v4-fold]"))return;
+  const key=e.target.dataset.radarV4Fold;
+  if(e.target.open)radarMobileV4.open.add(key);else radarMobileV4.open.delete(key);
+},true);
+document.addEventListener("click",e=>{
+  const button=e.target.closest("[data-radar-v4-action],[data-radar-v4-tab],[data-radar-v4-pick]"),card=button?.closest("[data-radar-v4]");
+  if(!card)return;
+  const dialog=card.querySelector(".radarV4Picker");
+  if(button.dataset.radarV4Action==="back"){closeRadarDetail();return;}
+  if(button.dataset.radarV4Action==="picker"){dialog.showModal();return;}
+  if(button.dataset.radarV4Action==="close"){dialog.close();return;}
+  if(button.dataset.radarV4Pick){dialog.close();showRadarDetail(button.dataset.radarV4Pick,false);return;}
+  radarMobileV4.tab=button.dataset.radarV4Tab;syncRadarV4(card);mountRadarHistoryChart(card);
+  card.querySelector('nav [data-radar-v4-tab="'+radarMobileV4.tab+'"]')?.focus({preventScroll:true});
+});
+let radarV4CompactFrame=0;
+window.addEventListener("scroll",()=>{
+  if(radarV4CompactFrame)return;
+  radarV4CompactFrame=requestAnimationFrame(()=>{radarV4CompactFrame=0;
+    const card=document.querySelector(".is-selected[data-radar-v4]"),bar=card?.querySelector(".radarV4Toolbar"),sentinel=card?.querySelector(".radarV4Sentinel");
+    if(bar&&sentinel)bar.classList.toggle("is-compact",sentinel.getBoundingClientRect().bottom<bar.getBoundingClientRect().top-1);
+  });
+},{passive:true});
 function buildRadarV2Card({x,mode,decision,stage,score,longRank,longRankChange,longScoreChange,formal,detailScoreState,tradeState,dailyPair}){
   const cardClass=`card signalCard radarV2Card ${x.signal.className} strategy-${mode}`,scoreText=Number.isFinite(score)?score:"—";
   if(mode==="long_term_core"){
     const presentation=decision?.finalPresentation||radarDecisionLayerFor(x),bucketLabel=presentation?.decision_label_zh||"資料不足",badgeLabel=finalDecisionBadgeLabel(presentation),displayStage={key:presentation?.decision_stage||"unavailable",label:bucketLabel,recommendation:presentation?.explanation_text_zh||"等待資料更新"};
-  return`<article class="${cardClass} radarFlowCard" data-etf-id="${esc(x.id)}" data-radar-ux-phase="8.5" aria-label="${esc(x.id)} ${esc(x.name)} 詳細資訊"><div class="signalCardDetails"><div class="detailTabs" role="tablist"><button class="active" type="button" data-detail-view="score" aria-selected="true">決策資訊</button><button type="button" data-detail-view="drawdown" aria-selected="false">高點回落</button></div><div data-detail-panel="score">${radarDetailCoreStatusHtml(x,decision,score,dailyPair,presentation,longRank)}${radarScoreTrendHtml(x)}${radarMarketPositionHtml(x)}${radarDecisionSummaryHtml(x)}${radarWhyScoreHtml(x,decision)}${detailAdvancedHtml(x)}</div><div data-detail-panel="drawdown" hidden>${longTermDrawdownTableHtml(x)}<div class="drawdownConclusion"><span>目前跌幅</span><b>${Number.isFinite(x.fromHigh)?fmt(x.fromHigh)+"%":"—"}</b><p>${esc(uiMetricStatus("drawdown",x.fromHigh))}；亮金框標示目前所在區間。</p></div></div></div></article>`;
+    return radarV4Card(x,cardClass,decision,dailyPair,presentation,longRank);
   }
   if(mode==="leveraged"){
     const leverage=leverageV1State(x),status=leverage.trigger?"V1 TRIGGER":leverage.available?"待命":"資料不足";
@@ -4533,6 +4601,14 @@ function openHomeC4RadarDetail(symbol){
 }
 function mountRadarHistoryChart(target){
   const host=target?.querySelector("[data-radar-history]"),symbol=host?.dataset.radarHistory,item=radarDisplayItems().find(x=>x.id===symbol);
+  if(target?.hasAttribute("data-radar-v4")){
+    syncRadarV4(target);
+    if(radarMobileV4.tab==="quick"){
+      window.HSRadarHistoryView?.unmount();
+      if(item)window.HSRadarHistoryView?.mountMini(target.querySelector("[data-radar-v4-mini]"),{symbol,artifact:finalizedCoreScoreHistoryArtifact,contract:window.HSFinalCoreProduction,completed:isCompletedTradingDate,headers:apiHeaders});
+      return;
+    }
+  }
   if(host&&item)window.HSRadarHistoryView?.mount(host,{symbol,name:item.name,artifact:finalizedCoreScoreHistoryArtifact,contract:window.HSFinalCoreProduction,thresholds:radarTrendPhase4Thresholds(),completed:isCompletedTradingDate,headers:apiHeaders});
 }
 function showRadarDetail(id,scroll=true){

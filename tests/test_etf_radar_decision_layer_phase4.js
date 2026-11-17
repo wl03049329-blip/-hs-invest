@@ -17,7 +17,8 @@ assert.doesNotMatch(radarBlock, /HSFinalCoreProduction\.buildFinal|computeCoreSc
 assert.doesNotMatch(radarBlock, /score\s*(?:>=|<=|>|<)\s*\d/);
 
 // 3–8: formal Core remains first; Decision fields are rendered directly and compactly.
-assert.match(longCard, /radarDetailCoreStatusHtml\(x,decision,score,dailyPair,presentation,longRank\)[\s\S]*radarDecisionSummaryHtml\(x\)/);
+assert.match(longCard,/return radarV4Card/);
+assert.match(html.slice(html.indexOf("function radarV4Card"),html.indexOf("function syncRadarV4")), /radarDetailCoreStatusHtml\(x,decision,current\?\.value,dailyPair,presentation,longRank\)[\s\S]*radarDecisionSummaryHtml\(x\)/);
 assert.doesNotMatch(longCard, /signalDetailHero|radarTodayHtml\(x,decision,score,dailyPair\)/);
 assert.match(radarBlock, /decision\.decision_label_zh/);
 assert.match(radarBlock, /decision\.distance_to_next_stage/);

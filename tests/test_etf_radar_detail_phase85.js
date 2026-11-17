@@ -9,11 +9,12 @@ const trend=html.slice(html.indexOf("function radarScoreTrendHtml"),html.indexOf
 
 assert.match(html,/data-radar-ux-phase="8\.5"/);
 assert.match(html,/20260920-live-archive-resilience-v1/);
-assert.ok(longCard.indexOf("radarDetailCoreStatusHtml")<longCard.indexOf("radarScoreTrendHtml"));
-assert.ok(longCard.indexOf("radarScoreTrendHtml")<longCard.indexOf("radarMarketPositionHtml"));
-assert.ok(longCard.indexOf("radarMarketPositionHtml")<longCard.indexOf("radarDecisionSummaryHtml"));
-assert.ok(longCard.indexOf("radarDecisionSummaryHtml")<longCard.indexOf("radarWhyScoreHtml"));
-assert.ok(longCard.indexOf("radarMarketPositionHtml")<longCard.indexOf("detailAdvancedHtml"));
+assert.match(longCard,/return radarV4Card/);
+const v4=html.slice(html.indexOf("function radarV4Card"),html.indexOf("function syncRadarV4"));
+assert.ok(v4.indexOf('data-radar-v4-pane="quick"')<v4.indexOf('data-radar-v4-pane="deep"'));
+assert.ok(v4.indexOf('fold("factors"')<v4.indexOf('fold("price"'));
+assert.ok(v4.indexOf('fold("price"')<v4.indexOf('fold("research"'));
+for(const name of ["radarDetailCoreStatusHtml","radarScoreTrendHtml","radarMarketPositionHtml","radarDecisionSummaryHtml","radarWhyScoreHtml","detailAdvancedHtml"])assert.ok(v4.includes(name));
 assert.doesNotMatch(longCard,/radarDetailTrendSummaryHtml\(x\)/);
 assert.doesNotMatch(longCard,/detailCoreMetrics|scoreReason/);
 

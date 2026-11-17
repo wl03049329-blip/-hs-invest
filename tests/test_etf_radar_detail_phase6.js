@@ -2,7 +2,7 @@
 "use strict";
 const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path"),vm=require("node:vm"),{webcrypto}=require("node:crypto"),{TextEncoder}=require("node:util");
 const root=path.resolve(__dirname,".."),html=fs.readFileSync(path.join(root,"index.html"),"utf8"),css=fs.readFileSync(path.join(root,"formal-black-gold.css"),"utf8");
-const phase6=html.slice(html.indexOf("function radarHistoryPhase6State"),html.indexOf("function buildRadarV2Card"));
+const phase6=html.slice(html.indexOf("function radarHistoryPhase6State"),html.indexOf("const radarMobileV4="));
 const official=html.slice(html.indexOf("function officialArtifactCoreScoreHistory"),html.indexOf("function localCoreScoreHistory"));
 const next=html.slice(html.indexOf("function radarOverviewNextLevel"),html.indexOf("function radarOverviewScoreDelta"));
 const validation=html.slice(html.indexOf("function stableResearchValue"),html.indexOf("function longOverviewCardHtml"));
