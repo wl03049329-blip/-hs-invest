@@ -20,7 +20,12 @@ const cases=[[375,812],[390,844],[430,932],[844,390],[1200,900]];
       try{
         const errors=[];page.on("pageerror",e=>errors.push(e.message));
         await page.clock.setFixedTime(new Date("2026-11-18T01:00:00Z"));
-        await page.route("**/*",r=>r.request().url().startsWith(base+"/")?r.continue():r.abort());
+        // Keep production disconnected. Model an unavailable cross-origin source
+        // with an HTTP response so WebKit exercises the app fallback, not CORS.
+        await page.route("**/*",r=>r.request().url().startsWith(base+"/")?r.continue():r.fulfill({
+          status:503,headers:{"access-control-allow-origin":"*","content-type":"application/json"},
+          body:'{"test":"isolated external source unavailable"}'
+        }));
         await page.goto(base+"/",{waitUntil:"domcontentloaded"});
         await page.waitForFunction(()=>document.querySelector('#cards [data-etf-id="0050"][data-radar-v4]'));
         await page.evaluate(()=>openHomeC4RadarDetail("0050"));
