@@ -2482,3 +2482,11 @@ body:has(#homeDataHealth:not(.tabHidden)) #message.hsHomeMarketAsOf{display:none
 .hsHomeHealthDialog::backdrop{background:rgba(0,0,0,.72)}.hsHomeHealthDialog>header{display:flex;align-items:center;justify-content:space-between;gap:12px}.hsHomeHealthDialog h2{margin:0;font-size:19px}.hsHomeHealthDialog>header button{min-width:44px;min-height:44px;border:1px solid #76613c;border-radius:50%;background:#211e16;color:#f2e5cc;font-size:26px;cursor:pointer}
 .hsHomeHealthDialog .hsHomeSystemDetails{margin:0}.hsHomeHealthDialog .hsHomeSystemDetails>summary{display:none}.hsHomeHealthDialog .hsSystemHealthDetail{margin:8px 0 0;padding:0;border:0;background:none}.hsHomeHealthDialog .hsSystemHealthRow>span>b{font-size:14px}.hsHomeHealthDialog .hsSystemHealthRow>span>small,.hsHomeHealthDialog .hsSystemHealthRow>strong,.hsHomeHealthDialog .hsSystemHealthRow>p,.hsHomeHealthDialog .hsSystemHealthDetail>p{font-size:13px;line-height:1.6;color:#c7bdab}.hsHomeHealthDialog .hsSystemHealthRow.is-warning>strong,.hsHomeHealthOffline{color:#edc36c}.hsHomeHealthDialog .hsSystemHealthRow.is-error>strong{color:#f0a69d}
 @media(max-width:700px){.hsHomeHealthDialog{margin:auto auto max(12px,env(safe-area-inset-bottom,0px));padding:12px;max-height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 28px)}.hsHomeHealthDialog .hsSystemHealthRow{grid-template-columns:minmax(0,1fr)}.hsHomeHealthDialog .hsSystemHealthDetail>header{flex-wrap:wrap}}
+#homeDataHealthDialog .is-healthy>.hsSystemHealthDetail>header>b,
+#homeDataHealthDialog .hsSystemHealthRow.is-healthy>strong{color:#79d9ad}
+#homeDataHealthDialog .is-warning>.hsSystemHealthDetail>header>b,
+#homeDataHealthDialog .hsSystemHealthRow.is-warning>strong{color:#edc36c}
+#homeDataHealthDialog .is-error>.hsSystemHealthDetail>header>b,
+#homeDataHealthDialog .hsSystemHealthRow.is-error>strong{color:#ff8585}
+#homeDataHealthDialog .hsHomeSystemDetails:is([data-health-market="PREMARKET"],[data-health-market="CLOSED"],[data-health-market="HOLIDAY"]) [data-health-key="live"].is-healthy>strong,
+#homeDataHealthDialog .hsHomeSystemDetails[data-health-leverage="waiting"] [data-health-key="leverage"].is-healthy>strong{color:#c7bdab}

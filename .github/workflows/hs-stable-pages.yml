@@ -54,6 +54,11 @@ jobs:
           node tests/test_official_margin_balance.js
           node --test tests/test_home_taiex.js
           node --test tests/test_home_tmf.js
+          node tests/test_c4_close_observations.js
+          node tests/test_radar_history_lifecycle.js
+          node tests/test_lradar_v1.js
+          node tests/test_lc4_research_integration.js
+          node tests/test_lc4_radar_v2.js
       - name: Build exact-commit static release
         run: node scripts/build_stable_app.cjs "$RUNNER_TEMP/hs-site"
       - name: Verify C4 split recovery without publishing

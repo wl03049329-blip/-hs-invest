@@ -7,8 +7,8 @@ test('all original diagnostic rows and explanations retain exact renderer bytes'
 test('core score hero remains byte-identical',()=>{const hero=s=>{const line=s.split('\n').find(l=>l.startsWith('host.innerHTML=`<div class="hsCoreDecisionHero">'));return line.includes('<div class="hsDecisionStatusRail">')?line.split('<div class="hsDecisionStatusRail">')[0]:line.slice(0,-2);};assert.equal(hero(html),hero(base));});
 // Compare the complete sentiment section, including its methods/date disclosure.
 test('only the reviewed five-card sentiment presentation may differ',()=>{const re=/<section id="homeSentiment"[\s\S]*?<\/section>/;assert.equal(require('./helpers/home_sentiment_projection.cjs')(html).match(re)[0],base.match(re)[0]);assert.equal((html.match(re)[0].match(/class="homeSentimentCard"/g)||[]).length,5);});
-test('retired rail and inline details are absent from the hero',()=>{const s=slice(html,'function renderDecisionCenter(longs','function renderTop(');assert(!s.includes('hsDecisionStatusRail'));assert(!s.includes('decisionCenterHealthHtml(health)'));assert(s.includes('renderHomeDataHealth(dualTrack,health)'));});
-const label={dataset:{},textContent:'',className:''},context={},details={},content={querySelector:()=>details,set innerHTML(v){this.value=v;}},notice={},summary={querySelector:()=>label};
+test('retired rail and inline details are absent from the hero',()=>{const s=slice(html,'function renderDecisionCenter(longs','function renderTop(');assert(!s.includes('hsDecisionStatusRail'));assert(!s.includes('decisionCenterHealthHtml(health)'));assert(s.includes('renderHomeDataHealth(dualTrack,health,leverageState)'));});
+const label={dataset:{},textContent:'',className:''},context={},details={dataset:{}},content={querySelector:()=>details,set innerHTML(v){this.value=v;}},notice={},summary={querySelector:()=>label};
 const ctx={document:{querySelector:s=>s.includes('data-health-overall')?label:notice},navigator:{onLine:true},$:s=>({'#homeDataHealth':summary,'#homeDataHealthContext':context,'#homeDataHealthContent':content}[s]),decisionCenterHeaderPresentation:d=>({isLive:d.live}),decisionCenterMarketLabel:s=>s,taipeiToday:()=> '2026-11-03',decisionCenterHealthHtml:h=>JSON.stringify(h)};
 vm.createContext(ctx);vm.runInContext(slice(html,'function syncHomeHealthConnectivity()','function initHomeHealthDialog()'),ctx);
 function draw(state,level='HEALTHY',officialLevel='HEALTHY',live=false){const health={level,label:{HEALTHY:'資料正常 ✓',WARNING:'資料注意 ⚠',ERROR:'資料異常 ✕'}[level],officialDate:'2026-11-02',marketState:state,items:[{key:'official',level:officialLevel,detail:'original'},{key:'live',detail:'existing live check'}]},dual={target_date:'2026-11-03',live},before=JSON.stringify({health,dual});ctx.renderHomeDataHealth(dual,health);assert.equal(JSON.stringify({health,dual}),before);assert(details.open);return context.textContent;}
@@ -20,6 +20,15 @@ test('old official warning explicitly says last FINAL',()=>assert.match(draw('HO
 test('invalid official is not represented as validated FINAL',()=>{assert.match(draw('STALE','ERROR','ERROR'),/正式資料待確認/);assert.equal(label.textContent,'資料異常 ✕');});
 test('offline retains diagnostic content and explicitly warns, reconnect restores aggregate not assumed healthy',()=>{draw('OPEN','WARNING');ctx.navigator.onLine=false;ctx.syncHomeHealthConnectivity();assert.equal(label.textContent,'離線 · 更新待確認');assert.equal(notice.hidden,false);ctx.navigator.onLine=true;ctx.syncHomeHealthConnectivity();assert.equal(label.textContent,'資料注意 ⚠');assert.equal(notice.hidden,true);});
 test('later CNN aggregate updates still reach relocated status and original diagnostic wrapper',()=>{const s=slice(html,'function renderCnnPresentationViews()','function renderHomeCnnGauge()');assert(s.includes('health.closest(".hsHomeSystemDetails")'));assert(s.includes('DECISION_CENTER_HEALTH_LEVELS[level].label'));assert(s.includes('syncHomeHealthConnectivity()'));});
+test('dialog wait markers use market and tactical states, not display text',()=>{
+ const health={level:'HEALTHY',label:'unchanged',marketState:'PREMARKET',items:[]};
+ ctx.renderHomeDataHealth({},health,{available:true,trigger:false});
+ assert.deepEqual(details.dataset,{healthMarket:'PREMARKET',healthLeverage:'waiting'});
+ ctx.renderHomeDataHealth({}, {...health,marketState:'OPEN'}, {available:true,trigger:true});
+ assert.deepEqual(details.dataset,{healthMarket:'OPEN',healthLeverage:''});
+ ctx.renderHomeDataHealth({},health,{available:false,trigger:false});
+ assert.equal(details.dataset.healthLeverage,'');
+});
 test('native modal, safe areas, 44px close, focus trap/return and scroll restoration present',()=>{assert.match(html,/<dialog id="homeDataHealthDialog"/);for(const s of ['dialog.showModal()','returnFocus.focus({preventScroll:true})','document.body.style.overflow=previousOverflow','event.key!=="Tab"','dialog.close()'])assert(html.includes(s));assert(css.includes('safe-area-inset-top'));assert(css.includes('min-width:44px;min-height:44px'));});
 test('presentation has no data writes, source requests or financial activation',()=>assert.doesNotMatch(slice(html,'// Home health presentation only;','const DECISION_CENTER_HEALTH_LEVELS='),/localStorage|indexedDB|fetch\(|setItem\(|persistLedger|FINANCIAL_WRITER/));
 console.log(JSON.stringify({pass,fail:0,skip:0}));

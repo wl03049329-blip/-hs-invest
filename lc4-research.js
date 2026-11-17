@@ -1,11 +1,11 @@
 /* Descriptive research subpage. Never reads or writes financial storage. */
 (()=>{'use strict';
- const S={bundle:null,pointer:null,returnFocus:null,loading:false,scroll:'',stats:null,expiryTimer:null};
+ const S={bundle:null,pointer:null,returnFocus:null,loading:false,scroll:'',stats:null,renderedAt:0};
  const $=s=>document.querySelector(s), el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
  const pct=(x,d=1)=>typeof x==='number'&&Number.isFinite(x)?(x*100).toFixed(d)+'%':'—';
  const num=x=>typeof x==='number'&&Number.isFinite(x)?x.toFixed(1):'—';
  const dialog=el('dialog',undefined,'lc4r');dialog.id='lc4-research';dialog.setAttribute('aria-labelledby','lc4r-title');
- const header=el('header');const title=el('h2','00631L 正二雷達 · 完整研究');title.id='lc4r-title';
+ const header=el('header');const title=el('h2','00631L 急跌反彈雷達');title.id='lc4r-title';
  const close=el('button','關閉 ×');close.type='button';close.setAttribute('aria-label','關閉研究雷達');
  header.append(title,close);const content=el('div',undefined,'lc4r-content');content.setAttribute('aria-live','polite');
  const toolbar=el('div',undefined,'lc4r-toolbar'),refresh=el('button','檢查研究資料');refresh.type='button';
@@ -14,10 +14,9 @@
  function line(parent,label,value){const row=el('div',undefined,'lc4r-row');row.append(el('span',label),el('strong',value));parent.append(row);}
  const signed=x=>typeof x==='number'&&Number.isFinite(x)?(x>0?'+':'')+pct(x,2):'資料不足';
  const fraction=(k,n)=>n?`${pct(k/n,2)}（${k}／${n}）`:'資料不足';
- function home(operation){const host=$('#lc4-radar-v2');if(!host)return;host.replaceChildren();const b=S.bundle,s=S.stats;
-  const stale=!Number.isFinite(Date.parse(b.next_source_check_due))||Date.now()>=Date.parse(b.next_source_check_due);
+ function legacy(host){const b=S.bundle,s=S.stats;
   const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
-  const usable=!stale&&b.asof<=today&&Number.isFinite(Date.parse(b.produced_at))&&Date.parse(b.produced_at)<=Date.now()&&operation?.bundle_sha256===S.pointer.sha256&&operation.live_source_check===true&&['NOOP','VERIFIED_RESEARCH_UPDATED'].includes(operation.status);
+  const usable=false; // Frozen research is historical only, never current L-Radar evidence.
   const t=HSLC4RadarV2.threshold(s.return5,b.asof,today,usable),state=({REACHED:'已達極端急跌警戒線',BELOW:'尚未達極端急跌警戒線',INSUFFICIENT:'資料不足，等待核驗',EXPIRED:'年度門檻已到期或不適用'})[t.state];
   host.dataset.state=t.state;const head=el('div',undefined,'lc4v2-meta');head.append(el('span',`${b.asof} 收盤 · ${usable?'來源已核驗':'歷史資料，待核驗更新'}`),el('strong',`NT$ ${s.close.toFixed(2)}`));host.append(head);
   const crash=el('section',undefined,'lc4v2-crash');crash.append(el('span','最近 5 個交易日'),el('strong',signed(s.return5),'lc4v2-big'),el('b',state,'lc4v2-status'));
@@ -35,7 +34,6 @@
   }
   for(const h of['5','10','20']){const n=el('button',h+' 日');n.type='button';n.dataset.v2h=h;n.onclick=()=>horizon(h);tabs.append(n);}panel.append(tabs,detail);horizon('5');host.append(panel);
   const peak=el('section');peak.append(el('h3','20 日內高點出現時間'));const dist=el('div',undefined,'lc4v2-peaks');for(const[i,label]of['1–5 日','6–10 日','11–20 日'].entries()){const n=el('div');n.append(el('span',label),el('strong',s.peak20.n?pct(s.peak20.fractions[i],2):'資料不足'),el('small',`${s.peak20.counts[i]}／${s.peak20.n}`));dist.append(n);}peak.append(dist,el('small','同一組完整 20 日事件；重複高點取最早日，非最佳賣出時間。'));host.append(peak);
-  clearTimeout(S.expiryTimer);const limits=[Date.parse(b.next_source_check_due),Date.parse('2027-01-01T00:00:00+08:00')].filter(x=>Number.isFinite(x)&&x>Date.now());if(limits.length)S.expiryTimer=setTimeout(()=>home(operation),Math.min(86400000,Math.min(...limits)-Date.now()+1));
  }
  function detailedV2(){const s=S.stats,p=HSLC4RadarV2.policy,n=section('正二雷達 V2.0 · 統計口徑');line(n,'2026 原始急跌速度門檻',String(p.velocity));line(n,'精確五日警戒跌幅',String(-p.velocity*5)+'%');line(n,'訓練截止／門檻到期',p.trainingEnd+'／'+p.to);line(n,'門檻版本',p.version);
   n.append(el('p','目前警戒線保留 2026 固定門檻；歷史母體則沿用已審核的年度 C95／70 交易日冷卻規則，並非每個事件均達 2026 門檻。沒有重新篩選事件或調整參數。'),el('p','日數由觸發後下一交易日起算。期末報酬＝第 N 日收盤／觸發日收盤−1；最高反彈＝期間最高價／觸發日收盤−1；最大不利波動＝min(0,期間最低價／觸發日收盤−1)。再破低比較觸發日最低價；無費用、無實際交易。'));
@@ -49,6 +47,25 @@
   const r=b.description.radar;if(r.writer!==false||r.score!==null||r.entry.authorized!==false||r.asof!==b.asof||r.market.date!==b.asof||r.tiers!==null||r.predictive_probability!==null)throw Error('RESEARCH_SAFETY_CONTRACT_INVALID');
   for(const h of['5','10','20']){const x=b.description.risk[h];if(!x||!Number.isInteger(x.n)||x.n<0||x.further_break_count<0||x.further_break_count>x.n||x.not_a_forecast!==true)throw Error('HISTORICAL_SAMPLE_INVALID');}}
  function render(shadow,operation){content.replaceChildren();const b=S.bundle,r=b.description.radar;
+  const unavailable=HSLRadar.unavailable(),daily=HSLRadar.describe(b.history.histories['00631L']),market=HSLRadar.describe(b.history.histories['0050']);
+  if(daily.asof!==b.asof||market.asof!==b.asof)throw Error('L_RADAR_HISTORY_DATE_CONFLICT');
+  const simple=section('先看結論');simple.append(el('strong',HSLRadar.states[unavailable.research_state]));
+  line(simple,'跌得夠深嗎？',`歷史 ${daily.asof}：近五日 ${signed(daily.returns[5])}；不判定今天`);
+  line(simple,'跌勢有變慢嗎？','沒有已驗證盤中 K 線，無法確認');
+  line(simple,'有回穩嗎？','沒有已驗證的新低、回升及相關市場證據');
+  line(simple,'為什麼要等？','已保存的日線不能代替當日盤中走勢');
+  const advanced=el('details');advanced.append(el('summary','進階研究、歷史統計與資料來源'));content.append(advanced);
+  const depth=section('L-Radar · 歷史跌幅與回撤');
+  for(const [days,value] of Object.entries(daily.returns))line(depth,days+' 日報酬',signed(value));
+  for(const [days,value] of Object.entries(daily.drawdowns))line(depth,days+' 日回撤',signed(value));
+  line(depth,'五日下跌速度',pct(daily.declineSpeed5,2)+'／日');
+  line(depth,'同日 0050 五日報酬',signed(market.returns[5]));
+  line(depth,'歷史下跌百分位',daily.declinePercentile===null?'不適用':pct(daily.declinePercentile,1));
+  line(depth,'L-Radar 版本',HSLRadar.version);line(depth,'盤中行情／盤中計算','未取得／未執行');
+  const findings=section('獨立回測 · NO-GO');
+  findings.append(el('p','14 筆回穩候選；1、3、5 日扣成本平均報酬為負，10 日平均的不確定區間跨零。歷史重播不是全新的樣本外驗證。'));
+  const report=el('a','下載完整回測數據（JSON）');report.href='research/hs_lradar/results-v1.json';findings.append(report);
+  const frozen=section('既有固定樣本 · 描述性歷史');frozen.classList.add('lc4v2');legacy(frozen);
   const status=section('資料與權限');status.dataset.lc4Health='true';
   const due=Date.parse(b.next_source_check_due),stale=!Number.isFinite(due)||Date.now()>=due;
   status.append(el('p',`${b.asof} 完成日線 · ${stale?'資料可能過期，等待來源核驗':'已驗證歷史研究資料，非即時行情'}`,stale?'lc4r-warn':''));
@@ -79,20 +96,33 @@
   }
   for(const h of['5','10','20']){const button=el('button',h+' 日');button.type='button';button.dataset.h=h;button.onclick=()=>horizon(h);tabs.append(button);}risk.append(tabs,details);horizon('5');
   const source=section('來源與研究限制');source.append(el('p',`TWSE 官方日線研究副本，截至 ${b.asof}。00631L 分割於 2026-03-31 按 22：1 僅調整一次；0050 趨勢含已審核股息。`),el('p',`222 個衝突日期、14 個缺漏日期已留存逐日核驗；來源原始內部原因及歷史當時發布版本仍不可驗證。訓練截止 ${r.training_end}。`),el('p','樣本少、事件相依、模型比較與資料修訂偏差仍存在；急跌高分位不代表一定反彈。'),el('small',`資料 SHA-256：${S.pointer.sha256}`));
+  advanced.append(...[...content.children].filter(n=>n!==simple&&n!==advanced));
  }
- async function load(){if(S.loading)return;S.loading=true;refresh.disabled=true;try{
+ async function load(){if(S.loading)return;S.loading=true;S.renderedAt=0;refresh.disabled=true;try{
    const {value:p}=await json('data/lc4-research/latest.json');
+   if(!dialog.open)return;
    if(p.schema!=='HS_LC4_RESEARCH_POINTER_V1'||!/^snapshots\/[0-9a-z.-]+\.json$/.test(p.path)||!/^[a-f0-9]{64}$/.test(p.sha256))throw Error('RESEARCH_POINTER_INVALID');
-   const {value:b,text}=await json('data/lc4-research/'+p.path),bytes=new TextEncoder().encode(text),hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),n=>n.toString(16).padStart(2,'0')).join('');
+   const {value:b,text}=await json('data/lc4-research/'+p.path);
+   if(!dialog.open)return;
+   const bytes=new TextEncoder().encode(text),hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),n=>n.toString(16).padStart(2,'0')).join('');
+   if(!dialog.open)return;
    if(hash!==p.sha256||bytes.length!==p.bytes)throw Error('RESEARCH_HASH_MISMATCH');verify(b,p);
    let shadow=null,operation=null;try{shadow=(await json('research/hs_leverage/forward/daily-status.json')).value;}catch{}
+   if(!dialog.open)return;
    try{operation=(await json('data/lc4-research/status.json')).value;if(operation.bundle_sha256!==p.sha256)operation=null;}catch{}
-   const stats=HSLC4RadarV2.describe(b.history);if(stats.asof!==b.asof||Math.abs(stats.close-b.description.radar.stabilization.close)>1e-8||Math.abs(stats.return5-b.description.radar.opportunity.return5)>1e-12)throw Error('RESEARCH_HISTORY_SNAPSHOT_MISMATCH');S.bundle=b;S.pointer=p;S.stats=stats;home(operation);render(shadow,operation);
-  }catch(e){clearTimeout(S.expiryTimer);content.replaceChildren(el('p','研究資料目前無法核驗，未顯示未確認數值。','lc4r-warn'),el('small',String(e.message)));const host=$('#lc4-radar-v2');if(host){host.dataset.state='INSUFFICIENT';host.replaceChildren(el('p','研究資料不足或無法核驗，暫不顯示數值。','lc4r-warn'));}}
+   if(!dialog.open)return;
+   const stats=HSLC4RadarV2.describe(b.history);if(stats.asof!==b.asof||Math.abs(stats.close-b.description.radar.stabilization.close)>1e-8||Math.abs(stats.return5-b.description.radar.opportunity.return5)>1e-12)throw Error('RESEARCH_HISTORY_SNAPSHOT_MISMATCH');
+   if(!dialog.open)return;
+   S.bundle=b;S.pointer=p;S.stats=stats;render(shadow,operation);S.renderedAt=Date.now();
+   const time=$('#lradar-home-time');if(time)time.textContent=`非即時 · 歷史日線 ${b.asof}`;
+  }catch(e){if(dialog.open)content.replaceChildren(el('p','研究資料目前無法核驗，未顯示未確認數值。','lc4r-warn'),el('small',String(e.message)));}
   finally{S.loading=false;refresh.disabled=false;}}
  refresh.onclick=load;
- function open(trigger){if(dialog.open)return;S.returnFocus=trigger;S.scroll=document.body.style.overflow;document.body.style.overflow='hidden';dialog.showModal();content.replaceChildren(el('p','正在核驗研究資料…'));close.focus();load();}
+ function open(trigger){if(dialog.open)return;S.returnFocus=trigger;S.scroll=document.body.style.overflow;document.body.style.overflow='hidden';dialog.showModal();close.focus();
+  const age=Date.now()-S.renderedAt;
+  if(S.renderedAt&&age>=0&&age<300000)return; // In-memory, historical display only.
+  content.replaceChildren(el('p','正在核驗研究資料…'));load();
+ }
  document.addEventListener('click',e=>{const trigger=e.target.closest('[data-lc4-research-open]');if(trigger){e.preventDefault();open(trigger);}});
- window.addEventListener('online',load);document.addEventListener('visibilitychange',()=>{if(!document.hidden)load();});
- load();
+ // No background fetch, polling or heavy historical work during home startup.
 })();
