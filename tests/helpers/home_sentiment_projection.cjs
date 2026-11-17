@@ -4,6 +4,20 @@
 // portfolio code remain under the original byte-for-byte assertions.
 const assert=require('assert/strict'),cp=require('child_process'),crypto=require('crypto');
 module.exports=function(source){
+ if(source.includes('class="radarV4Sentinel"')){
+  const previous=cp.execFileSync('git',['show','8873d574:index.html'],{maxBuffer:8e6}).toString().replace(/\r\n/g,'\n');
+  const range=(s,a,b)=>{const i=s.indexOf(a),j=s.indexOf(b,i+a.length);assert(i>=0&&j>i,a);return s.slice(i,j);};
+  for(const [a,b,pin] of [
+   ['// HS_FINAL_SOURCE_REFRESH_V1_BEGIN','// HS_FINAL_SOURCE_REFRESH_V1_END','c57069dbb104a72f09a6bd47b60d485a60899bf01e8cabc542ec68597548e46c'],
+   ['function radarHistoricalResearchHtml(','function showRadarDetail(','72b50a2944af78655356a789bf2ba816853661c33d55d24bbe6c548f6d71c11a']
+  ]){
+   const reviewed=range(source,a,b);
+   assert.equal(crypto.createHash('sha256').update(reviewed.replace(/\r\n/g,'\n')).digest('hex'),pin,'UNREVIEWED_RADAR_MOBILE_V4: '+a);
+   source=source.replace(reviewed,()=>range(previous,a,b));
+  }
+  assert.equal(source.replace(/\r\n/g,'\n'),previous,'UNRELATED_RADAR_MOBILE_V4_HTML_OR_FINANCIAL_FUNCTION_CHANGED');
+  source=previous;
+ }
  if(source.includes('details.dataset.healthMarket=')){
   for(const [after,before] of [
    ['function renderHomeDataHealth(dualTrack,health,leverageState){','function renderHomeDataHealth(dualTrack,health){'],

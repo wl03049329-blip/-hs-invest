@@ -4507,6 +4507,13 @@ document.addEventListener("toggle",e=>{
   if(e.target.open)radarMobileV4.open.add(key);else radarMobileV4.open.delete(key);
 },true);
 document.addEventListener("click",e=>{
+  const section=e.target.closest("summary")?.parentElement;
+  if(section?.matches(".is-selected [data-radar-v4-fold]")){
+    e.preventDefault();section.open=!section.open;
+    const key=section.dataset.radarV4Fold;
+    if(section.open)radarMobileV4.open.add(key);else radarMobileV4.open.delete(key);
+    return;
+  }
   const button=e.target.closest("[data-radar-v4-action],[data-radar-v4-tab],[data-radar-v4-pick]"),card=button?.closest("[data-radar-v4]");
   if(!card)return;
   const dialog=card.querySelector(".radarV4Picker");
