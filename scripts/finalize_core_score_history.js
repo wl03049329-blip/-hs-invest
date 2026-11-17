@@ -61,7 +61,24 @@ function writeAtomic(file,value){const temp=`${file}.${process.pid}.tmp`;fs.writ
 function parse(argv){const out={};for(let i=2;i<argv.length;i+=1)if(argv[i].startsWith("--"))out[argv[i].slice(2)]=argv[++i];return out}
 function clean(rows,cutoff){return(Array.isArray(rows)?rows:[]).map(row=>({date:date(row?.date),open:finite(row?.open),max:finite(row?.max??row?.high),min:finite(row?.min??row?.low),close:finite(row?.close),Trading_Volume:finite(row?.Trading_Volume??row?.volume)})).filter(row=>row.date&&row.date<=cutoff&&row.open>0&&row.max>0&&row.min>0&&row.close>0&&row.max>=row.min).sort((a,b)=>a.date.localeCompare(b.date))}
 async function fetchDataset(dataset,symbol,start){const url=new URL("https://api.finmindtrade.com/api/v4/data");url.searchParams.set("dataset",dataset);url.searchParams.set("data_id",symbol);url.searchParams.set("start_date",start);let response,payload;try{response=await fetch(url,{headers:process.env.FINMIND_TOKEN?{Authorization:`Bearer ${process.env.FINMIND_TOKEN}`}:{}});payload=await response.json()}catch(error){notReady(`official_history_fetch_failed_${symbol}_${dataset}_${error.message}`)}if(!response.ok||Number(payload?.status)!==200||!Array.isArray(payload.data))notReady(`official_history_input_unavailable_${symbol}_${dataset}`);return payload.data}
-async function decisionAtClose(symbol,d){const start=`${Number(d.slice(0,4))-3}-01-01`,[prices,dividends,splits]=await Promise.all([fetchDataset("TaiwanStockPrice",symbol,start),fetchDataset("TaiwanStockDividendResult",symbol,start),fetchDataset("TaiwanStockSplitPrice",symbol,start)]);const rows=buy.adjustPriceHistory(clean(prices,d),[...dividends.filter(row=>date(row?.date)&&date(row.date)<=d).map(row=>({...row,kind:"distribution"})),...splits.filter(row=>date(row?.date)&&date(row.date)<=d).map(row=>({...row,kind:"split"}))]).rows;if(rows.at(-1)?.date!==d||rows.length<252)notReady(`official_eod_history_not_ready_${symbol}`);const weekly=buy.weeklyKdj(rows).at(-1),high=Math.max(...rows.slice(-252).map(row=>finite(row.max)).filter(Number.isFinite)),dd52=high>0?(rows.at(-1).close/high-1)*100:null;return{...core.buildFinal({ticker:symbol,j:weekly?.j,k:weekly?.k,d:weekly?.d,dd52,rows,marketAsOf:`${d}T13:30:00+08:00`}),source_close:rows.at(-1).close}}
+function validateSplitBasis(raw,dividends,splits,proof){
+  const before="2026-11-10",resume="2026-11-17",same=(a,b)=>Number.isFinite(a)&&Number.isFinite(b)&&Math.abs(a-b)<1e-8;
+  const matching=splits.filter(row=>date(row?.date)>= "2026-11-11"&&date(row?.date)<=resume);
+  if(proof?.date!==resume||!same(proof.before_price,5*proof.after_price)||!(proof.after_price>0)||
+     !Array.isArray(proof.evidence)||proof.evidence.length<3||
+     matching.length!==1||matching[0].date!==resume||
+     !same(finite(matching[0].before_price??matching[0].before_close),proof.before_price)||
+     !same(finite(matching[0].reference_price??matching[0].after_price??matching[0].after_ref_close),proof.after_price)||
+     dividends.some(row=>date(row?.date)>= "2026-11-11"&&date(row?.date)<=resume)||
+     raw.some(row=>row.date>before&&row.date<resume))notReady("00662_split_basis_unverified");
+  for(const [day,official] of [[before,proof.last_ohlc],[resume,proof.resume_ohlc]]){
+    const matches=raw.filter(row=>row.date===day);
+    if(matches.length!==1||official?.stock_id!=="00662"||official.date!==day||
+       ["open","max","min","close"].some(key=>!same(matches[0][key],official[key]))||
+       (day===before&&!same(official.close,proof.before_price)))notReady("00662_raw_split_anchor_conflict");
+  }
+}
+async function decisionAtClose(symbol,d,splitProof){const start=`${Number(d.slice(0,4))-3}-01-01`,[prices,dividends,splits]=await Promise.all([fetchDataset("TaiwanStockPrice",symbol,start),fetchDataset("TaiwanStockDividendResult",symbol,start),fetchDataset("TaiwanStockSplitPrice",symbol,start)]);const raw=clean(prices,d);if(splitProof&&symbol==='00662')validateSplitBasis(raw,dividends,splits,splitProof);const rows=buy.adjustPriceHistory(raw,[...dividends.filter(row=>date(row?.date)&&date(row.date)<=d).map(row=>({...row,kind:"distribution"})),...splits.filter(row=>date(row?.date)&&date(row.date)<=d).map(row=>({...row,kind:"split"}))]).rows;if(rows.at(-1)?.date!==d||rows.length<252)notReady(`official_eod_history_not_ready_${symbol}`);const weekly=buy.weeklyKdj(rows).at(-1),high=Math.max(...rows.slice(-252).map(row=>finite(row.max)).filter(Number.isFinite)),dd52=high>0?(rows.at(-1).close/high-1)*100:null;return{...core.buildFinal({ticker:symbol,j:weekly?.j,k:weekly?.k,d:weekly?.d,dd52,rows,marketAsOf:`${d}T13:30:00+08:00`}),source_close:rows.at(-1).close}}
 async function inputFromOfficialEod(eod,expectedDate,decisionProvider=decisionAtClose){
   const expected=date(expectedDate);if(!expected)fail("missing_expected_trading_date");
   if(eod?.status==="NO_TRADING_DAY")notReady(`no_trading_day_${expected}`);
@@ -77,9 +94,15 @@ async function inputFromOfficialEod(eod,expectedDate,decisionProvider=decisionAt
 }
 async function main(){
   const args=parse(process.argv),inputPath=args.input?path.resolve(args.input):"";
-  const input=inputPath?read(inputPath,null):await inputFromOfficialEod(read(path.resolve(args.eod||path.join(ROOT,"official-eod-market.json")),null),args["expected-date"]);
+  const expected=args["expected-date"], proof=args["split-proof"]?read(path.resolve(args["split-proof"]),null):null;
+  const input=inputPath?read(inputPath,null):await inputFromOfficialEod(read(path.resolve(args.eod||path.join(ROOT,"official-eod-market.json")),null),expected,
+    (symbol,d)=>{if(symbol==="00662"&&d>="2026-11-17"&&!proof)notReady("00662_split_proof_missing");return decisionAtClose(symbol,d,d>="2026-11-17"?proof:null)});
   const output=path.resolve(args.output||OUTPUT),result=append(read(output,{schema_version:1,core_score_version:VERSION,generated_at:null,snapshots:[]}),input);
   if(result.changed)writeAtomic(output,result.artifact);console.log(`FINALIZED_CORE_HISTORY ${result.changed?"published":"already_published"}`);
 }
-module.exports={SCORED,VERSION,WEIGHTS,SourceNotReady,buildSnapshot,append,inputFromOfficialEod,decisionAtClose};
-if(require.main===module)main().catch(error=>{if(error instanceof SourceNotReady){console.log(error.message);return}console.error(error.message);process.exitCode=1});
+module.exports={SCORED,VERSION,WEIGHTS,SourceNotReady,buildSnapshot,append,inputFromOfficialEod,decisionAtClose,validateSplitBasis};
+if(require.main===module){
+  process.env.TZ="UTC";
+  console.log("FINAL_CALCULATION_TIMEZONE UTC");
+  main().catch(error=>{if(error instanceof SourceNotReady){console.log(error.message);return}console.error(error.message);process.exitCode=1});
+}

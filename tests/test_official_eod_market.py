@@ -61,3 +61,27 @@ print("PASS five required ETF completeness and 009815 non-blocking")
 result = eod.resolve("2026-08-25", stale_primary, state(eod.FALLBACK_PROVIDER, items("2026-08-24")), True, fetched)
 assert result["status"] == "NO_TRADING_DAY"
 print("PASS holiday/no-trading day is a safe no-op")
+
+day = "2026-11-17"
+fields = ["證券代號", "開盤價", "最高價", "最低價", "收盤價", "成交股數"]
+wire = {"stat": "OK", "date": "20261117", "tables": [{"fields": fields, "data": [
+    [r["symbol"], str(r["open"]), str(r["high"]), str(r["low"]), str(r["close"]), "1,000"]
+    for r in items(day).values()
+]}]}
+dated = eod.dated_items(wire, day)
+assert dated == items(day)
+assert eod.collect(day, primary_fetch=lambda: {}, fallback_fetch=lambda: {},
+                   holiday_fetch=lambda: [], dated_fetch=lambda d: dated)["provider"] == eod.DATED_PROVIDER
+partial = dict(dated)
+partial.pop("00662")
+assert eod.collect(day, primary_fetch=lambda: {}, fallback_fetch=lambda: {},
+                   holiday_fetch=lambda: [], dated_fetch=lambda d: partial)["status"] == "SOURCE_NOT_READY"
+for bad in ({**wire, "date": "20261116"}, {**wire, "tables": [
+    {"fields": fields, "data": wire["tables"][0]["data"] + [wire["tables"][0]["data"][0]]}
+]}):
+    try:
+        eod.dated_items(bad, day)
+        raise AssertionError("dated source accepted invalid date or duplicate")
+    except ValueError:
+        pass
+print("PASS dated MI_INDEX requires exact date, unique real trades, and all five required ETFs")

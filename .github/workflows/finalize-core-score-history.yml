@@ -50,12 +50,21 @@ jobs:
             --expected-date "$expected_date" \
             --output "${RUNNER_TEMP}/official-eod-market.json"
       - name: Finalize expected Taipei trading date only
+        env:
+          TZ: UTC
         run: |
           expected_date="$HS_FINAL_EXPECTED_DATE"
+          split_args=()
+          if [[ "$expected_date" > "2026-11-16" ]]; then
+            split_dir="${RUNNER_TEMP}/c4-split-evidence"
+            python -m scripts.update_radar_daily --as-of "$expected_date" \
+              --evidence-dir "$split_dir" --eod-split-proof "$split_dir/proof.json"
+            split_args=(--split-proof "$split_dir/proof.json")
+          fi
           set -o pipefail
           timeout --signal=TERM 120s node scripts/finalize_core_score_history.js \
             --eod "${RUNNER_TEMP}/official-eod-market.json" \
-            --expected-date "$expected_date" | tee "${RUNNER_TEMP}/finalized-core-result.log"
+            --expected-date "$expected_date" "${split_args[@]}" | tee "${RUNNER_TEMP}/finalized-core-result.log"
           if grep -q 'FINALIZED_CORE_HISTORY_SOURCE_NOT_READY' "${RUNNER_TEMP}/finalized-core-result.log"; then
             echo "::error::Official FINAL not published; prior verified FINAL retained."
             exit 1
