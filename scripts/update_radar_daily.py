@@ -141,6 +141,13 @@ def expected_day(client, now, as_of=None, *, minimum_time=(18, 0)):
     e = client.get(HOLIDAY_URL)
     holidays = e["payload"]
     if not isinstance(holidays, list) or not holidays or not any(iso_date(r.get("Date")).startswith(str(target.year)) for r in holidays):
+        # The rolling holiday endpoint can switch to next year early. A
+        # positive completed-session row can prove this exact candidate only.
+        # Absence is not a holiday and must not silently select an older day.
+        month = target.strftime("%Y%m")
+        sessions, evidence = official_sessions(client, "twse", month, target.isoformat())
+        if target.weekday() < 5 and target.isoformat() in sessions:
+            return target.isoformat(), limit.isoformat(), evidence
         raise ValueError("HOLIDAY_CALENDAR_COVERAGE")
     calendar = TradingCalendar(fetcher=lambda: holidays)
     for _ in range(28):

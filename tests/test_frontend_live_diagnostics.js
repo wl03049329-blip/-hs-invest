@@ -1,4 +1,14 @@
 "use strict";
+{
+  const assert = require("node:assert/strict");
+  const d = require("../frontend-live-diagnostics.js");
+  const state = {marketState:"OPEN",sourceStatus:"UNAVAILABLE",freshnessCheck:"REJECTED"};
+  for(const [reason,expected] of [
+    ["QuoteUnavailable:SECONDARY_UNAVAILABLE:00662:MIS_UNAVAILABLE","LIVE_QUOTES_UNAVAILABLE"],
+    ["QUOTE_NOT_CURRENT:0050","SNAPSHOT_STALE"],
+    ["C4_BRIDGE:calculation failed","LIVE_CALCULATION_UNAVAILABLE"],
+  ]) assert.equal(d.classifyRenderState({...state,reason}),expected);
+}
 
 const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path");
 const diagnostics=require("../frontend-live-diagnostics.js"),adapter=require("../hs-live-source-adapter.js");

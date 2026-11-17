@@ -9,6 +9,8 @@
     BACKEND_NO_SNAPSHOT:"盤中資料尚未建立",
     API_UNAVAILABLE:"盤中資料連線異常",
     SNAPSHOT_STALE:"盤中行情暫時過期",
+    LIVE_QUOTES_UNAVAILABLE:"必要盤中報價未取得",
+    LIVE_CALCULATION_UNAVAILABLE:"盤中分數計算未完成",
     FRONTEND_STATE_PENDING:"盤中資料同步中",
     MARKET_CLOSED:"今日盤中軌跡已封存",
     LIVE_ACTIVE:"盤中更新中",
@@ -84,10 +86,15 @@
       state(){return Object.freeze({issued,applied,latest_snapshot_time:latestTime})},
     });
   }
-  function classifyRenderState({marketState,sourceStatus,transportError=false,pending=false,liveSnapshotCount=0,selectedSnapshotTime=null,freshnessCheck=null}={}){
+  function classifyRenderState({marketState,sourceStatus,transportError=false,pending=false,liveSnapshotCount=0,selectedSnapshotTime=null,freshnessCheck=null,reason=""}={}){
     if(marketState==="CLOSED"||marketState==="HOLIDAY")return"MARKET_CLOSED";
     if(pending)return"FRONTEND_STATE_PENDING";
     if(transportError)return"API_UNAVAILABLE";
+    if(marketState==="OPEN"&&sourceStatus==="UNAVAILABLE"){
+      if(/(?:QUOTE_TOO_OLD|QUOTE_NOT_CURRENT|STALE|QUOTE_IN_FUTURE)/.test(reason))return"SNAPSHOT_STALE";
+      if(/(?:^QuoteUnavailable:|^SECONDARY_UNAVAILABLE:)/.test(reason))return"LIVE_QUOTES_UNAVAILABLE";
+      if(/(?:C4_BRIDGE|INVALID_SCORE|C4_VERSION_MISMATCH)/.test(reason))return"LIVE_CALCULATION_UNAVAILABLE";
+    }
     if(freshnessCheck==="REJECTED")return"SNAPSHOT_STALE";
     if(marketState==="OPEN"&&sourceStatus==="AVAILABLE"&&liveSnapshotCount>0&&selectedSnapshotTime)return"LIVE_ACTIVE";
     return"BACKEND_NO_SNAPSHOT";
