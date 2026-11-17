@@ -23,11 +23,38 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
+          fetch-depth: 0
           persist-credentials: false
       - run: |
           node --test tests/test_c4_openapi_close_candidate.cjs tests/test_audit_twse_close_capture.cjs
           node tests/test_c4_close_observations.js
           node tests/test_stable_app_update_lifecycle.js
+  probe:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Probe two current snapshots without retaining quotes
+        run: |
+          node - <<'NODE'
+          const {capture}=require('./scripts/audit_twse_close_capture.cjs');
+          const {sessions}=require('./scripts/audit_twse_close_watchdog.cjs');
+          (async()=>{
+            const now=new Date(Date.now()+8*3600000).toISOString().slice(0,10);
+            const r=await fetch('https://openapi.twse.com.tw/v1/exchangeReport/FMTQIK',{redirect:'error',signal:AbortSignal.timeout(15000)});
+            if(!r.ok) throw Error('MARKET_SESSION_HTTP_'+r.status);
+            const day=sessions(await r.json(),now.slice(0,7)+'-01',now).at(-1);
+            if(!day) throw Error('LATEST_COMPLETED_SESSION_UNKNOWN');
+            const first=await capture(day,null);
+            await new Promise(resolve=>setTimeout(resolve,2000));
+            const second=await capture(day,first);
+            console.log(JSON.stringify({type:'LATEST_COMPLETED_SESSION_PROBE',day,first,second}));
+            if(Object.values(second.symbols).some(row=>row.status!=='CANDIDATE_OHLCV'||row.revised))
+              throw Error('LIVE_PROBE_SYMBOL_UNAVAILABLE_OR_REVISED');
+          })().catch(e=>{console.error(e.message);process.exitCode=1});
+          NODE
   browser:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
