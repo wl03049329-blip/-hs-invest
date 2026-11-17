@@ -29,6 +29,22 @@ concurrency:
   group: hs-stable-pages-${{ github.event_name == 'pull_request' && github.event.pull_request.number || 'production' }}
   cancel-in-progress: false
 jobs:
+  c4-chart-mobile:
+    if: github.event_name == 'pull_request' && github.head_ref == 'fix/c4-chart-direct-points'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify direct chart touch and original PWA in Chrome and WebKit
+        run: |
+          npm install --prefix "$RUNNER_TEMP/hs-browser" playwright-core@1.62.1
+          "$RUNNER_TEMP/hs-browser/node_modules/.bin/playwright-core" install --with-deps chrome webkit
+          export NODE_PATH="$RUNNER_TEMP/hs-browser/node_modules"
+          node tests/c4_chart_points_browser.cjs
+          HS_APP_TEST_OUT="$RUNNER_TEMP/hs-chart-pwa" node tests/stable_app_update_browser.cjs
   final-resumption-acceptance:
     if: github.event_name == 'pull_request' && github.event.pull_request.number == 60 && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest

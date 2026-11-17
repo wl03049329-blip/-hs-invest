@@ -7,7 +7,7 @@ const dates=["2026-10-12","2026-10-13"];
 const artifact={schema_version:1,core_score_version:P.LONG_TERM_CORE_SCORE_VERSION,snapshots:dates.map((date,i)=>({date,finalized:true,snapshot_type:"FINALIZED_CLOSE",source:{status:"official_closing_data",provider:"FIXTURE_ONLY"},rows:["0050","00662"].map(symbol=>({symbol,final_core_score:29.1+i,core_score_version:P.LONG_TERM_CORE_SCORE_VERSION,data_as_of:date+"T13:30:00+08:00"}))}))};
 class Host{
   constructor(){this.dataset={};this.nodes=new Map();this.listeners=new Map();}
-  querySelector(key){if(!this.nodes.has(key))this.nodes.set(key,{textContent:"",innerHTML:"",dataset:{},children:[],append(node){this.children.push(node)}});return this.nodes.get(key);}
+  querySelector(key){if(!this.nodes.has(key))this.nodes.set(key,{...bus(),textContent:"",innerHTML:"",dataset:{},children:[],append(node){this.children.push(node)}});return this.nodes.get(key);}
   querySelectorAll(){return [];}
   addEventListener(key,fn){this.listeners.set(key,fn);}
   removeEventListener(key,fn){if(this.listeners.get(key)===fn)this.listeners.delete(key);}
@@ -60,19 +60,15 @@ const V=window.HSRadarHistoryView,args=symbol=>({symbol,name:symbol,artifact,con
   const h=new Host();await V.mount(h,args("0050"));
   assert.equal(charts.length,1);assert.equal(charts[0].series.filter(s=>s.type==="candle"&&s.pane===1).length,1);
   const labels=chart=>chart.series.flatMap(s=>s.primitives.flatMap(p=>p.priceAxisViews().map(v=>({pane:s.pane,price:Number(v.text().split('：')[1]),view:v,primitive:p,series:s}))));
-  assert.deepEqual(labels(charts[0]).map(l=>[l.pane,l.price]),[[1,102],[0,30.1]]);
+  assert.deepEqual(labels(charts[0]).map(l=>[l.pane,l.price]),[[1,102]]);
   const formatter=charts[0].options.localization.timeFormatter;
   for(const input of ['2026-10-12',{year:2026,month:10,day:12},Date.parse('2026-10-12T00:00:00Z')/1000])assert.equal(formatter(input),'2026/10/12');
   assert.equal(formatter({year:2026,month:1,day:2}),'2026/01/02');
   assert.equal(charts[0].options.crosshair.horzLine.labelVisible,false,'cursor mouse Y must not impersonate selected close');
   assert.ok(labels(charts[0]).every(l=>l.view.visible()&&l.view.tickVisible()&&!l.primitive.paneViews&&!l.primitive.hitTest));
-  const scoreLabel=labels(charts[0]).find(l=>l.pane===0);
-  assert.equal(scoreLabel.view.fixedCoordinate(),60.2);
-  scoreLabel.series.coordinateFactor=3;assert.equal(scoreLabel.view.fixedCoordinate(),90.30000000000001,'zoom/resize uses current native coordinates, not stale pixels');
-  scoreLabel.primitive.select(29.123456);assert.equal(scoreLabel.view.text(),'C4：29.1');
-  assert.equal(scoreLabel.view.fixedCoordinate(),29.123456*3,'one-decimal text must not round the plotted coordinate');
-  scoreLabel.primitive.select(27);assert.equal(scoreLabel.view.text(),'C4：27.0');
-  scoreLabel.primitive.select(30.1);
+  const priceLabel=labels(charts[0])[0];
+  assert.equal(priceLabel.view.fixedCoordinate(),204);
+  priceLabel.series.coordinateFactor=3;assert.equal(priceLabel.view.fixedCoordinate(),306,'zoom/resize uses current native coordinates, not stale pixels');
   assert.ok(charts[0].series.filter(s=>s.type==='candle').every(s=>s.options.lastValueVisible===false&&s.options.priceLineVisible===false));
   assert.match(h.querySelector(".radarHistoryDetail").innerHTML,/2026-10-13/);
   const beforeClear=charts[0].cleared;
@@ -82,9 +78,8 @@ const V=window.HSRadarHistoryView,args=symbol=>({symbol,name:symbol,artifact,con
   h.input('mousemove',{movementX:0,movementY:0});charts[0].crosshair({time:"2026-10-12",sourceEvent:input});assert.match(h.querySelector(".radarHistoryDetail").innerHTML,/30.1 分/,"stationary pointer/layout change cannot select historical day");
   h.input('mousemove',{movementX:1,movementY:0});
   charts[0].crosshair({time:"2026-10-12",sourceEvent:input});assert.match(h.querySelector(".radarHistoryDetail").innerHTML,/29.1 分/);
-  assert.deepEqual(labels(charts[0]).map(l=>[l.pane,l.price]),[[1,101],[0,29.1]],'both panes use same selected date, not latest/high/low/mouse Y');
-  charts[0].crosshair({});assert.deepEqual(labels(charts[0]).map(l=>l.price),[101,29.1],'mouseleave retains labels');
-  assert.equal(labels(charts[0]).find(l=>l.pane===0).view.text(),'C4：29.1');
+  assert.deepEqual(labels(charts[0]).map(l=>[l.pane,l.price]),[[1,101]],'price label uses selected date without obscuring C4 points');
+  charts[0].crosshair({});assert.deepEqual(labels(charts[0]).map(l=>l.price),[101],'mouseleave retains price label');
   charts[0].crosshair({time:"2026-10-13"});assert.match(h.querySelector(".radarHistoryDetail").innerHTML,/29.1 分/,"programmatic redraw preserves actual user selection");
   const beforeLatest=charts[0].cleared;
   await h.click({historyAction:"latest"});assert.match(h.querySelector(".radarHistoryDetail").innerHTML,/30.1 分/);assert.equal(charts[0].cleared,beforeLatest+1,"latest clears historical crosshair even when viewport range is unchanged");
@@ -100,7 +95,7 @@ const V=window.HSRadarHistoryView,args=symbol=>({symbol,name:symbol,artifact,con
   assert.equal(sheet.querySelector('[data-sheet-action="next"]').disabled,true);
   await sheet.press('previous');assert.match(sheet.querySelector('h2 time').textContent,/2026\/10\/12/);
   assert.equal(sameChart.cursor.time,'2026-10-12');assert.deepEqual(sameChart.range,sameRange);
-  assert.deepEqual(labels(sameChart).map(l=>l.price),[101,29.1],'sheet arrows update both native axis labels');
+  assert.deepEqual(labels(sameChart).map(l=>l.price),[101],'sheet arrows update native price label');
   assert.equal(sheet.querySelector('[data-sheet-action="previous"]').disabled,true);
   assert.match(sheet.querySelector('.radarHistorySheetBody').innerHTML,/該日未保存正式分項資料/);
   for(let i=0;i<30;i++){await sheet.press('next');await sheet.press('previous');}
@@ -130,12 +125,12 @@ const V=window.HSRadarHistoryView,args=symbol=>({symbol,name:symbol,artifact,con
   assert.match(failed.querySelector(".radarHistoryDetail").innerHTML,/30.1 分/);
   assert.match(failed.querySelector(".radarHistoryDetail").innerHTML,/股價：資料不足/);
   assert.equal(charts.at(-1).series.find(s=>s.type==="candle").rows.filter(r=>r.close!==undefined).length,0);
-  assert.equal(labels(charts.at(-1)).length,1);assert.equal(labels(charts.at(-1))[0].pane,0);
+  assert.equal(labels(charts.at(-1)).length,0);
   assert.match(failed.querySelector('.radarHistoryCanvas').children.at(-1).textContent,/收盤：資料不足/);
   V.unmount();console.log("PASS source failure preserves independent finalized C4 and never invents candles");
   sourceMode="NORMAL";const reference=new Host();await V.mount(reference,args("009815"));assert.match(reference.querySelector(".radarHistoryDetail").innerHTML,/該日未發布正式 C4/);assert.match(reference.querySelector(".radarHistoryDetail").innerHTML,/已驗證 RAW_UNADJUSTED/);
   assert.equal(labels(charts.at(-1)).length,1);assert.equal(labels(charts.at(-1))[0].pane,1);
-  assert.match(reference.querySelector('.radarHistoryCanvas').children.at(-1).textContent,/該日未發布正式 C4/);V.unmount();
+  assert.ok(reference.querySelector('.radarHistoryCanvas').children.at(-1).hidden);V.unmount();
   console.log("PASS no official score still renders independent verified price");
   const {Source:RealSource}=require("../radar-history-source"),requests=[];
   const api=new RealSource({fetcher:async url=>{const p=new URL(url).searchParams;requests.push(p.get("dataset"));const y=p.get("start_date").slice(0,4);return{ok:true,json:async()=>({status:200,data:p.get("dataset")==="TaiwanStockPrice"?[{stock_id:"0050",date:y+"-10-13",open:100,max:102,min:99,close:101,Trading_Volume:1000}]:[]})}},now:()=>new Date("2026-10-13T12:00Z")});
@@ -157,7 +152,7 @@ const V=window.HSRadarHistoryView,args=symbol=>({symbol,name:symbol,artifact,con
     const host=new Host();await V.mount(host,args(cycle%2?'0050':'00662'));
     assert.equal(charts.filter(c=>!c.removed).length,1);
     assert.equal(host.listeners.size,6);assert.equal(document.handlers.size,1);assert.equal(window.handlers.size,1);
-    for(const range of ['10D','20D','60D','120D','1Y','ALL']){await host.click({historyRange:range});assert.equal(labels(charts.at(-1)).length,2,'redraw must not leak duplicate price labels');}
+    for(const range of ['10D','20D','60D','120D','1Y','ALL']){await host.click({historyRange:range});assert.equal(labels(charts.at(-1)).length,1,'redraw must not leak duplicate price labels');}
     V.unmount();assert.equal(host.listeners.size,0);assert.equal(document.handlers.size,0);assert.equal(window.handlers.size,0);
     assert.equal(charts.filter(c=>!c.removed).length,0);
   }
