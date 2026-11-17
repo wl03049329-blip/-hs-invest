@@ -25,5 +25,19 @@ test("Taipei cutoff and idempotence; official close only; no 00662 or FINAL",asy
 test("wrong year or scoring source close cannot publish",async()=>{
  const wrong=async()=>Buffer.from(JSON.stringify({...calendar,queryYear:2027}));
  await assert.rejects(extend(artifact,asOf,{fetchBytes:wrong,decide}),/CALENDAR_UNVERIFIED/);
- await assert.rejects(extend(artifact,asOf,{fetchBytes,decide:async()=>({...await decide(),source_close:99})}),/SCORE_CLOSE_UNVERIFIED/);
+ const r=await extend(artifact,asOf,{fetchBytes,decide:async()=>({...await decide(),source_close:99})});
+ assert.equal(r.added.length,0);
+ assert.equal(r.pending.length,4);
+});
+test("one missing dividend series publishes the other three and backfills without rewriting",async()=>{
+ const result=await extend(artifact,asOf,{fetchBytes,decide:async s=>{
+  if(s==="0050")throw Error("private provider detail");
+  return decide();
+ }});
+ assert.deepEqual(result.pending,[{date:"2026-11-17",symbol:"0050",reason:"ADJUSTED_INPUT_UNAVAILABLE"}]);
+ assert.deepEqual(Object.keys(result.added[0].symbols),["00757","00830","00935"]);
+ const fixed=await extend(result.result,asOf,{fetchBytes,decide});
+ assert.equal(fixed.pending.length,0);
+ assert.deepEqual(fixed.added[0].symbols["00757"],result.added[0].symbols["00757"]);
+ assert.equal((await extend(fixed.result,asOf,{fetchBytes,decide})).added.length,0);
 });

@@ -50,12 +50,11 @@ function official(raw,day){
   if(!Array.isArray(row))throw Error("OFFICIAL_ROW_UNVERIFIED");
   const [s,...v]=indexes.map(i=>row[i]);
   if(!symbols.includes(s))continue;
-  if(out.has(s))throw Error("DUPLICATE_"+s);
+  if(out.has(s)){out.set(s,null);continue;}
   const [o,h,l,c,shares]=v.map(n);
-  if(![o,h,l,c,shares].every(x=>Number.isFinite(x)&&x>0)||!Number.isSafeInteger(shares)||h<Math.max(o,c)||l>Math.min(o,c))throw Error("OFFICIAL_OHLC_"+s);
-  out.set(s,c);
+  out.set(s,[o,h,l,c,shares].every(x=>Number.isFinite(x)&&x>0)&&Number.isSafeInteger(shares)&&
+    h>=Math.max(o,c)&&l<=Math.min(o,c)?c:null);
  }
- if(out.size!==symbols.length)throw Error("OFFICIAL_INCOMPLETE");
  return out;
 }
 async function extend(artifact,now,{fetchBytes=get,decide=decisionAtClose}={}){
@@ -63,13 +62,23 @@ async function extend(artifact,now,{fetchBytes=get,decide=decisionAtClose}={}){
     artifact.production_eligible!==false||artifact.score_version!==VERSION||artifact.calculation_timezone!=="UTC"||
     !Array.isArray(artifact.sessions)||artifact.sessions.some((s,i)=>!iso(s?.date)||s.date<start||
      (i>0&&s.date<=artifact.sessions[i-1].date)))throw Error("OBSERVATION_ARTIFACT_INVALID");
- const existing=new Set(artifact.sessions.map(s=>s.date)),{cutoff}=dates(now);
+ const existing=new Map(artifact.sessions.map(s=>[s.date,s])),{cutoff}=dates(now);
  if(artifact.sessions.some(s=>s.date>cutoff))throw Error("FUTURE_OBSERVATION");
- const days=(await tradingDays(start,cutoff,fetchBytes)).filter(day=>!existing.has(day)).slice(0,limit), added=[];
+ const days=(await tradingDays(start,cutoff,fetchBytes)).filter(day=>symbols.some(s=>!existing.get(day)?.symbols?.[s])).slice(0,limit), added=[],pending=[];
  for(const day of days){
   const source="https://www.twse.com.tw/exchangeReport/MI_INDEX?response=json&date="+day.replaceAll("-","")+"&type=ALLBUT0999";
-  const raw=await fetchBytes(source), closes=official(raw,day), rows={};
+  const prior=existing.get(day);
+  let raw,closes;
+  try{
+   raw=await fetchBytes(source);closes=official(raw,day);
+   if(prior&&(prior.source!==source||prior.source_sha256!==hash(raw)))throw Error("OFFICIAL_RECEIPT_CHANGED");
+  }catch(e){pending.push({date:day,symbol:"ALL",reason:/^[A-Z0-9_]+$/.test(e.message)?e.message:"OFFICIAL_UNAVAILABLE"});continue;}
+  const rows={...prior?.symbols};
+  let count=0;
   for(const s of symbols){
+   if(rows[s])continue;
+   try{
+   if(!closes.get(s))throw Error("OFFICIAL_OHLC_UNVERIFIED");
    const d=await decide(s,day), factors={};
    if(d?.coreScoreVersion!==VERSION||!Number.isFinite(d.coreScore)||d.coreScore<0||d.coreScore>100||
       !Number.isFinite(d.source_close)||Math.abs(d.source_close-closes.get(s))>1e-6||
@@ -83,20 +92,26 @@ async function extend(artifact,now,{fetchBytes=get,decide=decisionAtClose}={}){
    }
    if(Math.abs(total-d.coreScore)>1e-8)throw Error("TOTAL_UNVERIFIED_"+s);
    rows[s]={status:"VERIFIED_OBSERVATION",close:closes.get(s),score:d.coreScore,tier:d.label,factors};
+   count++;
+   }catch(e){pending.push({date:day,symbol:s,reason:/^[A-Z0-9_]+$/.test(e.message)?e.message:"ADJUSTED_INPUT_UNAVAILABLE"});}
   }
-  added.push({date:day,source,source_sha256:hash(raw),symbols:rows});
+  if(count){const session={date:day,source,source_sha256:hash(raw),symbols:rows};existing.set(day,session);added.push(session);}
  }
- return {added,result:{...artifact,sessions:[...artifact.sessions,...added].sort((a,b)=>a.date.localeCompare(b.date))}};
+ return {added,pending,result:{...artifact,sessions:[...existing.values()].sort((a,b)=>a.date.localeCompare(b.date))}};
 }
 async function main(){
  const write=process.argv[2]==="--write";
  if(process.argv.length>3||(process.argv[2]&&!write))throw Error("USAGE");
- const base=fs.readFileSync(file),{added,result}=await extend(JSON.parse(base),new Date());
+ const base=fs.readFileSync(file),{added,pending,result}=await extend(JSON.parse(base),new Date());
  if(write&&added.length){
   const tmp=file+".tmp-"+process.pid;
   fs.writeFileSync(tmp,JSON.stringify(result,null,2)+"\n",{flag:"wx"});
   try{if(!fs.readFileSync(file).equals(base))throw Error("SOURCE_CHANGED");fs.renameSync(tmp,file);}
   finally{if(fs.existsSync(tmp))fs.unlinkSync(tmp);}
+ }
+ if(pending.length){
+  console.warn("::warning::Incomplete independent observations: "+JSON.stringify(pending));
+  if(!added.length)throw Error("NO_VERIFIED_OBSERVATION_ADDED");
  }
  console.log("close observations:",added.map(s=>s.date).join(",")||"current (no write)");
 }
