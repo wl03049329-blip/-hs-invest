@@ -5,19 +5,23 @@
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const num=v=>C.finite(v)?String(Number(v.toFixed(4))):'—',signed=v=>C.finite(v)?(v>0?'+':'')+num(v):'—';
   const scoreNum=v=>root.HSC4Display.score(v),scoreSigned=v=>root.HSC4Display.signed(v);
-  const observationDates=['2026-11-11','2026-11-12'],observationSymbols=['0050','00662','00757','00830','00935'];
+  const observationSymbols=['0050','00662','00757','00830','00935'];
+  const validObservationDay=day=>typeof day==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(day)&&
+    Number.isFinite(Date.parse(day+'T00:00:00Z'))&&new Date(day+'T00:00:00Z').toISOString().slice(0,10)===day;
   function observationRows(artifact,symbol,asOf){
     if(!observationSymbols.includes(symbol)||artifact?.schema!=='HS_INDIVIDUAL_C4_CLOSE_OBSERVATIONS_V1'||
       artifact.official_final!==false||artifact.production_eligible!==false||artifact.score_version!=='FINAL_CORE_WEIGHT_V1'||
-      artifact.calculation_timezone!=='UTC'||!Array.isArray(artifact.sessions)||artifact.sessions.length!==2)return [];
+      artifact.calculation_timezone!=='UTC'||!Array.isArray(artifact.sessions)||!artifact.sessions.length||
+      artifact.sessions.length>1500||artifact.sessions.some((s,i)=>!validObservationDay(s?.date)||
+        (i>0&&s.date<=artifact.sessions[i-1].date)))return [];
     const rows=[];
-    for(const day of observationDates){
+    for(const s of artifact.sessions){
+      const day=s.date,r=s.symbols?.[symbol];
       if(day>asOf)continue;
-      const matches=artifact.sessions.filter(s=>s?.date===day),s=matches[0],r=s?.symbols?.[symbol];
-      if(matches.length!==1||s.source!=='https://www.twse.com.tw/exchangeReport/MI_INDEX?response=json&date='+day.replace(/-/g,'')+'&type=ALLBUT0999'||
+      if(s.source!=='https://www.twse.com.tw/exchangeReport/MI_INDEX?response=json&date='+day.replace(/-/g,'')+'&type=ALLBUT0999'||
         !/^[0-9a-f]{64}$/.test(s.source_sha256||'')||!r)continue;
       if(symbol==='00662'){
-        if(r.status==='OFFICIAL_SUSPENSION'&&r.reason==='ETF_SPLIT'&&r.last_final_date==='2026-11-10'&&!('score' in r))
+        if(['2026-11-11','2026-11-12','2026-11-13','2026-11-16'].includes(day)&&r.status==='OFFICIAL_SUSPENSION'&&r.reason==='ETF_SPLIT'&&r.last_final_date==='2026-11-10'&&!('score' in r))
           rows.push({time:day,halt:true,lastFinal:r.last_final_date});
         continue;
       }
@@ -57,13 +61,17 @@
   }
   async function loadObservations(s){
     const legend=s.host.querySelector('.radarObservationLegend');
-    if(!legend||!observationSymbols.includes(s.symbol))return;
-    legend.hidden=true;legend.innerHTML='';
+    if(!legend||!observationSymbols.includes(s.symbol)||s.observationLoading)return;
+    s.observationLoading=true;
     try{
       const response=await root.fetch('data/c4-close-observations-v1.json',{signal:s.abort.signal,cache:'no-store'});
       if(!response.ok)return;
       const rows=observationRows(await response.json(),s.symbol,cutoff(new Date(),13,30));
       if(active!==s||s.abort.signal.aborted||!rows.length)return;
+      const next=new Map(rows.map(r=>[r.time,r]));
+      // Reject partial/cached regressions and preserve previously validated points.
+      if((s.observations||[]).some(r=>JSON.stringify(r)!==JSON.stringify(next.get(r.time)))||
+         JSON.stringify(rows)===JSON.stringify(s.observations))return;
       s.observations=rows;
       legend.innerHTML='<span class="radarLegendFinal">正式 FINAL</span>'+(rows[0].halt?'<span>分割停牌・無分數</span>':'<span class="radarLegendObservation">'+observationText+'</span>')+
         rows.map(r=>'<button type="button" data-observation-date="'+r.time+'" aria-label="查看 '+displayDate(r.time)+' '+(r.halt?'停牌':'獨立收盤觀察')+'">'+displayDate(r.time).slice(5)+'</button>').join('');
@@ -73,6 +81,7 @@
         draw(s,Boolean(range&&range.to<s.axis.length-1));
       }
     }catch{/* Observations never block or fill formal chart history. */}
+    finally{s.observationLoading=false;}
   }
   const sourceMessage=reason=>({'TWSE_ARCHIVE_STALE':'官方日 K 尚未更新至應有交易日','OFFICIAL_UPDATE_OVERDUE':'收盤更新流程逾期，資料待更新','PUBLICATION_VERSION_MISMATCH':'公開行情與更新狀態版本未同步，保留已驗證資料','DAILY_UPDATE_STATUS_UNAVAILABLE':'更新狀態暫時無法取得','SOURCE_HTTP_402':'行情來源額度已達上限，暫停重試','SOURCE_HTTP_429':'行情來源限制請求，暫停重試','SOURCE_COOLDOWN':'來源冷卻中，稍後再試；未繞過供應商限制','Failed to fetch':'來源無法連線或不允許瀏覽器讀取，原因尚無法由瀏覽器確認'}[reason]||reason);
   function layoutDiagnostics(){
@@ -95,7 +104,7 @@
     <p class="radarHistoryHint">上：C4 分數（金線）｜下：原始日 K（紅漲綠跌）<br>點選／長按查日期 · 拖曳看歷史 · 雙指縮放 · 上下滑動捲頁</p>
     <small class="radarHistorySource">原始價格報酬不含配息；不與下方既有還原價格表現混用。<br>Charts by <a href="https://www.tradingview.com/" target="_blank" rel="noopener">TradingView</a> · Lightweight Charts™ 5.0.9</small></section>`;}
 function cutoff(now,closeHour=18,closeMinute=0){const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(now),v=Object.fromEntries(parts.map(p=>[p.type,p.value])),day=`${v.year}-${v.month}-${v.day}`;return Number(v.hour)*60+Number(v.minute)>=closeHour*60+closeMinute?day:new Date(Date.parse(day+'T00:00:00Z')-86400000).toISOString().slice(0,10);}
-function unmount(){if(active){closeSheet(active,false);active.sheet?.remove();active.labelStatus?.remove();clearSelectionLabels(active);clearObservationMarkers(active);active.abort.abort();document.removeEventListener("visibilitychange",active.resume);root.removeEventListener("pageshow",active.resume);active.resize?.disconnect();active.chart?.remove();active.host.removeEventListener('click',active.click);active.host.removeEventListener('change',active.change);for(const type of INPUT_EVENTS)active.host.removeEventListener(type,active.input,true);active=null;}}
+function unmount(){if(active){closeSheet(active,false);active.sheet?.remove();active.labelStatus?.remove();clearSelectionLabels(active);clearObservationMarkers(active);active.abort.abort();root.clearInterval?.(active.observationTimer);root.removeEventListener("online",active.observationRefresh);document.removeEventListener("visibilitychange",active.resume);root.removeEventListener("pageshow",active.resume);active.resize?.disconnect();active.chart?.remove();active.host.removeEventListener('click',active.click);active.host.removeEventListener('change',active.change);for(const type of INPUT_EVENTS)active.host.removeEventListener(type,active.input,true);active=null;}}
   async function mount(host,{symbol,name,artifact,contract,thresholds,completed,headers}){
     if(active?.host===host&&active.symbol===symbol)return;
     unmount();if(!host||!root.LightweightCharts)return;
@@ -119,7 +128,9 @@ function unmount(){if(active){closeSheet(active,false);active.sheet?.remove();ac
       s.inputEpoch++;
     };
     for(const type of INPUT_EVENTS)host.addEventListener(type,s.input,{capture:true,passive:true});
-    s.startedAt=Date.now();s.resume=()=>{if(active===s&&document.visibilityState==="visible"&&Date.now()-s.startedAt>300000){source.invalidate?.(symbol);source.cache.clear();unmount();mount(host,{symbol,name,artifact,contract,thresholds,completed,headers});}};document.addEventListener("visibilitychange",s.resume);root.addEventListener("pageshow",s.resume);
+    s.observationRefresh=()=>{if(active===s&&document.visibilityState==="visible")void loadObservations(s);};
+    s.observationTimer=root.setInterval?.(s.observationRefresh,300000);root.addEventListener("online",s.observationRefresh);
+    s.startedAt=Date.now();s.resume=()=>{if(active!==s||document.visibilityState!=="visible")return;if(Date.now()-s.startedAt>300000){source.invalidate?.(symbol);source.cache.clear();unmount();mount(host,{symbol,name,artifact,contract,thresholds,completed,headers});}else s.observationRefresh();};document.addEventListener("visibilitychange",s.resume);root.addEventListener("pageshow",s.resume);
     try{
 s.score=C.scores(artifact,symbol,contract,date=>completed(date)&&date<=cutoff(new Date(),13,30));s.cutoff=cutoff(new Date());if(source.priceCutoff!==s.cutoff){source.invalidate?.(symbol);source.cache.clear();source.priceCutoff=s.cutoff;}let cal;try{cal=await source.sessions(new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Taipei'}),s.abort.signal);}catch(error){if(s.abort.signal.aborted)throw error;cal=await source.savedSessions(symbol,s.score.rows.map(r=>r.time),s.abort.signal);s.calendarWarning=error.message;}if(active!==s)return;s.observedOnly=cal.observedOnly===true;s.dates=cal.dates;s.calendarFetchedAt=cal.fetchedAt;if(!s.dates.length)throw Error('CALENDAR_EMPTY');s.firstYear=Number(s.dates[0].slice(0,4));s.nextYear=Number(s.cutoff.slice(0,4));await older(s);
       if(active!==s)return;if(s.prefs.range==='ALL')await loadAll(s);else if(['1Y','120D'].includes(s.prefs.range))await older(s);setRange(s);

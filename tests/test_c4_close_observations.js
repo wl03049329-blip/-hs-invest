@@ -37,6 +37,15 @@ const altered=structuredClone(obs);
 altered.sessions[0].symbols["0050"].score+=1;
 altered.sessions[1].symbols["0050"].tier="<script>";
 assert.equal(view.observationRows(altered,"0050",cutoff).length,0);
+for(const [symbol,expected] of Object.entries({"0050":["30.7","57.7"],"00757":["44.7","50.1"],"00830":["71.0","87.6"],"00935":["60.9","84.6"]})){
+  const rows=view.observationRows(obs,symbol,"2026-11-16");
+  assert.equal(rows.length,4);
+  assert.deepEqual(plain(rows.slice(2).map(r=>r.value.toFixed(1))),expected);
+}
+assert.equal(view.observationRows(obs,"00662","2026-11-16").filter(r=>r.halt).length,4);
+const duplicate=structuredClone(obs);
+duplicate.sessions.push(duplicate.sessions.at(-1));
+assert.equal(view.observationRows(duplicate,"0050","2026-11-17").length,0);
 const broken=structuredClone(obs);
 broken.sessions[0].source="https://example.com/";
 broken.sessions[1].source_sha256="bad";
