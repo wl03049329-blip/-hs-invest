@@ -142,14 +142,32 @@ def expected_day(client, now, as_of=None, *, minimum_time=(18, 0)):
     target = dt.date.fromisoformat(as_of) if as_of else limit
     if target > limit: raise ValueError("UNCOMPLETED_DAY_1800_TAIPEI" if minimum_time == (18, 0) else "BEFORE_OFFICIAL_MARKET_CLOSE")
     e = client.get(HOLIDAY_URL)
-    holidays = e["payload"]
-    if not isinstance(holidays, list) or not holidays or not any(iso_date(r.get("Date")).startswith(str(target.year)) for r in holidays):
-        raise ValueError("HOLIDAY_CALENDAR_COVERAGE")
-    calendar = TradingCalendar(fetcher=lambda: holidays)
+    rolling = e["payload"]
+    calendars = {}
     for _ in range(28):
+        if target.year not in calendars:
+            source, holidays = e, rolling
+            year = str(target.year)
+            if not isinstance(holidays, list) or not any(
+                isinstance(r, dict) and (iso_date(r.get("Date")) or "").startswith(year + "-")
+                for r in holidays
+            ):
+                source = client.get(f"https://www.twse.com.tw/rwd/zh/holidaySchedule/holidaySchedule?response=json&date={year}0101")
+                p = source["payload"]
+                rows = p.get("data") if isinstance(p, dict) else None
+                if (not isinstance(rows, list) or not rows or p.get("stat") != "ok"
+                        or p.get("queryYear") != target.year or p.get("total") != len(rows)
+                        or p.get("fields") != ["日期", "名稱", "說明"]
+                        or any(not isinstance(r, list) or len(r) != 3
+                               or not all(isinstance(v, str) for v in r)
+                               or iso_date(r[0]) != r[0] or not r[0].startswith(year + "-") for r in rows)):
+                    raise ValueError("HOLIDAY_CALENDAR_COVERAGE")
+                holidays = [dict(zip(("Date", "Name", "Description"), row)) for row in rows]
+            calendars[target.year] = (TradingCalendar(fetcher=lambda rows=holidays: rows), source)
+        calendar, source = calendars[target.year]
         result = calendar.check(target)
         if result.status == "UNKNOWN": raise ValueError(result.reason)
-        if result.status == "TRADING_DAY": return target.isoformat(), limit.isoformat(), ref(e)
+        if result.status == "TRADING_DAY": return target.isoformat(), limit.isoformat(), ref(source)
         target -= dt.timedelta(days=1)
     raise ValueError("EXPECTED_SESSION_UNRESOLVED")
 

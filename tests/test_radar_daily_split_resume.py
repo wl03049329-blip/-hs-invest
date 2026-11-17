@@ -56,6 +56,25 @@ class Fixture:
         return dict(url=url, payload=p, sha256=digest(p), fetched_at="2026-11-17T10:15:00+00:00")
 
 class SplitRecovery(unittest.TestCase):
+    def test_eod_calendar_uses_target_year_when_rolling_advances(self):
+        class CalendarClient:
+            year = 2026
+            def get(self, url):
+                payload = [{"Date": "1160101"}] if url == u.HOLIDAY_URL else {
+                    "stat": "ok", "queryYear": self.year, "total": 2,
+                    "fields": ["日期", "名稱", "說明"],
+                    "data": [["2026-01-01", "元旦", "放假"], ["2026-11-16", "休市", "市場無交易"]]}
+                return {"url": url, "fetched_at": "fixture", "sha256": "fixture", "payload": payload}
+        import datetime as dt
+        c = CalendarClient()
+        now = dt.datetime(2026, 11, 16, 19, tzinfo=u.TZ)
+        chosen, limit, proof = u.expected_day(c, now)
+        self.assertEqual((chosen, limit), ("2026-11-13", "2026-11-16"))
+        self.assertIn("date=20260101", proof["url"])
+        c.year = 2027
+        with self.assertRaisesRegex(ValueError, "HOLIDAY_CALENDAR_COVERAGE"):
+            u.expected_day(c, now)
+
     def test_no_fake_bars_and_actual_pipeline_to_final(self):
         with tempfile.TemporaryDirectory() as d, patch.object(u,"verify_archive",return_value=copy.deepcopy(BASE)):
             root = Path(d)
