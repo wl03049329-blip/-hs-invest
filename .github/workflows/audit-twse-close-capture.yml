@@ -1,0 +1,98 @@
+name: Audit TWSE daily close capture (no publication)
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/audit-twse-close-capture.yml'
+      - 'scripts/*twse*close*.cjs'
+      - 'scripts/c4_openapi_close_candidate.cjs'
+      - 'tests/test_*close*.cjs'
+  schedule:
+    - cron: '20 10,12 * * 1-5' # 18:20 / 20:20 Asia/Taipei
+    - cron: '53 13 * * 1-5' # independent 21:53 catch-missed-runs check
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: twse-close-capture-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  contract:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - run: |
+          node --test tests/test_c4_openapi_close_candidate.cjs tests/test_audit_twse_close_capture.cjs
+          node tests/test_c4_close_observations.js
+          node tests/test_stable_app_update_lifecycle.js
+  browser:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install pinned browser test dependencies
+        run: |
+          npm install --prefix "$RUNNER_TEMP/hs-browser" playwright-core@1.62.1
+          "$RUNNER_TEMP/hs-browser/node_modules/.bin/playwright-core" install --with-deps chrome webkit
+      - name: Verify Chrome and WebKit PWA lifecycle
+        env:
+          NODE_PATH: ${{ runner.temp }}/hs-browser/node_modules
+          HS_APP_TEST_OUT: ${{ runner.temp }}/hs-twse-browser-evidence
+        run: node tests/stable_app_update_browser.cjs
+  capture:
+    if: github.event_name != 'pull_request' && github.event.schedule != '53 13 * * 1-5' && vars.HS_TWSE_CLOSE_CAPTURE_ENABLED == '1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - run: node --test tests/test_c4_openapi_close_candidate.cjs tests/test_audit_twse_close_capture.cjs
+      - name: Locate original same-session audit receipt
+        id: prior
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          day=$(TZ=Asia/Taipei date +%F)
+          echo "day=$day" >> "$GITHUB_OUTPUT"
+          prior=$(gh api --paginate "repos/$GITHUB_REPOSITORY/actions/artifacts?name=twse-close-${GITHUB_REF_NAME//\//-}-$day&per_page=100" | jq -s -r '[.[].artifacts[] | select(.expired == false)] | sort_by(.created_at, .id) | .[0].workflow_run.id // empty')
+          artifact="twse-close-${GITHUB_REF_NAME//\//-}-$day"
+          echo "artifact=$artifact" >> "$GITHUB_OUTPUT"
+          if [[ -n "$prior" ]]; then
+            gh run download "$prior" --name "$artifact" --dir prior
+            test -f prior/receipt.json
+          fi
+      - name: Verify current Taipei session and detect revisions
+        run: node scripts/audit_twse_close_capture.cjs receipt.json prior/receipt.json
+      - name: Store immutable per-run receipt (no raw quotes)
+        if: always() && hashFiles('receipt.json') != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ${{ steps.prior.outputs.artifact }}
+          path: receipt.json
+          retention-days: 30
+          overwrite: false
+      - name: Flag missing session, source failure or revised quote
+        if: failure()
+        run: echo "::error::TWSE close capture needs review; no C4 observation or production data was written."
+  watchdog:
+    if: github.event.schedule == '53 13 * * 1-5' && vars.HS_TWSE_CLOSE_CAPTURE_ENABLED == '1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Check observed market sessions since enablement
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HS_CAPTURE_START: ${{ vars.HS_TWSE_CLOSE_CAPTURE_START }}
+        run: node scripts/audit_twse_close_watchdog.cjs
