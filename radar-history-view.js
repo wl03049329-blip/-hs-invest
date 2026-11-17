@@ -304,7 +304,10 @@ s.score=C.scores(artifact,symbol,contract,date=>completed(date)&&date<=cutoff(ne
   }
   function draw(s,preserve){
     if(active!==s)return;const L=root.LightweightCharts,oldRange=s.chart?.timeScale().getVisibleRange(),oldAxis=s.axis;
-    const observations=s.observations||[],baseAxis=C.axis(s.dates,s.score.rows,s.prices);
+    // A published FINAL proves its own session even if raw-price calendar
+    // snapshots are lagging. Add only the validated dates, never candles.
+    const sessions=[...new Set([...s.dates,...s.score.rows.map(r=>r.time)])].sort();
+    const observations=s.observations||[],baseAxis=C.axis(sessions,s.score.rows,s.prices);
     const observedDays=observations.map(r=>r.time),last=observedDays.at(-1);
     s.axis=last?[...new Set([...baseAxis,...observedDays,...s.dates.filter(d=>d>baseAxis.at(-1)&&d<=last)])].sort():baseAxis;
     s.host.querySelector('.radarHistoryCanvas').hidden=!s.axis.length;if(!s.axis.length){s.status('歷史資料不足；可載入更早歷史或重新取得。');return;}s.rendering=true;

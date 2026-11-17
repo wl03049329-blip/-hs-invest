@@ -25,8 +25,8 @@ async function run(){
       for(const symbol of ["0050","00757","00830","00935","00662"]){
         await page.evaluate(async ({dates,archive,symbol})=>{
           HSRadarHistoryView.unmount();
-          window.HSRadarHistorySource={Source:class{cache=new Map();async sessions(){return {dates};}
-            async year(s){return {rows:dates.filter(d=>s!=="00662"||d===dates[0]||d===dates.at(-1)).map(time=>({time,open:48,high:50,low:47,close:49,volume:100})),events:[],invalid:[],dividendStatus:"VERIFIED"};}}};
+          window.HSRadarHistorySource={Source:class{cache=new Map();async sessions(){return {dates:dates.slice(0,-1)};}
+            async year(s){return {rows:dates.slice(0,-1).filter(d=>s!=="00662"||d===dates[0]).map(time=>({time,open:48,high:50,low:47,close:49,volume:100})),events:[],invalid:[],dividendStatus:"VERIFIED"};}}};
           const h=document.querySelector("#host");h.innerHTML=HSRadarHistoryView.html(symbol);
           await HSRadarHistoryView.mount(h,{symbol,name:symbol,artifact:archive,contract:HSFinalCoreProduction,thresholds:[],completed:()=>true});
         },{dates,archive:{...archive,snapshots:archive.snapshots.filter(s=>dates.includes(s.date))},symbol});
