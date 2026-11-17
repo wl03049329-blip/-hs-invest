@@ -156,7 +156,7 @@ const V=window.HSRadarHistoryView,args=symbol=>({symbol,name:symbol,artifact,con
   for(let cycle=0;cycle<100;cycle++){
     const host=new Host();await V.mount(host,args(cycle%2?'0050':'00662'));
     assert.equal(charts.filter(c=>!c.removed).length,1);
-    assert.equal(host.listeners.size,6);assert.equal(document.handlers.size,1);assert.equal(window.handlers.size,1);
+    assert.equal(host.listeners.size,6);assert.equal(document.handlers.size,1);assert.equal(window.handlers.size,2);
     for(const range of ['10D','20D','60D','120D','1Y','ALL']){await host.click({historyRange:range});assert.equal(labels(charts.at(-1)).length,2,'redraw must not leak duplicate price labels');}
     V.unmount();assert.equal(host.listeners.size,0);assert.equal(document.handlers.size,0);assert.equal(window.handlers.size,0);
     assert.equal(charts.filter(c=>!c.removed).length,0);

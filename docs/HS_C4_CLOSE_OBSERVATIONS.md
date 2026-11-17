@@ -1,9 +1,24 @@
-# Individual C4 close observations: 2026-11-11 and 2026-11-12
+# Individual C4 close observations
 
 This is a fixed, read-only historical supplement, not an automatic publisher.
 Its data contract is independent of canonical FINAL, official chart points,
 rank, smart buying and trading. Only the ETF history view loads it. No
 holdings, portfolio store, Ledger or Worker protocol changes.
+
+## 2026-11-13 and 2026-11-16 extension
+
+The same UTC read-only suspension Shadow CLI reproduced all five sealed
+2026-11-10 factors, scores and tiers before replaying these two completed
+sessions. For each of the eight added rows the FinMind cutoff close matched
+the dated TWSE MI_INDEX close. The artifact carries the source response SHA,
+score and factors. The 00662 rows are suspension notices only. No 11/17
+close is asserted and no LIVE or FINAL input has been changed.
+
+The chart now accepts ordered subsequent sessions and rechecks them without
+the HTTP cache on reconnect, foreground and a bounded visible refresh.
+This fixes the browser-side date ceiling, not the source-side publication
+schedule: there is still no automated close-observation publisher. Maintain
+reviewed dated source evidence through the existing Stable Pages release.
 
 ## Replay evidence
 
