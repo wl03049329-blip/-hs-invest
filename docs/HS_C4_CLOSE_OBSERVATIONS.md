@@ -1,7 +1,6 @@
 # Individual C4 close observations
 
-This is a fixed, read-only historical supplement, not an automatic publisher.
-Its data contract is independent of canonical FINAL, official chart points,
+This historical supplement is independent of canonical FINAL, official chart points,
 rank, smart buying and trading. Only the ETF history view loads it. No
 holdings, portfolio store, Ledger or Worker protocol changes.
 
@@ -16,9 +15,17 @@ close is asserted and no LIVE or FINAL input has been changed.
 
 The chart now accepts ordered subsequent sessions and rechecks them without
 the HTTP cache on reconnect, foreground and a bounded visible refresh.
-This fixes the browser-side date ceiling, not the source-side publication
-schedule: there is still no automated close-observation publisher. Maintain
-reviewed dated source evidence through the existing Stable Pages release.
+
+The independent main-only workflow is scheduled at 18:20 and 20:20 Taipei
+on weekdays; use the official target-year calendar, reject incomplete
+official sessions, and backfill the oldest missing sessions first, ten per run.
+Transient transport failures have at most three attempts, while source
+throttling or validation failures stop publication and surface a workflow
+error. A later scheduled/manual run can retry without duplicates.
+Only the observation artifact may be committed. Non-fast-forward pushes fail
+closed without overwriting other publishers. The normal Stable Pages
+workflow observes successful main runs. This is a rehearsal until merged;
+no 00662 observations or FINAL writes are part of the workflow.
 
 ## Replay evidence
 

@@ -9,6 +9,7 @@ on:
     workflows:
       - Update delayed market quotes
       - Finalize official EOD Core Score history
+      - Update independent C4 close observations
       - Publish Railway live artifacts
       - Update CNN Fear and Greed
       - Update delayed commodity quotes
@@ -55,6 +56,7 @@ jobs:
           node --test tests/test_home_taiex.js
           node --test tests/test_home_tmf.js
           node tests/test_c4_close_observations.js
+          node --test tests/test_c4_close_observation_publisher.cjs
           node tests/test_radar_history_lifecycle.js
           node tests/test_lradar_v1.js
           node tests/test_lc4_research_integration.js
