@@ -5,6 +5,7 @@ const dir=fs.mkdtempSync(path.join(os.tmpdir(),"hs-radar-v4-")),site=build({out:
 const types={".html":"text/html",".js":"text/javascript",".css":"text/css",".json":"application/json",".webmanifest":"application/manifest+json"};
 const server=http.createServer((req,res)=>{
   const url=new URL(req.url,"http://localhost"),file=path.resolve(site,"."+url.pathname+(url.pathname==="/"?"index.html":""));
+  if(url.pathname==="/__test/live-scores")return res.writeHead(503,{"Content-Type":"application/json"}).end('{"status":"unavailable"}');
   if(!file.startsWith(site+path.sep)||!fs.existsSync(file)||!fs.statSync(file).isFile())return res.writeHead(404).end();
   res.writeHead(200,{"Content-Type":types[path.extname(file)]||"application/octet-stream"});
   fs.createReadStream(file).pipe(res);
@@ -16,9 +17,10 @@ const cases=[[375,812],[390,844],[430,932],[844,390],[1200,900]];
   for(const engine of (process.env.HS_CHROME_ONLY==="1"?[chromium]:[chromium,webkit])){
     const browser=await engine.launch(engine===chromium?{channel:"chrome"}:{});
     try{for(const [width,height] of cases){
-      const page=await browser.newPage({viewport:{width,height},isMobile:width<900,hasTouch:width<900});
+      const page=await browser.newPage({viewport:{width,height},isMobile:width<900,hasTouch:width<900,serviceWorkers:"block"});
       try{
         const errors=[];page.on("pageerror",e=>errors.push(e.message));
+        await page.addInitScript(url=>{window.HS_LIVE_RAILWAY_URL=url;},base+"/__test/live-scores");
         await page.clock.setFixedTime(new Date("2026-11-18T01:00:00Z"));
         // Keep production disconnected. Model an unavailable cross-origin source
         // with an HTTP response so WebKit exercises the app fallback, not CORS.
