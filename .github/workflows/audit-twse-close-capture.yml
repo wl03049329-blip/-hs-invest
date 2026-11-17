@@ -1,6 +1,11 @@
 name: Audit TWSE daily close capture (no publication)
 on:
   workflow_dispatch:
+    inputs:
+      candidate_probe:
+        description: 'Run a read-only latest completed session probe on the candidate branch'
+        type: boolean
+        default: false
   pull_request:
     paths:
       - '.github/workflows/audit-twse-close-capture.yml'
@@ -27,11 +32,11 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - run: |
-          node --test tests/test_c4_openapi_close_candidate.cjs tests/test_audit_twse_close_capture.cjs
+          node --test tests/test_c4_openapi_close_candidate.cjs tests/test_audit_twse_close_capture.cjs tests/test_stable_pages_push_scope.cjs
           node tests/test_c4_close_observations.js
           node tests/test_stable_app_update_lifecycle.js
   probe:
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    if: (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) || (github.event_name == 'workflow_dispatch' && inputs.candidate_probe && github.ref == 'refs/heads/feat/twse-close-capture')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -40,6 +45,7 @@ jobs:
       - name: Probe two current snapshots without retaining quotes
         run: |
           node - <<'NODE'
+          const fs=require('node:fs');
           const {capture}=require('./scripts/audit_twse_close_capture.cjs');
           const {sessions}=require('./scripts/audit_twse_close_watchdog.cjs');
           (async()=>{
@@ -52,10 +58,18 @@ jobs:
             await new Promise(resolve=>setTimeout(resolve,2000));
             const second=await capture(day,first);
             console.log(JSON.stringify({type:'LATEST_COMPLETED_SESSION_PROBE',day,first,second}));
+            fs.writeFileSync('candidate-probe.json',JSON.stringify({day,first,second},null,2)+'\n',{flag:'wx'});
             if(Object.values(second.symbols).some(row=>row.status!=='CANDIDATE_OHLCV'||row.revised))
               throw Error('LIVE_PROBE_SYMBOL_UNAVAILABLE_OR_REVISED');
           })().catch(e=>{console.error(e.message);process.exitCode=1});
           NODE
+      - if: always() && hashFiles('candidate-probe.json') != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: twse-candidate-probe
+          path: candidate-probe.json
+          retention-days: 30
+          overwrite: false
   browser:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
@@ -75,7 +89,7 @@ jobs:
           HS_APP_TEST_OUT: ${{ runner.temp }}/hs-twse-browser-evidence
         run: node tests/stable_app_update_browser.cjs
   capture:
-    if: github.event_name != 'pull_request' && github.event.schedule != '53 13 * * 1-5' && vars.HS_TWSE_CLOSE_CAPTURE_ENABLED == '1'
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && github.event.schedule != '53 13 * * 1-5' && vars.HS_TWSE_CLOSE_CAPTURE_ENABLED == '1'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -135,7 +149,7 @@ jobs:
         if: failure()
         run: echo "::error::TWSE close capture needs review; no C4 observation or production data was written."
   watchdog:
-    if: github.event.schedule == '53 13 * * 1-5' && vars.HS_TWSE_CLOSE_CAPTURE_ENABLED == '1'
+    if: github.ref == 'refs/heads/main' && github.event.schedule == '53 13 * * 1-5' && vars.HS_TWSE_CLOSE_CAPTURE_ENABLED == '1'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
