@@ -16,6 +16,10 @@ function sessions(rows, since, now) {
   if (new Set(dates).size !== dates.length) throw Error("MARKET_SESSION_DUPLICATE");
   return dates.filter(day => day >= since);
 }
+function missingReceipts(days, names, prefix) {
+  const known = new Set(names);
+  return days.filter(day => !["18-20","20-20","manual"].some(slot => known.has(prefix+day+"-ok-"+slot)));
+}
 async function main() {
   const now = new Date(Date.now()+8*3600000).toISOString().slice(0,10);
   const start = process.env.HS_CAPTURE_START;
@@ -30,11 +34,11 @@ async function main() {
   const prefix = "twse-close-" + process.env.GITHUB_REF_NAME.replaceAll("/","-") + "-";
   const pages = JSON.parse(execFileSync("gh",["api","--paginate","--slurp",
     `repos/${process.env.GITHUB_REPOSITORY}/actions/artifacts?per_page=100`],{encoding:"utf8",maxBuffer:24e6}));
-  const receipts = new Set(pages.flatMap(page => page.artifacts).filter(a => !a.expired).map(a => a.name));
-  const missing = days.filter(day => !receipts.has(prefix+day));
+  const receipts = pages.flatMap(page => page.artifacts).filter(a => !a.expired).map(a => a.name);
+  const missing = missingReceipts(days, receipts, prefix);
   if (missing.length) throw Error("MISSED_CAPTURE_RECEIPTS " + missing.join(","));
   console.log("Receipts present for observed sessions",days.length,
     "; absent market sessions and previous-month coverage are not certified.");
 }
 if (require.main === module) main().catch(e=>{console.error("::error::"+e.message);process.exitCode=1;});
-module.exports = {sessions};
+module.exports = {sessions,missingReceipts};

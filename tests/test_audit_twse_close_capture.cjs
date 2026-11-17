@@ -1,8 +1,8 @@
 "use strict";
 const {test} = require("node:test");
 const assert = require("node:assert/strict");
-const {receipt,capture} = require("../scripts/audit_twse_close_capture.cjs");
-const {sessions} = require("../scripts/audit_twse_close_watchdog.cjs");
+const {receipt,capture,captureWindow} = require("../scripts/audit_twse_close_capture.cjs");
+const {sessions,missingReceipts} = require("../scripts/audit_twse_close_watchdog.cjs");
 const date = "2026-11-16";
 const now = () => new Date("2026-11-16T10:20:00Z");
 const raw = close => Buffer.from(JSON.stringify([{Date:"1151116",Code:"0050",
@@ -13,6 +13,20 @@ test("watchdog uses actual completed sessions, never weekday guesses", () => {
   assert.deepEqual(sessions(entries,"2026-11-13","2026-11-17"),["2026-11-13","2026-11-16"]);
   assert.throws(() => sessions([...entries,entries[0]],"2026-11-13","2026-11-17"),/DUPLICATE/);
   assert.throws(() => sessions(entries,"2026-11-13","2026-11-15"),/ROW_INVALID/);
+});
+
+test("Taipei slots accept bounded delays but reject the next slot or next date", () => {
+  const created = "2026-11-16T10:20:00Z";
+  assert.equal(captureWindow(new Date("2026-11-16T10:47:00Z"),"18:20",created),date);
+  assert.equal(captureWindow(new Date("2026-11-16T12:26:00Z"),"20:20",created),date);
+  assert.throws(() => captureWindow(new Date("2026-11-16T12:20:00Z"),"18:20",created),/WINDOW_MISSED/);
+  assert.throws(() => captureWindow(new Date("2026-11-17T10:25:00Z"),"18:20",created),/WINDOW_MISSED/);
+});
+
+test("watchdog flags both skipped and failed capture, but accepts the second clean slot", () => {
+  const prefix = "twse-close-main-", days = ["2026-11-13",date,"2026-11-17"];
+  assert.deepEqual(missingReceipts(days,[prefix+days[0]+"-ok-18-20",prefix+days[1]],prefix),[date,days[2]]);
+  assert.deepEqual(missingReceipts(days,[prefix+days[0]+"-ok-18-20",prefix+date+"-ok-20-20"],prefix),[days[2]]);
 });
 
 test("receipt has no raw prices and changes are flagged only for affected symbols", () => {

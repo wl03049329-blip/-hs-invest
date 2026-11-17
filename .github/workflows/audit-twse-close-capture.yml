@@ -8,7 +8,8 @@ on:
       - 'scripts/c4_openapi_close_candidate.cjs'
       - 'tests/test_*close*.cjs'
   schedule:
-    - cron: '20 10,12 * * 1-5' # 18:20 / 20:20 Asia/Taipei
+    - cron: '20 10 * * 1-5' # 18:20 Asia/Taipei
+    - cron: '20 12 * * 1-5' # 20:20 Asia/Taipei
     - cron: '53 13 * * 1-5' # independent 21:53 catch-missed-runs check
 permissions:
   contents: read
@@ -90,6 +91,17 @@ jobs:
           set -euo pipefail
           day=$(TZ=Asia/Taipei date +%F)
           echo "day=$day" >> "$GITHUB_OUTPUT"
+          case "${{ github.event.schedule }}" in
+            '20 10 * * 1-5') slot=18:20 ;;
+            '20 12 * * 1-5') slot=20:20 ;;
+            '') slot=manual ;;
+            *) exit 1 ;;
+          esac
+          echo "slot=$slot" >> "$GITHUB_OUTPUT"
+          echo "slot_id=${slot/:/-}" >> "$GITHUB_OUTPUT"
+          created=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" --jq .created_at)
+          test -n "$created"
+          echo "created=$created" >> "$GITHUB_OUTPUT"
           prior=$(gh api --paginate "repos/$GITHUB_REPOSITORY/actions/artifacts?name=twse-close-${GITHUB_REF_NAME//\//-}-$day&per_page=100" | jq -s -r '[.[].artifacts[] | select(.expired == false)] | sort_by(.created_at, .id) | .[0].workflow_run.id // empty')
           artifact="twse-close-${GITHUB_REF_NAME//\//-}-$day"
           echo "artifact=$artifact" >> "$GITHUB_OUTPUT"
@@ -98,13 +110,25 @@ jobs:
             test -f prior/receipt.json
           fi
       - name: Verify current Taipei session and detect revisions
-        run: node scripts/audit_twse_close_capture.cjs receipt.json prior/receipt.json
+        env:
+          HS_CAPTURE_SLOT: ${{ steps.prior.outputs.slot }}
+          HS_RUN_CREATED_AT: ${{ steps.prior.outputs.created }}
+          HS_SESSION_DATE: ${{ steps.prior.outputs.day }}
+        run: node scripts/audit_twse_close_capture.cjs receipt.json prior/receipt.json "$HS_SESSION_DATE"
       - name: Store immutable per-run receipt (no raw quotes)
         if: always() && hashFiles('receipt.json') != ''
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: ${{ steps.prior.outputs.artifact }}
           path: receipt.json
+          retention-days: 30
+          overwrite: false
+      - name: Mark clean receipt for watchdog
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ${{ steps.prior.outputs.artifact }}-ok-${{ steps.prior.outputs.slot_id }}
+          path: receipt.json
+          if-no-files-found: error
           retention-days: 30
           overwrite: false
       - name: Flag missing session, source failure or revised quote

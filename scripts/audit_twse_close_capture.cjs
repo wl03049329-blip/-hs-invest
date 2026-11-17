@@ -6,6 +6,16 @@ const SCHEMA = "HS_TWSE_CLOSE_CAPTURE_V1";
 const sha = bytes => createHash("sha256").update(bytes).digest("hex");
 const taipei = now => new Date(+now + 8*3600000).toISOString();
 
+function captureWindow(now, slot, createdAt) {
+  const clock = taipei(now), date = clock.slice(0,10), time = clock.slice(11,16);
+  const windows = {"18:20":["18:20","20:20"],"20:20":["20:20","21:53"],manual:["18:20","21:53"]};
+  if (!Object.hasOwn(windows,slot) || time < windows[slot][0] || time >= windows[slot][1] ||
+      !createdAt || taipei(new Date(createdAt)).slice(0,10) !== date)
+    throw Error("CAPTURE_WINDOW_MISSED");
+  if ([0,6].includes(new Date(date).getUTCDay())) throw Error("WEEKEND_CAPTURE_NOT_EXPECTED");
+  return date;
+}
+
 function receipt(raw, date, previous, now = new Date()) {
   if (date > taipei(now).slice(0,10)) throw Error("FUTURE_SESSION");
   const snapshot = readCloseSnapshot(raw, date);
@@ -41,14 +51,15 @@ async function capture(date, previous, {get = fetch, pause = ms => new Promise(r
 }
 
 async function main() {
-  const [out, previousPath] = process.argv.slice(2);
+  const [out, previousPath, expectedDate] = process.argv.slice(2);
   if (!out) throw Error("OUTPUT_REQUIRED");
-  const clock = taipei(new Date());
-  if (clock.slice(11,16) < "18:20") throw Error("BEFORE_CAPTURE_WINDOW");
-  const date = clock.slice(0,10);
-  if ([0,6].includes(new Date(date).getUTCDay())) throw Error("WEEKEND_CAPTURE_NOT_EXPECTED");
+  const {HS_CAPTURE_SLOT:slot, HS_RUN_CREATED_AT:createdAt} = process.env;
+  const date = captureWindow(new Date(),slot,createdAt);
+  if (date !== expectedDate) throw Error("CAPTURE_LOOKUP_DATE_MISMATCH");
   const previous = previousPath && fs.existsSync(previousPath) ? JSON.parse(fs.readFileSync(previousPath,"utf8")) : null;
   const r = await capture(date, previous);
+  captureWindow(new Date(),slot,createdAt);
+  r.slot = slot;
   fs.writeFileSync(out, JSON.stringify(r,null,2) + "\n", {flag:"wx"});
   console.log(date + " TWSE receipt; no score publication authorized");
   if (Object.values(r.symbols).some(s => s.revised || s.status !== "CANDIDATE_OHLCV"))
@@ -58,4 +69,4 @@ if (require.main === module) main().catch(e => {
   console.error("::error::TWSE close receipt not clean: " + e.message);
   process.exitCode = 1;
 });
-module.exports = {receipt,capture};
+module.exports = {receipt,capture,captureWindow};
