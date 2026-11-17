@@ -11,6 +11,36 @@ const iso=d=>typeof d==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(d)&&Number.isFinite
 const shift=(d,n)=>new Date(Date.parse(d)+n*86400000).toISOString().slice(0,10);
 const n=x=>/^\d+(\.\d+)?$/.test(String(x).trim().replaceAll(",",""))?Number(String(x).trim().replaceAll(",","")):NaN;
 const hash=b=>crypto.createHash("sha256").update(b).digest("hex");
+// One source vintage per invocation. Never cache errors as empty action data
+// or carry a response into a future run with unverified coverage.
+function observationFetch(base, warn=console.warn){
+ const requests=new Map();
+ let quota=null;
+ return async (input,init)=>{
+  const url=new URL(input);
+  if(url.origin!=="https://api.finmindtrade.com"||url.pathname!=="/api/v4/data")return base(input,init);
+  const symbol=url.searchParams.get("data_id"), dataset=url.searchParams.get("dataset");
+  if(!symbols.includes(symbol)||!["TaiwanStockPrice","TaiwanStockDividendResult","TaiwanStockSplitPrice"].includes(dataset))
+   throw Error("FINMIND_REQUEST_SCOPE");
+  if(!requests.has(url.href)){
+   if(quota)throw Error(quota);
+   requests.set(url.href,(async()=>{
+    const response=await base(input,{...init,signal:init?.signal??AbortSignal.timeout(15000)});
+    const body=await response.clone().json().catch(()=>null);
+    const code=[402,429].find(c=>response.status===c||Number(body?.status)===c);
+    if(code){
+     quota="FINMIND_QUOTA_"+code;
+     warn("::warning::"+quota+" "+symbol+" "+dataset+"; remaining requests paused");
+     throw Error(quota);
+    }
+    if(!response.ok||Number(body?.status)!==200||!Array.isArray(body.data))
+     warn("::warning::FINMIND_RESPONSE_UNVERIFIED "+symbol+" "+dataset+" HTTP_"+response.status);
+    return response;
+   })());
+  }
+  return (await requests.get(url.href)).clone();
+ };
+}
 function dates(now){
  const stamp=new Date(+now+28800000).toISOString(), today=stamp.slice(0,10);
  return {today,cutoff:stamp.slice(11,16)>="18:00"?today:shift(today,-1)};
@@ -102,7 +132,13 @@ async function extend(artifact,now,{fetchBytes=get,decide=decisionAtClose}={}){
 async function main(){
  const write=process.argv[2]==="--write";
  if(process.argv.length>3||(process.argv[2]&&!write))throw Error("USAGE");
- const base=fs.readFileSync(file),{added,pending,result}=await extend(JSON.parse(base),new Date());
+ const base=fs.readFileSync(file), originalFetch=globalThis.fetch;
+ let run;
+ try{
+  globalThis.fetch=observationFetch(originalFetch);
+  run=await extend(JSON.parse(base),new Date());
+ }finally{globalThis.fetch=originalFetch;}
+ const {added,pending,result}=run;
  if(write&&added.length){
   const tmp=file+".tmp-"+process.pid;
   fs.writeFileSync(tmp,JSON.stringify(result,null,2)+"\n",{flag:"wx"});
@@ -116,4 +152,4 @@ async function main(){
  console.log("close observations:",added.map(s=>s.date).join(",")||"current (no write)");
 }
 if(require.main===module)main().catch(e=>{console.error("CLOSE_OBSERVATION_FAILED",e.message);process.exitCode=1;});
-module.exports={dates,official,extend};
+module.exports={dates,official,extend,observationFetch};

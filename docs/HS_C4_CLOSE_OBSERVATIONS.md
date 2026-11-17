@@ -52,6 +52,19 @@ rows with unresolved gaps fail the job. Subsequent runs fill absent symbols
 without replacing prior rows. A changed raw receipt fails closed rather
 than silently attributing old rows to new bytes.
 
+### Request budget
+
+The standalone publisher now coalesces identical FinMind requests across
+symbols/dates within one invocation (distinct URLs stay independent).
+Pending requests are shared and each consumer gets its own response clone.
+HTTP or API 402/429 emits a sanitized quota annotation and stops new FinMind
+requests in that run; a later schedule may retry. It does not switch
+identities or treat failed history as zero events. Cross-run persistence
+is not enabled: a historical corporate-action cache needs authenticated
+coverage, reconciliation of revisions, and verified retention rights before
+it may replace a fresh source. Neither the archive nor the writer changes
+the existing FINAL publisher's network behavior.
+
 ## Replay evidence
 
 On 2026-11-12 the existing read-only Shadow CLI was run under UTC for

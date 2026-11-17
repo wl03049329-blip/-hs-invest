@@ -1,6 +1,6 @@
 "use strict";
 const test=require("node:test"),assert=require("node:assert/strict");
-const {extend,dates}=require("../scripts/update_c4_close_observations.cjs");
+const {extend,dates,observationFetch}=require("../scripts/update_c4_close_observations.cjs");
 const production=require("../final-core-production");
 const published=require("../data/c4-close-observations-v1.json");
 const artifact={...published,sessions:published.sessions.filter(s=>s.date<="2026-11-16")};
@@ -40,4 +40,20 @@ test("one missing dividend series publishes the other three and backfills withou
  assert.equal(fixed.pending.length,0);
  assert.deepEqual(fixed.added[0].symbols["00757"],result.added[0].symbols["00757"]);
  assert.equal((await extend(fixed.result,asOf,{fetchBytes,decide})).added.length,0);
+});
+test("same source vintage deduplicates concurrent and later reads; 402 stops new network requests",async()=>{
+ let calls=0;const warnings=[];
+ const get=observationFetch(async url=>{
+  calls++;
+  return new Response(JSON.stringify(url.searchParams.get("data_id")==="0050"?
+    {status:200,data:[{date:"2026-07-21"}]}:{status:402}),{status:200});
+ },x=>warnings.push(x));
+ const u=s=>new URL("https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockDividendResult&data_id="+s);
+ const a=await Promise.all([get(u("0050")),get(u("0050"))]);
+ assert.equal((await a[0].json()).data.length,1);
+ assert.equal((await a[1].json()).data.length,1);
+ await get(u("0050"));assert.equal(calls,1);
+ await assert.rejects(get(u("00757")),/FINMIND_QUOTA_402/);
+ await assert.rejects(get(u("00935")),/FINMIND_QUOTA_402/);
+ assert.equal(calls,2);assert.match(warnings[0],/FINMIND_QUOTA_402/);
 });
