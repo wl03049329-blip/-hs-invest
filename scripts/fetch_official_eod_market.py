@@ -24,6 +24,7 @@ TAIPEI = ZoneInfo("Asia/Taipei")
 REQUIRED_SYMBOLS = ("0050", "00662", "00757", "00830", "00935")
 PRIMARY_PROVIDER = "TWSE_OPENAPI_STOCK_DAY_ALL"
 FALLBACK_PROVIDER = "TWSE_EXCHANGE_REPORT_OPEN_DATA"
+DATED_PROVIDER = "TWSE_DATED_MI_INDEX"
 PRIMARY_URL = "https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL"
 FALLBACK_URL = "https://www.twse.com.tw/exchangeReport/STOCK_DAY_ALL?response=open_data"
 HOLIDAY_URL = "https://openapi.twse.com.tw/v1/holidaySchedule/holidaySchedule"
@@ -124,6 +125,38 @@ def fetch_fallback() -> dict[str, dict[str, Any]]:
     return normalize_rows(list(csv.DictReader(io.StringIO(text))), FALLBACK_PROVIDER)
 
 
+def dated_items(payload: dict[str, Any], expected: str) -> dict[str, dict[str, Any]]:
+    if payload.get("stat") != "OK" or payload.get("date") != expected.replace("-", ""):
+        raise ValueError("DATED_EOD_NOT_CURRENT")
+    keys = ("證券代號", "開盤價", "最高價", "最低價", "收盤價", "成交股數")
+    matches = [t for t in payload.get("tables", [])
+               if isinstance(t, dict) and all(t.get("fields", []).count(k) == 1 for k in keys)]
+    if len(matches) != 1 or not isinstance(matches[0].get("data"), list):
+        raise ValueError("DATED_EOD_SCHEMA")
+    table = matches[0]
+    indices = [table["fields"].index(k) for k in keys]
+    rows, seen = [], set()
+    for entry in table["data"]:
+        if not isinstance(entry, list) or len(entry) <= max(indices):
+            raise ValueError("DATED_EOD_ROW")
+        row = {k: entry[i] for k, i in zip(keys, indices)}
+        symbol = row["證券代號"]
+        if symbol not in REQUIRED_SYMBOLS:
+            continue
+        volume = decimal_value(row["成交股數"], positive=True)
+        if symbol in seen or volume is None or volume != volume.to_integral_value():
+            raise ValueError("DATED_EOD_DUPLICATE_OR_NO_TRADE")
+        seen.add(symbol)
+        rows.append({**row, "日期": expected})
+    return normalize_rows(rows, FALLBACK_PROVIDER)
+
+
+def fetch_dated(expected: str) -> dict[str, dict[str, Any]]:
+    url = ("https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?response=json&type=ALLBUT0999&date="
+           + expected.replace("-", ""))
+    return dated_items(json.loads(fetch_bytes(url).decode("utf-8-sig")), expected)
+
+
 def fetch_holidays() -> list[dict[str, Any]]:
     payload = json.loads(fetch_bytes(HOLIDAY_URL).decode("utf-8-sig"))
     if not isinstance(payload, list):
@@ -171,25 +204,26 @@ def equivalent(left: dict[str, dict[str, Any]], right: dict[str, dict[str, Any]]
     return True
 
 
-def resolve(expected: str, primary: dict[str, Any], fallback: dict[str, Any], no_trading_day: bool, fetched_at: str) -> dict[str, Any]:
-    for source in (primary, fallback):
+def resolve(expected: str, primary: dict[str, Any], fallback: dict[str, Any], no_trading_day: bool, fetched_at: str, dated: dict[str, Any] | None = None) -> dict[str, Any]:
+    sources = (primary, fallback, dated) if dated else (primary, fallback)
+    for source in sources:
         if source.get("complete") and str(source.get("source_date")) > expected:
             raise LookAheadRejected(f"future_source_{source['provider']}_{source['source_date']}_after_{expected}")
-    ready = [source for source in (primary, fallback) if source.get("complete") and source.get("source_date") == expected]
-    diagnostics = [{key: source.get(key) for key in ("provider", "status", "source_date", "complete", "symbols", "error")} for source in (primary, fallback)]
+    ready = [source for source in sources if source.get("complete") and source.get("source_date") == expected]
+    diagnostics = [{key: source.get(key) for key in ("provider", "status", "source_date", "complete", "symbols", "error")} for source in sources]
     if no_trading_day:
         if ready:
             raise SourceConflict(f"calendar_marks_no_trading_but_source_ready_{expected}")
         return {"schema_version": 1, "snapshot_type": "OFFICIAL_EOD_MARKET", "status": "NO_TRADING_DAY", "expected_date": expected, "source_date": None, "provider": None, "source_type": SOURCE_TYPE, "fetched_at": fetched_at, "fallback_used": False, "items": {}, "sources": diagnostics}
-    if len(ready) == 2 and not equivalent(ready[0]["items"], ready[1]["items"]):
+    if any(not equivalent(ready[0]["items"], s["items"]) for s in ready[1:]):
         raise SourceConflict(f"same_date_ohlc_conflict_{expected}")
-    selected = ready[0] if ready and ready[0]["provider"] == PRIMARY_PROVIDER else (ready[-1] if ready else None)
+    selected = ready[0] if ready else None
     if not selected:
         return {"schema_version": 1, "snapshot_type": "OFFICIAL_EOD_MARKET", "status": "SOURCE_NOT_READY", "expected_date": expected, "source_date": None, "provider": None, "source_type": SOURCE_TYPE, "fetched_at": fetched_at, "fallback_used": False, "items": {}, "sources": diagnostics}
     return {"schema_version": 1, "snapshot_type": "OFFICIAL_EOD_MARKET", "status": "READY", "expected_date": expected, "source_date": expected, "provider": selected["provider"], "source_type": SOURCE_TYPE, "fetched_at": fetched_at, "fallback_used": selected["provider"] != PRIMARY_PROVIDER, "items": selected["items"], "sources": diagnostics}
 
 
-def collect(expected: str, now: datetime | None = None, primary_fetch: Callable[[], dict[str, dict[str, Any]]] = fetch_primary, fallback_fetch: Callable[[], dict[str, dict[str, Any]]] = fetch_fallback, holiday_fetch: Callable[[], list[dict[str, Any]]] = fetch_holidays) -> dict[str, Any]:
+def collect(expected: str, now: datetime | None = None, primary_fetch: Callable[[], dict[str, dict[str, Any]]] = fetch_primary, fallback_fetch: Callable[[], dict[str, dict[str, Any]]] = fetch_fallback, holiday_fetch: Callable[[], list[dict[str, Any]]] = fetch_holidays, dated_fetch: Callable[[str], dict[str, dict[str, Any]]] | None = None) -> dict[str, Any]:
     now = now or datetime.now(TAIPEI)
     fetched_at = now.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
     states: list[dict[str, Any]] = []
@@ -202,7 +236,13 @@ def collect(expected: str, now: datetime | None = None, primary_fetch: Callable[
         no_trading = is_no_trading_day(expected, holiday_fetch())
     except Exception:  # The price sources remain fail-closed if calendar transport is unavailable.
         no_trading = datetime.strptime(expected, "%Y-%m-%d").date().weekday() >= 5
-    return resolve(expected, states[0], states[1], no_trading, fetched_at)
+    dated = None
+    if dated_fetch is not None and not no_trading and not any(s["source_date"] == expected for s in states):
+        try:
+            dated = source_state(DATED_PROVIDER, dated_fetch(expected))
+        except Exception as exc:
+            dated = source_state(DATED_PROVIDER, {}, f"{type(exc).__name__}:{exc}")
+    return resolve(expected, states[0], states[1], no_trading, fetched_at, dated)
 
 
 def write_atomic(path: Path, payload: dict[str, Any]) -> None:
@@ -226,7 +266,7 @@ def main() -> None:
     expected = iso_date(args.expected_date)
     if not expected:
         raise SystemExit("OFFICIAL_EOD_REJECTED invalid_expected_date")
-    payload = collect(expected)
+    payload = collect(expected, dated_fetch=fetch_dated)
     write_atomic(Path(args.output).resolve(), payload)
     print(f"OFFICIAL_EOD_{payload['status']} expected={expected} provider={payload.get('provider')} source_date={payload.get('source_date')} fallback_used={payload.get('fallback_used')}")
 

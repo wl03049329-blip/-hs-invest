@@ -74,6 +74,12 @@ class SplitRecovery(unittest.TestCase):
         c.year = 2027
         with self.assertRaisesRegex(ValueError, "HOLIDAY_CALENDAR_COVERAGE"):
             u.expected_day(c, now)
+        with patch.object(u, "official_sessions", return_value=(["2026-11-16"], {"url": "official-completed"})):
+            self.assertEqual(u.expected_day(c, now, minimum_time=(13, 30)),
+                             ("2026-11-16", "2026-11-16", {"url": "official-completed"}))
+        with patch.object(u, "official_sessions", return_value=(["2026-11-13"], {})):
+            with self.assertRaisesRegex(ValueError, "HOLIDAY_CALENDAR_COVERAGE"):
+                u.expected_day(c, now, minimum_time=(13, 30))
 
     def test_no_fake_bars_and_actual_pipeline_to_final(self):
         with tempfile.TemporaryDirectory() as d, patch.object(u,"verify_archive",return_value=copy.deepcopy(BASE)):

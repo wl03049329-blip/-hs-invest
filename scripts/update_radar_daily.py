@@ -161,6 +161,14 @@ def expected_day(client, now, as_of=None, *, minimum_time=(18, 0)):
                         or any(not isinstance(r, list) or len(r) != 3
                                or not all(isinstance(v, str) for v in r)
                                or iso_date(r[0]) != r[0] or not r[0].startswith(year + "-") for r in rows)):
+                    # For FINAL only, completed market trades can positively
+                    # establish this exact session. Absence cannot establish a
+                    # holiday, and RAW still requires its normal calendar.
+                    if minimum_time == (13, 30):
+                        day = target.isoformat()
+                        sessions, market_ref = official_sessions(client, "twse", target.strftime("%Y%m"), day)
+                        if day in sessions:
+                            return day, limit.isoformat(), market_ref
                     raise ValueError("HOLIDAY_CALENDAR_COVERAGE")
                 holidays = [dict(zip(("Date", "Name", "Description"), row)) for row in rows]
             calendars[target.year] = (TradingCalendar(fetcher=lambda rows=holidays: rows), source)

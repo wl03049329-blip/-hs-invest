@@ -33,12 +33,19 @@ jobs:
     if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    outputs:
+      deploy: ${{ steps.scope.outputs.deploy }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # official v4
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
           fetch-depth: 0
+      - name: Verify C4 split recovery without publishing
+        if: github.event_name == 'pull_request'
+        run: |
+          python3 -B tests/test_official_eod_market.py
+          python3 -B -m unittest discover -s tests -p 'test_radar_daily_split_resume.py'
       - name: Validate stable update and data contracts
         run: |
           node tests/test_stable_app_updates.js
@@ -61,15 +68,17 @@ jobs:
           node tests/test_lc4_radar_v2.js
       - name: Build exact-commit static release
         run: node scripts/build_stable_app.cjs "$RUNNER_TEMP/hs-site"
-      - name: Verify C4 split recovery without publishing
-        if: github.event_name == 'pull_request'
-        run: python3 -B -m unittest discover -s tests -p 'test_radar_daily_split_resume.py'
+      - name: Check deployment scope
+        id: scope
+        env:
+          HS_PUSH_BEFORE: ${{ github.event.before }}
+        run: node scripts/stable_pages_push_scope.cjs >> "$GITHUB_OUTPUT"
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # official v3
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        if: steps.scope.outputs.deploy == 'true'
         with:
           path: ${{ runner.temp }}/hs-site
   deploy:
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    if: needs.build.outputs.deploy == 'true'
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 10
