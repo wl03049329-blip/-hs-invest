@@ -1,396 +1,8 @@
 {
   "schema_version": 1,
   "artifact": "intraday-core-snapshots-v1",
-  "generated_at": "2026-11-17T10:55:52.997282+08:00",
+  "generated_at": "2026-11-17T11:01:01.714856+08:00",
   "snapshots": [
-    {
-      "calculated_at": "2026-10-28T13:15:37.569426+08:00",
-      "captured_at": "2026-10-28T13:15:37.560005+08:00",
-      "contract": "HS_LIVE_INTRADAY_SLOT_V4",
-      "freshness": {
-        "market_as_of": "2026-10-28T13:15:35+08:00",
-        "status": "FRESH",
-        "trading_date": "2026-10-28"
-      },
-      "items": {
-        "0050": {
-          "calculated_at": "2026-10-28T13:15:37.569426+08:00",
-          "components": {
-            "crash": {
-              "state": "positive",
-              "value": -6.95278969957082
-            },
-            "dd52": {
-              "state": "neutral",
-              "value": -7.03259005145797
-            },
-            "weekly_j": {
-              "state": "positive",
-              "value": 12.0480285466337
-            }
-          },
-          "core_factors": {
-            "crash": {
-              "contribution": 1.17167381974249,
-              "raw": -6.95278969957082,
-              "score": 7.81115879828327,
-              "weight": 15
-            },
-            "dd52": {
-              "contribution": 12.65,
-              "raw": -7.03259005145797,
-              "score": 23,
-              "weight": 55
-            },
-            "weeklyJ": {
-              "contribution": 21.3,
-              "raw": 12.0480285466337,
-              "score": 71,
-              "weight": 30
-            }
-          },
-          "cta": {
-            "detail": "維持基本投入，開始追蹤低檔條件。",
-            "headline": "回檔訊號出現"
-          },
-          "data_as_of": "2026-10-28T13:15:35+08:00",
-          "dd52": -7.03259005145797,
-          "delta_vs_previous_close": -11.4270386266094,
-          "delta_vs_previous_successful_intraday": null,
-          "display_score": 35,
-          "freshness": "FRESH",
-          "market_as_of": "2026-10-28T13:15:35+08:00",
-          "previous_close_rank": 3,
-          "previous_close_score": 46.5487124463519,
-          "previous_close_trading_date": "2026-10-27",
-          "previous_successful_intraday_rank": null,
-          "previous_successful_intraday_score": null,
-          "previous_successful_intraday_slot": null,
-          "price": 108.4,
-          "rank": 3,
-          "rank_delta_vs_previous_close": 0,
-          "rank_delta_vs_previous_successful_intraday": null,
-          "score": 35.1216738197425,
-          "score_version": "FINAL_CORE_WEIGHT_V1",
-          "slot": "13:15",
-          "stage": {
-            "key": "回檔訊號出現",
-            "label": "回檔訊號出現",
-            "recommendation": "維持基本投入，開始追蹤低檔條件。"
-          },
-          "status": "SUCCESS",
-          "symbol": "0050",
-          "tier": "回檔訊號出現",
-          "trading_date": "2026-10-28",
-          "weekly_j": 12.0480285466337
-        },
-        "00662": {
-          "calculated_at": "2026-10-28T13:15:37.569426+08:00",
-          "components": {
-            "crash": {
-              "state": "neutral",
-              "value": -2.59128386336867
-            },
-            "dd52": {
-              "state": "weak",
-              "value": -2.85826155050901
-            },
-            "weekly_j": {
-              "state": "weak",
-              "value": 55.7381434954571
-            }
-          },
-          "core_factors": {
-            "crash": {
-              "contribution": 0,
-              "raw": -2.59128386336867,
-              "score": 0,
-              "weight": 15
-            },
-            "dd52": {
-              "contribution": 5.5,
-              "raw": -2.85826155050901,
-              "score": 10,
-              "weight": 55
-            },
-            "weeklyJ": {
-              "contribution": 0,
-              "raw": 55.7381434954571,
-              "score": 0,
-              "weight": 30
-            }
-          },
-          "cta": {
-            "detail": "維持基本投入；尚未進入額外加碼區。",
-            "headline": "一般持有"
-          },
-          "data_as_of": "2026-10-28T13:15:31+08:00",
-          "dd52": -2.85826155050901,
-          "delta_vs_previous_close": -6.35,
-          "delta_vs_previous_successful_intraday": null,
-          "display_score": 5,
-          "freshness": "FRESH",
-          "market_as_of": "2026-10-28T13:15:31+08:00",
-          "previous_close_rank": 5,
-          "previous_close_score": 11.85,
-          "previous_close_trading_date": "2026-10-27",
-          "previous_successful_intraday_rank": null,
-          "previous_successful_intraday_score": null,
-          "previous_successful_intraday_slot": null,
-          "price": 124.05,
-          "rank": 5,
-          "rank_delta_vs_previous_close": 0,
-          "rank_delta_vs_previous_successful_intraday": null,
-          "score": 5.5,
-          "score_version": "FINAL_CORE_WEIGHT_V1",
-          "slot": "13:15",
-          "stage": {
-            "key": "一般持有",
-            "label": "一般持有",
-            "recommendation": "維持基本投入；尚未進入額外加碼區。"
-          },
-          "status": "SUCCESS",
-          "symbol": "00662",
-          "tier": "一般持有",
-          "trading_date": "2026-10-28",
-          "weekly_j": 55.7381434954571
-        },
-        "00757": {
-          "calculated_at": "2026-10-28T13:15:37.569426+08:00",
-          "components": {
-            "crash": {
-              "state": "neutral",
-              "value": -4.71698113207547
-            },
-            "dd52": {
-              "state": "weak",
-              "value": -4.81319421070348
-            },
-            "weekly_j": {
-              "state": "neutral",
-              "value": 34.7631442827085
-            }
-          },
-          "core_factors": {
-            "crash": {
-              "contribution": 0,
-              "raw": -4.71698113207547,
-              "score": 0,
-              "weight": 15
-            },
-            "dd52": {
-              "contribution": 8.8,
-              "raw": -4.81319421070348,
-              "score": 16,
-              "weight": 55
-            },
-            "weeklyJ": {
-              "contribution": 5.4,
-              "raw": 34.7631442827085,
-              "score": 18,
-              "weight": 30
-            }
-          },
-          "cta": {
-            "detail": "維持基本投入；尚未進入額外加碼區。",
-            "headline": "一般持有"
-          },
-          "data_as_of": "2026-10-28T13:14:27+08:00",
-          "dd52": -4.81319421070348,
-          "delta_vs_previous_close": -6.59730458221025,
-          "delta_vs_previous_successful_intraday": null,
-          "display_score": 14,
-          "freshness": "FRESH",
-          "market_as_of": "2026-10-28T13:14:27+08:00",
-          "previous_close_rank": 4,
-          "previous_close_score": 20.7973045822102,
-          "previous_close_trading_date": "2026-10-27",
-          "previous_successful_intraday_rank": null,
-          "previous_successful_intraday_score": null,
-          "previous_successful_intraday_slot": null,
-          "price": 141.4,
-          "rank": 4,
-          "rank_delta_vs_previous_close": 0,
-          "rank_delta_vs_previous_successful_intraday": null,
-          "score": 14.2,
-          "score_version": "FINAL_CORE_WEIGHT_V1",
-          "slot": "13:15",
-          "stage": {
-            "key": "一般持有",
-            "label": "一般持有",
-            "recommendation": "維持基本投入；尚未進入額外加碼區。"
-          },
-          "status": "SUCCESS",
-          "symbol": "00757",
-          "tier": "一般持有",
-          "trading_date": "2026-10-28",
-          "weekly_j": 34.7631442827085
-        },
-        "00830": {
-          "calculated_at": "2026-10-28T13:15:37.569426+08:00",
-          "components": {
-            "crash": {
-              "state": "strong",
-              "value": -10.6027987082885
-            },
-            "dd52": {
-              "state": "positive",
-              "value": -18.7377690802348
-            },
-            "weekly_j": {
-              "state": "positive",
-              "value": 15.8183488928998
-            }
-          },
-          "core_factors": {
-            "crash": {
-              "contribution": 3.36167922497309,
-              "raw": -10.6027987082885,
-              "score": 22.4111948331539,
-              "weight": 15
-            },
-            "dd52": {
-              "contribution": 34.1,
-              "raw": -18.7377690802348,
-              "score": 62,
-              "weight": 55
-            },
-            "weeklyJ": {
-              "contribution": 18.9,
-              "raw": 15.8183488928998,
-              "score": 63,
-              "weight": 30
-            }
-          },
-          "cta": {
-            "detail": "可在基本投入之外啟動額外加碼計畫。",
-            "headline": "正式加碼訊號"
-          },
-          "data_as_of": "2026-10-28T13:15:34+08:00",
-          "dd52": -18.7377690802348,
-          "delta_vs_previous_close": -16.7375672766415,
-          "delta_vs_previous_successful_intraday": null,
-          "display_score": 56,
-          "freshness": "FRESH",
-          "market_as_of": "2026-10-28T13:15:34+08:00",
-          "previous_close_rank": 1,
-          "previous_close_score": 73.0992465016146,
-          "previous_close_trading_date": "2026-10-27",
-          "previous_successful_intraday_rank": null,
-          "previous_successful_intraday_score": null,
-          "previous_successful_intraday_slot": null,
-          "price": 83.05,
-          "rank": 1,
-          "rank_delta_vs_previous_close": 0,
-          "rank_delta_vs_previous_successful_intraday": null,
-          "score": 56.3616792249731,
-          "score_version": "FINAL_CORE_WEIGHT_V1",
-          "slot": "13:15",
-          "stage": {
-            "key": "正式加碼訊號",
-            "label": "正式加碼訊號",
-            "recommendation": "可在基本投入之外啟動額外加碼計畫。"
-          },
-          "status": "SUCCESS",
-          "symbol": "00830",
-          "tier": "正式加碼訊號",
-          "trading_date": "2026-10-28",
-          "weekly_j": 15.8183488928998
-        },
-        "00935": {
-          "calculated_at": "2026-10-28T13:15:37.569426+08:00",
-          "components": {
-            "crash": {
-              "state": "strong",
-              "value": -10.9362706530291
-            },
-            "dd52": {
-              "state": "positive",
-              "value": -11.2156862745098
-            },
-            "weekly_j": {
-              "state": "positive",
-              "value": 10.3555668409371
-            }
-          },
-          "core_factors": {
-            "crash": {
-              "contribution": 3.56176239181746,
-              "raw": -10.9362706530291,
-              "score": 23.7450826121164,
-              "weight": 15
-            },
-            "dd52": {
-              "contribution": 20.35,
-              "raw": -11.2156862745098,
-              "score": 37,
-              "weight": 55
-            },
-            "weeklyJ": {
-              "contribution": 22.2,
-              "raw": 10.3555668409371,
-              "score": 74,
-              "weight": 30
-            }
-          },
-          "cta": {
-            "detail": "只適合小額試探，等待條件進一步改善。",
-            "headline": "試探加碼"
-          },
-          "data_as_of": "2026-10-28T13:15:29+08:00",
-          "dd52": -11.2156862745098,
-          "delta_vs_previous_close": -14.1938630999213,
-          "delta_vs_previous_successful_intraday": null,
-          "display_score": 46,
-          "freshness": "FRESH",
-          "market_as_of": "2026-10-28T13:15:29+08:00",
-          "previous_close_rank": 2,
-          "previous_close_score": 60.3056254917388,
-          "previous_close_trading_date": "2026-10-27",
-          "previous_successful_intraday_rank": null,
-          "previous_successful_intraday_score": null,
-          "previous_successful_intraday_slot": null,
-          "price": 56.6,
-          "rank": 2,
-          "rank_delta_vs_previous_close": 0,
-          "rank_delta_vs_previous_successful_intraday": null,
-          "score": 46.1117623918175,
-          "score_version": "FINAL_CORE_WEIGHT_V1",
-          "slot": "13:15",
-          "stage": {
-            "key": "試探加碼",
-            "label": "試探加碼",
-            "recommendation": "只適合小額試探，等待條件進一步改善。"
-          },
-          "status": "SUCCESS",
-          "symbol": "00935",
-          "tier": "試探加碼",
-          "trading_date": "2026-10-28",
-          "weekly_j": 10.3555668409371
-        }
-      },
-      "market_as_of": "2026-10-28T13:15:35+08:00",
-      "schema_version": 1,
-      "score_version": "FINAL_CORE_WEIGHT_V1",
-      "slot": "13:15",
-      "snapshot_type": "INTRADAY_CORE",
-      "source": {
-        "input_fingerprint": "a6bdd48c07c38433cd420114427289803e79d9a20d096759e044084b14c8c924",
-        "provider": "TWSE_MIS",
-        "required_symbols": "5/5",
-        "trigger_source": "RAILWAY_PRIMARY",
-        "quote_sources": {
-          "0050": "FUGLE_LAST_TRADE",
-          "00662": "FUGLE_LAST_TRADE",
-          "00757": "FUGLE_LAST_TRADE",
-          "00830": "FUGLE_LAST_TRADE",
-          "00935": "FUGLE_LAST_TRADE"
-        }
-      },
-      "source_completeness": "5/5",
-      "status": "SUCCESS",
-      "trading_date": "2026-10-28"
-    },
     {
       "calculated_at": "2026-10-28T13:20:53.768502+08:00",
       "captured_at": "2026-10-28T13:20:53.760112+08:00",
@@ -193994,6 +193606,394 @@
         "quote_sources": {
           "0050": "MIS_Z",
           "00662": "FUGLE_LAST_TRADE",
+          "00757": "FUGLE_LAST_TRADE",
+          "00830": "FUGLE_LAST_TRADE",
+          "00935": "FUGLE_LAST_TRADE"
+        }
+      },
+      "source_completeness": "5/5",
+      "status": "SUCCESS",
+      "trading_date": "2026-11-17"
+    },
+    {
+      "calculated_at": "2026-11-17T11:01:01.714856+08:00",
+      "captured_at": "2026-11-17T11:01:01.707221+08:00",
+      "contract": "HS_LIVE_INTRADAY_SLOT_V4",
+      "freshness": {
+        "market_as_of": "2026-11-17T11:01:00+08:00",
+        "status": "FRESH",
+        "trading_date": "2026-11-17"
+      },
+      "items": {
+        "0050": {
+          "calculated_at": "2026-11-17T11:01:01.714856+08:00",
+          "components": {
+            "crash": {
+              "state": "strong",
+              "value": -12.7473538886332
+            },
+            "dd52": {
+              "state": "positive",
+              "value": -18.696397941681
+            },
+            "weekly_j": {
+              "state": "positive",
+              "value": 10.4816525579646
+            }
+          },
+          "core_factors": {
+            "crash": {
+              "contribution": 4.64841233317994,
+              "raw": -12.7473538886332,
+              "score": 30.9894155545329,
+              "weight": 15
+            },
+            "dd52": {
+              "contribution": 34.1,
+              "raw": -18.696397941681,
+              "score": 62,
+              "weight": 55
+            },
+            "weeklyJ": {
+              "contribution": 22.2,
+              "raw": 10.4816525579646,
+              "score": 74,
+              "weight": 30
+            }
+          },
+          "cta": {
+            "detail": "可在基本投入之外啟動額外加碼計畫。",
+            "headline": "正式加碼訊號"
+          },
+          "data_as_of": "2026-11-17T11:00:04+08:00",
+          "dd52": -18.696397941681,
+          "delta_vs_previous_close": 3.240155452446,
+          "delta_vs_previous_successful_intraday": null,
+          "display_score": 60,
+          "freshness": "FRESH",
+          "market_as_of": "2026-11-17T11:00:04+08:00",
+          "previous_close_rank": 3,
+          "previous_close_score": 57.7082568807339,
+          "previous_close_trading_date": "2026-11-16",
+          "previous_successful_intraday_rank": null,
+          "previous_successful_intraday_score": null,
+          "previous_successful_intraday_slot": null,
+          "price": 94.8,
+          "rank": 3,
+          "rank_delta_vs_previous_close": 0,
+          "rank_delta_vs_previous_successful_intraday": null,
+          "score": 60.9484123331799,
+          "score_version": "FINAL_CORE_WEIGHT_V1",
+          "slot": "11:01",
+          "stage": {
+            "key": "正式加碼訊號",
+            "label": "正式加碼訊號",
+            "recommendation": "可在基本投入之外啟動額外加碼計畫。"
+          },
+          "status": "SUCCESS",
+          "symbol": "0050",
+          "tier": "正式加碼訊號",
+          "trading_date": "2026-11-17",
+          "weekly_j": 10.4816525579646
+        },
+        "00662": {
+          "calculated_at": "2026-11-17T11:01:01.714856+08:00",
+          "components": {
+            "crash": {
+              "state": "positive",
+              "value": -8.81074674041881
+            },
+            "dd52": {
+              "state": "neutral",
+              "value": -9.6319498825372
+            },
+            "weekly_j": {
+              "state": "positive",
+              "value": 2.2894667492957
+            }
+          },
+          "core_factors": {
+            "crash": {
+              "contribution": 2.28644804425128,
+              "raw": -8.81074674041881,
+              "score": 15.2429869616752,
+              "weight": 15
+            },
+            "dd52": {
+              "contribution": 17.6,
+              "raw": -9.6319498825372,
+              "score": 32,
+              "weight": 55
+            },
+            "weeklyJ": {
+              "contribution": 27,
+              "raw": 2.2894667492957,
+              "score": 90,
+              "weight": 30
+            }
+          },
+          "cta": {
+            "detail": "只適合小額試探，等待條件進一步改善。",
+            "headline": "試探加碼"
+          },
+          "data_as_of": "2026-11-17T11:00:44+08:00",
+          "dd52": -9.6319498825372,
+          "delta_vs_previous_close": 7.47433636513213,
+          "delta_vs_previous_successful_intraday": null,
+          "display_score": 46,
+          "freshness": "FRESH",
+          "market_as_of": "2026-11-17T11:00:44+08:00",
+          "previous_close_rank": 5,
+          "previous_close_score": 39.4121116791191,
+          "previous_close_trading_date": "2026-11-10",
+          "previous_successful_intraday_rank": null,
+          "previous_successful_intraday_score": null,
+          "previous_successful_intraday_slot": null,
+          "price": 23.08,
+          "rank": 5,
+          "rank_delta_vs_previous_close": 0,
+          "rank_delta_vs_previous_successful_intraday": null,
+          "score": 46.8864480442513,
+          "score_version": "FINAL_CORE_WEIGHT_V1",
+          "slot": "11:01",
+          "stage": {
+            "key": "試探加碼",
+            "label": "試探加碼",
+            "recommendation": "只適合小額試探，等待條件進一步改善。"
+          },
+          "status": "SUCCESS",
+          "symbol": "00662",
+          "tier": "試探加碼",
+          "trading_date": "2026-11-17",
+          "weekly_j": 2.2894667492957
+        },
+        "00757": {
+          "calculated_at": "2026-11-17T11:01:01.714856+08:00",
+          "components": {
+            "crash": {
+              "state": "positive",
+              "value": -9.12560721721027
+            },
+            "dd52": {
+              "state": "positive",
+              "value": -11.8478626725009
+            },
+            "weekly_j": {
+              "state": "strong",
+              "value": -9.5588215636393
+            }
+          },
+          "core_factors": {
+            "crash": {
+              "contribution": 2.47536433032616,
+              "raw": -9.12560721721027,
+              "score": 16.5024288688411,
+              "weight": 15
+            },
+            "dd52": {
+              "contribution": 21.45,
+              "raw": -11.8478626725009,
+              "score": 39,
+              "weight": 55
+            },
+            "weeklyJ": {
+              "contribution": 30,
+              "raw": -9.5588215636393,
+              "score": 100,
+              "weight": 30
+            }
+          },
+          "cta": {
+            "detail": "可在基本投入之外啟動額外加碼計畫。",
+            "headline": "正式加碼訊號"
+          },
+          "data_as_of": "2026-11-17T11:00:46+08:00",
+          "dd52": -11.8478626725009,
+          "delta_vs_previous_close": 3.81435954563717,
+          "delta_vs_previous_successful_intraday": null,
+          "display_score": 53,
+          "freshness": "FRESH",
+          "market_as_of": "2026-11-17T11:00:46+08:00",
+          "previous_close_rank": 4,
+          "previous_close_score": 50.111004784689,
+          "previous_close_trading_date": "2026-11-16",
+          "previous_successful_intraday_rank": null,
+          "previous_successful_intraday_score": null,
+          "previous_successful_intraday_slot": null,
+          "price": 130.95,
+          "rank": 4,
+          "rank_delta_vs_previous_close": 0,
+          "rank_delta_vs_previous_successful_intraday": null,
+          "score": 53.9253643303262,
+          "score_version": "FINAL_CORE_WEIGHT_V1",
+          "slot": "11:01",
+          "stage": {
+            "key": "正式加碼訊號",
+            "label": "正式加碼訊號",
+            "recommendation": "可在基本投入之外啟動額外加碼計畫。"
+          },
+          "status": "SUCCESS",
+          "symbol": "00757",
+          "tier": "正式加碼訊號",
+          "trading_date": "2026-11-17",
+          "weekly_j": -9.5588215636393
+        },
+        "00830": {
+          "calculated_at": "2026-11-17T11:01:01.714856+08:00",
+          "components": {
+            "crash": {
+              "state": "strong",
+              "value": -14.6722790138304
+            },
+            "dd52": {
+              "state": "strong",
+              "value": -30.5772994129158
+            },
+            "weekly_j": {
+              "state": "positive",
+              "value": 2.47503281116915
+            }
+          },
+          "core_factors": {
+            "crash": {
+              "contribution": 5.80336740829825,
+              "raw": -14.6722790138304,
+              "score": 38.6891160553217,
+              "weight": 15
+            },
+            "dd52": {
+              "contribution": 55,
+              "raw": -30.5772994129158,
+              "score": 100,
+              "weight": 55
+            },
+            "weeklyJ": {
+              "contribution": 27,
+              "raw": 2.47503281116915,
+              "score": 90,
+              "weight": 30
+            }
+          },
+          "cta": {
+            "detail": "可依資金規劃增加額外批次，仍保留後續資金。",
+            "headline": "重大加碼機會"
+          },
+          "data_as_of": "2026-11-17T11:01:00+08:00",
+          "dd52": -30.5772994129158,
+          "delta_vs_previous_close": 0.162569314194627,
+          "delta_vs_previous_successful_intraday": null,
+          "display_score": 87,
+          "freshness": "FRESH",
+          "market_as_of": "2026-11-17T11:01:00+08:00",
+          "previous_close_rank": 1,
+          "previous_close_score": 87.6407980941036,
+          "previous_close_trading_date": "2026-11-16",
+          "previous_successful_intraday_rank": null,
+          "previous_successful_intraday_score": null,
+          "previous_successful_intraday_slot": null,
+          "price": 70.95,
+          "rank": 2,
+          "rank_delta_vs_previous_close": -1,
+          "rank_delta_vs_previous_successful_intraday": null,
+          "score": 87.8033674082983,
+          "score_version": "FINAL_CORE_WEIGHT_V1",
+          "slot": "11:01",
+          "stage": {
+            "key": "重大加碼機會",
+            "label": "重大加碼機會",
+            "recommendation": "可依資金規劃增加額外批次，仍保留後續資金。"
+          },
+          "status": "SUCCESS",
+          "symbol": "00830",
+          "tier": "重大加碼機會",
+          "trading_date": "2026-11-17",
+          "weekly_j": 2.47503281116915
+        },
+        "00935": {
+          "calculated_at": "2026-11-17T11:01:01.714856+08:00",
+          "components": {
+            "crash": {
+              "state": "strong",
+              "value": -19.416961130742
+            },
+            "dd52": {
+              "state": "strong",
+              "value": -28.4549019607843
+            },
+            "weekly_j": {
+              "state": "strong",
+              "value": -0.829427169326891
+            }
+          },
+          "core_factors": {
+            "crash": {
+              "contribution": 8.65017667844523,
+              "raw": -19.416961130742,
+              "score": 57.6678445229682,
+              "weight": 15
+            },
+            "dd52": {
+              "contribution": 52.25,
+              "raw": -28.4549019607843,
+              "score": 95,
+              "weight": 55
+            },
+            "weeklyJ": {
+              "contribution": 28.2,
+              "raw": -0.829427169326891,
+              "score": 94,
+              "weight": 30
+            }
+          },
+          "cta": {
+            "detail": "可依資金規劃增加額外批次，仍保留後續資金。",
+            "headline": "重大加碼機會"
+          },
+          "data_as_of": "2026-11-17T11:00:30+08:00",
+          "dd52": -28.4549019607843,
+          "delta_vs_previous_close": 4.46070299423469,
+          "delta_vs_previous_successful_intraday": null,
+          "display_score": 89,
+          "freshness": "FRESH",
+          "market_as_of": "2026-11-17T11:00:30+08:00",
+          "previous_close_rank": 2,
+          "previous_close_score": 84.6394736842105,
+          "previous_close_trading_date": "2026-11-16",
+          "previous_successful_intraday_rank": null,
+          "previous_successful_intraday_score": null,
+          "previous_successful_intraday_slot": null,
+          "price": 45.61,
+          "rank": 1,
+          "rank_delta_vs_previous_close": 1,
+          "rank_delta_vs_previous_successful_intraday": null,
+          "score": 89.1001766784452,
+          "score_version": "FINAL_CORE_WEIGHT_V1",
+          "slot": "11:01",
+          "stage": {
+            "key": "重大加碼機會",
+            "label": "重大加碼機會",
+            "recommendation": "可依資金規劃增加額外批次，仍保留後續資金。"
+          },
+          "status": "SUCCESS",
+          "symbol": "00935",
+          "tier": "重大加碼機會",
+          "trading_date": "2026-11-17",
+          "weekly_j": -0.829427169326891
+        }
+      },
+      "market_as_of": "2026-11-17T11:01:00+08:00",
+      "schema_version": 1,
+      "score_version": "FINAL_CORE_WEIGHT_V1",
+      "slot": "11:01",
+      "snapshot_type": "INTRADAY_CORE",
+      "source": {
+        "input_fingerprint": "b46fbc8517ade50f5abd9a81aa8f1ef96372692ca692c3de39267b8b95688159",
+        "provider": "TWSE_MIS",
+        "required_symbols": "5/5",
+        "trigger_source": "RAILWAY_PRIMARY",
+        "quote_sources": {
+          "0050": "MIS_Z",
+          "00662": "MIS_Z",
           "00757": "FUGLE_LAST_TRADE",
           "00830": "FUGLE_LAST_TRADE",
           "00935": "FUGLE_LAST_TRADE"
