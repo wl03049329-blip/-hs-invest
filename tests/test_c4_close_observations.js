@@ -27,6 +27,7 @@ assert.ok(halt.every(r=>r.halt&&r.lastFinal===axis[0]&&!Object.hasOwn(r,"value")
 assert.equal(view.observationSegments(axis,[],halt).length,0);
 assert.equal(view.observationRows(obs,"009815",cutoff).length,0);
 assert.match(view.html("0050"),/radarObservationLegend/);
+assert.doesNotMatch(fs.readFileSync(require.resolve("../radar-history-view"),"utf8"),/data-observation-date|dataset\.observationDate/);
 assert.doesNotMatch(view.html("0050"),/radarCloseObservations/);
 console.log("PASS formal anchor + independent observation markers, formal takes precedence, no gap bridging or fabricated suspension scores");
 assert.equal(view.observationRows(obs,"0050","2026-11-10").length,0);
@@ -41,6 +42,20 @@ const broken=structuredClone(obs);
 broken.sessions[0].source="https://example.com/";
 broken.sessions[1].source_sha256="bad";
 assert.equal(view.observationRows(broken,"0050",cutoff).length,0);
+const expanded=[...axis,"2026-11-13","2026-11-16","2026-11-17"];
+for(const symbol of ["0050","00757","00830","00935"]){
+  const official=core.scores(archive,symbol,production,()=>true).rows;
+  const rows=view.observationRows(obs,symbol,"2026-11-17");
+  const [series]=view.observationSegments(expanded,official,rows);
+  assert.deepEqual(plain(series.points.map(r=>r.time)),expanded.slice(1,-1));
+  assert.deepEqual(plain(series.data.map(r=>r.time)),expanded);
+  const withGap=view.observationSegments(expanded,official,rows.filter(r=>r.time!=="2026-11-13"));
+  assert.equal(withGap.length,2);
+  assert.ok(withGap.every(segment=>segment.data.every(r=>r.time!=="2026-11-13")));
+}
+const resumed=core.scores(archive,"00662",production,()=>true).rows;
+assert.equal(resumed.find(r=>r.time==="2026-11-17").value.toFixed(1),"46.5");
+assert.ok(view.observationRows(obs,"00662","2026-11-17").every(r=>r.halt&&!Object.hasOwn(r,"value")));
 console.log("PASS malformed provenance, scores, tiers, future dates and incompatible scope cannot render");
 assert.deepEqual(core.scores(obs,"0050",production,()=>true).rows,[]);
 assert.equal(resolveFinalOnly({finalizedArtifact:obs,targetDate:cutoff,scoreVersion:production.LONG_TERM_CORE_SCORE_VERSION,symbols:["0050","00662","00757","00830","00935"]}),null);
