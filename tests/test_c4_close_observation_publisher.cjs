@@ -2,7 +2,8 @@
 const test=require("node:test"),assert=require("node:assert/strict");
 const {extend,dates}=require("../scripts/update_c4_close_observations.cjs");
 const production=require("../final-core-production");
-const artifact=require("../data/c4-close-observations-v1.json");
+const published=require("../data/c4-close-observations-v1.json");
+const artifact={...published,sessions:published.sessions.filter(s=>s.date<="2026-11-16")};
 const weights=[30,55,15], names=["weeklyJ","dd52","crash"];
 const calendar={stat:"ok",queryYear:2026,total:1,fields:["日期","名稱","說明"],data:[["2026-01-01","元旦","放假"]]};
 const body={stat:"OK",date:"20261117",tables:[{fields:["證券代號","開盤價","最高價","最低價","收盤價","成交股數"],
