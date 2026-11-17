@@ -40,6 +40,34 @@
   const observationAt=(s,time)=>s.score?.rows.some(r=>r.time===time)?null:s.observations?.find(r=>r.time===time);
   const selectable=s=>C.selectionDates(s.score.rows,[...s.prices,...(s.observations||[])]);
   const observationText='獨立收盤觀察｜非正式 FINAL';
+  async function mountMini(host,{symbol,artifact,contract,completed,headers}){
+    if(!host)return;
+    const marker=Symbol();host.radarMiniRequest=marker;
+    const now=new Date(),final=C.scores(artifact,symbol,contract,d=>completed(d)&&d<=cutoff(now,13,30)).rows;
+    let obs=[],dates=[];
+    const show=()=>{
+      if(host.radarMiniRequest!==marker||!host.isConnected)return;
+      const last=[final.at(-1)?.time,obs.at(-1)?.time].filter(Boolean).sort().at(-1);
+      if(!last){host.textContent='尚無已驗證分數';return;}
+      const official=new Set(final.map(r=>r.time)),observed=obs.filter(r=>!r.halt&&!official.has(r.time));
+      const axis=[...new Set([...dates,...final.map(r=>r.time),...obs.map(r=>r.time)])].filter(d=>d<=last).sort().slice(-20);
+      const x=t=>10+300*axis.indexOf(t)/Math.max(1,axis.length-1),y=v=>120-v;
+      const path=(rows,cls)=>rows.length>1?'<polyline class="'+cls+'" points="'+rows.map(r=>x(r.time)+','+y(r.value)).join(' ')+'"/>':'';
+      const a=final.filter(r=>axis.includes(r.time)),b=observed.filter(r=>axis.includes(r.time));
+      const known=dates.length>0;
+      host.innerHTML='<svg viewBox="0 0 320 130" role="img" aria-label="近 20 個交易日正式與獨立觀察分數">'+
+        (known?C.segments(axis,a).map(r=>path(r,'radarV4Final')).join('')+observationSegments(axis,a,b).map(r=>path(r.data,'radarV4Obs')).join(''):'')+
+        [...a,...b].map(r=>'<circle class="'+(official.has(r.time)?'radarV4Final':'radarV4Obs')+'" cx="'+x(r.time)+'" cy="'+y(r.value)+'" r="2.6"/>').join('')+
+        '</svg><small>'+axis[0].slice(5).replace('-','/')+' ～ '+last.slice(5).replace('-','/')+(known?'':' · 交易日曆待確認，僅顯示已驗證點位')+'</small>';
+    };
+    show();
+    if(!source)source=new root.HSRadarHistorySource.Source({headers});
+    const signal=AbortSignal.timeout(12000);
+    await Promise.allSettled([
+      source.sessions(now.toLocaleDateString('en-CA',{timeZone:'Asia/Taipei'}),signal).then(r=>{if(!r.observedOnly)dates=r.dates;show();}),
+      root.fetch('data/c4-close-observations-v1.json',{cache:'no-store',signal}).then(r=>r.ok?r.json():null).then(data=>{obs=observationRows(data,symbol,cutoff(now,13,30));show();})
+    ]);
+  }
   function observationSegments(axis,formal,observations){
     const official=new Map(formal.map(r=>[r.time,r.value])),rows=observations.filter(r=>C.finite(r.value)&&!official.has(r.time));
     return C.segments(axis,rows).map(points=>{
@@ -93,28 +121,54 @@
   function html(symbol){return`<section class="radarV2Section radarHistoryV2" data-radar-history="${esc(symbol)}">
     <header><h3>近期趨勢與訊號 2.0</h3><small class="radarHistoryIdentity">${esc(symbol)}｜正式 C4 × 原始日 K</small></header>
     <nav class="radarHistoryRanges" aria-label="圖表時間區間">${C.RANGES.map(r=>`<button type="button" data-history-range="${r}">${r==='ALL'?'全部':r}</button>`).join('')}</nav>
-    <div class="radarHistorySelection"><div class="radarHistoryDetail" aria-live="polite"></div><button type="button" data-history-action="details">查看 C4 詳細資訊</button></div>
     <div class="radarObservationLegend" aria-label="C4 圖例" hidden></div>
     <div class="radarHistoryCanvas" aria-label="上圖 C4 正式分數；下圖原始日 K，共用交易日期" tabindex="0"></div>
-    <div class="radarHistoryTools"><button type="button" data-history-action="latest">最新</button><button type="button" data-history-action="older">載入更早歷史</button><button type="button" data-history-action="zoom-in" aria-label="放大圖表">＋</button><button type="button" data-history-action="zoom-out" aria-label="縮小圖表">−</button><button type="button" data-history-action="retry">重新取得</button></div>
+    <div class="radarHistorySelection"><div class="radarHistoryDetail" aria-live="polite"></div><button type="button" data-history-action="details">查看 C4 詳細資訊</button></div>
+    <div class="radarHistoryTools"><button type="button" data-history-action="latest">最新</button><button type="button" data-history-action="older">載入更早歷史</button><button type="button" data-history-action="zoom-in" aria-label="放大圖表">＋</button><button type="button" data-history-action="zoom-out" aria-label="縮小圖表">−</button><button type="button" data-history-action="retry">重新取得</button><button type="button" data-history-action="fullscreen" aria-pressed="false">放大研究</button></div>
+    <details class="radarHistoryCustom"><summary>更多：自訂日期</summary><label>開始 <input type="date" data-custom-start></label><label>結束 <input type="date" data-custom-end></label><button type="button" data-history-action="custom">套用日期</button><p data-custom-status role="status"></p></details>
     <details class="radarHistorySettings"><summary>圖表設定</summary><div>${Object.entries({score:'C4 折線',price:'原始 K 線',extrema:'高低點標記',ma5:'MA5',ma10:'MA10',ma20:'MA20',ma60:'MA60',volume:'成交量',thresholds:'正式門檻線'}).map(([key,label])=>`<label><input type="checkbox" data-history-pref="${key}"> ${label}</label>`).join('')}</div></details>
     <div class="radarHistoryExtrema"></div><p class="radarHistoryStatus" role="status">載入已驗證歷史資料…</p>
     <p class="radarHistoryHint">上：C4 分數（金線）｜下：原始日 K（紅漲綠跌）<br>點選／長按查日期 · 拖曳看歷史 · 雙指縮放 · 上下滑動捲頁</p>
     <small class="radarHistorySource">原始價格報酬不含配息；不與下方既有還原價格表現混用。<br>Charts by <a href="https://www.tradingview.com/" target="_blank" rel="noopener">TradingView</a> · Lightweight Charts™ 5.0.9</small></section>`;}
 function cutoff(now,closeHour=18,closeMinute=0){const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(now),v=Object.fromEntries(parts.map(p=>[p.type,p.value])),day=`${v.year}-${v.month}-${v.day}`;return Number(v.hour)*60+Number(v.minute)>=closeHour*60+closeMinute?day:new Date(Date.parse(day+'T00:00:00Z')-86400000).toISOString().slice(0,10);}
-function unmount(){if(active){closeSheet(active,false);active.sheet?.remove();active.labelStatus?.remove();clearSelectionLabels(active);clearObservationMarkers(active);active.abort.abort();active.removePointTap?.();document.removeEventListener("visibilitychange",active.resume);root.removeEventListener("pageshow",active.resume);active.resize?.disconnect();active.chart?.remove();active.host.removeEventListener('click',active.click);active.host.removeEventListener('change',active.change);for(const type of INPUT_EVENTS)active.host.removeEventListener(type,active.input,true);active=null;}}
+function unmount(){if(active){if(active.fullscreen)setFullscreen(active,false);closeSheet(active,false);active.sheet?.remove();active.labelStatus?.remove();clearSelectionLabels(active);clearObservationMarkers(active);active.abort.abort();active.removePointTap?.();document.removeEventListener("visibilitychange",active.resume);root.removeEventListener("pageshow",active.resume);active.resize?.disconnect();active.chart?.remove();active.host.removeEventListener('click',active.click);active.host.removeEventListener('change',active.change);for(const type of INPUT_EVENTS)active.host.removeEventListener(type,active.input,true);active=null;}}
+  let savedCustom=null;
+  function setFullscreen(s,on){
+    s.fullscreen=on;
+    if(on){s.beforeFocus=document.activeElement;s.beforeOverflow=document.documentElement.style.overflow;document.documentElement.style.overflow='hidden';
+      s.placeholder=document.createComment('radar chart');s.host.before(s.placeholder);document.body.append(s.host);
+      s.escape=e=>{if(e.key==='Escape'&&!s.sheet?.open)setFullscreen(s,false);};root.addEventListener('keydown',s.escape);
+    }else {document.documentElement.style.overflow=s.beforeOverflow;root.removeEventListener('keydown',s.escape);
+      s.placeholder.replaceWith(s.host);s.beforeFocus?.focus({preventScroll:true});}
+    s.host.classList.toggle('radarHistoryFullscreen',on);
+    const b=s.host.querySelector('[data-history-action="fullscreen"]');
+    b.textContent=on?'退出放大':'放大研究';b.setAttribute('aria-pressed',String(on));if(on)b.focus({preventScroll:true});
+  }
+  function customRange(axis,a,b){
+    if(!C.dateOK(a)||!C.dateOK(b)||a>b||a<axis[0]||b>axis.at(-1))return null;
+    const from=axis.findIndex(d=>d>=a),to=axis.findLastIndex(d=>d<=b);
+    return from>=0&&to>=from?{from,to}:null;
+  }
   async function mount(host,{symbol,name,artifact,contract,thresholds,completed,headers}){
     if(active?.host===host&&active.symbol===symbol)return;
     unmount();if(!host||!root.LightweightCharts)return;
     if(!source)source=new root.HSRadarHistorySource.Source({headers});
-    const s={host,symbol,name,artifact,contract,thresholds,completed,prefs:readPreferences(),abort:new AbortController(),prices:[],events:[],invalid:[],dates:[],series:[],markers:[],years:new Set(),warnings:new Set(),firstYear:null,busy:false,dividendStatus:'VERIFIED',selected:null};active=s;
+    const s={host,symbol,name,artifact,contract,thresholds,completed,prefs:readPreferences(),custom:savedCustom,abort:new AbortController(),prices:[],events:[],invalid:[],dates:[],series:[],markers:[],years:new Set(),warnings:new Set(),firstYear:null,busy:false,dividendStatus:'VERIFIED',selected:null};active=s;
     void loadObservations(s);
     // Opt-in, DOM-only evidence. No API calls, scores, credentials or user holdings.
     if(typeof location!=='undefined'&&new URLSearchParams(location.search).get('radarLayoutDebug')==='1'&&!host.querySelector('.radarHistoryDiagnostics')){const d=document.createElement('details');d.className='radarHistoryDiagnostics';d.innerHTML='<summary>版面診斷（唯讀）</summary><button type="button" data-history-action="measure">量測版面</button><pre></pre>';host.append(d);}
     host.querySelector('.radarHistoryIdentity').textContent=s.symbol+' '+s.name+'｜正式 C4 × 原始日 K';
     s.status=text=>{if(active===s)host.querySelector('.radarHistoryStatus').textContent=text;};
-    s.click=async e=>{const button=e.target.closest('button');if(!button)return;try{if(button.dataset.historyRange){s.prefs.range=button.dataset.historyRange;savePreferences(s.prefs);if(s.prefs.range==='ALL')await loadAll(s);else if(['1Y','120D'].includes(s.prefs.range)&&s.years.size===1)await older(s);setRange(s);}
-      const action=button.dataset.historyAction;if(action==='details'){openSheet(s,button);return;}if(action==='measure'){host.querySelector('.radarHistoryDiagnostics pre').textContent=JSON.stringify(layoutDiagnostics(),null,2);return;}if(action==='latest'){s.selected=null;setRange(s);}if(action==='older')await older(s);if(action==='retry'){source.invalidate?.(symbol);source.cache.clear();unmount();await mount(host,{symbol,name,artifact,contract,thresholds,completed,headers});}if(action?.startsWith('zoom-')){const r=s.chart?.timeScale().getVisibleLogicalRange();if(r){const center=(r.from+r.to)/2,half=(r.to-r.from)/2*(action==='zoom-in'?.75:1.35);s.chart.timeScale().setVisibleLogicalRange({from:center-half,to:center+half});}}}catch(error){if(active===s)s.status('資料不足｜'+error.message+'；既有已驗證資料保留，未補值。');}};
+    s.click=async e=>{const button=e.target.closest('button');if(!button)return;try{if(button.dataset.historyRange){s.custom=savedCustom=null;s.prefs.range=button.dataset.historyRange;savePreferences(s.prefs);if(s.prefs.range==='ALL')await loadAll(s);else if(['1Y','120D'].includes(s.prefs.range)&&s.years.size===1)await older(s);setRange(s);}
+      if(button.dataset.historyAction==='fullscreen'){setFullscreen(s,!s.fullscreen);return;}
+      if(button.dataset.historyAction==='custom'){
+        const a=host.querySelector('[data-custom-start]').value,b=host.querySelector('[data-custom-end]').value,status=host.querySelector('[data-custom-status]');
+        if(C.dateOK(a)&&C.dateOK(b)&&a<=b&&!s.busy)while(active===s&&a<(s.axis?.[0]||'')&&s.nextYear>=s.firstYear)await older(s);
+        if(active!==s)return;
+        if(!customRange(s.axis||[],a,b)){status.textContent='日期順序錯誤、超出資料範圍，或區間內沒有交易日。';return;}
+        s.custom=savedCustom={a,b};status.textContent=s.axis.filter(d=>d>=a&&d<=b&&!s.score.rows.some(r=>r.time===d)).length?'部分日期沒有正式分數，保留缺口。':'';setRange(s);return;
+      }
+      const action=button.dataset.historyAction;if(action==='details'){openSheet(s,button);return;}if(action==='measure'){host.querySelector('.radarHistoryDiagnostics pre').textContent=JSON.stringify(layoutDiagnostics(),null,2);return;}if(action==='latest'){s.selected=null;s.custom=savedCustom=null;setRange(s);}if(action==='older')await older(s);if(action==='retry'){source.invalidate?.(symbol);source.cache.clear();unmount();await mount(host,{symbol,name,artifact,contract,thresholds,completed,headers});}if(action?.startsWith('zoom-')){const r=s.chart?.timeScale().getVisibleLogicalRange();if(r){const center=(r.from+r.to)/2,half=(r.to-r.from)/2*(action==='zoom-in'?.75:1.35);s.chart.timeScale().setVisibleLogicalRange({from:center-half,to:center+half});}}}catch(error){if(active===s)s.status('資料不足｜'+sourceMessage(error.message)+'；既有已驗證資料保留，未補值。');}};
     s.change=e=>{const key=e.target.dataset.historyPref;if(!key)return;s.prefs[key]=e.target.checked;savePreferences(s.prefs);draw(s,true);};host.addEventListener('click',s.click);host.addEventListener('change',s.change);
     s.inputEpoch=0;s.consumedInputEpoch=0;
     s.input=e=>{
@@ -129,12 +183,16 @@ function unmount(){if(active){closeSheet(active,false);active.sheet?.remove();ac
     s.startedAt=Date.now();s.resume=()=>{if(active===s&&document.visibilityState==="visible"&&Date.now()-s.startedAt>300000){source.invalidate?.(symbol);source.cache.clear();unmount();mount(host,{symbol,name,artifact,contract,thresholds,completed,headers});}};document.addEventListener("visibilitychange",s.resume);root.addEventListener("pageshow",s.resume);
     try{
 s.score=C.scores(artifact,symbol,contract,date=>completed(date)&&date<=cutoff(new Date(),13,30));s.cutoff=cutoff(new Date());if(source.priceCutoff!==s.cutoff){source.invalidate?.(symbol);source.cache.clear();source.priceCutoff=s.cutoff;}let cal;try{cal=await source.sessions(new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Taipei'}),s.abort.signal);}catch(error){if(s.abort.signal.aborted)throw error;cal=await source.savedSessions(symbol,s.score.rows.map(r=>r.time),s.abort.signal);s.calendarWarning=error.message;}if(active!==s)return;s.observedOnly=cal.observedOnly===true;s.dates=cal.dates;s.calendarFetchedAt=cal.fetchedAt;if(!s.dates.length)throw Error('CALENDAR_EMPTY');s.firstYear=Number(s.dates[0].slice(0,4));s.nextYear=Number(s.cutoff.slice(0,4));await older(s);
-      if(active!==s)return;if(s.prefs.range==='ALL')await loadAll(s);else if(['1Y','120D'].includes(s.prefs.range))await older(s);setRange(s);
+      if(active!==s)return;if(s.custom){while(active===s&&s.custom.a<(s.axis?.[0]||'')&&s.nextYear>=s.firstYear)await older(s);
+        if(active!==s)return;
+        host.querySelector('[data-custom-start]').value=s.custom.a;host.querySelector('[data-custom-end]').value=s.custom.b;
+        if(!customRange(s.axis||[],s.custom.a,s.custom.b))host.querySelector('[data-custom-status]').textContent='這檔 ETF 尚無完整自訂區間，先顯示可用範圍。';
+      }else if(s.prefs.range==='ALL')await loadAll(s);else if(['1Y','120D'].includes(s.prefs.range))await older(s);setRange(s);
 }catch(error){if(active===s){if(s.dates.length&&s.score.rows.length){draw(s,false);}else{host.querySelector('.radarHistoryCanvas').hidden=true;host.querySelector('.radarHistoryDetail').textContent='無可驗證日線時不產生假 K 線。';}s.status('資料不足｜'+sourceMessage(error.message)+'；不使用盤中或還原價格替代。');}}
   }
   async function older(s){if(active!==s||s.busy||s.nextYear<s.firstYear)return;s.busy=true;const year=s.nextYear;s.status(`正在載入 ${year} 原始日線…`);try{const result=await source.year(s.symbol,year,s.dates,s.cutoff,s.abort.signal);if(active!==s)return;s.years.add(year);s.nextYear--;s.prices=[...result.rows,...s.prices].sort((a,b)=>a.time.localeCompare(b.time));s.events=[...result.events,...s.events];s.invalid.push(...result.invalid);if(result.sourceWarning)s.warnings.add(result.sourceWarning);if(result.dividendStatus!=='VERIFIED')s.dividendStatus=result.dividendStatus;s.fetchedAt=result.fetchedAt;s.expectedPriceDate=result.expectedCompleted||s.expectedPriceDate;s.priceProvider=result.provider||s.priceProvider;draw(s,true);}finally{s.busy=false;}}
   async function loadAll(s){if(s.busy)return;while(active===s&&s.prefs.range==='ALL'&&s.nextYear>=s.firstYear){await older(s);if(s.abort.signal.aborted)return;}}
-  function setRange(s){if(active!==s||!s.chart)return;const r=C.range(s.axis,s.prefs.range);if(r)s.chart.timeScale().setVisibleLogicalRange(r.from===r.to?{from:r.from-.5,to:r.to+.5}:r);s.syncingCursor=true;try{s.chart.clearCrosshairPosition();}finally{s.syncingCursor=false;}syncControls(s);showDetail(s,s.axis.at(-1));syncCursor(s);}
+  function setRange(s){if(active!==s||!s.chart)return;const custom=s.custom&&customRange(s.axis,s.custom.a,s.custom.b),r=custom||C.range(s.axis,s.prefs.range);if(r)s.chart.timeScale().setVisibleLogicalRange(r.from===r.to?{from:r.from-.5,to:r.to+.5}:r);s.syncingCursor=true;try{s.chart.clearCrosshairPosition();}finally{s.syncingCursor=false;}syncControls(s);showDetail(s,custom?s.axis[custom.to]:s.axis.at(-1));syncCursor(s);}
   function syncControls(s){s.host.querySelectorAll('[data-history-range]').forEach(b=>{b.classList.toggle('active',b.dataset.historyRange===s.prefs.range);b.setAttribute('aria-pressed',String(b.dataset.historyRange===s.prefs.range));});s.host.querySelectorAll('[data-history-pref]').forEach(b=>b.checked=s.prefs[b.dataset.historyPref]);}
   const displayDate=time=>String(time||'—').replace(/-/g,'/');
   // BusinessDay is an exchange date, not a local-midnight timestamp.
@@ -356,6 +414,7 @@ s.score=C.scores(artifact,symbol,contract,date=>completed(date)&&date<=cutoff(ne
       s.removePointTap=()=>{for(const [type,fn] of [['touchstart',start],['touchend',end],['touchcancel',cancel]])canvas.removeEventListener(type,fn);};
       s.chart.timeScale().subscribeVisibleLogicalRangeChange(r=>visible(s,r));s.resize=new ResizeObserver(entries=>{const width=Math.floor(entries[0].contentRect.width);if(width>0)s.chart.applyOptions({width});});s.resize.observe(s.host.querySelector('.radarHistoryCanvas'));
       s.anchor=s.chart.addSeries(L.LineSeries,{color:'transparent',priceFormat:{type:'custom',formatter:scoreNum,minMove:.1},lineVisible:false,priceLineVisible:false,lastValueVisible:false},0);
+      s.anchor.priceScale().applyOptions({scaleMargins:{top:0,bottom:0}});
       s.priceSeries=s.chart.addSeries(L.CandlestickSeries,{upColor:'#ed786f',downColor:'#64c593',borderUpColor:'#ed786f',borderDownColor:'#64c593',wickUpColor:'#ed786f',wickDownColor:'#64c593',lastValueVisible:false,priceLineVisible:false},1);s.priceMarkers=L.createSeriesMarkers(s.priceSeries,[]);s.chart.panes()[0].setHeight(230);s.chart.panes()[1].setHeight(300);
     }
     clearSelectionLabels(s);
@@ -364,7 +423,7 @@ s.score=C.scores(artifact,symbol,contract,date=>completed(date)&&date<=cutoff(ne
     for(const series of s.series)s.chart.removeSeries(series);s.series=[];
     const priceByDate=new Map(s.prices.map(r=>[r.time,r]));
     s.anchor.setData(s.axis.map(time=>({time})));s.priceSeries.applyOptions({visible:s.prefs.price});s.priceSeries.setData(s.axis.map(time=>priceByDate.get(time)||{time}));
-    const addLines=(segments,options,pane)=>{const added=[];for(const data of segments){const series=s.chart.addSeries(L.LineSeries,{priceLineVisible:false,lastValueVisible:false,...options},pane);series.setData(data);s.series.push(series);added.push(series);}return added;};
+    const addLines=(segments,options,pane)=>{const added=[];for(const data of segments){const series=s.chart.addSeries(L.LineSeries,{priceLineVisible:false,lastValueVisible:false,...(pane===0?{autoscaleInfoProvider:()=>({priceRange:{minValue:0,maxValue:100}})}:{}),...options},pane);series.setData(data);s.series.push(series);added.push(series);}return added;};
     const scoreSeries=addLines(C.segments(s.axis,s.score.rows),{color:'#e8c367',priceFormat:{type:'custom',formatter:scoreNum,minMove:.1},lineWidth:2,pointMarkersVisible:true,pointMarkersRadius:2,visible:s.prefs.score},0);
     s.scoreLines=scoreSeries;
     for(const segment of observationSegments(s.axis,s.score.rows,observations)){
@@ -378,5 +437,5 @@ s.score=C.scores(artifact,symbol,contract,date=>completed(date)&&date<=cutoff(ne
     if(s.prefs.volume){const series=s.chart.addSeries(L.HistogramSeries,{priceScaleId:'volume',priceFormat:{type:'volume'},priceLineVisible:false,lastValueVisible:false},1);series.priceScale().applyOptions({scaleMargins:{top:.85,bottom:0}});series.setData(s.prices.map(p=>({time:p.time,value:p.volume,color:p.close>=p.open?'#ed786f55':'#64c59355'})));s.series.push(series);}
     if(preserve&&oldRange&&oldAxis?.length)s.chart.timeScale().setVisibleRange(oldRange);else setRange(s);visible(s,s.chart.timeScale().getVisibleLogicalRange());syncControls(s);showDetail(s,s.selected&&s.axis.includes(s.selected)?s.selected:s.axis.at(-1));s.rendering=false;syncCursor(s);
   }
-  root.HSRadarHistoryView={html,mount,unmount,layoutDiagnostics,observationRows,observationSegments};
+  root.HSRadarHistoryView={html,mount,mountMini,unmount,layoutDiagnostics,observationRows,observationSegments,customRange};
 })(window);

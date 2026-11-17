@@ -13,7 +13,8 @@ for(const [score,threshold,label,distance] of [[19,30,"回檔訊號出現",11],[
 assert.match(render(40,39),/今日 \+1\.0 分/);assert.match(render(90,89),/已進入最高級距/);
 assert.match(render(45,null),/歷史資料不足/);
 output=render(null,49);assert.match(output,/資料暫缺/);assert.doesNotMatch(output,/試探加碼|正式加碼訊號|強力加碼訊號/);
-const longCard=html.slice(cardStart,cardEnd);assert.match(longCard,/radarDetailCoreStatusHtml/);assert.doesNotMatch(longCard,/signalDetailHero|radarTodayHtml\(x,decision,score,dailyPair\)|detailGrandTotal/);assert.ok(longCard.indexOf("radarDetailCoreStatusHtml")<longCard.indexOf("radarScoreTrendHtml")&&longCard.indexOf("radarScoreTrendHtml")<longCard.indexOf("radarMarketPositionHtml"));
+const longCard=html.slice(cardStart,cardEnd);assert.match(longCard,/return radarV4Card/);assert.doesNotMatch(longCard,/signalDetailHero|radarTodayHtml\(x,decision,score,dailyPair\)|detailGrandTotal/);
+assert.match(html.slice(html.indexOf("function radarV4Card"),html.indexOf("function syncRadarV4")),/radarScoreTrendHtml[\s\S]*radarMarketPositionHtml[\s\S]*radarDetailCoreStatusHtml/);
 assert.match(html.slice(detailStart,detailEnd),/radarOverviewNextLevel\(hasScore\?latestScore:null\)/,"Next level must reuse the formal contract helper");
 assert.match(css,/\.radarDetailDeck\.is-open \.signalCard\.is-selected>\.radarDetailSummary\{display:none!important\}/);assert.match(css,/\.radarDetailCoreStatus\{/);assert.match(css,/@media\(max-width:430px\)[\s\S]*\.radarDetailCoreFacts/);
 assert.match(css,/\.radarDetailDeck\.is-open \.signalCard\.is-selected \.radarDecisionSummary \.radarDecisionLead>b\{display:none\}/);
