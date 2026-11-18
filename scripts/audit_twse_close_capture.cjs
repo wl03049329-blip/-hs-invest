@@ -71,16 +71,31 @@ const ARCHIVE_SCHEMA = "HS_00631L_OPEN_CLOSE_V1";
 const DATASET = "https://data.gov.tw/dataset/11549";
 const LICENSE = "https://data.gov.tw/license";
 const MARKET_SESSIONS = "https://openapi.twse.com.tw/v1/exchangeReport/FMTQIK";
+const OPEN_CSV = "https://www.twse.com.tw/exchangeReport/STOCK_DAY_ALL?response=open_data";
+const MARKET_CSV = "https://www.twse.com.tw/exchangeReport/FMTQIK?response=open_data";
+// Only the two CSV resources explicitly listed in the government data catalog.
+function csvRows(raw, market) {
+  const header=market?"日期,成交股數,成交金額,成交筆數,發行量加權股價指數,漲跌點數":
+    "日期,證券代號,證券名稱,成交股數,成交金額,開盤價,最高價,最低價,收盤價,漲跌價差,成交筆數";
+  const [first,...lines]=raw.toString("utf8").replace(/^\uFEFF/,"").trimEnd().split(/\r?\n/);
+  if(first!==header||!lines.length)throw Error("ARCHIVE_OPEN_CSV_HEADER");
+  return lines.map(line=>{
+    if(!/^"(?:[^"]|"")*"(?:,"(?:[^"]|"")*")*$/.test(line)) throw Error("ARCHIVE_OPEN_CSV_ROW");
+    const f=[...line.matchAll(/"((?:[^"]|"")*)"/g)].map(m=>m[1].replaceAll('""','"'));
+    if(f.length!==(market?6:11)) throw Error("ARCHIVE_OPEN_CSV_COLUMNS");
+    return market?{Date:f[0],TradeVolume:f[1]}:{Date:f[0],Code:f[1],TradeVolume:f[3],ClosingPrice:f[8],Change:f[9]};
+  });
+}
 const price = s => typeof s === "string" && /^\d{1,7}\.\d{2}$/.test(s) && cents(s) > 0;
 const cents = s => Number(s.replace(".", ""));
-function archiveReceipt(raw, marketRaw, now, morning, probe = false) {
+function archiveReceipt(raw, marketRaw, now, morning, probe = false, options = {}) {
   const today = taipei(now).slice(0,10);
   const time = taipei(now).slice(11,16);
-  if (!probe && (morning ? time < "08:00" || time >= "12:00" : time < "18:20"))
+  if (!probe && (morning ? (!options.manual && time < "08:00") || time >= "12:00" : time < "18:20"))
     return {status:"DEFERRED_WINDOW"};
-  const eligible = sessions(JSON.parse(marketRaw), "2000-01-01", today)
+  const eligible = sessions(options.marketCsv?csvRows(marketRaw,true):JSON.parse(marketRaw), "2000-01-01", today)
     .filter(date => !morning || date < today);
-  const rows = JSON.parse(raw);
+  const rows = options.csv?csvRows(raw,false):JSON.parse(raw);
   if (!Array.isArray(rows) || !rows.length || !/^\d{7}$/.test(rows[0]?.Date) ||
       rows.some(r => r?.Date !== rows[0].Date))
     throw Error("ARCHIVE_SNAPSHOT_SCHEMA_OR_MIXED_DATE");
@@ -103,8 +118,8 @@ function archiveReceipt(raw, marketRaw, now, morning, probe = false) {
   const record = {schema:ARCHIVE_SCHEMA, symbol:"00631L", trading_date:date,
     close_twd:row.ClosingPrice, comparison_twd:reference > 0 ? (reference/100).toFixed(2) : null,
     captured_at:now.toISOString(), price_basis:"TWSE_RAW_CLOSE",
-    source:URL, source_attribution:"臺灣證券交易所", dataset:DATASET, license:LICENSE,
-    response_sha256:sha(raw), session_source:MARKET_SESSIONS, session_sha256:sha(marketRaw),
+    source:options.csv?OPEN_CSV:URL, source_attribution:"臺灣證券交易所", dataset:DATASET, license:LICENSE,
+    response_sha256:sha(raw), session_source:options.marketCsv?MARKET_CSV:MARKET_SESSIONS, session_sha256:sha(marketRaw),
     session_dataset:"https://data.gov.tw/dataset/11672",
     observed_sessions:eligible.filter(d => d <= date)};
   return {status:"VERIFIED",record};
@@ -112,7 +127,7 @@ function archiveReceipt(raw, marketRaw, now, morning, probe = false) {
 function appendClose(dir, record) {
   if (record.schema !== ARCHIVE_SCHEMA || record.symbol !== "00631L" ||
       !/^20\d\d-\d\d-\d\d$/.test(record.trading_date) || !price(record.close_twd) ||
-      record.source !== URL || record.license !== LICENSE || record.dataset !== DATASET ||
+      ![URL,OPEN_CSV].includes(record.source) || record.license !== LICENSE || record.dataset !== DATASET ||
       !/^[a-f0-9]{64}$/.test(record.response_sha256)) throw Error("ARCHIVE_RECORD_INVALID");
   const name = record.trading_date+".json", file = path.join(dir,name);
   const days = fs.readdirSync(dir).filter(s => /^20\d\d-\d\d-\d\d\.json$/.test(s)).sort();
@@ -150,14 +165,28 @@ async function fetchArchive(out, mode) {
     return body;
   };
   let raw, marketRaw;
-  try { [marketRaw,raw] = await Promise.all([load(MARKET_SESSIONS),load(URL)]); }
+  try { [marketRaw,raw] = await Promise.all([load(MARKET_CSV),load(OPEN_CSV)]); }
   catch (err) {
     if (err.name === "TimeoutError" || err instanceof TypeError) return {status:"DEFERRED_NETWORK"};
     throw err;
   }
   if (!raw || !marketRaw) return {status:"DEFERRED_UPSTREAM"};
-  const result = archiveReceipt(raw,marketRaw,new Date(),mode === "morning",mode === "probe");
+  const now=new Date(), morning=mode==="morning"||mode==="manual-morning";
+  const result = archiveReceipt(raw,marketRaw,now,morning,mode === "probe",
+    {csv:true,marketCsv:true,manual:mode==="manual-morning"});
   if (result.record) {
+    const r=result.record, newFiles=[];
+    // On a new archive only, the independently dated official JSON can supply
+    // the immediately preceding close while the CSV has already rolled forward.
+    if (!fs.readdirSync(out).some(n=>/^20\d\d-\d\d-\d\d\.json$/.test(n))) {
+      let previousRaw;
+      try{previousRaw=await load(URL);}catch(e){console.warn("OPTIONAL_PRIOR_SOURCE_UNAVAILABLE",e.message);}
+      if(previousRaw){
+        const p=archiveReceipt(previousRaw,marketRaw,now,morning,true,{marketCsv:true}).record;
+        if(p&&r.observed_sessions.at(-2)===p.trading_date&&r.comparison_twd===p.close_twd)
+          newFiles.push(appendClose(out,p).name);
+      }
+    }
     // The market OpenAPI may roll at month end. A matching, independently
     // verified official session interval can bridge that boundary, not a price guess.
     if (process.env.HS_00631L_CROSS_MONTH_CALENDAR === "1") {
@@ -172,7 +201,9 @@ async function fetchArchive(out, mode) {
           r.cross_month_session = {previous:prev, source:"HS_VERIFIED_TWSE_SESSION_INTERVAL", sha256:calendar.content_sha256};
       }
     }
-    return {...appendClose(out,result.record),date:result.record.trading_date};
+    const saved=appendClose(out,r);
+    if(saved.status==="APPENDED")newFiles.push(saved.name);
+    return {...saved,date:r.trading_date,newFiles};
   }
   return result;
 }
@@ -180,9 +211,9 @@ if (require.main === module) (process.argv[2] === "--00631l-archive"
   ? fetchArchive(process.argv[3],process.argv[4]).then(result => {
     console.log(JSON.stringify(result));
     if (result.status === "APPENDED" && process.env.GITHUB_OUTPUT)
-      fs.appendFileSync(process.env.GITHUB_OUTPUT,"file="+result.name+"\n");
+      fs.appendFileSync(process.env.GITHUB_OUTPUT,result.newFiles.join("\n")+"\n");
   }) : main()).catch(e => {
   console.error("::error::TWSE close receipt not clean: " + e.message);
   process.exitCode = 1;
 });
-module.exports = {receipt,capture,captureWindow,archiveReceipt,appendClose,windowCoverage};
+module.exports = {receipt,capture,captureWindow,archiveReceipt,appendClose,windowCoverage,csvRows};

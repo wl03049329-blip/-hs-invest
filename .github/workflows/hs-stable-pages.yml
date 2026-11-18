@@ -29,7 +29,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   observation-00631l:
-    if: github.event_name == 'pull_request' && github.head_ref == 'feat/00631l-crash-radar-v3'
+    if: github.event_name == 'pull_request' && (github.head_ref == 'feat/00631l-crash-radar-v3' || github.head_ref == 'fix/00631l-open-close-source')
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:

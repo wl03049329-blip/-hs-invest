@@ -132,7 +132,7 @@
    const fmt=x=>Number.isFinite(x)?(x>0?'+':'')+x.toFixed(2)+'%':'—';
    const round=x=>Number.isFinite(x)?x.toFixed(2):'—';
    let selected=240,range=3,records=[],fresh=false,flight=null,lastCheck=0;
-   function gauge(name,current,g,limits){
+   function gauge(name,current,g,limits,needed,d){
      const n=el('section',undefined,'lradar-v3-gauge'),bar=el('div',undefined,'lradar-v3-bar'),fill=el('i'),mark=el('b');
      n.append(el('h4',name),el('strong',g?fmt(current):'—'));
      const [watch,extreme]=limits;
@@ -141,7 +141,8 @@
      if(g){fill.style.width=Math.min(100,100*g.decline/g.extreme)+'%';bar.append(fill);}
      bar.append(mark);n.append(bar);
      n.append(el('small',`正常 0%｜觀察 ${round(watch)}%｜極端 ${round(extreme)}%`),
-       el('p',!g?'資料累積中':g.fromExtreme>=0?`已達極端門檻，超過 ${round(g.fromExtreme)} 個百分點`:`距極端門檻還差 ${round(-g.fromExtreme)} 個百分點`));
+       el('p',!g?(needed==='all'?'缺少自上市起的完整核驗收盤':`需連續 ${needed} 筆同基準收盤，目前 ${d.rows.length} 筆`):g.fromExtreme>=0?`已達極端門檻，超過 ${round(g.fromExtreme)} 個百分點`:`距極端門檻還差 ${round(-g.fromExtreme)} 個百分點`),
+       el('small',d.asof?'截至 '+d.asof:'尚無核驗截至日'));
      return n;
    }
    function draw(){
@@ -150,8 +151,9 @@
      daily.replaceChildren(el('strong',!d.asof?'資料累積中':!fresh?'資料尚未更新':level===null?'資料累積中':labels[level]),
        el('p',d.asof?`${fresh?trigger:'顯示最後核驗的歷史資料，不判定今天。'}｜${d.asof} 收盤 ${round(d.close)} 元`:'尚無已驗證的每日收盤封存。'));
      const quick=el('div',undefined,'lradar-v3-grid');
-     quick.append(gauge('五日急跌速度',d.recent[5],d.speed,HSLRadar.limits.speed),gauge(periodName(selected)+'最高收盤回落',v?.change,d.depth,HSLRadar.limits[selected]));
-     daily.append(quick,el('p',`近 3 日 ${fmt(d.recent[3])}｜近 10 日 ${fmt(d.recent[10])}`));
+     quick.append(gauge('五日急跌速度',d.recent[5],d.speed,HSLRadar.limits.speed,6,d),gauge(periodName(selected)+'最高收盤回落',v?.change,d.depth,HSLRadar.limits[selected],selected,d));
+     const recentText=[3,5,10].map(n=>`近 ${n} 日 ${Number.isFinite(d.recent[n])?fmt(d.recent[n]):`—（需 ${n+1} 筆連續收盤）`}`).join('｜');
+     daily.append(quick,el('p',recentText+(d.asof?'｜截至 '+d.asof:'')));
      const select=el('select');select.setAttribute('aria-label','高點比較期間');
      for(const p of HSLRadar.periods){const o=el('option',periodName(p));o.value=p;select.append(o);}select.value=selected;
      select.onchange=()=>{selected=select.value==='all'?'all':Number(select.value);draw();daily.querySelector('select').focus();};
@@ -161,7 +163,8 @@
      for(const p of HSLRadar.periods){const x=d.peaks[p];line(points,periodName(p),x?`${fmt(x.change)}｜${round(x.price)} 元｜${x.date}`:'資料累積中');}
      daily.append(points);
      const returns=el('div',undefined,'lradar-v3-grid');['本月','近 3 個月','近 6 個月','今年'].forEach((name,i)=>{
-       const r=d.returns[i],c=el('section',undefined,'lradar-v3-gauge');c.append(el('h4',name),el('strong',fmt(r?.change),r?.change>0?'lradar-rise':r?.change<0?'lradar-fall':''),el('small',r?'比較 '+r.date:'資料累積中'));returns.append(c);
+       const missing=['缺上月底基準收盤','缺三個月前基準收盤','缺六個月前基準收盤','缺去年底基準收盤'];
+       const r=d.returns[i],c=el('section',undefined,'lradar-v3-gauge');c.append(el('h4',name),el('strong',fmt(r?.change),r?.change>0?'lradar-rise':r?.change<0?'lradar-fall':''),el('small',r?'比較 '+r.date:missing[i]+'或其後有缺日'),el('small',d.asof?'截至 '+d.asof:'尚無核驗截至日'));returns.append(c);
      });
      daily.append(returns);
      const graph=el('section',undefined,'lradar-v3-gauge'),ranges=el('div',undefined,'lc4r-tabs');
@@ -205,8 +208,11 @@
        records=nextRecords;
        const asof=records.at(-1)?.trading_date;
        const completed=cal.expected_completed_bar,next=cal.next_expected_trading_day;
-       fresh=!!asof&&cal.schema_version===1&&/^\d{4}-\d{2}-\d{2}$/.test(next||'')&&today<=next&&completed===asof&&
-         !(today===next&&local.slice(-5)>='18:00'&&asof<today);
+       const knownNext=/^\d{4}-\d{2}-\d{2}$/.test(next||'');
+       const dayAfter=asof&&new Date(Date.parse(asof)+86400000).toISOString().slice(0,10);
+       fresh=!!asof&&cal.schema_version===1&&completed===asof&&
+         (today===asof||knownNext&&today<=next&&!(today===next&&local.slice(-5)>='18:00')||
+           !knownNext&&today===dayAfter&&local.slice(-5)<'18:00');
        if(changed||wasFresh!==fresh)draw();
      }).catch(()=>{if(fresh){fresh=false;draw();}}).finally(()=>{flight=null;});
    }

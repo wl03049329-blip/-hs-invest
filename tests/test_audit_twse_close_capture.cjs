@@ -23,6 +23,17 @@ test("00631L requires a dated confirmed session and handles a bounded next-morni
   assert.match(record.response_sha256,/^[a-f0-9]{64}$/);
   assert.equal(archiveReceipt(openRaw("1151116","27.95","X"),market,now(),false).record.comparison_twd,null);
 });
+test("licensed CSV independently confirms the close and previous price basis", () => {
+  const stock = Buffer.from('日期,證券代號,證券名稱,成交股數,成交金額,開盤價,最高價,最低價,收盤價,漲跌價差,成交筆數\n"1151116","00631L","元大,台灣50","678825245","1","31.25","31.37","27.95","27.95","-3.9700","1"\n');
+  const daily = Buffer.from('日期,成交股數,成交金額,成交筆數,發行量加權股價指數,漲跌點數\n"1151116","1000","1","1","1","1"\n');
+  const options = {csv:true,marketCsv:true,manual:true};
+  const {record} = archiveReceipt(stock,daily,new Date("2026-11-16T16:15:00Z"),true,false,options);
+  assert.equal(record.trading_date,"2026-11-16");
+  assert.equal(record.close_twd,"27.95");
+  assert.equal(record.comparison_twd,"31.92");
+  assert.ok(record.source.endsWith("response=open_data"));
+  assert.throws(() => archiveReceipt(Buffer.from("bad header"),daily,now(),false,false,options),/OPEN_CSV_HEADER/);
+});
 test("00631L replays are idempotent; corrections never replace original bytes", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(),"hs-00631l-test-"));
   try {

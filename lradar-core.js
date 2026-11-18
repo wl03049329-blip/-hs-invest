@@ -81,8 +81,8 @@
        !validDay(r.trading_date)||r.trading_date>today||(i&&r.trading_date<=index.records[i-1].trading_date)||
        !closeText(r.close_twd)||(r.comparison_twd!==null&&!closeText(r.comparison_twd))||
        !Number.isFinite(Date.parse(r.captured_at))||Date.parse(r.captured_at)>now||Date.parse(r.captured_at)<Date.parse(r.trading_date+'T18:20:00+08:00')||
-       r.source!=='https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL'||r.dataset!=='https://data.gov.tw/dataset/11549'||r.source_attribution!=='臺灣證券交易所'||
-       r.license!=='https://data.gov.tw/license'||r.session_source!=='https://openapi.twse.com.tw/v1/exchangeReport/FMTQIK'||
+       !['https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL','https://www.twse.com.tw/exchangeReport/STOCK_DAY_ALL?response=open_data'].includes(r.source)||r.dataset!=='https://data.gov.tw/dataset/11549'||r.source_attribution!=='臺灣證券交易所'||
+       r.license!=='https://data.gov.tw/license'||!['https://openapi.twse.com.tw/v1/exchangeReport/FMTQIK','https://www.twse.com.tw/exchangeReport/FMTQIK?response=open_data'].includes(r.session_source)||
        r.session_dataset!=='https://data.gov.tw/dataset/11672'||![r.response_sha256,r.session_sha256].every(s=>typeof s==='string'&&/^[a-f0-9]{64}$/.test(s))||
        !Array.isArray(r.observed_sessions)||r.observed_sessions.length>62||r.observed_sessions.at(-1)!==r.trading_date||
        r.observed_sessions.some((d,j)=>!validDay(d)||j&&d<=r.observed_sessions[j-1])||
