@@ -114,9 +114,105 @@
    const stats=HSLC4RadarV2.describe(b.history);if(stats.asof!==b.asof||Math.abs(stats.close-b.description.radar.stabilization.close)>1e-8||Math.abs(stats.return5-b.description.radar.opportunity.return5)>1e-12)throw Error('RESEARCH_HISTORY_SNAPSHOT_MISMATCH');
    if(!dialog.open)return;
    S.bundle=b;S.pointer=p;S.stats=stats;render(shadow,operation);S.renderedAt=Date.now();
-   const time=$('#lradar-home-time');if(time)time.textContent=`非即時 · 歷史日線 ${b.asof}`;
+   const time=$('#lradar-home-time');if(time&&!$('.lradar-v3'))time.textContent=`非即時 · 歷史日線 ${b.asof}`;
   }catch(e){if(dialog.open)content.replaceChildren(el('p','研究資料目前無法核驗，未顯示未確認數值。','lc4r-warn'),el('small',String(e.message)));}
   finally{S.loading=false;refresh.disabled=false;}}
+ // The daily observation is independent of the archived research dialog.
+ const home=$('#lc4-radar-v2');
+ if(home){
+   const daily=el('div',undefined,'lradar-v3');
+   daily.append(el('strong','資料尚未更新'),el('p','等待已驗證的收盤資料；不以盤中價替代。'));
+   const oldButton=home.querySelector('[data-lc4-research-open]');
+   if(oldButton)oldButton.textContent='查看封存研究 ›';
+   home.querySelector('h3').textContent='00631L 急跌機會雷達';
+   home.querySelector(':scope > strong').hidden=true;
+   home.querySelector(':scope > p').hidden=true;
+   home.querySelector('h3').after(daily);
+   const labels=['一般波動','明顯急跌','歷史極端急跌'],periodName=p=>p==='all'?'歷史最高':p+' 日';
+   const fmt=x=>Number.isFinite(x)?(x>0?'+':'')+x.toFixed(2)+'%':'—';
+   const round=x=>Number.isFinite(x)?x.toFixed(2):'—';
+   let selected=240,range=3,records=[],fresh=false,flight=null,lastCheck=0;
+   function gauge(name,current,g,limits){
+     const n=el('section',undefined,'lradar-v3-gauge'),bar=el('div',undefined,'lradar-v3-bar'),fill=el('i'),mark=el('b');
+     n.append(el('h4',name),el('strong',g?fmt(current):'—'));
+     const [watch,extreme]=limits;
+     mark.style.left=100*watch/extreme+'%';
+     bar.setAttribute('aria-hidden','true');
+     if(g){fill.style.width=Math.min(100,100*g.decline/g.extreme)+'%';bar.append(fill);}
+     bar.append(mark);n.append(bar);
+     n.append(el('small',`正常 0%｜觀察 ${round(watch)}%｜極端 ${round(extreme)}%`),
+       el('p',!g?'資料累積中':g.fromExtreme>=0?`已達極端門檻，超過 ${round(g.fromExtreme)} 個百分點`:`距極端門檻還差 ${round(-g.fromExtreme)} 個百分點`));
+     return n;
+   }
+   function draw(){
+     const d=HSLRadar.archiveSummary(records,selected),v=d.peaks[selected],peak240=d.peaks[240],level=d.level,speed=(d.speed?.level??-1)>=(d.depth?.level??-1);
+     const trigger=level===null?'部分區間資料累積中，暫不分級':level===0?'兩項皆未達觀察門檻':(d.speed?.level===level&&d.depth?.level===level?'兩項皆達此等級':speed?'由五日跌幅觸發':'由最高收盤價回落觸發');
+     daily.replaceChildren(el('strong',!d.asof?'資料累積中':!fresh?'資料尚未更新':level===null?'資料累積中':labels[level]),
+       el('p',d.asof?`${fresh?trigger:'顯示最後核驗的歷史資料，不判定今天。'}｜${d.asof} 收盤 ${round(d.close)} 元`:'尚無已驗證的每日收盤封存。'));
+     const quick=el('div',undefined,'lradar-v3-grid');
+     quick.append(gauge('五日急跌速度',d.recent[5],d.speed,HSLRadar.limits.speed),gauge(periodName(selected)+'最高收盤回落',v?.change,d.depth,HSLRadar.limits[selected]));
+     daily.append(quick,el('p',`近 3 日 ${fmt(d.recent[3])}｜近 10 日 ${fmt(d.recent[10])}`));
+     const select=el('select');select.setAttribute('aria-label','高點比較期間');
+     for(const p of HSLRadar.periods){const o=el('option',periodName(p));o.value=p;select.append(o);}select.value=selected;
+     select.onchange=()=>{selected=select.value==='all'?'all':Number(select.value);draw();daily.querySelector('select').focus();};
+     daily.append(select,el('p',v?`選取最高收盤價 ${round(v.price)} 元 · ${v.date} · 已過 ${v.age} 個交易日`:'選取期間：資料累積中'),
+       el('p',peak240?`近 240 日回落 ${fmt(peak240.change)} · 距高點 ${peak240.age} 個交易日`:'近 240 日回落：資料累積中','lradar-v3-peak'));
+     const points=el('details');points.append(el('summary','查看各期間最高收盤價'));
+     for(const p of HSLRadar.periods){const x=d.peaks[p];line(points,periodName(p),x?`${fmt(x.change)}｜${round(x.price)} 元｜${x.date}`:'資料累積中');}
+     daily.append(points);
+     const returns=el('div',undefined,'lradar-v3-grid');['本月','近 3 個月','近 6 個月','今年'].forEach((name,i)=>{
+       const r=d.returns[i],c=el('section',undefined,'lradar-v3-gauge');c.append(el('h4',name),el('strong',fmt(r?.change),r?.change>0?'lradar-rise':r?.change<0?'lradar-fall':''),el('small',r?'比較 '+r.date:'資料累積中'));returns.append(c);
+     });
+     daily.append(returns);
+     const graph=el('section',undefined,'lradar-v3-gauge'),ranges=el('div',undefined,'lc4r-tabs');
+     for(const n of [1,3,6,12,0]){const b=el('button',n===0?'全部':n===12?'1 年':n+' 個月');b.type='button';b.setAttribute('aria-pressed',n===range);b.onclick=()=>{range=n;draw();daily.querySelector('.lc4r-tabs button[aria-pressed="true"]')?.focus();};ranges.append(b);}
+     const rows=range&&d.asof?d.rows.filter(r=>r[0]>=HSLRadar.monthsBack(d.asof,range)):d.rows,svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+     graph.append(el('h4','價格走勢'),ranges);
+     if(rows.length<2){graph.append(el('p','可比較的收盤資料累積中。'));}
+     else{
+     svg.setAttribute('viewBox','0 0 360 144');svg.setAttribute('aria-label','收盤價格走勢圖（歷史以現行分割單位表示）');
+     const top=Math.max(...rows.map(r=>r[1])),bottom=Math.min(...rows.map(r=>r[1])),x=i=>4+352*i/Math.max(1,rows.length-1),y=p=>136-126*(p-bottom)/(top-bottom||1);
+     const shape=(tag,attrs)=>{const e=document.createElementNS(svg.namespaceURI,tag);for(const [k,v]of Object.entries(attrs))e.setAttribute(k,v);svg.append(e);return e;};
+     shape('polyline',{points:rows.map((r,i)=>x(i)+','+y(r[1])).join(' '),fill:'none',stroke:'#dfbf75','stroke-width':2});
+     const pi=rows.findLastIndex(r=>r[1]===top);shape('circle',{cx:x(pi),cy:y(top),r:4,fill:'#dfbf75'});
+     const readout=el('p',`區間最高收盤 ${round(top)} 元 · ${rows[pi][0]}`);
+     const inspect=i=>{const r=rows[i];readout.textContent=`${r[0]} 收盤 ${round(r[1])} 元｜區間最高收盤 ${round(top)} 元（${rows[pi][0]}）`;};
+     svg.onclick=e=>{const b=svg.getBoundingClientRect();inspect(Math.max(0,Math.min(rows.length-1,Math.round(((e.clientX-b.left)/b.width*360-4)/352*(rows.length-1)))));};
+     const cursor=el('input');cursor.type='range';cursor.min=0;cursor.max=rows.length-1;cursor.value=rows.length-1;cursor.setAttribute('aria-label','逐日查看收盤價');cursor.oninput=()=>inspect(Number(cursor.value));
+     graph.append(el('small',`僅顯示已核驗的連續封存：${rows[0][0]} 至 ${rows.at(-1)[0]}`),svg,cursor,readout);
+     }
+     daily.append(graph);
+     const h=el('details');h.append(el('summary','歷史相似急跌統計'));h.ontoggle=()=>{
+       if(!h.open||h.dataset.ready)return;h.dataset.ready='1';const driver=speed?'speed':'depth';
+       h.append(el('p',`依${driver==='speed'?'五日跌幅':periodName(selected)+'最高收盤回落'}首次跨越固定極端門檻，事件間隔至少 21 個交易日。不是未來機率或交易績效。`));
+       const stats=selected!=='all'&&d.rows.length>=240?HSLRadar.historical({rows:d.rows,thresholds:HSLRadar.limits,training_end:HSLRadar.training},selected,driver):[];
+       for(const n of [5,10,20]){
+         const s=stats.find(x=>x.h===n);
+         line(h,`${n} 日｜後續最低收盤價跌幅`,!s||s.n<10?'資料累積中（樣本不足）':`${s.n} 件（待成熟 ${s.pending}）｜平均 ${fmt(s.mean)}／中位 ${fmt(s.median)}；正報酬 ${round(s.positive)}%；後續最低收盤價跌幅 ${fmt(s.worst)}`);
+       }
+     };
+     const source=el('details');source.append(el('summary','資料與固定門檻'),el('p',`臺灣證券交易所開放資料 · 非即時。只比較相同價格基準的收盤，股價報酬不含股息。門檻版本 ${HSLRadar.thresholdVersion}，以截至 ${HSLRadar.training} 的 P80/P95 固定，不代表買進或保證反彈。`));
+     daily.append(h,source);$('#lradar-home-time').textContent=d.asof?'非即時 · 收盤資料 '+d.asof:'非即時 · 尚無已核驗收盤日期';
+   }
+   function refreshDaily(){
+     if(flight||Date.now()-lastCheck<60000)return;
+     lastCheck=Date.now();
+     flight=Promise.all([json(HSLRadar.archiveURL),json('data/radar-history/status-v1.json').catch(()=>null)]).then(([x,s])=>{
+       const cal=s?.value||{},now=new Date(),local=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Taipei',dateStyle:'short',timeStyle:'short'}).format(now),today=local.slice(0,10);
+       const nextRecords=HSLRadar.verifyIndex(x.value,today,+now);
+       if(records.some((r,i)=>JSON.stringify(r)!==JSON.stringify(nextRecords[i])))throw Error('ARCHIVE_ROLLBACK_OR_OVERWRITE');
+       const changed=nextRecords.length!==records.length, wasFresh=fresh;
+       records=nextRecords;
+       const asof=records.at(-1)?.trading_date;
+       const completed=cal.expected_completed_bar,next=cal.next_expected_trading_day;
+       fresh=!!asof&&cal.schema_version===1&&/^\d{4}-\d{2}-\d{2}$/.test(next||'')&&today<=next&&completed===asof&&
+         !(today===next&&local.slice(-5)>='18:00'&&asof<today);
+       if(changed||wasFresh!==fresh)draw();
+     }).catch(()=>{if(fresh){fresh=false;draw();}}).finally(()=>{flight=null;});
+   }
+   draw();refreshDaily();window.addEventListener('online',refreshDaily);window.addEventListener('pageshow',refreshDaily);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshDaily();});
+   window.setInterval(()=>{if(!document.hidden)refreshDaily();},300000);
+ }
  refresh.onclick=load;
  function open(trigger){if(dialog.open)return;S.returnFocus=trigger;S.scroll=document.body.style.overflow;document.body.style.overflow='hidden';dialog.showModal();close.focus();
   const age=Date.now()-S.renderedAt;
@@ -124,5 +220,5 @@
   content.replaceChildren(el('p','正在核驗研究資料…'));load();
  }
  document.addEventListener('click',e=>{const trigger=e.target.closest('[data-lc4-research-open]');if(trigger){e.preventDefault();open(trigger);}});
- // No background fetch, polling or heavy historical work during home startup.
+ // The archived research bundle is still only loaded on explicit request.
 })();

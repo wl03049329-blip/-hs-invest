@@ -21,7 +21,6 @@ on:
       - Update official home TMF snapshot
       - Update market events
       - Update Trump market watch
-      - 00631L Daily Forward Shadow
     types: [completed]
 permissions:
   contents: read
@@ -29,6 +28,26 @@ concurrency:
   group: hs-stable-pages-${{ github.event_name == 'pull_request' && github.event.pull_request.number || 'production' }}
   cancel-in-progress: false
 jobs:
+  observation-00631l:
+    if: github.event_name == 'pull_request' && github.head_ref == 'feat/00631l-crash-radar-v3'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Test locked observation, historical archive and mobile layout
+        run: |
+          node tests/test_00631l_observation.js
+          python3 -B -m unittest discover -s tests -p test_00631l_observation_openapi.py
+          node tests/test_c4_openapi_close_candidate.cjs
+          node tests/test_lradar_v1.js
+          node tests/test_radar_daily_workflow.js
+          npm install --prefix "$RUNNER_TEMP/hs-browser" playwright-core@1.62.1
+          "$RUNNER_TEMP/hs-browser/node_modules/.bin/playwright-core" install --with-deps chrome webkit
+          NODE_PATH="$RUNNER_TEMP/hs-browser/node_modules" node tests/00631l_observation_browser.cjs
+          NODE_PATH="$RUNNER_TEMP/hs-browser/node_modules" HS_APP_TEST_OUT="$RUNNER_TEMP/hs-00631l-pwa" node tests/stable_app_update_browser.cjs
   radar-mobile-v4:
     if: github.event_name == 'pull_request' && (github.head_ref == 'feat/radar-mobile-v4' || github.head_ref == 'fix/radar-v4-sticky-toolbar' || github.head_ref == 'fix/radar-mobile-chart-selection')
     runs-on: ubuntu-latest
