@@ -1,6 +1,6 @@
 """Description-only 00631L closes, derived from the pinned historical source."""
 import datetime as dt
-import json
+import os
 import sys
 from pathlib import Path
 from scripts.lc4_research_daily import (
@@ -80,6 +80,8 @@ def build(root, client, now):
 
 
 if __name__ == "__main__":
+    require(os.environ.get("HS_00631L_AUTHORIZED_HISTORY_COLLECTION") == "1",
+            "OFFICIAL_HISTORY_COLLECTION_AUTHORIZATION_NOT_CONFIGURED")
     artifact = build(ROOT, Client(sys.argv[1]), dt.datetime.now(TZ))
     if artifact is not None:
         tmp = ROOT / (FILE + ".tmp")
