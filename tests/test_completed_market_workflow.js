@@ -20,7 +20,7 @@ assert(cache.includes('gh run watch "$found" --interval 5 --exit-status'));
 assert(cache.includes('python -m scripts.verify_stable_pages'));
 assert(!/gh workflow run.*(?:recovery|packaging)/i.test(q+m));
 assert(m.includes('--repair')&&m.includes("if: github.ref == 'refs/heads/main'"));
-assert(m.includes("if: steps.audit.outcome != 'success'"),'failed public dates remain failure');
+assert(m.includes("if: steps.audit.outcome != 'success' && steps.incident.outputs.disposition != 'duplicate'"),'only a recognized duplicate may suppress a failure');
 console.log('PASS 12 completed-market workflow / isolated publication / bounded source contracts');
 const publication=q.slice(q.indexOf('  official_quote_publication:')),collector=q.slice(start,q.indexOf('  official_quote_publication:'));
 assert(publication.includes('needs: official_quote_cache'));
@@ -35,22 +35,31 @@ assert(!/continue-on-error: true/.test(publication+collector),'partial failure c
 console.log('PASS 9 quote-scope / no-op repair / short writer-lock / bounded push contracts');
 const vm=require('node:vm');
 const reportScript=m.split('          script: |')[1].split('\n      - uses:')[0];
-const marker='<!-- hs-completed-market-v1 -->', mutations=[], notices=[];
-let report;
+const marker='<!-- hs-completed-market-v1 -->', mutations=[], notices=[], outputs=[];
+let report, prior;
 const env={
   require:()=>({readFileSync:()=>JSON.stringify(report)}),process:{env:{RUNNER_TEMP:'/fixture'}},
   context:{repo:{owner:'fixture',repo:'test'},runId:123},
-  github:{paginate:async()=>[{number:44,user:{login:'github-actions[bot]'},body:marker}],
-    rest:{issues:{listForRepo(){},update:async args=>mutations.push(args)}}},
-  core:{notice:message=>notices.push(message),summary:{addCodeBlock(){return this;},async write(){}}}
+  github:{paginate:async()=>prior?[prior]:[],
+    rest:{issues:{listForRepo(){},create:async args=>{mutations.push(args);prior={number:44,user:{login:'github-actions[bot]'},body:args.body};},
+      update:async args=>{mutations.push(args);if(args.state==='closed')prior=null;else prior.body=args.body;}}}},
+  core:{notice:message=>notices.push(message),setOutput:(key,value)=>outputs.push([key,value]),summary:{addCodeBlock(){return this;},async write(){}}}
 };
 (async()=>{
   const run=()=>vm.runInNewContext('(async()=>{'+reportScript+'})()',env);
-  report={healthy:null,deferred:true,waiting:'WAIT_DAILY_PUBLICATION'};
+  report={healthy:null,deferred:true,waiting:'WAIT_DAILY_PUBLICATION',reasons:['DAILY_BARS_INCOMPLETE']};
   await run();assert.deepEqual(notices,['WAIT_DAILY_PUBLICATION']);assert.equal(mutations.length,0);
-  report={healthy:false,reasons:['DAILY_BARS_INCOMPLETE']};
-  await run();assert.match(mutations[0].body,/DAILY_BARS_INCOMPLETE/);
+  report={healthy:false,reasons:['DAILY_BARS_INCOMPLETE'],daily_unverified:{'009815':{status:'STALE',reason:'Missing 2026-11-18'}}};
+  await run();assert.match(mutations[0].body,/DAILY_BARS_INCOMPLETE/);assert.equal(outputs.length,0);
+  report={...report,repair:['BOUNDED_COOLDOWN'],daily_unverified:{'009815':{status:'STALE',reason:'Missing 2026-11-19'}}};
+  await run();assert.equal(mutations.length,1);assert.deepEqual(outputs,[['disposition','duplicate']]);
+  report={...report,daily_unverified:{'009815':{status:'STALE',reason:'HTTP 522'}}};
+  await run();assert.match(mutations[1].body,/HTTP 522/);assert.equal(mutations[1].issue_number,44);assert.equal(outputs.length,1);
+  report={healthy:null,deferred:true,waiting:'WAIT_DAILY_PUBLICATION',reasons:['DAILY_BARS_INCOMPLETE']};
+  await run();assert.equal(mutations.length,2);
   report={healthy:true,reasons:[]};
-  await run();assert.equal(mutations[1].state,'closed');
+  await run();assert.equal(mutations[2].state,'closed');
+  report={healthy:false,reasons:['OFFICIAL_CLOSE_NOT_CURRENT_TPEx']};
+  await run();assert.match(mutations[3].body,/OFFICIAL_CLOSE_NOT_CURRENT_TPEx/);assert.equal(outputs.length,1);
   console.log('PASS watchdog waiting preserves alerts, incomplete reports, and verified recovery closes');
 })().catch(e=>{console.error(e);process.exitCode=1;});

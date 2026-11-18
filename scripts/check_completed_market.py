@@ -32,10 +32,13 @@ def inspect(expected, quotes, daily, scores):
             "official_closing_data", "official_closing_data_daily_report"
         ):
             reasons.append("OFFICIAL_SOURCE_UNVERIFIED_" + market)
-    if daily.get("expected_completed_bar") != expected or not daily.get("next_expected_trading_day"):
+    # The next session is a forecast, not evidence about the completed one.
+    # Accept an explicit null; do not treat a missing/empty field as verified.
+    next_day = daily.get("next_expected_trading_day", False)
+    if daily.get("expected_completed_bar") != expected or (next_day is not None and not next_day):
         reasons.append("DAILY_CALENDAR_NOT_CURRENT")
     symbols = daily.get("symbols", {})
-    if len(symbols) != 6 or any(r.get("status") != "CURRENT" or r.get("latest_verified_date") != expected for r in symbols.values()):
+    if set(symbols) != set(SYMBOLS) or any(r.get("status") != "CURRENT" or r.get("latest_verified_date") != expected for r in symbols.values()):
         reasons.append("DAILY_BARS_INCOMPLETE")
     if not any(r.get("date") == expected and r.get("finalized") is True for r in scores.get("snapshots", [])):
         reasons.append("CORE_CLOSE_NOT_CURRENT")
