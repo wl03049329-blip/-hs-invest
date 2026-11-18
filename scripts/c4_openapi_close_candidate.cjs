@@ -6,7 +6,7 @@ const URL = "https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL";
 const SYMBOLS = Object.freeze(["0050", "00757", "00830", "00935"]);
 const numeric = s => typeof s === "string" && /^\d+(?:\.\d+)?$/.test(s) ? Number(s) : NaN;
 
-function readCloseSnapshot(raw, expectedDate) {
+function readCloseSnapshot(raw, expectedDate, requested = SYMBOLS) {
   if (typeof expectedDate !== "string" || !/^20\d\d-\d\d-\d\d$/.test(expectedDate) ||
       !Number.isFinite(Date.parse(expectedDate)) || new Date(expectedDate).toISOString().slice(0, 10) !== expectedDate)
     throw Error("OPENAPI_EXPECTED_DATE_INVALID");
@@ -14,8 +14,10 @@ function readCloseSnapshot(raw, expectedDate) {
   if (!Array.isArray(rows) || !rows.length) throw Error("OPENAPI_SCHEMA_INVALID");
   const roc = String(Number(expectedDate.slice(0, 4)) - 1911) + expectedDate.slice(5).replace("-", "");
   if (rows.some(row => row?.Date !== roc)) throw Error("OPENAPI_SESSION_DATE_MISMATCH");
+  if (!Array.isArray(requested) || !requested.length || requested.some(s => typeof s !== "string" || !/^[0-9A-Z]{4,10}$/.test(s)) ||
+      new Set(requested).size !== requested.length) throw Error("OPENAPI_SYMBOLS_INVALID");
   const symbols = {};
-  for (const symbol of SYMBOLS) {
+  for (const symbol of requested) {
     const matches = rows.filter(row => row.Code === symbol);
     if (matches.length !== 1) {
       symbols[symbol] = {status: matches.length ? "DUPLICATE_SYMBOL" : "MISSING_SYMBOL"};
