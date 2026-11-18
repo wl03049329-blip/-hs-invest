@@ -2,6 +2,20 @@
 const source=fs.readFileSync('portfolio-v3/personal-v3.js','utf8'),end=source.indexOf("const scope=document.getElementById('hpv2')"),box={crypto:crypto.webcrypto,TextEncoder,TextDecoder,console};vm.createContext(box);vm.runInContext(source.slice(0,end)+'host.contract=window;})(globalThis);',box);const V=box.contract.HSPersonalV3Core,P=box.contract.HSPortfolioCapitalBuildPlanCore,fp=x=>crypto.createHash('sha256').update(JSON.stringify(x)).digest('hex');let pass=0;const t=(n,f)=>{f();pass++;console.log('PASS',n);},clone=x=>JSON.parse(JSON.stringify(x));
 const status={expected_completed_bar:'2026-11-03',next_expected_trading_day:'2026-11-04',symbols:Object.fromEntries(['0050','00662','00757','00830','00935','009815'].map(s=>[s,{status:'CURRENT',latest_verified_date:'2026-11-03',archive_sha256:'a'.repeat(64)}]))},now='2026-11-04T15:00:00+08:00';
 const cache={version:2,updated_at:'2026-11-04T14:30:00+08:00',official_last_checked_at:'2026-11-04T14:30:00+08:00',sources:{TWSE_close:'https://www.twse.com.tw/exchangeReport/MI_INDEX'},source_status:{TWSE:'official_closing_data_daily_report'},source_dates:{TWSE:'2026-11-04'},official_source_dates:{TWSE:'2026-11-04'},items:[{code:'0050',market:'TWSE',date:'2026-11-04',price:100,quote_mode:'close'},{code:'00830',market:'TWSE',date:'2026-11-04',price:50,quote_mode:'close'}]};
+t('00662 manual post-split edit requires an explicit bound receipt, not another conversion',()=>{
+ const A=box.contract.HSPersonalV3Accounting,at='2026-11-18T18:00:00+08:00',q={date:'2026-11-18',price:24,latest:true},h={symbol:'00662',shares:500,break_even_price:20,created_at:'2026-11-12T01:00:00Z',updated_at:'2026-11-18T07:00:00Z'};
+ const raw=JSON.stringify(h);assert.equal(V.unitStatus(A.project(h,[],q.date,at),q),'SPLIT_BASIS_REVIEW_REQUIRED');
+ const r=A.confirmUnits(h,{id:'synthetic-post-split',basis:'POST_SPLIT',quoteDate:q.date,at});
+ const confirmed=A.project(h,[r],q.date,at);assert.equal(confirmed.unit_status,'AS_CONFIRMED');assert.equal(confirmed.shares,500);assert.equal(confirmed.break_even_price,20);
+ assert.equal(A.project({...h,shares:501},[r],q.date,at).unit_status,'UNIT_CONFIRMATION_CHANGED_REQUIRED');
+ assert.equal(A.project(h,[r],'2026-11-16',at).unit_status,'PRICE_UNIT_DATE_REQUIRED');
+ const ledger=require('../portfolio-ledger-core').migrateLegacyPortfolio({holdings:[{code:'00662',shares:100,averageCost:100}],cash:0,tradeDate:'2026-11-12',timestamp:'2026-11-12T03:00:00Z'});
+ const events=JSON.stringify(ledger.events),book=A.costs([confirmed],vm.runInContext('JSON.parse('+JSON.stringify(events)+')',box),at);
+ assert.equal(book.rows[0].source,'POSITION_RECONCILIATION_REQUIRED',book.reason);assert.equal(book.rows[0].cost_minor,null);
+ const display=V.view({holdings:[confirmed],cashMinor:100000,prefs:null,quotes:new Map([['00662',q]]),now:at,positionValue:P.localPositionValue,allocate:()=>({rows:[]})});
+ assert.equal(display.equity_minor,1200000);assert.equal(display.total_assets_minor,1300000);assert.equal(display.pnl_minor,200000);
+ assert.equal(JSON.stringify(h),raw);assert.equal(JSON.stringify(ledger.events),events);
+});
 t('RED case: verified today official prices are latest even while raw K and FINAL are yesterday',()=>{assert.equal(V.closeQuotes(cache,status,now).get('0050').latest,true);assert.equal(V.session(status,now).completed,'2026-11-03');});
 t('18:00 does not revoke verified prices merely because independent historical bars are pending',()=>assert.equal(V.closeQuotes(cache,status,'2026-11-04T18:01:00+08:00').get('0050').latest,true));
 t('calendar candidate does not fabricate missing prices',()=>{const q=clone(cache);q.items=[];assert.equal(V.closeQuotes(q,status,now).size,0);});

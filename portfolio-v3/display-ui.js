@@ -6,5 +6,8 @@
  function colors(storage){function load(){try{const p=JSON.parse(storage.getItem(KEY)||'{}');return p&&typeof p==='object'&&!Array.isArray(p)?Object.fromEntries(Object.entries(p).filter(([s,c])=>symbol(s)&&valid(c))):{};}catch{return{};}}
   return{get:s=>load()[s]||defaultColor(s),set(s,c){if(!symbol(s)||c!==null&&!valid(c))return false;try{const p=load();if(c===null)delete p[s];else p[s]=c.toLowerCase();storage.setItem(KEY,JSON.stringify(p));return true;}catch{return false;}}};}
  function reorder(container,rows){const rank=new Map(rows.map((r,i)=>[r.symbol,i])),shells=[...container.children];if(shells.some(n=>!rank.has((n.matches('.holding')?n:n.querySelector('.holding'))?.dataset.symbol)))return;const sorted=shells.slice().sort((a,b)=>rank.get((a.matches('.holding')?a:a.querySelector('.holding')).dataset.symbol)-rank.get((b.matches('.holding')?b:b.querySelector('.holding')).dataset.symbol));if(sorted.some((n,i)=>n!==shells[i]))container.append(...sorted);}
- return Object.freeze({KEY,valid,defaultColor,displayRows,colors,reorder});
+ // Schedule presentation only. Each delivered frame still obtains a fresh,
+ // fully validated projection; writes and explicit reads are never cached.
+ function frameRefresh({visible,frame,render}){let pending=false;return()=>{if(pending||!visible())return;pending=true;frame(()=>{pending=false;if(visible())render();});};}
+ return Object.freeze({KEY,valid,defaultColor,displayRows,colors,reorder,frameRefresh});
 });
