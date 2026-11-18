@@ -83,7 +83,7 @@ jobs:
         id: publish
         run: |
           git add -- data/radar-history/twse/0050.json data/radar-history/twse/00662.json data/radar-history/twse/00757.json data/radar-history/twse/00830.json data/radar-history/twse/00935.json data/radar-history/tpex/009815.json data/radar-history/status-v1.json
-          if test -f data/00631l-observation-v1.json; then git add -- data/00631l-observation-v1.json; fi
+          if test -f data/00631l-close-observation-v1.json; then git add -- data/00631l-close-observation-v1.json; fi
           if git diff --cached --quiet; then
             echo "NOOP_ALREADY_VERIFIED"
             echo "changed=false" >> "$GITHUB_OUTPUT"

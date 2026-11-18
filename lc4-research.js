@@ -144,17 +144,17 @@
    function draw(){
      if(!artifact)return;
      const a=artifact,d=HSLRadar.summary(a,selected),v=d.peaks[selected],peak240=d.peaks[240],level=d.level,speed=d.speed.level>=d.depth.level;
-     const trigger=level===0?'兩項皆未達觀察門檻':(d.speed.level===level&&d.depth.level===level?'兩項皆達此等級':speed?'由五日跌幅觸發':'由高點回落觸發');
+     const trigger=level===0?'兩項皆未達觀察門檻':(d.speed.level===level&&d.depth.level===level?'兩項皆達此等級':speed?'由五日跌幅觸發':'由最高收盤價回落觸發');
      daily.replaceChildren(el('strong',fresh?labels[level]:'資料尚未更新'),el('p',(fresh?trigger:'資料過期或完整性待確認，以下為歷史觀察，不判定今天。')+`｜${a.asof} 收盤 ${round(d.close)} 元`));
      const quick=el('div',undefined,'lradar-v3-grid');
-     quick.append(gauge('五日急跌速度',d.recent[5],d.speed),gauge(periodName(selected)+'高點回落',v.change,d.depth));
+     quick.append(gauge('五日急跌速度',d.recent[5],d.speed),gauge(periodName(selected)+'最高收盤回落',v.change,d.depth));
      daily.append(quick,el('p',`近 3 日 ${fmt(d.recent[3])}｜近 10 日 ${fmt(d.recent[10])}`));
      const select=el('select');select.setAttribute('aria-label','高點比較期間');
      for(const p of HSLRadar.periods){const o=el('option',periodName(p));o.value=p;select.append(o);}select.value=selected;
      select.onchange=()=>{selected=select.value==='all'?'all':Number(select.value);draw();daily.querySelector('select').focus();};
-     daily.append(select,el('p',`選取高點 ${round(v.price)} 元 · ${v.date} · 已過 ${v.age} 個交易日`),
+     daily.append(select,el('p',`選取最高收盤價 ${round(v.price)} 元 · ${v.date} · 已過 ${v.age} 個交易日`),
        el('p',`近 240 日回落 ${fmt(peak240.change)} · 距高點 ${peak240.age} 個交易日`,'lradar-v3-peak'));
-     const points=el('details');points.append(el('summary','查看各期間高點'));
+     const points=el('details');points.append(el('summary','查看各期間最高收盤價'));
      for(const p of HSLRadar.periods){const x=d.peaks[p];line(points,periodName(p),`${fmt(x.change)}｜${round(x.price)} 元｜${x.date}`);}
      daily.append(points);
      const returns=el('div',undefined,'lradar-v3-grid');['本月','近 3 個月','近 6 個月','今年'].forEach((name,i)=>{
@@ -165,27 +165,27 @@
      for(const n of [1,3,6,12,0]){const b=el('button',n===0?'全部':n===12?'1 年':n+' 個月');b.type='button';b.setAttribute('aria-pressed',n===range);b.onclick=()=>{range=n;draw();daily.querySelector('.lc4r-tabs button[aria-pressed="true"]')?.focus();};ranges.append(b);}
      const rows=range?a.rows.filter(r=>r[0]>=HSLRadar.monthsBack(a.asof,range)):a.rows,svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
      svg.setAttribute('viewBox','0 0 360 144');svg.setAttribute('aria-label','收盤價格走勢圖（歷史以現行分割單位表示）');
-     const top=Math.max(...rows.map(r=>r[2])),bottom=Math.min(...rows.map(r=>r[1])),x=i=>4+352*i/Math.max(1,rows.length-1),y=p=>136-126*(p-bottom)/(top-bottom||1);
+     const top=Math.max(...rows.map(r=>r[1])),bottom=Math.min(...rows.map(r=>r[1])),x=i=>4+352*i/Math.max(1,rows.length-1),y=p=>136-126*(p-bottom)/(top-bottom||1);
      const shape=(tag,attrs)=>{const e=document.createElementNS(svg.namespaceURI,tag);for(const [k,v]of Object.entries(attrs))e.setAttribute(k,v);svg.append(e);return e;};
      shape('polyline',{points:rows.map((r,i)=>x(i)+','+y(r[1])).join(' '),fill:'none',stroke:'#dfbf75','stroke-width':2});
-     const pi=rows.findLastIndex(r=>r[2]===top);shape('circle',{cx:x(pi),cy:y(top),r:4,fill:'#dfbf75'});
-     const readout=el('p',`區間最高 ${round(top)} 元 · ${rows[pi][0]}`);
-     const inspect=i=>{const r=rows[i];readout.textContent=`${r[0]} 收盤 ${round(r[1])} 元｜區間最高 ${round(top)} 元（${rows[pi][0]}）`;};
+     const pi=rows.findLastIndex(r=>r[1]===top);shape('circle',{cx:x(pi),cy:y(top),r:4,fill:'#dfbf75'});
+     const readout=el('p',`區間最高收盤 ${round(top)} 元 · ${rows[pi][0]}`);
+     const inspect=i=>{const r=rows[i];readout.textContent=`${r[0]} 收盤 ${round(r[1])} 元｜區間最高收盤 ${round(top)} 元（${rows[pi][0]}）`;};
      svg.onclick=e=>{const b=svg.getBoundingClientRect();inspect(Math.max(0,Math.min(rows.length-1,Math.round(((e.clientX-b.left)/b.width*360-4)/352*(rows.length-1)))));};
      const cursor=el('input');cursor.type='range';cursor.min=0;cursor.max=rows.length-1;cursor.value=rows.length-1;cursor.setAttribute('aria-label','逐日查看收盤價');cursor.oninput=()=>inspect(Number(cursor.value));
      graph.append(el('h4','價格走勢'),ranges,svg,cursor,readout);daily.append(graph);
      const h=el('details');h.append(el('summary','歷史相似急跌統計'));h.ontoggle=()=>{
        if(!h.open||h.dataset.ready)return;h.dataset.ready='1';const driver=speed?'speed':'depth';
-       h.append(el('p',`依${driver==='speed'?'五日跌幅':periodName(selected)+'高點回落'}首次跨越固定極端門檻，事件間隔至少 21 個交易日。不是未來機率或交易績效。`));
-       for(const s of HSLRadar.historical(a,selected,driver))line(h,`${s.h} 日（${s.n} 件；待成熟 ${s.pending}）`,`平均 ${fmt(s.mean)}／中位 ${fmt(s.median)}；正報酬 ${s.positive===null?'樣本不足':round(s.positive)+'%'}；期間最差下跌 ${fmt(s.worst)}`);
+       h.append(el('p',`依${driver==='speed'?'五日跌幅':periodName(selected)+'最高收盤回落'}首次跨越固定極端門檻，事件間隔至少 21 個交易日。不是未來機率或交易績效。`));
+       for(const s of HSLRadar.historical(a,selected,driver))line(h,`${s.h} 日（${s.n} 件；待成熟 ${s.pending}）`,`平均 ${fmt(s.mean)}／中位 ${fmt(s.median)}；正報酬 ${s.positive===null?'樣本不足':round(s.positive)+'%'}；後續最低收盤價跌幅 ${fmt(s.worst)}`);
      };
-     const source=el('details');source.append(el('summary','資料與固定門檻'),el('p',`官方收盤 · ${a.source}。股價報酬不含股息；歷史高點按 22:1 分割調整基準。門檻版本 ${a.threshold_version}，以截至 ${a.training_end} 的 P80/P95 固定，不代表買進或保證反彈。`));
+     const source=el('details');source.append(el('summary','資料與固定門檻'),el('p',`官方收盤 · ${a.source}。股價報酬不含股息；歷史收盤價按 22:1 分割調整基準。門檻版本 ${a.threshold_version}，以截至 ${a.training_end} 的 P80/P95 固定，不代表買進或保證反彈。`));
      daily.append(h,source);$('#lradar-home-time').textContent='非即時 · 收盤資料 '+d.asof;
    }
    function refreshDaily(){
      if(flight||Date.now()-lastCheck<60000)return;
      lastCheck=Date.now();
-     flight=Promise.all([json('data/00631l-observation-v1.json'),json('data/radar-history/status-v1.json').catch(()=>null)]).then(([x,s])=>{
+     flight=Promise.all([json('data/00631l-close-observation-v1.json'),json('data/radar-history/status-v1.json').catch(()=>null)]).then(([x,s])=>{
        const a=HSLRadar.verify(x.value),cal=s?.value||{},now=new Date(),local=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Taipei',dateStyle:'short',timeStyle:'short'}).format(now),today=local.slice(0,10);
        if(Date.parse(a.verified_at)>+now||a.asof>today||artifact&&artifact.asof>a.asof)throw Error('FUTURE_OR_ROLLBACK');
        artifact=a;

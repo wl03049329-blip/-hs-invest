@@ -21,20 +21,20 @@
    month.setUTCDate(Math.min(d,last));return day(month);
  }
  function verify(a){
-   if(a?.schema!=='HS_00631L_OBSERVATION_V1'||a.threshold_version!=='P80_P95_FIXED_20201231_V1'||a.training_end!=='2020-12-31'||
+   if(a?.schema!=='HS_00631L_CLOSE_OBSERVATION_V1'||a.threshold_version!=='P80_P95_CLOSE_FIXED_20201231_V1'||a.training_end!=='2020-12-31'||
      !validDay(a.asof)||!Array.isArray(a.rows)||a.rows.length<240||a.rows.length>20000||a.rows.at(-1)[0]!==a.asof||
      !/^[a-f0-9]{64}$/.test(a.history_sha256)||!Number.isFinite(Date.parse(a.verified_at))||
      !Array.isArray(a.evidence)||a.evidence.length<4||a.evidence.some(e=>typeof e.url!=='string'||!(e.url.startsWith('https://www.twse.com.tw/')||(e.url==='https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL'&&e.license==='https://data.gov.tw/license'&&e.dataset==='https://data.gov.tw/dataset/11549'&&validDay(e.date)))||!/^[a-f0-9]{64}$/.test(e.sha256))||
      ['speed',...periods].some(k=>{const t=a.thresholds?.[k];return !Array.isArray(t)||t.length!==3||!t.every(Number.isFinite)||t[0]<0||t[1]<=t[0]||t[1]>=100||!Number.isInteger(t[2])||t[2]<240;})||
-     a.rows.some((r,i)=>!Array.isArray(r)||r.length!==4||!validDay(r[0])||i&&r[0]<=a.rows[i-1][0]||r.slice(1).some(n=>!Number.isFinite(n)||n<=0)||r[3]>r[1]||r[1]>r[2]))throw Error('OBSERVATION_SOURCE_INVALID');
+     a.rows.some((r,i)=>!Array.isArray(r)||r.length!==2||!validDay(r[0])||i&&r[0]<=a.rows[i-1][0]||!Number.isFinite(r[1])||r[1]<=0))throw Error('OBSERVATION_SOURCE_INVALID');
    return a;
  }
  const pctChange=(a,b)=>100*(a/b-1);
  function peak(rows,i,period){
    if(period!=='all'&&i+1<period)return null;
    const from=period==='all'?0:i-period+1;let best=from;
-   for(let j=from+1;j<=i;j++)if(rows[j][2]>=rows[best][2])best=j;
-   return {date:rows[best][0],price:rows[best][2],age:i-best,change:pctChange(rows[i][1],rows[best][2])};
+   for(let j=from+1;j<=i;j++)if(rows[j][1]>=rows[best][1])best=j;
+   return {date:rows[best][0],price:rows[best][1],age:i-best,change:pctChange(rows[i][1],rows[best][1])};
  }
  function gauge(change,[watch,extreme]){
    const decline=Math.max(0,-change);
@@ -55,7 +55,7 @@
    // Frozen training ends before any eligible date. An episode enters once
    // upon crossing the extreme line; a 20-session exclusion prevents overlap.
    for(let i=0;i<rows.length;i++){
-     const r=rows[i];allHigh=Math.max(allHigh,r[2]);
+     const r=rows[i];allHigh=Math.max(allHigh,r[1]);
      if(i<5)continue;
      const p=driver==='speed'?pctChange(r[1],rows[i-5][1]):period==='all'?pctChange(r[1],allHigh):peak(rows,i,period)?.change;
      const now=Number.isFinite(p)&&-p>=limit;
@@ -64,7 +64,7 @@
    }
    return [5,10,20].map(h=>{
      const mature=events.filter(i=>i+h<rows.length),returns=mature.map(i=>pctChange(rows[i+h][1],rows[i][1])).sort((x,y)=>x-y),n=returns.length;
-     const worst=mature.map(i=>Math.min(0,...rows.slice(i+1,i+1+h).map(r=>pctChange(r[3],rows[i][1]))));
+     const worst=mature.map(i=>Math.min(0,...rows.slice(i+1,i+1+h).map(r=>pctChange(r[1],rows[i][1]))));
      return {h,n,pending:events.length-n,mean:n?returns.reduce((x,y)=>x+y,0)/n:null,median:n?(returns[Math.floor((n-1)/2)]+returns[Math.floor(n/2)])/2:null,positive:n>=10?100*returns.filter(x=>x>0).length/n:null,worst:n?Math.min(...worst):null};
    });
  }
