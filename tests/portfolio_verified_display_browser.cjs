@@ -1,13 +1,17 @@
 'use strict';
 // Isolated localhost app and synthetic holdings; never use an existing profile.
-const {chromium,webkit}=require('playwright-core'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
+const {chromium,webkit}=require('playwright-core'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict'),cp=require('node:child_process');
 const {build}=require('../scripts/build_stable_app.cjs'),out=fs.mkdtempSync(path.join(os.tmpdir(),'hs-portfolio-readout-'));
 const sites=[['candidate',build({out:path.join(out,'candidate')}).out]];
 if(process.env.HS_BASELINE_ROOT)sites.unshift(['baseline',build({root:process.env.HS_BASELINE_ROOT,out:path.join(out,'baseline')}).out]);
 const mime={'.html':'text/html','.json':'application/json','.js':'text/javascript','.css':'text/css','.webmanifest':'application/manifest+json','.png':'image/png'};
+const marketPin='ce946dd28de9b1a49bb7a5f09098157afe46bf1b',marketFiles=new Map();
+for(const name of ['market-quotes.json','finalized-core-score-snapshots-v1.json','data/radar-history/status-v1.json','data/radar-history/twse/0050.json','data/radar-history/twse/00662.json']){
+ marketFiles.set(name,cp.execFileSync('git',['show',marketPin+':'+name],{maxBuffer:16e6}));
+}
 function server(site){return http.createServer((req,res)=>{const url=new URL(req.url,'http://local'),file=path.resolve(site,'../'+path.basename(site)+url.pathname.replace(/^\/-hs-invest/,'')+(url.pathname.endsWith('/')?'index.html':''));
  if(!file.startsWith(site+path.sep)||!fs.existsSync(file)||!fs.statSync(file).isFile())return res.writeHead(404).end();
- res.writeHead(200,{'Content-Type':mime[path.extname(file)]||'application/octet-stream','Cache-Control':'no-store'});fs.createReadStream(file).pipe(res);
+ res.writeHead(200,{'Content-Type':mime[path.extname(file)]||'application/octet-stream','Cache-Control':'no-store'});const pinned=marketFiles.get(path.relative(site,file).split(path.sep).join('/'));if(pinned)res.end(pinned);else fs.createReadStream(file).pipe(res);
 });}
 async function add(p,symbol,shares,price){await p.locator('#hpv2-add').click();const d=p.locator('#hpv2-holdingDialog');await d.locator('#hpv2-symbol').fill(symbol);await d.locator('#hpv2-shares').fill(String(shares));await d.locator('#hpv2-breakEven').fill(String(price));await d.locator('button[type=submit]').click();await d.waitFor({state:'hidden'});}
 const raw=p=>p.evaluate(()=>Object.fromEntries(Object.entries(localStorage).filter(([k])=>k.startsWith('hsPersonalV3.v1.')).map(([k,v])=>[new TextDecoder().decode(Uint8Array.from(k.slice('hsPersonalV3.v1.'.length).match(/../g),x=>parseInt(x,16))),v]).filter(([k])=>/simpleHoldings|ledger|investableCash/.test(k))));
@@ -38,9 +42,15 @@ async function run(p,url,name,width){
   await p.waitForFunction(()=>HSPersonalV3.read().rows.some(r=>r.symbol==='00662'&&r.unit_status==='AS_CONFIRMED'));
   const row=await p.evaluate(()=>HSPersonalV3.read().rows.find(r=>r.symbol==='00662'));
   assert.equal(row.shares,500);assert.equal(row.break_even_price,20);assert.equal(row.market_value_minor,Math.round(row.price*50000));assert.deepEqual(await raw(p),before);
+  await p.waitForFunction(()=>document.getElementById('pv3-pnl').previousElementSibling.textContent.includes('使用者成本估算'));
   assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
   for(let i=0;i<4;i++)for(const name of ['today','portfolio'])await p.locator('.appNavButton[data-tab="'+name+'"]:visible').click();
   await p.evaluate(()=>{dispatchEvent(new PageTransitionEvent('pageshow'));dispatchEvent(new Event('online'));});
+  await p.context().setOffline(true);
+  await p.evaluate(()=>document.getElementById('hpv2-updatePrices').click());
+  assert.deepEqual(await raw(p),before);
+  await p.context().setOffline(false);
+  await p.evaluate(()=>dispatchEvent(new Event('online')));
   assert.deepEqual(await raw(p),before);
  }
 }
