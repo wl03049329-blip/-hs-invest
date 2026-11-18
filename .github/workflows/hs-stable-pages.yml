@@ -39,6 +39,7 @@ jobs:
       - name: Test locked observation, historical archive and mobile layout
         run: |
           node tests/test_00631l_observation.js
+          python3 -B -m unittest discover -s tests -p test_00631l_observation_openapi.py
           node tests/test_00631l_openapi_close.cjs
           node tests/test_c4_openapi_close_candidate.cjs
           node tests/test_lradar_v1.js

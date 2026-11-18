@@ -24,7 +24,7 @@
    if(a?.schema!=='HS_00631L_OBSERVATION_V1'||a.threshold_version!=='P80_P95_FIXED_20201231_V1'||a.training_end!=='2020-12-31'||
      !validDay(a.asof)||!Array.isArray(a.rows)||a.rows.length<240||a.rows.length>20000||a.rows.at(-1)[0]!==a.asof||
      !/^[a-f0-9]{64}$/.test(a.history_sha256)||!Number.isFinite(Date.parse(a.verified_at))||
-     !Array.isArray(a.evidence)||a.evidence.length<4||a.evidence.some(e=>typeof e.url!=='string'||!e.url.startsWith('https://www.twse.com.tw/')||!/^[a-f0-9]{64}$/.test(e.sha256))||
+     !Array.isArray(a.evidence)||a.evidence.length<4||a.evidence.some(e=>typeof e.url!=='string'||!(e.url.startsWith('https://www.twse.com.tw/')||(e.url==='https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL'&&e.license==='https://data.gov.tw/license'&&e.dataset==='https://data.gov.tw/dataset/11549'&&validDay(e.date)))||!/^[a-f0-9]{64}$/.test(e.sha256))||
      ['speed',...periods].some(k=>{const t=a.thresholds?.[k];return !Array.isArray(t)||t.length!==3||!t.every(Number.isFinite)||t[0]<0||t[1]<=t[0]||t[1]>=100||!Number.isInteger(t[2])||t[2]<240;})||
      a.rows.some((r,i)=>!Array.isArray(r)||r.length!==4||!validDay(r[0])||i&&r[0]<=a.rows[i-1][0]||r.slice(1).some(n=>!Number.isFinite(n)||n<=0)||r[3]>r[1]||r[1]>r[2]))throw Error('OBSERVATION_SOURCE_INVALID');
    return a;

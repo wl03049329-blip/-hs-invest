@@ -72,11 +72,11 @@ jobs:
           if [ "$REVALIDATE" = "true" ]; then args+=(--revalidate); fi
           python -m scripts.update_radar_daily "${args[@]}" 2>&1 | tee "$RUNNER_TEMP/radar-daily.log"
       - name: Refresh descriptive 00631L observation without gating other symbols
-        if: inputs.as_of == '' && vars.HS_00631L_AUTHORIZED_HISTORY_COLLECTION == '1'
+        if: inputs.as_of == '' && vars.HS_00631L_OPENAPI_CONTINUITY_APPROVED == '1'
         env:
-          HS_00631L_AUTHORIZED_HISTORY_COLLECTION: "1"
+          HS_00631L_OPENAPI_CONTINUITY_APPROVED: "1"
         run: |
-          if ! python -m scripts.update_00631l_observation "$RUNNER_TEMP/00631l-evidence"; then
+          if ! python -m scripts.update_00631l_observation; then
             echo '00631L：保留最後核驗資料，首頁依實際日期標示待更新。' >> "$GITHUB_STEP_SUMMARY"
           fi
       - name: Commit only independently validated candles and status
