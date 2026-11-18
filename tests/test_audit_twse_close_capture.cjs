@@ -1,12 +1,48 @@
 "use strict";
 const {test} = require("node:test");
 const assert = require("node:assert/strict");
-const {receipt,capture,captureWindow} = require("../scripts/audit_twse_close_capture.cjs");
+const {receipt,capture,captureWindow,archiveReceipt,appendClose,windowCoverage} = require("../scripts/audit_twse_close_capture.cjs");
+const fs = require("node:fs"), os = require("node:os"), path = require("node:path");
 const {sessions,missingReceipts} = require("../scripts/audit_twse_close_watchdog.cjs");
 const date = "2026-11-16";
 const now = () => new Date("2026-11-16T10:20:00Z");
 const raw = close => Buffer.from(JSON.stringify([{Date:"1151116",Code:"0050",
   OpeningPrice:"10",HighestPrice:"12",LowestPrice:"9",ClosingPrice:close,TradeVolume:"123"}]));
+const openRaw = (date="1151116",close="27.95",change="-3.9700") => Buffer.from(JSON.stringify([
+  {Date:date,Code:"00631L",ClosingPrice:close,Change:change,TradeVolume:"678825245"}]));
+const market = Buffer.from(JSON.stringify([{Date:"1151116",TradeVolume:"1100000"}]));
+
+test("00631L requires a dated confirmed session and handles a bounded next-morning retry", () => {
+  assert.equal(archiveReceipt(openRaw("1151113"),market,now(),false).status,"DEFERRED_SOURCE_DATE");
+  assert.equal(archiveReceipt(openRaw(),market,new Date("2026-11-17T00:17:00Z"),false).status,"DEFERRED_WINDOW");
+  assert.equal(archiveReceipt(openRaw(),market,new Date("2026-11-17T00:17:00Z"),true).record.trading_date,date);
+  assert.equal(archiveReceipt(openRaw(),market,new Date("2026-11-17T10:20:00Z"),false).status,"DEFERRED_SESSION");
+  const {record} = archiveReceipt(openRaw(),market,now(),false);
+  assert.equal(record.close_twd,"27.95");
+  assert.equal(record.comparison_twd,"31.92");
+  assert.match(record.response_sha256,/^[a-f0-9]{64}$/);
+  assert.equal(archiveReceipt(openRaw("1151116","27.95","X"),market,now(),false).record.comparison_twd,null);
+});
+test("00631L replays are idempotent; corrections never replace original bytes", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(),"hs-00631l-test-"));
+  try {
+    const {record} = archiveReceipt(openRaw(),market,now(),false);
+    const {name,status} = appendClose(dir,record);
+    assert.equal(status,"APPENDED");
+    const original = fs.readFileSync(path.join(dir,name),"utf8");
+    assert.equal(appendClose(dir,{...record,response_sha256:"f".repeat(64)}).status,"DUPLICATE");
+    assert.throws(() => appendClose(dir,{...record,close_twd:"28.00"}),/REVISION/);
+    assert.equal(fs.readFileSync(path.join(dir,name),"utf8"),original);
+  } finally { fs.unlinkSync(path.join(dir,date+".json")); fs.rmdirSync(dir); }
+});
+test("window eligibility rejects missing days and unverified action basis", () => {
+  const first = "2026-11-13", days = [first,date];
+  const {record} = archiveReceipt(openRaw(),market,now(),false);
+  assert.deepEqual(windowCoverage([record],days,first,date,true),{status:"MISSING_SESSIONS",missing:[first]});
+  const complete = [{...record,trading_date:first,close_twd:"31.92"},record];
+  assert.equal(windowCoverage(complete,days,first,date,false).status,"PRICE_BASIS_UNVERIFIED");
+  assert.equal(windowCoverage(complete,days,first,date,true).status,"COMPLETE");
+});
 
 test("watchdog uses actual completed sessions, never weekday guesses", () => {
   const entries = [{Date:"1151113",TradeVolume:"100"},{Date:"1151116",TradeVolume:"200"}];
