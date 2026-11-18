@@ -2,7 +2,7 @@ import unittest
 import datetime as dt
 import json
 from unittest.mock import patch
-from scripts.check_completed_market import inspect
+from scripts.check_completed_market import inspect, SYMBOLS
 from scripts.check_completed_market import repair
 from scripts import update_market_quotes as quotes
 
@@ -12,7 +12,7 @@ class CompletedPublication(unittest.TestCase):
         self.q = dict(official_source_dates=dict(TWSE="2026-11-02", TPEx="2026-11-02"),
                       source_status=dict(TWSE="official_closing_data_daily_report", TPEx="official_closing_data"))
         self.d = dict(expected_completed_bar="2026-11-02", next_expected_trading_day="2026-11-03",
-                      symbols={str(i): dict(status="CURRENT", latest_verified_date="2026-11-02") for i in range(6)})
+                      symbols={s: dict(status="CURRENT", latest_verified_date="2026-11-02") for s in SYMBOLS})
         self.s = dict(snapshots=[dict(date="2026-11-02", finalized=True)])
 
     def run_report(self):
@@ -20,6 +20,22 @@ class CompletedPublication(unittest.TestCase):
 
     def test_complete(self):
         self.assertTrue(self.run_report()["healthy"])
+
+    def test_unknown_next_session_does_not_invalidate_completed_session(self):
+        self.d["next_expected_trading_day"] = None
+        self.assertTrue(self.run_report()["healthy"])
+        del self.q["official_source_dates"]["TWSE"]
+        self.assertEqual(self.run_report()["reasons"], ["OFFICIAL_CLOSE_NOT_CURRENT_TWSE"])
+        self.s["snapshots"] = []
+        self.assertIn("CORE_CLOSE_NOT_CURRENT", self.run_report()["reasons"])
+
+    def test_explicit_unknown_does_not_mask_bad_bars_or_calendar(self):
+        self.d["next_expected_trading_day"] = None
+        self.d["symbols"].pop(next(iter(SYMBOLS)))
+        self.d["symbols"]["unrelated"] = dict(status="CURRENT", latest_verified_date="2026-11-02")
+        self.assertEqual(self.run_report()["reasons"], ["DAILY_BARS_INCOMPLETE"])
+        self.d["expected_completed_bar"] = "2026-10-30"
+        self.assertIn("DAILY_CALENDAR_NOT_CURRENT", self.run_report()["reasons"])
 
     def test_fresh_timestamp_cannot_mask_old_date(self):
         self.q["updated_at"] = "2026-11-03T00:53:00+08:00"
@@ -31,7 +47,7 @@ class CompletedPublication(unittest.TestCase):
         self.assertFalse(self.run_report()["healthy"])
 
     def test_stale_bar(self):
-        self.d["symbols"]["0"]["latest_verified_date"] = "2026-10-30"
+        self.d["symbols"][next(iter(SYMBOLS))]["latest_verified_date"] = "2026-10-30"
         self.assertIn("DAILY_BARS_INCOMPLETE", self.run_report()["reasons"])
 
     def test_stale_calendar(self):
