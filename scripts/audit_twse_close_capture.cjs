@@ -210,8 +210,8 @@ async function fetchArchive(out, mode) {
 if (require.main === module) (process.argv[2] === "--00631l-archive"
   ? fetchArchive(process.argv[3],process.argv[4]).then(result => {
     console.log(JSON.stringify(result));
-    if (result.status === "APPENDED" && process.env.GITHUB_OUTPUT)
-      fs.appendFileSync(process.env.GITHUB_OUTPUT,result.newFiles.join("\n")+"\n");
+    if (result.status === "APPENDED" && process.env.HS_00631L_FILE_LIST)
+      fs.writeFileSync(process.env.HS_00631L_FILE_LIST,result.newFiles.join("\n")+"\n",{flag:"wx"});
   }) : main()).catch(e => {
   console.error("::error::TWSE close receipt not clean: " + e.message);
   process.exitCode = 1;
