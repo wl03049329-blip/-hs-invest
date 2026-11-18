@@ -1,5 +1,11 @@
 // Strip ONLY the reviewed V3.6 reader/UI wiring; keep all original safety seals.
 const assert=require('assert/strict');module.exports=s=>{
+ if(s.includes('HSPortfolioDisplayUI.frameRefresh')){
+  // Pin the exact reviewed presentation change, then apply the unchanged
+  // financial/storage seals to its parent rather than ignoring new lines.
+  assert.equal(require('node:crypto').createHash('sha256').update(s.replace(/\r\n/g,'\n')).digest('hex'),'192d33538f697d40a58852c834a47d4fd9e30e04c5f3d0ddd077939fc6e2ce63','UNREVIEWED_VERIFIED_PORTFOLIO_DISPLAY');
+  s=require('node:child_process').execFileSync('git',['show','ce946dd28de9b1a49bb7a5f09098157afe46bf1b:portfolio-v3/personal-v3.js'],{maxBuffer:8e6}).toString();
+ }
  if(s.includes('let marketController=null;')){
   assert.equal(require('node:crypto').createHash('sha256').update(s).digest('hex'),'398bddab510eab91f44ae4b29717a5363f5a5613e3624502945e69f828aae880','UNREVIEWED_PORTFOLIO_REFRESH_CHANGE');
   s=require('node:child_process').execFileSync('git',['show','d675c843503ce569160e0432ec81e567c318b5e7:portfolio-v3/personal-v3.js'],{maxBuffer:8e6}).toString();

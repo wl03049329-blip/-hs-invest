@@ -55,6 +55,29 @@ jobs:
             node tests/c4_chart_points_browser.cjs
             HS_APP_TEST_OUT="$RUNNER_TEMP/hs-radar-pwa" node tests/stable_app_update_browser.cjs
           fi
+  portfolio-verified-display:
+    if: github.event_name == 'pull_request' && github.head_ref == 'fix/portfolio-verified-display'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify portfolio and frozen data contracts
+        run: |
+          node tests/test_portfolio_price_independence.js
+          node tests/test_portfolio_experience360.js
+          node tests/test_asset_summary353.js
+      - name: Compare mobile baseline and run portfolio and PWA regressions
+        run: |
+          npm install --prefix "$RUNNER_TEMP/hs-browser" playwright-core@1.62.1
+          "$RUNNER_TEMP/hs-browser/node_modules/.bin/playwright-core" install --with-deps chrome webkit
+          export NODE_PATH="$RUNNER_TEMP/hs-browser/node_modules"
+          git worktree add --detach "$RUNNER_TEMP/hs-baseline" ce946dd28de9b1a49bb7a5f09098157afe46bf1b
+          HS_BASELINE_ROOT="$RUNNER_TEMP/hs-baseline" node tests/portfolio_verified_display_browser.cjs
+          node tests/c4_chart_points_browser.cjs
+          HS_APP_TEST_OUT="$RUNNER_TEMP/hs-portfolio-pwa" node tests/stable_app_update_browser.cjs
   c4-chart-mobile:
     if: github.event_name == 'pull_request' && github.head_ref == 'fix/c4-chart-direct-points'
     runs-on: ubuntu-latest
