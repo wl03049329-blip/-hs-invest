@@ -60,14 +60,30 @@ test("homepage renders net and movement colors independently",async()=>{
   }
 });
 test("settlement exclusion retains and reconciles official market total",()=>{
-  const x=structuredClone(snapshot), o=x.observations[1];
-  const month=x.trade_date.slice(0,7).replace("-",""),n=o.months[month];
+  // Build a raw, six-contract fixture even when the freshly fetched report
+  // has already removed the expiring contract or rolled into a new month.
+  const x=colorFixture(0,0), o=x.observations[1];
+  const [year, monthNumber]=x.trade_date.split("-").map(Number);
+  const month=x.trade_date.slice(0,7).replace("-","");
+  o.months=Object.fromEntries(Array.from({length:6},(_,i)=>[
+    new Date(Date.UTC(year,monthNumber-1+i,1)).toISOString().slice(0,7).replace("-",""),
+    100+i
+  ]));
+  delete o.excluded_expiry;
+  o.market_open_interest=Object.values(o.months).reduce((total,n)=>total+n,0);
+  assert.equal(core.valid(x,now),true,"ordinary six-contract report");
+  const n=o.months[month];
   delete o.months[month];
   o.excluded_expiry={month,open_interest:n,raw_total:o.market_open_interest};
   o.market_open_interest-=n;
-  // Model a distribution whose compared post-settlement market covers both sides.
-  o.months["202612"]+=100000;o.market_open_interest+=100000;o.excluded_expiry.raw_total+=100000;
-  assert.equal(core.valid(x,now),true);
-  o.excluded_expiry.raw_total++;
-  assert.equal(core.valid(x,now),false);
+  assert.equal(core.valid(x,now),true,"settlement report excluding exactly one contract");
+  for(const mutate of [
+    row=>row.excluded_expiry.raw_total++,
+    row=>row.excluded_expiry.open_interest++,
+    row=>row.market_open_interest++,
+    row=>row.months[month]=n
+  ]){
+    const bad=structuredClone(x);mutate(bad.observations[1]);
+    assert.equal(core.valid(bad,now),false);
+  }
 });
