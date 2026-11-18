@@ -47,6 +47,9 @@
 .radarLegendObservation::before{border-top:2px dashed #f2dbad}
 .radarHistoryCanvas{width:100%;height:560px;min-width:0;touch-action:pan-y;contain:layout paint}
 .radarHistoryCanvas{position:relative}
+.radarHistoryReadout{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;min-width:0;margin:8px 0;padding:8px 10px;border:1px solid #584223;border-radius:8px;font-size:13px;line-height:1.4;font-variant-numeric:tabular-nums}
+.radarHistoryReadout>small{flex-basis:100%;overflow-wrap:anywhere}
+.radarHistoryReadout>time,.radarHistoryReadout>b{color:#f0d999}
 .radarHistoryMissingLabel{position:absolute;top:8px;left:8px;max-width:calc(100% - 88px);pointer-events:none;z-index:1;padding:4px 6px;border:1px solid #574324;border-radius:4px;background:#100e0aeb;color:#d6c6a0;font-size:11px;overflow-wrap:anywhere}
 .radarHistoryMissingLabel[hidden]{display:none}
 .radarHistoryExtrema{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:12px 0}

@@ -30,7 +30,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   radar-mobile-v4:
-    if: github.event_name == 'pull_request' && (github.head_ref == 'feat/radar-mobile-v4' || github.head_ref == 'fix/radar-v4-sticky-toolbar')
+    if: github.event_name == 'pull_request' && (github.head_ref == 'feat/radar-mobile-v4' || github.head_ref == 'fix/radar-v4-sticky-toolbar' || github.head_ref == 'fix/radar-mobile-chart-selection')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -51,7 +51,7 @@ jobs:
           "$RUNNER_TEMP/hs-browser/node_modules/.bin/playwright-core" install --with-deps chrome webkit
           export NODE_PATH="$RUNNER_TEMP/hs-browser/node_modules"
           node tests/radar_mobile_v4_browser.cjs
-          if [ "$GITHUB_HEAD_REF" = "feat/radar-mobile-v4" ]; then
+          if [ "$GITHUB_HEAD_REF" != "fix/radar-v4-sticky-toolbar" ]; then
             node tests/c4_chart_points_browser.cjs
             HS_APP_TEST_OUT="$RUNNER_TEMP/hs-radar-pwa" node tests/stable_app_update_browser.cjs
           fi

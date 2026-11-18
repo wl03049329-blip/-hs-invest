@@ -37,6 +37,14 @@ async function run(){
         await settled.dispose();
         const expected=archive.snapshots.find(s=>s.date==="2026-11-17").rows.find(r=>r.symbol===symbol).final_core_score;
         assert.equal(Number(await canvas.getAttribute("data-selected-c4")),expected);
+        const readout=page.locator(".radarHistoryReadout");
+        assert.equal(await readout.locator("time").getAttribute("datetime"),"2026-11-17");
+        assert.match(await readout.innerText(),/原始收盤 —/);
+        assert.ok((await readout.boundingBox()).y+(await readout.boundingBox()).height<=(await canvas.boundingBox()).y);
+        const bounds=await page.evaluate(()=>HSRadarHistoryView.layoutDiagnostics().chart.paneBounds);
+        for(const [pane,{height,top,bottom}] of Object.entries(bounds)){
+          assert.ok(Number.isFinite(top)&&top>=24&&bottom<=height-24&&bottom>top,pane+JSON.stringify(bounds));
+        }
         const points=await page.evaluate(()=>HSRadarHistoryView.layoutDiagnostics().chart.observationPoints);
         assert.equal(points.length,symbol==="00662"?0:4);
         for(const day of points.map(p=>p.date)){
@@ -49,6 +57,16 @@ async function run(){
           const text=await page.locator(".radarHistoryDetail").innerText();
           assert.ok(text.includes("獨立收盤觀察｜非正式 FINAL"));
           assert.ok(text.includes(observations.sessions.find(s=>s.date===point.date).symbols[symbol].score.toFixed(1)));
+          assert.equal(await readout.locator("time").getAttribute("datetime"),point.date);
+          assert.match(await readout.innerText(),/獨立收盤觀察｜非正式 FINAL/);
+          assert.match(await readout.innerText(),/原始收盤 49/);
+        }
+        if(points.length){
+          const first=points[0],b=await canvas.boundingBox();
+          await page.touchscreen.tap(b.x+first.x,b.y+bounds.score.height+100);
+          await readout.locator('time[datetime="'+first.date+'"]').waitFor();
+          assert.match(await readout.innerText(),/原始收盤 49/);
+          assert.match(await readout.innerText(),/漲跌 [→+−-]?0/);
         }
         assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth),390);
         console.log(engine.name(),symbol,"390px direct points PASS");

@@ -114,6 +114,14 @@
       const series=s.observationLines?.find(line=>line.data().some(p=>p.time===r.time));
       return {date:r.time,x:scale.timeToCoordinate(r.time),y:series?.priceToCoordinate(r.value)};
     });
+    if(chart&&logical){
+      const [scorePane,pricePane]=s.chart.panes(),x=C.extrema(s.axis,s.score.rows,s.prices,logical);
+      const score=s.scoreLines?.[0]||s.observationLines?.[0];
+      chart.paneBounds={
+        score:{height:scorePane.getHeight(),top:score?.priceToCoordinate(100)??null,bottom:score?.priceToCoordinate(0)??null},
+        price:{height:pricePane.getHeight(),top:x?.priceHigh?s.priceSeries.priceToCoordinate(x.priceHigh.high):null,bottom:x?.priceLow?s.priceSeries.priceToCoordinate(x.priceLow.low):null}
+      };
+    }
     return{viewport:{width:root.innerWidth,height:root.innerHeight,scrollY:root.scrollY,documentWidth:document.documentElement.scrollWidth},chart,nodes:selectors.map(selector=>{const el=document.querySelector(selector);if(!el)return{selector,present:false};const r=el.getBoundingClientRect(),s=root.getComputedStyle(el);return{selector,top:r.top,bottom:r.bottom,height:r.height,width:r.width,hidden:el.hidden,open:el.open,display:s.display,position:s.position,margin:s.margin,padding:s.padding,minHeight:s.minHeight,scrollMarginTop:s.scrollMarginTop,stickyTop:s.top};})};
   }
   function readPreferences(){if(sessionPreferences)return C.preferences(sessionPreferences);try{return C.preferences(JSON.parse(localStorage.getItem(KEY)));}catch{return C.preferences();}}
@@ -122,8 +130,9 @@
     <header><h3>近期趨勢與訊號 2.0</h3><small class="radarHistoryIdentity">${esc(symbol)}｜正式 C4 × 原始日 K</small></header>
     <nav class="radarHistoryRanges" aria-label="圖表時間區間">${C.RANGES.map(r=>`<button type="button" data-history-range="${r}">${r==='ALL'?'全部':r}</button>`).join('')}</nav>
     <div class="radarObservationLegend" aria-label="C4 圖例" hidden></div>
+    <div class="radarHistoryReadout" aria-live="polite" aria-atomic="true"><time>—</time><b data-readout-c4>正式 C4 —</b><span data-readout-price>原始收盤 —</span><span data-readout-change>漲跌 —</span><small data-readout-state>尚未選取日期</small></div>
     <div class="radarHistoryCanvas" aria-label="上圖 C4 正式分數；下圖原始日 K，共用交易日期" tabindex="0"></div>
-    <div class="radarHistorySelection"><div class="radarHistoryDetail" aria-live="polite"></div><button type="button" data-history-action="details">查看 C4 詳細資訊</button></div>
+    <div class="radarHistorySelection"><div class="radarHistoryDetail"></div><button type="button" data-history-action="details">查看 C4 詳細資訊</button></div>
     <div class="radarHistoryTools"><button type="button" data-history-action="latest">最新</button><button type="button" data-history-action="older">載入更早歷史</button><button type="button" data-history-action="zoom-in" aria-label="放大圖表">＋</button><button type="button" data-history-action="zoom-out" aria-label="縮小圖表">−</button><button type="button" data-history-action="retry">重新取得</button><button type="button" data-history-action="fullscreen" aria-pressed="false">放大研究</button></div>
     <details class="radarHistoryCustom"><summary>更多：自訂日期</summary><label>開始 <input type="date" data-custom-start></label><label>結束 <input type="date" data-custom-end></label><button type="button" data-history-action="custom">套用日期</button><p data-custom-status role="status"></p></details>
     <details class="radarHistorySettings"><summary>圖表設定</summary><div>${Object.entries({score:'C4 折線',price:'原始 K 線',extrema:'高低點標記',ma5:'MA5',ma10:'MA10',ma20:'MA20',ma60:'MA60',volume:'成交量',thresholds:'正式門檻線'}).map(([key,label])=>`<label><input type="checkbox" data-history-pref="${key}"> ${label}</label>`).join('')}</div></details>
@@ -192,7 +201,7 @@ s.score=C.scores(artifact,symbol,contract,date=>completed(date)&&date<=cutoff(ne
   }
   async function older(s){if(active!==s||s.busy||s.nextYear<s.firstYear)return;s.busy=true;const year=s.nextYear;s.status(`正在載入 ${year} 原始日線…`);try{const result=await source.year(s.symbol,year,s.dates,s.cutoff,s.abort.signal);if(active!==s)return;s.years.add(year);s.nextYear--;s.prices=[...result.rows,...s.prices].sort((a,b)=>a.time.localeCompare(b.time));s.events=[...result.events,...s.events];s.invalid.push(...result.invalid);if(result.sourceWarning)s.warnings.add(result.sourceWarning);if(result.dividendStatus!=='VERIFIED')s.dividendStatus=result.dividendStatus;s.fetchedAt=result.fetchedAt;s.expectedPriceDate=result.expectedCompleted||s.expectedPriceDate;s.priceProvider=result.provider||s.priceProvider;draw(s,true);}finally{s.busy=false;}}
   async function loadAll(s){if(s.busy)return;while(active===s&&s.prefs.range==='ALL'&&s.nextYear>=s.firstYear){await older(s);if(s.abort.signal.aborted)return;}}
-  function setRange(s){if(active!==s||!s.chart)return;const custom=s.custom&&customRange(s.axis,s.custom.a,s.custom.b),r=custom||C.range(s.axis,s.prefs.range);if(r)s.chart.timeScale().setVisibleLogicalRange(r.from===r.to?{from:r.from-.5,to:r.to+.5}:r);s.syncingCursor=true;try{s.chart.clearCrosshairPosition();}finally{s.syncingCursor=false;}syncControls(s);showDetail(s,custom?s.axis[custom.to]:s.axis.at(-1));syncCursor(s);}
+  function setRange(s){if(active!==s||!s.chart)return;const custom=s.custom&&customRange(s.axis,s.custom.a,s.custom.b),r=custom||C.range(s.axis,s.prefs.range);if(r)s.chart.timeScale().setVisibleLogicalRange(r.from===r.to?{from:r.from-.5,to:r.to+.5}:r);s.syncingCursor=true;try{s.chart.clearCrosshairPosition();}finally{s.syncingCursor=false;}syncControls(s);const index=s.axis.indexOf(s.selected);showDetail(s,r&&index>=r.from&&index<=r.to?s.selected:s.axis[custom?custom.to:s.axis.length-1]);syncCursor(s);}
   function syncControls(s){s.host.querySelectorAll('[data-history-range]').forEach(b=>{b.classList.toggle('active',b.dataset.historyRange===s.prefs.range);b.setAttribute('aria-pressed',String(b.dataset.historyRange===s.prefs.range));});s.host.querySelectorAll('[data-history-pref]').forEach(b=>b.checked=s.prefs[b.dataset.historyPref]);}
   const displayDate=time=>String(time||'—').replace(/-/g,'/');
   // BusinessDay is an exchange date, not a local-midnight timestamp.
@@ -216,6 +225,12 @@ s.score=C.scores(artifact,symbol,contract,date=>completed(date)&&date<=cutoff(ne
   function showDetail(s,time){
     if(!time||!s.axis.includes(time))return;s.selected=time;s.host.dataset.selectedDate=time;
     const d=C.detail(time,s.dates,s.score.rows,s.prices,s.events),p=d.price,c=d.score,o=observationAt(s,time);
+    const readout=s.host.querySelector('.radarHistoryReadout');
+    const date=readout.querySelector('time');date.dateTime=time;date.textContent=displayDate(time);
+    readout.querySelector('[data-readout-c4]').textContent=o&&!o.halt?'C4 觀察 '+scoreNum(o.value):'正式 C4 '+scoreNum(c?.value);
+    readout.querySelector('[data-readout-price]').textContent='原始收盤 '+num(p?.close);
+    readout.querySelector('[data-readout-change]').textContent='漲跌 '+signed(d.change)+(d.returnPct===null?'':'（'+signed(d.returnPct)+'%）');
+    readout.querySelector('[data-readout-state]').textContent=o?(o.halt?'分割停牌・無分數':observationText):c?'正式收盤':'無已驗證正式 C4';
     s.host.querySelector('.radarHistoryDetail').innerHTML=`
       <header><time datetime="${esc(time)}">${displayDate(time)}</time><b>${esc(s.symbol)} ${esc(s.name)}</b></header>
       <div class="radarHistorySummary"><strong>${o?(o.halt?'分割停牌・無分數':scoreNum(o.value)+' 分'):c?scoreNum(c.value)+' 分':'該日未發布正式 C4'}</strong><span>${esc(o?.tier||c?.tier||'')}</span><span>${o?(o.halt?'最後有效 FINAL：'+displayDate(o.lastFinal):observationText):c&&c.delta!==null?(c.delta>0?'↑ ':c.delta<0?'↓ ':'→ ')+scoreSigned(c.delta):'暫無前筆正式比較'}</span></div>
@@ -288,7 +303,7 @@ s.score=C.scores(artifact,symbol,contract,date=>completed(date)&&date<=cutoff(ne
     finally{s.syncingCursor=false;}
   }
   function selectDate(s,time,reveal=false){
-    if(active!==s||!selectable(s).includes(time))return;
+    if(active!==s||!s.axis.includes(time))return;
     showDetail(s,time);
     if(reveal){const scale=s.chart.timeScale(),r=scale.getVisibleLogicalRange(),next=C.revealRange(r,s.axis.indexOf(time),s.axis.length);if(next!==r)scale.setVisibleLogicalRange(next);}
     syncCursor(s);
@@ -395,9 +410,11 @@ s.score=C.scores(artifact,symbol,contract,date=>completed(date)&&date<=cutoff(ne
       const start=e=>{touch=e.touches.length===1?e.touches[0]:null;};
       const end=e=>{
         const origin=touch,point=e.changedTouches[0];touch=null;
-        if(active!==s||!s.prefs.score||!origin||!point||point.identifier!==origin.identifier||
+        if(active!==s||!origin||!point||point.identifier!==origin.identifier||
           Math.hypot(point.clientX-origin.clientX,point.clientY-origin.clientY)>8)return;
         const rect=canvas.getBoundingClientRect(),x=point.clientX-rect.left,y=point.clientY-rect.top;
+        const scale=s.chart.timeScale();
+        if(x<0||x>=scale.width()||y<0||y>=s.chart.panes().reduce((height,pane)=>height+pane.getHeight(),0))return;
         let best=null,distance=18;
         for(const {series,points} of s.observationMarkers){
           for(const row of points){
@@ -407,15 +424,19 @@ s.score=C.scores(artifact,symbol,contract,date=>completed(date)&&date<=cutoff(ne
             if(delta<distance){best=row.time;distance=delta;}
           }
         }
-        if(best)selectDate(s,best);
+        const logical=scale.coordinateToLogical(x);
+        const day=best||(C.finite(logical)?s.axis[Math.round(logical)]:null);
+        if(day)selectDate(s,day);
       };
       const cancel=()=>{touch=null;};
       for(const [type,fn] of [['touchstart',start],['touchend',end],['touchcancel',cancel]])canvas.addEventListener(type,fn,{passive:true});
       s.removePointTap=()=>{for(const [type,fn] of [['touchstart',start],['touchend',end],['touchcancel',cancel]])canvas.removeEventListener(type,fn);};
       s.chart.timeScale().subscribeVisibleLogicalRangeChange(r=>visible(s,r));s.resize=new ResizeObserver(entries=>{const width=Math.floor(entries[0].contentRect.width);if(width>0)s.chart.applyOptions({width});});s.resize.observe(s.host.querySelector('.radarHistoryCanvas'));
       s.anchor=s.chart.addSeries(L.LineSeries,{color:'transparent',priceFormat:{type:'custom',formatter:scoreNum,minMove:.1},lineVisible:false,priceLineVisible:false,lastValueVisible:false},0);
-      s.anchor.priceScale().applyOptions({scaleMargins:{top:0,bottom:0}});
-      s.priceSeries=s.chart.addSeries(L.CandlestickSeries,{upColor:'#ed786f',downColor:'#64c593',borderUpColor:'#ed786f',borderDownColor:'#64c593',wickUpColor:'#ed786f',wickDownColor:'#64c593',lastValueVisible:false,priceLineVisible:false},1);s.priceMarkers=L.createSeriesMarkers(s.priceSeries,[]);s.chart.panes()[0].setHeight(230);s.chart.panes()[1].setHeight(300);
+      s.anchor.priceScale().applyOptions({scaleMargins:{top:.18,bottom:.18}});
+      s.priceSeries=s.chart.addSeries(L.CandlestickSeries,{upColor:'#ed786f',downColor:'#64c593',borderUpColor:'#ed786f',borderDownColor:'#64c593',wickUpColor:'#ed786f',wickDownColor:'#64c593',lastValueVisible:false,priceLineVisible:false},1);
+      s.priceSeries.priceScale().applyOptions({scaleMargins:{top:.16,bottom:.18}});
+      s.priceMarkers=L.createSeriesMarkers(s.priceSeries,[]);s.chart.panes()[0].setHeight(230);s.chart.panes()[1].setHeight(300);
     }
     clearSelectionLabels(s);
     clearObservationMarkers(s);
