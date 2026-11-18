@@ -7,7 +7,7 @@ const dates=["2026-10-12","2026-10-13"];
 const artifact={schema_version:1,core_score_version:P.LONG_TERM_CORE_SCORE_VERSION,snapshots:dates.map((date,i)=>({date,finalized:true,snapshot_type:"FINALIZED_CLOSE",source:{status:"official_closing_data",provider:"FIXTURE_ONLY"},rows:["0050","00662"].map(symbol=>({symbol,final_core_score:29.1+i,core_score_version:P.LONG_TERM_CORE_SCORE_VERSION,data_as_of:date+"T13:30:00+08:00"}))}))};
 class Host{
   constructor(){this.dataset={};this.nodes=new Map();this.listeners=new Map();}
-  querySelector(key){if(!this.nodes.has(key))this.nodes.set(key,{...bus(),textContent:"",innerHTML:"",dataset:{},children:[],append(node){this.children.push(node)}});return this.nodes.get(key);}
+  querySelector(key){if(!this.nodes.has(key))this.nodes.set(key,{...bus(),textContent:"",innerHTML:"",dataset:{},children:[],append(node){this.children.push(node)},querySelector:child=>this.querySelector(key+" "+child)});return this.nodes.get(key);}
   querySelectorAll(){return [];}
   addEventListener(key,fn){this.listeners.set(key,fn);}
   removeEventListener(key,fn){if(this.listeners.get(key)===fn)this.listeners.delete(key);}
@@ -114,6 +114,8 @@ assert.equal(JSON.stringify(V.customRange(dates,dates[0],dates[1])),JSON.stringi
   await h.click({historyAction:'details'});
   console.log('PASS modal open/close/swipe, 60 day arrows, boundaries, focus and chart/range preservation');
   await h.click({historyRange:"60D"});assert.match(storage.values().next().value,/"range":"60D"/);
+  assert.equal(h.querySelector(".radarHistoryReadout time").dateTime,"2026-10-12");
+  assert.equal(h.querySelector(".radarHistoryReadout [data-readout-price]").textContent,"原始收盤 101");
   const h2=new Host();await V.mount(h2,args("00662"));assert.ok(charts[0].removed);assert.equal(h.listeners.size,0);assert.match(h2.querySelector(".radarHistoryDetail").innerHTML,/00662/);assert.doesNotMatch(h2.querySelector(".radarHistoryDetail").innerHTML,/0050/);
   charts.at(-1).crosshair({time:"2026-10-12"});assert.match(h2.querySelector(".radarHistoryDetail").innerHTML,/30.1 分/,"new ETF starts at latest despite inherited pointer position");
   V.unmount();assert.equal(document.handlers.size,0);assert.equal(window.handlers.size,0);assert.equal(h2.listeners.size,0);
@@ -128,6 +130,7 @@ assert.equal(JSON.stringify(V.customRange(dates,dates[0],dates[1])),JSON.stringi
   assert.match(failed.querySelector(".radarHistoryStatus").textContent,/SOURCE_FIXTURE_OUTAGE/);
   assert.match(failed.querySelector(".radarHistoryDetail").innerHTML,/30.1 分/);
   assert.match(failed.querySelector(".radarHistoryDetail").innerHTML,/股價：資料不足/);
+  assert.equal(failed.querySelector(".radarHistoryReadout [data-readout-price]").textContent,"原始收盤 —");
   assert.equal(charts.at(-1).series.find(s=>s.type==="candle").rows.filter(r=>r.close!==undefined).length,0);
   assert.equal(labels(charts.at(-1)).length,0);
   assert.match(failed.querySelector('.radarHistoryCanvas').children.at(-1).textContent,/收盤：資料不足/);
