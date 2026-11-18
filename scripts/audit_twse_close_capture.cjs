@@ -157,7 +157,23 @@ async function fetchArchive(out, mode) {
   }
   if (!raw || !marketRaw) return {status:"DEFERRED_UPSTREAM"};
   const result = archiveReceipt(raw,marketRaw,new Date(),mode === "morning",mode === "probe");
-  if (result.record) return {...appendClose(out,result.record),date:result.record.trading_date};
+  if (result.record) {
+    // The market OpenAPI may roll at month end. A matching, independently
+    // verified official session interval can bridge that boundary, not a price guess.
+    if (process.env.HS_00631L_CROSS_MONTH_CALENDAR === "1") {
+      const read = name => JSON.parse(fs.readFileSync(path.join(__dirname,"..","data","radar-history",name),"utf8"));
+      const r = result.record, calendar = read("twse/0050.json"), status = read("status-v1.json"),
+        inc = calendar.incremental_verification, dates = inc?.sessions;
+      if (calendar.verified === true && status.symbols?.["0050"]?.archive_sha256 === calendar.content_sha256 &&
+          /^[a-f0-9]{64}$/.test(calendar.content_sha256) && inc?.calendar_evidence?.length &&
+          Array.isArray(dates) && dates.join() === [...new Set(dates)].sort().join()) {
+        const i = dates.indexOf(r.trading_date), prev = dates[i-1];
+        if (i>0 && /^20\d\d-\d\d-\d\d$/.test(prev) && prev.slice(0,7)!==r.trading_date.slice(0,7))
+          r.cross_month_session = {previous:prev, source:"HS_VERIFIED_TWSE_SESSION_INTERVAL", sha256:calendar.content_sha256};
+      }
+    }
+    return {...appendClose(out,result.record),date:result.record.trading_date};
+  }
   return result;
 }
 if (require.main === module) (process.argv[2] === "--00631l-archive"

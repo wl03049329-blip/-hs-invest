@@ -68,5 +68,54 @@
      return {h,n,pending:events.length-n,mean:n?returns.reduce((x,y)=>x+y,0)/n:null,median:n?(returns[Math.floor((n-1)/2)]+returns[Math.floor(n/2)])/2:null,positive:n>=10?100*returns.filter(x=>x>0).length/n:null,worst:n?Math.min(...worst):null};
    });
  }
- return Object.freeze({version,states,unavailable,describe,periods,verify,summary,historical,monthsBack});
+ const archiveURL='https://raw.githubusercontent.com/wl03049329-blip/-hs-invest/refs/heads/data/00631l-open-close/index.json';
+ const training='2020-12-31', thresholdVersion='P80_P95_CLOSE_FIXED_20201231_V1';
+ const limits=Object.freeze({speed:[2.2185014650481394,6.714628297362113,1508],
+   20:[6.6833056017748245,13.198992443324942,1494],60:[11.023851076207103,23.181707613719293,1454],
+   120:[15.859564164648921,26.069410815173534,1394],240:[18.886198547215493,27.72397094430994,1274],
+   all:[19.854941069809605,28.934624697336574,1274]});
+ const closeText=s=>typeof s==='string'&&/^\d{1,7}\.\d{2}$/.test(s)&&+s>0;
+ function verifyIndex(index,today,now){
+   if(index?.schema!=='HS_00631L_OPEN_INDEX_V1'||!Array.isArray(index.records)||index.records.length>15000||
+     index.records.some((r,i)=>!r||r.schema!=='HS_00631L_OPEN_CLOSE_V1'||r.symbol!=='00631L'||r.price_basis!=='TWSE_RAW_CLOSE'||
+       !validDay(r.trading_date)||r.trading_date>today||(i&&r.trading_date<=index.records[i-1].trading_date)||
+       !closeText(r.close_twd)||(r.comparison_twd!==null&&!closeText(r.comparison_twd))||
+       !Number.isFinite(Date.parse(r.captured_at))||Date.parse(r.captured_at)>now||Date.parse(r.captured_at)<Date.parse(r.trading_date+'T18:20:00+08:00')||
+       r.source!=='https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL'||r.dataset!=='https://data.gov.tw/dataset/11549'||r.source_attribution!=='臺灣證券交易所'||
+       r.license!=='https://data.gov.tw/license'||r.session_source!=='https://openapi.twse.com.tw/v1/exchangeReport/FMTQIK'||
+       r.session_dataset!=='https://data.gov.tw/dataset/11672'||![r.response_sha256,r.session_sha256].every(s=>typeof s==='string'&&/^[a-f0-9]{64}$/.test(s))||
+       !Array.isArray(r.observed_sessions)||r.observed_sessions.length>62||r.observed_sessions.at(-1)!==r.trading_date||
+       r.observed_sessions.some((d,j)=>!validDay(d)||j&&d<=r.observed_sessions[j-1])||
+       r.cross_month_session!==undefined&&(!validDay(r.cross_month_session?.previous)||
+         r.cross_month_session.previous.slice(0,7)>=r.trading_date.slice(0,7)||
+         r.cross_month_session.source!=='HS_VERIFIED_TWSE_SESSION_INTERVAL'||
+         !/^[a-f0-9]{64}$/.test(r.cross_month_session.sha256))))throw Error('UNVERIFIED_00631L_ARCHIVE');
+   return index.records;
+ }
+ function archiveSummary(records,period){
+   if(!periods.includes(period)) throw Error('INVALID_PERIOD');
+   const last=records.at(-1);
+   let start=records.length-1;
+   for(let i=start;i>0;i--){
+     const r=records[i],prior=records[i-1];
+     if(r.comparison_twd!==prior.close_twd||
+        (r.observed_sessions.at(-2)!==prior.trading_date&&r.cross_month_session?.previous!==prior.trading_date))break;
+     start=i-1;
+   }
+   const rows=records.slice(Math.max(0,start)).map(r=>[r.trading_date,+r.close_twd]), i=rows.length-1, end=rows[i];
+   // All-time data need an approved listing-to-present archive; the new forward archive is not one.
+   const peaks=Object.fromEntries(periods.map(n=>[n,n==='all'||!end?null:peak(rows,i,n)]));
+   const recent=Object.fromEntries([3,5,10].map(n=>[n,i>=n?pctChange(end[1],rows[i-n][1]):null]));
+   const [year,month]=end?end[0].split('-').map(Number):[];
+   const requested=end?[day(new Date(Date.UTC(year,month-1,0))),monthsBack(end[0],3),monthsBack(end[0],6),(year-1)+'-12-31']:[];
+   const returns=[0,1,2,3].map(j=>{
+     const r=rows.findLast(r=>r[0]<=requested[j]);
+     return r?{date:r[0],change:pctChange(end[1],r[1])}:null;
+   });
+   const speed=Number.isFinite(recent[5])?gauge(recent[5],limits.speed):null;
+   const depth=peaks[period]?gauge(peaks[period].change,limits[period]):null;
+   const level=speed&&depth?Math.max(speed.level,depth.level):speed?.level===2||depth?.level===2?2:null;
+   return {asof:last?.trading_date??null,close:end?.[1]??null,rows,recent,peaks,returns,speed,depth,level};
+ }
+ return Object.freeze({version,states,unavailable,describe,periods,verify,summary,historical,monthsBack,archiveURL,verifyIndex,archiveSummary,limits,training,thresholdVersion});
 });

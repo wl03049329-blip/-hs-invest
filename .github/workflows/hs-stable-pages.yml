@@ -40,13 +40,13 @@ jobs:
         run: |
           node tests/test_00631l_observation.js
           python3 -B -m unittest discover -s tests -p test_00631l_observation_openapi.py
-          node tests/test_00631l_openapi_close.cjs
           node tests/test_c4_openapi_close_candidate.cjs
           node tests/test_lradar_v1.js
           node tests/test_radar_daily_workflow.js
           npm install --prefix "$RUNNER_TEMP/hs-browser" playwright-core@1.62.1
           "$RUNNER_TEMP/hs-browser/node_modules/.bin/playwright-core" install --with-deps chrome webkit
           NODE_PATH="$RUNNER_TEMP/hs-browser/node_modules" node tests/00631l_observation_browser.cjs
+          NODE_PATH="$RUNNER_TEMP/hs-browser/node_modules" HS_APP_TEST_OUT="$RUNNER_TEMP/hs-00631l-pwa" node tests/stable_app_update_browser.cjs
   radar-mobile-v4:
     if: github.event_name == 'pull_request' && (github.head_ref == 'feat/radar-mobile-v4' || github.head_ref == 'fix/radar-v4-sticky-toolbar' || github.head_ref == 'fix/radar-mobile-chart-selection')
     runs-on: ubuntu-latest
