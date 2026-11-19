@@ -29,7 +29,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   observation-00631l:
-    if: github.event_name == 'pull_request' && (github.head_ref == 'feat/00631l-crash-radar-v3' || github.head_ref == 'fix/00631l-open-close-source')
+    if: github.event_name == 'pull_request' && (github.head_ref == 'feat/00631l-crash-radar-v3' || github.head_ref == 'fix/00631l-open-close-source' || github.head_ref == 'fix/00631l-authorized-period-ui')
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
@@ -40,6 +40,7 @@ jobs:
       - name: Test locked observation, historical archive and mobile layout
         run: |
           node tests/test_00631l_observation.js
+          node --test tests/test_00631l_authorized_periods.cjs
           python3 -B -m unittest discover -s tests -p test_00631l_observation_openapi.py
           node tests/test_c4_openapi_close_candidate.cjs
           node tests/test_lradar_v1.js
