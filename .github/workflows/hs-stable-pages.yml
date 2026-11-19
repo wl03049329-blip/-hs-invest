@@ -29,7 +29,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   observation-00631l:
-    if: github.event_name == 'pull_request' && (github.head_ref == 'feat/00631l-crash-radar-v3' || github.head_ref == 'fix/00631l-open-close-source' || github.head_ref == 'fix/00631l-history-close-completion' || github.head_ref == 'fix/00631l-authorized-period-ui')
+    if: github.event_name == 'pull_request' && (github.head_ref == 'feat/00631l-crash-radar-v3' || github.head_ref == 'fix/00631l-open-close-source' || github.head_ref == 'fix/00631l-history-close-completion' || github.head_ref == 'fix/00631l-authorized-period-ui' || github.head_ref == 'fix/00631l-auto-local')
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
@@ -43,6 +43,7 @@ jobs:
           node --test tests/test_00631l_close_history_audit.cjs
           node --test tests/test_00631l_authorized_periods.cjs
           node --test tests/test_lradar_local.cjs
+          node --test tests/test_lradar_auto.cjs
           python3 -B -m unittest discover -s tests -p test_00631l_observation_openapi.py
           node tests/test_c4_openapi_close_candidate.cjs
           node tests/test_lradar_v1.js
@@ -50,6 +51,7 @@ jobs:
           npm install --prefix "$RUNNER_TEMP/hs-browser" playwright-core@1.62.1
           "$RUNNER_TEMP/hs-browser/node_modules/.bin/playwright-core" install --with-deps chrome webkit
           NODE_PATH="$RUNNER_TEMP/hs-browser/node_modules" node tests/00631l_observation_browser.cjs
+          NODE_PATH="$RUNNER_TEMP/hs-browser/node_modules" node tests/lradar_auto_browser.cjs
           NODE_PATH="$RUNNER_TEMP/hs-browser/node_modules" HS_APP_TEST_OUT="$RUNNER_TEMP/hs-00631l-pwa" node tests/stable_app_update_browser.cjs
   radar-mobile-v4:
     if: github.event_name == 'pull_request' && (github.head_ref == 'feat/radar-mobile-v4' || github.head_ref == 'fix/radar-v4-sticky-toolbar' || github.head_ref == 'fix/radar-mobile-chart-selection')

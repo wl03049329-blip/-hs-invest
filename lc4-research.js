@@ -132,13 +132,17 @@
    const fmt=x=>Number.isFinite(x)?(x>0?'+':'')+x.toFixed(2)+'%':'—';
    const round=x=>Number.isFinite(x)?x.toFixed(2):'—';
    let selected=240,range=3,records=[],fresh=false,flight=null,lastCheck=0;
-   const local=window.HSLRadarLocal;let personal=null,personalError='',personalBusy=false;
+   const local=window.HSLRadarLocal;let personal=null,personalError='',personalBusy=false,autoBusy=false,autoStatus='',autoNext=null;
+   const autoMessage=()=>({AUTO_STORAGE_UNAVAILABLE:'此瀏覽器本機儲存無法使用，完整歷史尚未啟用；保留公開版，不會清除你的資料。',AUTO_NETWORK_UNAVAILABLE:'FinMind 連線或瀏覽器跨站讀取暫不可用；冷卻後重試，保留已驗證公開收盤。',AUTO_PREVIOUS_INTERRUPTED:'上次歷史載入已中斷；冷卻後再試，目前未在下載。',AUTO_RESPONSE_INVALID:'歷史回應格式不符，已拒絕使用，等待來源核對。',AUTO_ROW_INVALID:'歷史價格或交易日期無法核驗，已拒絕使用。',AUTO_RESPONSE_SIZE:'來源回應超過安全大小，已停止讀取。',AUTO_SOURCE_UNAVAILABLE:'FinMind 服務暫時不可用，保留已驗證公開收盤。',AUTO_LOADING:'正在由你的裝置直接取得完整歷史；不需下載 JSON，也不需等待 240 天。',AUTO_ORIGIN_NOT_ENABLED:'此位置不是正式 HS，不會自動查詢個人歷史。',AUTO_OFFLINE:'目前離線，完整歷史尚未啟用；連線後會自動重試。',AUTO_HTTP_402:'FinMind 免費查詢額度暫時不足；保留已驗證公開收盤，冷卻後再試。',AUTO_HTTP_429:'FinMind 暫時限流；已停止請求並遵守冷卻時間。',AUTO_HTTP_401:'FinMind 要求授權，尚未取得歷史；沒有改用共享金鑰或繞過驗證。',AUTO_HTTP_403:'FinMind 拒絕此裝置查詢；完整歷史尚未啟用。',AUTO_HISTORY_REVISED:'來源歷史與凍結核驗版本不同，已拒絕使用，等待核對。',AUTO_COORDINATION_UNAVAILABLE:'瀏覽器不支援安全協調自動載入，尚未啟用完整歷史。',PUBLIC_SELECTED:'目前使用公開封存；你可切回已保存的個人本機歷史。'})[autoStatus]||'完整歷史尚未啟用：來源暫時無法核驗；不是要重新等待 240 天。';
+   async function loadAutomatic(){if(!local||autoBusy||personalBusy)return;autoBusy=true;autoStatus='AUTO_LOADING';draw();try{const result=await local.bootstrap();autoStatus=result.status;autoNext=result.next||null;if(result.state){personal=result.state;if(personal.enabled&&records.length)personal=await local.sync(records);personalError='';}}catch(e){personalError=localError(e);autoStatus=e.message==='AUTO_COORDINATION_UNAVAILABLE'?e.message:'AUTO_STORAGE_UNAVAILABLE';}finally{autoBusy=false;draw();}}
    const localError=e=>({PRIVATE_BASE_HASH_OR_RIGHTS:'檔案來源、授權或內容無法核驗',PRIVATE_EXTENSION_GAP_OR_PRICE:'新收盤與本機歷史有缺日或前收不一致',PRIVATE_OVERLAP_CONFLICT:'公開封存與本機歷史重疊價格衝突',PRIVATE_IMPORT_ROLLBACK_OR_CONFLICT:'備份較舊或內容衝突，已保留目前資料',PRIVATE_BACKUP_EXTENSION_NEEDS_PUBLIC_CHECK:'備份新增收盤尚未與公開封存核對，請連線後再恢復',PRIVATE_CONCURRENT_CHANGE:'另一分頁已更新，請再試一次'})[e.message]||'本機資料暫時無法核驗或儲存，已保留原資料';
    async function personalAction(fn){if(personalBusy)return;personalBusy=true;try{personal=await fn();personalError='';}catch(e){personalError=localError(e);}finally{personalBusy=false;draw();}}
    function personalControls(d){
      if(!local)return;
-     const panel=el('details');panel.dataset.lradarPersonal='true';panel.append(el('summary','個人本機歷史（匯入／備份）'),el('p','只存此瀏覽器，不上傳。僅供同一使用者非商業分析；請另存備份，勿轉發。清除網站資料會遺失，公開版仍可使用。'));
-     panel.append(el('p',personal?`${personal.enabled?'使用本機歷史':'使用公開封存'}｜本機 ${local.rows(personal.data).length} 筆，截至 ${local.rows(personal.data).at(-1)[0]}`:'尚未匯入個人歷史。'));
+     const panel=el('details');panel.dataset.lradarPersonal='true';panel.append(el('summary','個人本機歷史（自動載入／備份）'),el('p','歷史由此裝置直接向 FinMind 免費端點取得，不經 HS 轉發、不上傳。僅供本人非商業分析，勿轉發。清除資料或換手機後會重新核驗取得；私人備份仍可恢復。'));
+     panel.append(el('p',personal?`${personal.enabled?'使用本機歷史':'使用公開封存'}｜本機 ${local.rows(personal.data).length} 筆，截至 ${local.rows(personal.data).at(-1)[0]}`:autoMessage()));
+     if(autoNext)panel.append(el('small','最早重試：'+new Date(autoNext).toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false})));
+     if(!personal){const retry=el('button','重新嘗試自動載入');retry.type='button';retry.disabled=autoBusy;retry.onclick=loadAutomatic;panel.append(retry);}
      if(personalError)panel.append(el('p',personalError,'lc4r-warn'));
      const label=el('label','一次性匯入或恢復備份 '),input=el('input');input.type='file';input.accept='.json,application/json';input.disabled=personalBusy;input.setAttribute('aria-label','匯入個人歷史或備份');
      input.onchange=()=>{const file=input.files?.[0];if(!file)return;if(file.size>2000000){personalError='檔案過大，未匯入';draw();return;}personalAction(async()=>{if(!confirm('此資料僅供你本人本機分析，不會上傳。確認匯入並啟用？'))return personal;personal=await local.importText(await file.text(),records);return records.length?await local.sync(records):personal;});};
@@ -157,7 +161,7 @@
      if(g){fill.style.width=Math.min(100,100*g.decline/g.extreme)+'%';bar.append(fill);}
      bar.append(mark);n.append(bar);
      n.append(el('small',`正常 0%｜觀察 ${round(watch)}%｜極端 ${round(extreme)}%`),
-       el('p',!g?(needed==='all'?'缺少自上市起的完整核驗收盤':`需連續 ${needed} 筆同基準收盤，目前 ${d.rows.length} 筆`):g.fromExtreme>=0?`已達極端門檻，超過 ${round(g.fromExtreme)} 個百分點`:`距極端門檻還差 ${round(-g.fromExtreme)} 個百分點`),
+       el('p',!g?(local&&!personal?.enabled?'完整歷史尚未啟用；不是要重新累積 240 天。':needed==='all'?'缺少自上市起的完整核驗收盤':`需連續 ${needed} 筆同基準收盤，目前 ${d.rows.length} 筆`):g.fromExtreme>=0?`已達極端門檻，超過 ${round(g.fromExtreme)} 個百分點`:`距極端門檻還差 ${round(-g.fromExtreme)} 個百分點`),
        el('small',d.asof?'截至 '+d.asof:'尚無核驗截至日'));
      return n;
    }
@@ -165,8 +169,10 @@
      const d=personal?.enabled?local.summary(personal.data,selected):HSLRadar.archiveSummary(records,selected),v=d.peaks[selected],peak240=d.peaks[240],level=d.level,speed=(d.speed?.level??-1)>=(d.depth?.level??-1);
      const current=fresh&&d.asof===records.at(-1)?.trading_date&&!(d.personal&&personalError);
      const trigger=level===null?'部分區間資料累積中，暫不分級':level===0?'兩項皆未達觀察門檻':(d.speed?.level===level&&d.depth?.level===level?'兩項皆達此等級':speed?'由五日跌幅觸發':'由最高收盤價回落觸發');
-     daily.replaceChildren(el('strong',!d.asof?'資料累積中':!current?'資料尚未更新':level===null?'資料累積中':labels[level]),
+     const inactive=local&&!personal?.enabled;
+     daily.replaceChildren(el('strong',inactive?(autoBusy?'正在啟用完整歷史':personal?'公開收盤模式':'完整歷史尚未啟用'):!d.asof?'資料累積中':!current?'資料尚未更新':level===null?'資料累積中':labels[level]),
        el('p',d.asof?`${current?trigger:'顯示最後核驗的歷史資料，不判定今天。'}｜${d.asof} 收盤 ${round(d.close)} 元`:'尚無已驗證的每日收盤封存。'));
+     if(inactive)daily.append(el('p',autoMessage()));
      if(d.personal)daily.append(el('small','個人本機歷史 · 不含息價格報酬 · 不上傳'));
      const quick=el('div',undefined,'lradar-v3-grid');
      quick.append(gauge('五日急跌速度',d.recent[5],d.speed,HSLRadar.limits.speed,6,d),gauge(periodName(selected)+'最高收盤回落',v?.change,d.depth,HSLRadar.limits[selected],selected,d));
@@ -249,9 +255,10 @@
      }).catch(()=>{if(fresh){fresh=false;draw();}}).finally(()=>{flight=null;});
    }
    draw();refreshDaily();window.addEventListener('online',refreshDaily);window.addEventListener('pageshow',refreshDaily);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshDaily();});
-   if(local)local.read().then(async p=>{personal=p;if(p?.enabled&&records.length)personal=await local.sync(records);draw();}).catch(e=>{personalError=localError(e);draw();});
+   if(local)loadAutomatic();
    const restorePersonal=()=>{if(!local||document.hidden||personalBusy)return;local.read(true).then(p=>{if(p?.revision!==personal?.revision){personal=p;draw();}}).catch(e=>{personalError=localError(e);});};
    window.addEventListener('pageshow',restorePersonal);document.addEventListener('visibilitychange',restorePersonal);
+   const retryAutomatic=()=>{if(!document.hidden&&!personal)loadAutomatic();};window.addEventListener('online',retryAutomatic);window.addEventListener('pageshow',retryAutomatic);
    window.setInterval(()=>{if(!document.hidden)refreshDaily();},300000);
  }
  refresh.onclick=load;

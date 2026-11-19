@@ -6,7 +6,8 @@ test('unknown history, rights flags and corrupted base never pass',async()=>{
  await assert.rejects(L.importText('x'.repeat(2_000_001)),/PRIVATE_FILE_SIZE/);
 });
 test('personal storage cannot upload or read financial storage',()=>{
- const src=fs.readFileSync('lradar-local.js','utf8');for(const call of ['fetch(','.sendBeacon(','.send(','localStorage.','sessionStorage.','hsPersonal','Ledger'])assert.ok(!src.includes(call));
+ const src=fs.readFileSync('lradar-local.js','utf8');for(const call of ['.sendBeacon(','.send(','localStorage.','sessionStorage.','hsPersonal','Ledger','Authorization'])assert.ok(!src.includes(call));
+ assert.equal(src.match(/fetch\(/g)?.length,1);assert.ok(src.includes("method:'GET',mode:'cors',credentials:'omit'"));assert.ok(src.includes("redirect:'error'"));
  assert.equal(L.DB,'hs.research.00631l.personal.v1');
  assert.equal(R.thresholdVersion,'P80_P95_CLOSE_FIXED_20201231_V1');
  assert.ok(fs.readFileSync('lc4-research.js','utf8').includes('&&!(d.personal&&personalError)'));
