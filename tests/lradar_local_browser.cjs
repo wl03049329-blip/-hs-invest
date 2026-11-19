@@ -18,6 +18,7 @@ const fragment=fs.readFileSync('index.html','utf8').match(/<section id="lc4-rada
  await p.goto('http://localhost:8235');const radar=p.locator('.lradar-v3'),panel=p.locator('[data-lradar-personal]');await panel.waitFor();await p.evaluate(()=>localStorage.setItem('hsPersonalV3.v1.TEST_ONLY','KEEP'));
  await panel.locator('summary').click();await p.getByLabel('匯入個人歷史或備份').setInputFiles(path.resolve(file));await radar.getByText('個人本機歷史 · 不含息價格報酬 · 不上傳',{exact:true}).waitFor();
  const actual=await p.evaluate(()=>HSLRadarLocal.read().then(s=>HSLRadarLocal.summary(s.data,240)));assert.equal(actual.rows.length,2935);assert.equal(actual.recent[5],100*(24.57/30.99-1));
+ assert.match(await radar.textContent(),/FinMind TaiwanStockPrice 個人本機歷史/);
  await p.waitForFunction(()=>document.querySelector('.lradar-v3>strong')?.textContent==='歷史極端急跌');
  for(const n of ['20','60','120','240','all']){await radar.getByLabel('高點比較期間').selectOption(n);assert.equal(await radar.locator('.lradar-v3-bar i').count(),2);}
  for(const width of[320,375,390,430,1200]){await p.setViewportSize({width,height:900});assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));if(out)await radar.screenshot({path:path.join(out,kind+'-'+width+'.png')});results.push({kind,width,pass:true});}

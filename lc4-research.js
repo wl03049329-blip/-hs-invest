@@ -218,7 +218,9 @@
          line(h,`${n} 日｜後續最低收盤價跌幅`,!s||s.n<10?'資料累積中（樣本不足）':`${s.n} 件（待成熟 ${s.pending}）｜平均 ${fmt(s.mean)}／中位 ${fmt(s.median)}；正報酬 ${round(s.positive)}%；後續最低收盤價跌幅 ${fmt(s.worst)}`);
        }
      };
-     const source=el('details');source.append(el('summary','資料與固定門檻'),el('p',`臺灣證券交易所開放資料 · 非即時。只比較相同價格基準的收盤，股價報酬不含股息。門檻版本 ${HSLRadar.thresholdVersion}，以截至 ${HSLRadar.training} 的 P80/P95 固定，不代表買進或保證反彈。`));
+     const source=el('details'),basis=d.personal?'FinMind TaiwanStockPrice 個人本機歷史（原資訊來源：臺灣證券交易所）；新收盤接續 TWSE 開放資料。2026/03/31 的 22:1 分割僅調整一次，分割前換算現行單位。':'臺灣證券交易所開放資料。';
+     source.append(el('summary','資料與固定門檻'),el('p',`${basis}非即時。只比較相同價格基準的收盤，股價報酬不含股息。門檻版本 ${HSLRadar.thresholdVersion}，以截至 ${HSLRadar.training} 的 P80/P95 固定，不代表買進或保證反彈。`));
+     if(d.personal){const terms=el('a','FinMind 個人非商業使用範圍（不含公開再散布）');terms.href='https://finmind.github.io/Pricing/';terms.target='_blank';terms.rel='noopener noreferrer';source.append(terms);}
      const attribution=el('p'),dataset=el('a','臺灣證券交易所｜個股日成交資訊'),license=el('a','政府資料開放授權條款第 1 版');
      dataset.href='https://data.gov.tw/dataset/11549';license.href='https://data.gov.tw/license';
      for(const a of [dataset,license]){a.target='_blank';a.rel='noopener noreferrer';}
