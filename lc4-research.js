@@ -132,6 +132,22 @@
    const fmt=x=>Number.isFinite(x)?(x>0?'+':'')+x.toFixed(2)+'%':'—';
    const round=x=>Number.isFinite(x)?x.toFixed(2):'—';
    let selected=240,range=3,records=[],fresh=false,flight=null,lastCheck=0;
+   const local=window.HSLRadarLocal;let personal=null,personalError='',personalBusy=false;
+   const localError=e=>({PRIVATE_BASE_HASH_OR_RIGHTS:'檔案來源、授權或內容無法核驗',PRIVATE_EXTENSION_GAP_OR_PRICE:'新收盤與本機歷史有缺日或前收不一致',PRIVATE_OVERLAP_CONFLICT:'公開封存與本機歷史重疊價格衝突',PRIVATE_IMPORT_ROLLBACK_OR_CONFLICT:'備份較舊或內容衝突，已保留目前資料',PRIVATE_CONCURRENT_CHANGE:'另一分頁已更新，請再試一次'})[e.message]||'本機資料暫時無法核驗或儲存，已保留原資料';
+   async function personalAction(fn){if(personalBusy)return;personalBusy=true;try{personal=await fn();personalError='';}catch(e){personalError=localError(e);}finally{personalBusy=false;draw();}}
+   function personalControls(d){
+     if(!local)return;
+     const panel=el('details');panel.dataset.lradarPersonal='true';panel.append(el('summary','個人本機歷史（匯入／備份）'),el('p','只存此瀏覽器，不上傳。僅供同一使用者非商業分析；請另存備份，勿轉發。清除網站資料會遺失，公開版仍可使用。'));
+     panel.append(el('p',personal?`${personal.enabled?'使用本機歷史':'使用公開封存'}｜本機 ${local.rows(personal.data).length} 筆，截至 ${local.rows(personal.data).at(-1)[0]}`:'尚未匯入個人歷史。'));
+     if(personalError)panel.append(el('p',personalError,'lc4r-warn'));
+     const label=el('label','一次性匯入或恢復備份 '),input=el('input');input.type='file';input.accept='.json,application/json';input.disabled=personalBusy;input.setAttribute('aria-label','匯入個人歷史或備份');
+     input.onchange=()=>{const file=input.files?.[0];if(!file)return;if(file.size>2000000){personalError='檔案過大，未匯入';draw();return;}personalAction(async()=>{if(!confirm('此資料僅供你本人本機分析，不會上傳。確認匯入並啟用？'))return personal;personal=await local.importText(await file.text());return records.length?await local.sync(records):personal;});};
+     label.append(input);panel.append(label);
+     const backup=el('button','備份本機歷史'),toggle=el('button',personal?.enabled?'改用公開封存':'使用本機歷史');
+     for(const b of [backup,toggle]){b.type='button';b.disabled=!personal||personalBusy;}
+     backup.onclick=async()=>{try{const text=await local.backup(),url=URL.createObjectURL(new Blob([text],{type:'application/json'})),a=el('a');a.href=url;a.download='00631L-personal-backup.lradar-private.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);}catch(e){personalError=localError(e);draw();}};
+     toggle.onclick=()=>personalAction(()=>local.enable(!personal.enabled));panel.append(backup,toggle);daily.append(panel);
+   }
    function gauge(name,current,g,limits,needed,d){
      const n=el('section',undefined,'lradar-v3-gauge'),bar=el('div',undefined,'lradar-v3-bar'),fill=el('i'),mark=el('b');
      n.append(el('h4',name),el('strong',g?fmt(current):'—'));
@@ -146,10 +162,12 @@
      return n;
    }
    function draw(){
-     const d=HSLRadar.archiveSummary(records,selected),v=d.peaks[selected],peak240=d.peaks[240],level=d.level,speed=(d.speed?.level??-1)>=(d.depth?.level??-1);
+     const d=personal?.enabled?local.summary(personal.data,selected):HSLRadar.archiveSummary(records,selected),v=d.peaks[selected],peak240=d.peaks[240],level=d.level,speed=(d.speed?.level??-1)>=(d.depth?.level??-1);
+     const current=fresh&&d.asof===records.at(-1)?.trading_date;
      const trigger=level===null?'部分區間資料累積中，暫不分級':level===0?'兩項皆未達觀察門檻':(d.speed?.level===level&&d.depth?.level===level?'兩項皆達此等級':speed?'由五日跌幅觸發':'由最高收盤價回落觸發');
-     daily.replaceChildren(el('strong',!d.asof?'資料累積中':!fresh?'資料尚未更新':level===null?'資料累積中':labels[level]),
-       el('p',d.asof?`${fresh?trigger:'顯示最後核驗的歷史資料，不判定今天。'}｜${d.asof} 收盤 ${round(d.close)} 元`:'尚無已驗證的每日收盤封存。'));
+     daily.replaceChildren(el('strong',!d.asof?'資料累積中':!current?'資料尚未更新':level===null?'資料累積中':labels[level]),
+       el('p',d.asof?`${current?trigger:'顯示最後核驗的歷史資料，不判定今天。'}｜${d.asof} 收盤 ${round(d.close)} 元`:'尚無已驗證的每日收盤封存。'));
+     if(d.personal)daily.append(el('small','個人本機歷史 · 不含息價格報酬 · 不上傳'));
      const quick=el('div',undefined,'lradar-v3-grid');
      quick.append(gauge('五日急跌速度',d.recent[5],d.speed,HSLRadar.limits.speed,6,d),gauge(periodName(selected)+'最高收盤回落',v?.change,d.depth,HSLRadar.limits[selected],selected,d));
      const recentText=[3,5,10].map(n=>`近 ${n} 日 ${Number.isFinite(d.recent[n])?fmt(d.recent[n]):`—（需 ${n+1} 筆連續收盤）`}`).join('｜');
@@ -194,7 +212,7 @@
      const h=el('details');h.append(el('summary','歷史相似急跌統計'));h.ontoggle=()=>{
        if(!h.open||h.dataset.ready)return;h.dataset.ready='1';const driver=speed?'speed':'depth';
        h.append(el('p',`依${driver==='speed'?'五日跌幅':periodName(selected)+'最高收盤回落'}首次跨越固定極端門檻，事件間隔至少 21 個交易日。不是未來機率或交易績效。`));
-       const stats=selected!=='all'&&d.rows.length>=240?HSLRadar.historical({rows:d.rows,thresholds:HSLRadar.limits,training_end:HSLRadar.training},selected,driver):[];
+     const stats=(selected!=='all'||d.personal)&&d.rows.length>=240?HSLRadar.historical({rows:d.rows,thresholds:HSLRadar.limits,training_end:HSLRadar.training},selected,driver):[];
        for(const n of [5,10,20]){
          const s=stats.find(x=>x.h===n);
          line(h,`${n} 日｜後續最低收盤價跌幅`,!s||s.n<10?'資料累積中（樣本不足）':`${s.n} 件（待成熟 ${s.pending}）｜平均 ${fmt(s.mean)}／中位 ${fmt(s.median)}；正報酬 ${round(s.positive)}%；後續最低收盤價跌幅 ${fmt(s.worst)}`);
@@ -206,16 +224,18 @@
      for(const a of [dataset,license]){a.target='_blank';a.rel='noopener noreferrer';}
      attribution.append(dataset,' · ',license);source.append(attribution);
      daily.append(h,source);$('#lradar-home-time').textContent=d.asof?'非即時 · 收盤資料 '+d.asof:'非即時 · 尚無已核驗收盤日期';
+     personalControls(d);
    }
    function refreshDaily(){
      if(flight||Date.now()-lastCheck<60000)return;
      lastCheck=Date.now();
-     flight=Promise.all([json(HSLRadar.archiveURL),json('data/radar-history/status-v1.json').catch(()=>null)]).then(([x,s])=>{
+     flight=Promise.all([json(HSLRadar.archiveURL),json('data/radar-history/status-v1.json').catch(()=>null)]).then(async([x,s])=>{
        const cal=s?.value||{},now=new Date(),local=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Taipei',dateStyle:'short',timeStyle:'short'}).format(now),today=local.slice(0,10);
        const nextRecords=HSLRadar.verifyIndex(x.value,today,+now);
        if(records.some((r,i)=>JSON.stringify(r)!==JSON.stringify(nextRecords[i])))throw Error('ARCHIVE_ROLLBACK_OR_OVERWRITE');
        const changed=nextRecords.length!==records.length, wasFresh=fresh;
        records=nextRecords;
+       if(local&&personal?.enabled){try{personal=await local.sync(records);personalError='';}catch(e){personalError=localError(e);}}
        const asof=records.at(-1)?.trading_date;
        const completed=cal.expected_completed_bar,next=cal.next_expected_trading_day;
        const knownNext=/^\d{4}-\d{2}-\d{2}$/.test(next||'');
@@ -223,10 +243,13 @@
        fresh=!!asof&&cal.schema_version===1&&completed===asof&&
          (today===asof||knownNext&&today<=next&&!(today===next&&local.slice(-5)>='18:00')||
            !knownNext&&today===dayAfter&&local.slice(-5)<'18:00');
-       if(changed||wasFresh!==fresh)draw();
+       if(changed||wasFresh!==fresh||personalError)draw();
      }).catch(()=>{if(fresh){fresh=false;draw();}}).finally(()=>{flight=null;});
    }
    draw();refreshDaily();window.addEventListener('online',refreshDaily);window.addEventListener('pageshow',refreshDaily);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshDaily();});
+   if(local)local.read().then(async p=>{personal=p;if(p?.enabled&&records.length)personal=await local.sync(records);draw();}).catch(e=>{personalError=localError(e);draw();});
+   const restorePersonal=()=>{if(!local||document.hidden||personalBusy)return;local.read(true).then(p=>{if(p?.revision!==personal?.revision){personal=p;draw();}}).catch(e=>{personalError=localError(e);});};
+   window.addEventListener('pageshow',restorePersonal);document.addEventListener('visibilitychange',restorePersonal);
    window.setInterval(()=>{if(!document.hidden)refreshDaily();},300000);
  }
  refresh.onclick=load;

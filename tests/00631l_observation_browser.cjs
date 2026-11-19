@@ -17,9 +17,9 @@ const webRoot='http://localhost:8234/';
     await p.route(archiveURL,r=>empty?r.fulfill({status:404,headers:{'access-control-allow-origin':'*'}}):
       r.fulfill({json:makeIndex(rec),headers:{'access-control-allow-origin':'*'}}));
     await p.route(webRoot+'**',r=>{const name=new URL(r.request().url()).pathname;
-      if(name==='/')return r.fulfill({contentType:'text/html; charset=utf-8',body:'<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="lc4-radar-v2.css">'+fragment+['lradar-core.js','lc4-research.js'].map(f=>'<script src="'+f+'"></script>').join('')});
+      if(name==='/')return r.fulfill({contentType:'text/html; charset=utf-8',body:'<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="lc4-radar-v2.css">'+fragment+['lradar-core.js','lradar-local.js','lc4-research.js'].map(f=>'<script src="'+f+'"></script>').join('')});
       if(name==='/data/radar-history/status-v1.json')return r.fulfill({json:{schema_version:1,expected_completed_bar:late?'2026-11-17':asof,next_expected_trading_day:'2026-11-20'}});
-      if(['/lc4-radar-v2.css','/lradar-core.js','/lc4-research.js'].includes(name))return r.fulfill({body:fs.readFileSync(name.slice(1)),contentType:name.endsWith('css')?'text/css':'text/javascript'});
+      if(['/lc4-radar-v2.css','/lradar-core.js','/lradar-local.js','/lc4-research.js'].includes(name))return r.fulfill({body:fs.readFileSync(name.slice(1)),contentType:name.endsWith('css')?'text/css':'text/javascript'});
       return r.abort();
     });
     await p.goto(webRoot);

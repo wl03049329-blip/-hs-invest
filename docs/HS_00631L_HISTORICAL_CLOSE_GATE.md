@@ -41,7 +41,7 @@ permission. All source and prior data hashes remain unchanged.
    events. The archived dividend/split tables plus zero matches are not a
    blanket proof of all-period company-action coverage.
 
-Keep this candidate Draft. Do not import the offline candidate into
+Keep public historical-data publication on HOLD. Do not import the offline candidate into
 `data/00631l-open-close`, claim complete historical publication, reset any
 archive, or change C4/FINAL/LIVE/portfolio/Ledger. Existing licensed daily
 capture remains independent. No paid service or old research schedule enabled.
@@ -72,7 +72,9 @@ Split the already-tested calendar-period/chart-return software into
 `fix/00631l-authorized-period-ui`, based on latest main. It uses only the existing
 verified continuous daily-open-data archive, publishes no new historical input
 or private aggregate, and leaves all missing-window gates and fixed thresholds
-unchanged. This PR retains the offline historical audit and remains Draft.
+unchanged. The public historical-data gate stays closed. Same-owner personal
+local use is evaluated separately in `HS_00631L_PERSONAL_LOCAL_MODE.md`; it is
+not a grant to redistribute the data, and no private payload enters Pages.
 
 The minimum historical-output unblock is evidence that specifically permits
 using the archived historical input to compute and publicly display HS's

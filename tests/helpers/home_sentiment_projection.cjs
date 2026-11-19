@@ -4,6 +4,8 @@
 // portfolio code remain under the original byte-for-byte assertions.
 const assert=require('assert/strict'),cp=require('child_process'),crypto=require('crypto');
 module.exports=function(source){
+ const personal='<script defer src="lradar-local.js"></script>\n';
+ if(source.includes(personal)){assert.equal(source.split(personal).length-1,1);source=source.replace(personal,'');}
  if(source.includes('class="radarV4Sentinel"')){
   const previous=cp.execFileSync('git',['show','8873d574:index.html'],{maxBuffer:8e6}).toString().replace(/\r\n/g,'\n');
   const range=(s,a,b)=>{const i=s.indexOf(a),j=s.indexOf(b,i+a.length);assert(i>=0&&j>i,a);return s.slice(i,j);};

@@ -42,6 +42,7 @@ jobs:
           node tests/test_00631l_observation.js
           node --test tests/test_00631l_close_history_audit.cjs
           node --test tests/test_00631l_authorized_periods.cjs
+          node --test tests/test_lradar_local.cjs
           python3 -B -m unittest discover -s tests -p test_00631l_observation_openapi.py
           node tests/test_c4_openapi_close_candidate.cjs
           node tests/test_lradar_v1.js
