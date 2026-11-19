@@ -12,6 +12,10 @@
   return structuredClone(input);
  }
  function rows(input){return [...input.base.rows,...input.extension.map(r=>[r.trading_date,+r.close_twd])];}
+ function reconcile(incoming,observed,old){
+  const trusted=new Map([...(old?.extension||[]),...observed].map(r=>[r.trading_date,JSON.stringify(r)]));
+  for(const r of incoming.extension)fail(trusted.get(r.trading_date)===JSON.stringify(r),'PRIVATE_BACKUP_EXTENSION_NEEDS_PUBLIC_CHECK');
+ }
  function merge(input,records){
   const all=rows(input),by=new Map(all),extension=[...input.extension];let last=all.at(-1);
   for(const r of records){
@@ -50,9 +54,10 @@
    try{return await write(old,next.data,next.enabled);}catch(e){if(e.message!=='PRIVATE_CONCURRENT_CHANGE')throw e;ready=false;}
   }throw Error('PRIVATE_CONCURRENT_CHANGE');
  });}
- async function importText(text){
+ async function importText(text,observed=[]){
   fail(typeof text==='string'&&text.length<=2_000_000,'PRIVATE_FILE_SIZE');const incoming=await verify(JSON.parse(text));
-  return change(old=>{if(old){const a=rows(old.data),b=rows(incoming);fail(b.length>=a.length&&a.every((r,i)=>JSON.stringify(r)===JSON.stringify(b[i])),'PRIVATE_IMPORT_ROLLBACK_OR_CONFLICT');}return {data:incoming,enabled:true};});
+  R.verifyIndex({schema:'HS_00631L_OPEN_INDEX_V1',records:observed},date(),Date.now());
+  return change(old=>{reconcile(incoming,observed,old?.data);if(old){const a=rows(old.data),b=rows(incoming);fail(b.length>=a.length&&a.every((r,i)=>JSON.stringify(r)===JSON.stringify(b[i])),'PRIVATE_IMPORT_ROLLBACK_OR_CONFLICT');}return {data:incoming,enabled:true};});
  }
  async function sync(records){
   R.verifyIndex({schema:'HS_00631L_OPEN_INDEX_V1',records},date(),Date.now());
@@ -60,5 +65,5 @@
  }
  async function enable(enabled){return change(old=>{fail(old,'PRIVATE_NOT_IMPORTED');return old.enabled===enabled?null:{data:old.data,enabled};});}
  async function backup(){const current=await read();fail(current,'PRIVATE_NOT_IMPORTED');await verify(current.data);return JSON.stringify(current.data);}
- return Object.freeze({PIN,DB,verify,rows,merge,summary,read,importText,sync,enable,backup});
+ return Object.freeze({PIN,DB,verify,rows,reconcile,merge,summary,read,importText,sync,enable,backup});
 });

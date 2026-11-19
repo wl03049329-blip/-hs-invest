@@ -53,6 +53,10 @@ immediate prior session and previous close must agree, and new records must be
 after the immutable base. Conflicts/gaps retain the last verified local state.
 Atomic revision-checked transactions prevent a stale writer overwriting newer
 data. Restoring a shorter backup cannot roll back an existing longer history.
+On a fresh browser, restored extension records must also match the actual
+verified public archive fetched by the app; self-declared SHA/source fields in
+an imported file are not proof. If offline, keep the backup and reconnect before
+restoring newer extension records. The pinned original base can restore offline.
 No timestamps, raw history or calculated personal results leave the browser.
 
 The public mode stays available through a switch. Offline retains saved local

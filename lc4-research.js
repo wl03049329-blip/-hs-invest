@@ -133,7 +133,7 @@
    const round=x=>Number.isFinite(x)?x.toFixed(2):'—';
    let selected=240,range=3,records=[],fresh=false,flight=null,lastCheck=0;
    const local=window.HSLRadarLocal;let personal=null,personalError='',personalBusy=false;
-   const localError=e=>({PRIVATE_BASE_HASH_OR_RIGHTS:'檔案來源、授權或內容無法核驗',PRIVATE_EXTENSION_GAP_OR_PRICE:'新收盤與本機歷史有缺日或前收不一致',PRIVATE_OVERLAP_CONFLICT:'公開封存與本機歷史重疊價格衝突',PRIVATE_IMPORT_ROLLBACK_OR_CONFLICT:'備份較舊或內容衝突，已保留目前資料',PRIVATE_CONCURRENT_CHANGE:'另一分頁已更新，請再試一次'})[e.message]||'本機資料暫時無法核驗或儲存，已保留原資料';
+   const localError=e=>({PRIVATE_BASE_HASH_OR_RIGHTS:'檔案來源、授權或內容無法核驗',PRIVATE_EXTENSION_GAP_OR_PRICE:'新收盤與本機歷史有缺日或前收不一致',PRIVATE_OVERLAP_CONFLICT:'公開封存與本機歷史重疊價格衝突',PRIVATE_IMPORT_ROLLBACK_OR_CONFLICT:'備份較舊或內容衝突，已保留目前資料',PRIVATE_BACKUP_EXTENSION_NEEDS_PUBLIC_CHECK:'備份新增收盤尚未與公開封存核對，請連線後再恢復',PRIVATE_CONCURRENT_CHANGE:'另一分頁已更新，請再試一次'})[e.message]||'本機資料暫時無法核驗或儲存，已保留原資料';
    async function personalAction(fn){if(personalBusy)return;personalBusy=true;try{personal=await fn();personalError='';}catch(e){personalError=localError(e);}finally{personalBusy=false;draw();}}
    function personalControls(d){
      if(!local)return;
@@ -141,7 +141,7 @@
      panel.append(el('p',personal?`${personal.enabled?'使用本機歷史':'使用公開封存'}｜本機 ${local.rows(personal.data).length} 筆，截至 ${local.rows(personal.data).at(-1)[0]}`:'尚未匯入個人歷史。'));
      if(personalError)panel.append(el('p',personalError,'lc4r-warn'));
      const label=el('label','一次性匯入或恢復備份 '),input=el('input');input.type='file';input.accept='.json,application/json';input.disabled=personalBusy;input.setAttribute('aria-label','匯入個人歷史或備份');
-     input.onchange=()=>{const file=input.files?.[0];if(!file)return;if(file.size>2000000){personalError='檔案過大，未匯入';draw();return;}personalAction(async()=>{if(!confirm('此資料僅供你本人本機分析，不會上傳。確認匯入並啟用？'))return personal;personal=await local.importText(await file.text());return records.length?await local.sync(records):personal;});};
+     input.onchange=()=>{const file=input.files?.[0];if(!file)return;if(file.size>2000000){personalError='檔案過大，未匯入';draw();return;}personalAction(async()=>{if(!confirm('此資料僅供你本人本機分析，不會上傳。確認匯入並啟用？'))return personal;personal=await local.importText(await file.text(),records);return records.length?await local.sync(records):personal;});};
      label.append(input);panel.append(label);
      const backup=el('button','備份本機歷史'),toggle=el('button',personal?.enabled?'改用公開封存':'使用本機歷史');
      for(const b of [backup,toggle]){b.type='button';b.disabled=!personal||personalBusy;}

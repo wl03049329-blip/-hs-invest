@@ -20,6 +20,9 @@ test('actual private bootstrap, split, all metrics and daily join',{skip:!proces
  const source={schema:'HS_00631L_OPEN_CLOSE_V1',symbol:'00631L',price_basis:'TWSE_RAW_CLOSE',trading_date:'2026-11-20',close_twd:'25.00',comparison_twd:'24.57',captured_at:'2026-11-20T12:00:00Z',observed_sessions:['2026-11-19','2026-11-20'],source:'https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL',source_attribution:'臺灣證券交易所',dataset:'https://data.gov.tw/dataset/11549',license:'https://data.gov.tw/license',session_source:'https://openapi.twse.com.tw/v1/exchangeReport/FMTQIK',session_dataset:'https://data.gov.tw/dataset/11672',response_sha256:'a'.repeat(64),session_sha256:'b'.repeat(64)};
  // Synthetic next-day price is TEST ONLY, never an artifact or live result.
  const merged=L.merge(p,[source]);await L.verify(merged,'2026-11-20',Date.parse('2026-11-20T13:00:00Z'));
+ assert.throws(()=>L.reconcile(merged,[],null),/NEEDS_PUBLIC_CHECK/);
+ L.reconcile(merged,[source],null);L.reconcile(merged,[],merged);
+ assert.throws(()=>L.reconcile(merged,[{...source,close_twd:'25.01'}],null),/NEEDS_PUBLIC_CHECK/);
  assert.equal(L.merge(merged,[source]).extension.length,1);
  assert.throws(()=>L.merge(p,[{...source,comparison_twd:'1.00'}]),/PRICE/);
  assert.throws(()=>L.merge(p,[{...source,observed_sessions:['2026-11-18','2026-11-20']}]),/GAP/);
