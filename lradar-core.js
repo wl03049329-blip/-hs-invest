@@ -40,15 +40,31 @@
    const decline=Math.max(0,-change);
    return {decline,watch,extreme,level:decline>=extreme?2:decline>=watch?1:0,fromExtreme:decline-extreme};
  }
+ // Calendar-month comparisons use the last verified trading close on or
+ // before the requested calendar date. The caller supplies a gap-free series.
+ function periodReturns(rows){
+   const end=rows.at(-1);
+   if(!end)return {};
+   const [year,month]=end[0].split('-').map(Number);
+   const targets={month:day(new Date(Date.UTC(year,month-1,0))),m1:monthsBack(end[0],1),
+     m3:monthsBack(end[0],3),m6:monthsBack(end[0],6),year:(year-1)+'-12-31',y1:monthsBack(end[0],12)};
+   return Object.fromEntries(Object.entries(targets).map(([key,requested])=>{
+     const row=rows.findLast(r=>r[0]<=requested);
+     return [key,row?{requested,date:row[0],price:row[1],asof:end[0],change:pctChange(end[1],row[1])}:null];
+   }));
+ }
+ function rangeReturn(rows){
+   return rows.length>=2?{start:rows[0][0],end:rows.at(-1)[0],
+     change:pctChange(rows.at(-1)[1],rows[0][1])}:null;
+ }
  function summary(a,period=240){
    if(!periods.includes(period))throw Error('INVALID_PERIOD');
    const rows=a.rows,i=rows.length-1,last=rows[i],recent=Object.fromEntries([3,5,10].map(n=>[n,pctChange(last[1],rows[i-n][1])]));
    const peaks=Object.fromEntries(periods.map(n=>[n,peak(rows,i,n)]));
-   const [year,month]=last[0].split('-').map(Number);
-   const requested=[day(new Date(Date.UTC(year,month-1,0))),monthsBack(last[0],3),monthsBack(last[0],6),(year-1)+'-12-31'];
-   const returns=requested.map(d=>{const row=rows.findLast(r=>r[0]<=d);return row?{date:row[0],change:pctChange(last[1],row[1])}:null;});
+   const performance=periodReturns(rows);
+   const returns=['month','m3','m6','year'].map(k=>performance[k]);
    const speed=gauge(recent[5],a.thresholds.speed),depth=gauge(peaks[period].change,a.thresholds[period]);
-   return {asof:last[0],close:last[1],recent,peaks,returns,speed,depth,level:Math.max(speed.level,depth.level)};
+   return {asof:last[0],close:last[1],recent,peaks,returns,performance,speed,depth,level:Math.max(speed.level,depth.level)};
  }
  function historical(a,period,driver){
    const rows=a.rows,limit=a.thresholds[driver==='speed'?'speed':period][1],events=[];let prior=false,last=-21,allHigh=0;
@@ -106,16 +122,11 @@
    // All-time data need an approved listing-to-present archive; the new forward archive is not one.
    const peaks=Object.fromEntries(periods.map(n=>[n,n==='all'||!end?null:peak(rows,i,n)]));
    const recent=Object.fromEntries([3,5,10].map(n=>[n,i>=n?pctChange(end[1],rows[i-n][1]):null]));
-   const [year,month]=end?end[0].split('-').map(Number):[];
-   const requested=end?[day(new Date(Date.UTC(year,month-1,0))),monthsBack(end[0],3),monthsBack(end[0],6),(year-1)+'-12-31']:[];
-   const returns=[0,1,2,3].map(j=>{
-     const r=rows.findLast(r=>r[0]<=requested[j]);
-     return r?{date:r[0],change:pctChange(end[1],r[1])}:null;
-   });
+   const performance=periodReturns(rows),returns=['month','m3','m6','year'].map(k=>performance[k]??null);
    const speed=Number.isFinite(recent[5])?gauge(recent[5],limits.speed):null;
    const depth=peaks[period]?gauge(peaks[period].change,limits[period]):null;
    const level=speed&&depth?Math.max(speed.level,depth.level):speed?.level===2||depth?.level===2?2:null;
-   return {asof:last?.trading_date??null,close:end?.[1]??null,rows,recent,peaks,returns,speed,depth,level};
+   return {asof:last?.trading_date??null,close:end?.[1]??null,rows,recent,peaks,returns,performance,speed,depth,level};
  }
- return Object.freeze({version,states,unavailable,describe,periods,verify,summary,historical,monthsBack,archiveURL,verifyIndex,archiveSummary,limits,training,thresholdVersion});
+ return Object.freeze({version,states,unavailable,describe,periods,verify,summary,historical,monthsBack,periodReturns,rangeReturn,archiveURL,verifyIndex,archiveSummary,limits,training,thresholdVersion});
 });
