@@ -1,5 +1,53 @@
 # 00631L personal local mode — source and storage boundary
 
+## Automatic device bootstrap (2026-11-20, V3.9.15)
+
+No private data service is necessary. A real browser-origin test from the HS
+origin to FinMind's existing Free TaiwanStockPrice endpoint succeeded with CORS,
+HTTP/API 200, 2,935 rows. Independently tested Chrome and WebKit candidate code
+then each made one genuine provider GET, verified/stored the history and reused
+it after reload without a file, login or shared key. This is not a live intraday
+test and is not a claim of production deployment until its separate acceptance.
+
+This follows the documented personal/noncommercial application use in the same
+FinMind terms below: the requesting user receives data directly from the vendor.
+HS does not host, proxy, mirror or redistribute that history. This is not an
+unauthenticated HS "private endpoint" or hidden URL/password scheme. It does not
+grant commercial/public data reuse or assume that paying for another API helps.
+
+The sole direct GET URL selects 00631L, TaiwanStockPrice, 2014-10-01 through
+2026-11-19. No token, login cookie or referrer is sent; redirects are rejected.
+It runs only on the original HS app origin/path, not CI/localhost/clones. Future
+daily prices use the existing licensed public archive, not another scheduler.
+
+The normalized split-once close array must hash exactly to
+`9079de2db57bd184ec020978de47df21544f5659a1843658584e101d4291b94b`.
+Only raw pre-2026-03-31 prices divide by 22. Partial, duplicate, zero-volume,
+invalid-date, double-adjusted or revised history is rejected, not approximated.
+The new direct-response backup schema keeps the actual response hash and local
+retrieval time; the original manually imported schema remains valid unchanged.
+
+An existing saved history or explicit public-mode preference prevents another
+vendor query. A browser Web Lock coordinates tabs. Attempts/cooldowns are in
+the same separate research DB, never financial storage. One attempt has a
+20-second full-body deadline/4 MB cap. No looping retries: ordinary source errors
+cool down 30 minutes, 402/429 at least one hour plus Retry-After, 401/403 and
+historical content conflicts one day. Retry is on reopening/online or explicit
+retry, still subject to the cooldown. No account/key/IP rotation or paid upgrade.
+
+Clearing browser storage/changing phones allows a new direct verified fetch;
+no JSON transfer is required while the provider is available. Backup remains an
+optional same-owner fallback. Offline retains verified saved values/dates. If
+automatic access fails, the home status names activation/source/quota failure
+instead of suggesting another 240-day wait. No arbitrary browser/carrier or
+future provider availability is guaranteed. Physical iPhone remains PENDING.
+
+Private positive replay tests run locally, not CI. CI mocks failure statuses
+and ensures cross-tab/cooldown behavior without receiving private history;
+localhost PWA tests cannot call the historical endpoint because of the origin
+guard. Real provider acceptance is separately recorded, never labelled REPLAY
+or synthetic tests as a successful vendor/live run.
+
 ## Source-use decision (2026-11-20)
 
 This is the same HS owner's noncommercial personal analysis, not a public

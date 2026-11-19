@@ -4,6 +4,7 @@
 // portfolio code remain under the original byte-for-byte assertions.
 const assert=require('assert/strict'),cp=require('child_process'),crypto=require('crypto');
 module.exports=function(source){
+ source=source.replace(/\r\n/g,'\n'); // Match Git's canonical text on Windows checkouts.
  const personal='<script defer src="lradar-local.js"></script>\n';
  if(source.includes(personal)){assert.equal(source.split(personal).length-1,1);source=source.replace(personal,'');}
  if(source.includes('class="radarV4Sentinel"')){

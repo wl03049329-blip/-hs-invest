@@ -46,7 +46,7 @@ const webRoot='http://localhost:8234/';
     await radar.getByText(/後續最低收盤價跌幅/).first().waitFor();
     late=true;
     await p.reload();
-    await radar.getByText('資料尚未更新',{exact:true}).waitFor();
+    await radar.getByText('完整歷史尚未啟用',{exact:true}).waitFor();
     assert.ok((await radar.innerText()).includes(asof));
     assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
     assert.deepEqual(errors,[]);
