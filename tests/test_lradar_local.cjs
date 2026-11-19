@@ -9,6 +9,7 @@ test('personal storage cannot upload or read financial storage',()=>{
  const src=fs.readFileSync('lradar-local.js','utf8');for(const call of ['fetch(','.sendBeacon(','.send(','localStorage.','sessionStorage.','hsPersonal','Ledger'])assert.ok(!src.includes(call));
  assert.equal(L.DB,'hs.research.00631l.personal.v1');
  assert.equal(R.thresholdVersion,'P80_P95_CLOSE_FIXED_20201231_V1');
+ assert.ok(fs.readFileSync('lc4-research.js','utf8').includes('&&!(d.personal&&personalError)'));
 });
 test('actual private bootstrap, split, all metrics and daily join',{skip:!process.env.HS_PRIVATE_INPUT},async()=>{
  const p=await L.verify(JSON.parse(fs.readFileSync(process.env.HS_PRIVATE_INPUT,'utf8'))),all=L.rows(p),d=L.summary(p,240);

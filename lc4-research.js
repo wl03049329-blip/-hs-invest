@@ -163,7 +163,7 @@
    }
    function draw(){
      const d=personal?.enabled?local.summary(personal.data,selected):HSLRadar.archiveSummary(records,selected),v=d.peaks[selected],peak240=d.peaks[240],level=d.level,speed=(d.speed?.level??-1)>=(d.depth?.level??-1);
-     const current=fresh&&d.asof===records.at(-1)?.trading_date;
+     const current=fresh&&d.asof===records.at(-1)?.trading_date&&!(d.personal&&personalError);
      const trigger=level===null?'部分區間資料累積中，暫不分級':level===0?'兩項皆未達觀察門檻':(d.speed?.level===level&&d.depth?.level===level?'兩項皆達此等級':speed?'由五日跌幅觸發':'由最高收盤價回落觸發');
      daily.replaceChildren(el('strong',!d.asof?'資料累積中':!current?'資料尚未更新':level===null?'資料累積中':labels[level]),
        el('p',d.asof?`${current?trigger:'顯示最後核驗的歷史資料，不判定今天。'}｜${d.asof} 收盤 ${round(d.close)} 元`:'尚無已驗證的每日收盤封存。'));
