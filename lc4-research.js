@@ -201,6 +201,10 @@
        }
      };
      const source=el('details');source.append(el('summary','資料與固定門檻'),el('p',`臺灣證券交易所開放資料 · 非即時。只比較相同價格基準的收盤，股價報酬不含股息。門檻版本 ${HSLRadar.thresholdVersion}，以截至 ${HSLRadar.training} 的 P80/P95 固定，不代表買進或保證反彈。`));
+     const attribution=el('p'),dataset=el('a','臺灣證券交易所｜個股日成交資訊'),license=el('a','政府資料開放授權條款第 1 版');
+     dataset.href='https://data.gov.tw/dataset/11549';license.href='https://data.gov.tw/license';
+     for(const a of [dataset,license]){a.target='_blank';a.rel='noopener noreferrer';}
+     attribution.append(dataset,' · ',license);source.append(attribution);
      daily.append(h,source);$('#lradar-home-time').textContent=d.asof?'非即時 · 收盤資料 '+d.asof:'非即時 · 尚無已核驗收盤日期';
    }
    function refreshDaily(){

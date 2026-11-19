@@ -20,6 +20,8 @@ test('period UI uses only the existing verified continuous archive; no full-hist
  const ui=fs.readFileSync('lc4-research.js','utf8');
  assert.match(ui,/HSLRadar\.archiveSummary/);assert.match(ui,/HSLRadar\.verifyIndex/);
  assert.match(ui,/HSLRadar\.archiveURL/);
+ assert.ok(ui.includes("dataset.href='https://data.gov.tw/dataset/11549'"));
+ assert.ok(ui.includes("license.href='https://data.gov.tw/license'"));
  const summary=R.archiveSummary([],240);
  assert.equal(summary.speed,null);assert.equal(summary.depth,null);assert.equal(summary.level,null);
  assert.deepEqual(summary.returns,[null,null,null,null]);assert.deepEqual(summary.performance,{});
