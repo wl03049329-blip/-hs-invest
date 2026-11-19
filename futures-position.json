@@ -1,50 +1,50 @@
 {
   "version": 1,
-  "updated_at": "2026-11-18T16:38:54.535302Z",
-  "data_date": "2026-11-18",
+  "updated_at": "2026-11-19T16:41:57.069451Z",
+  "data_date": "2026-11-19",
   "foreign_tx": {
-    "long": 9922,
-    "short": 109360,
-    "net": -99438,
-    "net_change": -1542
+    "long": 12664,
+    "short": 111883,
+    "net": -99219,
+    "net_change": 219
   },
   "estimated_non_institutional_mtx": {
-    "long": 29994,
-    "short": 24412,
-    "net": 5582,
-    "net_change": 2553
+    "long": 25532,
+    "short": 23558,
+    "net": 1974,
+    "net_change": -3608
   },
   "estimated_non_institutional_tmf": {
-    "long": 86819,
-    "short": 48618,
-    "net": 38201,
-    "net_change": 3788
+    "long": 88348,
+    "short": 37849,
+    "net": 50499,
+    "net_change": 12298
   },
   "methodology": "外資臺股期貨採期交所三大法人未平倉資料。MTX/TMF 非三大法人部位推估＝一般交易時段、相同交易日、同商品所有有效月份（含 MTX 週契約）全市場未平倉量，分別扣除自營商、投信、外資及陸資的多方／空方未平倉口數。",
   "source_status": {
     "aligned": true,
     "freshness": "SOURCE_FALLBACK",
-    "source_provider": "TAIFEX_OFFICIAL_CSV",
-    "source_checked_at": "2026-11-18T16:38:54.535302Z",
-    "latest_expected_trading_date": "2026-11-18",
+    "source_provider": "DATA_GOV_OFFICIAL",
+    "source_checked_at": "2026-11-19T16:41:57.069451Z",
+    "latest_expected_trading_date": "2026-11-19",
     "lag_trading_days": 0,
     "net_change_available": true,
-    "net_change_baseline_date": "2026-11-17",
+    "net_change_baseline_date": "2026-11-18",
     "session_scope": "一般交易時段未平倉量",
     "mtx_contract_scope": [
-      "202611",
       "202611W4",
       "202612",
       "202612W1",
       "202701",
+      "202702",
       "202703",
       "202706",
       "202709"
     ],
     "tmf_contract_scope": [
-      "202611",
       "202612",
       "202701",
+      "202702",
       "202703",
       "202706",
       "202709"
@@ -52,7 +52,8 @@
     "institutional_source": "https://openapi.taifex.com.tw/v1/MarketDataOfMajorInstitutionalTradersDetailsOfFuturesContractsBytheDate",
     "market_source": "https://openapi.taifex.com.tw/v1/DailyMarketReportFut",
     "diagnostics": [
-      "TAIFEX_PRIMARY:SOURCE_NOT_READY:2026-11-17"
+      "TAIFEX_PRIMARY:SOURCE_NOT_READY:2026-11-18",
+      "TAIFEX_OFFICIAL_CSV:TimeoutError"
     ]
   }
 }
