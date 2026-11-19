@@ -167,6 +167,11 @@
        const r=d.returns[i],c=el('section',undefined,'lradar-v3-gauge');c.append(el('h4',name),el('strong',fmt(r?.change),r?.change>0?'lradar-rise':r?.change<0?'lradar-fall':''),el('small',r?'比較 '+r.date:missing[i]+'或其後有缺日'),el('small',d.asof?'截至 '+d.asof:'尚無核驗截至日'));returns.append(c);
      });
      daily.append(returns);
+     const extra=el('details');extra.append(el('summary','其他期間漲跌（價格報酬）'));
+     for(const [key,name,missing] of [['m1','近 1 個月','缺一個月前基準收盤或其後有缺日'],['y1','近 1 年','缺一年前基準收盤或其後有缺日']]){
+       const r=d.performance[key];line(extra,name,r?`${fmt(r.change)}｜比較 ${r.date}，截至 ${r.asof}`:missing);
+     }
+     daily.append(extra);
      const graph=el('section',undefined,'lradar-v3-gauge'),ranges=el('div',undefined,'lc4r-tabs');
      for(const n of [1,3,6,12,0]){const b=el('button',n===0?'全部':n===12?'1 年':n+' 個月');b.type='button';b.setAttribute('aria-pressed',n===range);b.onclick=()=>{range=n;draw();daily.querySelector('.lc4r-tabs button[aria-pressed="true"]')?.focus();};ranges.append(b);}
      const rows=range&&d.asof?d.rows.filter(r=>r[0]>=HSLRadar.monthsBack(d.asof,range)):d.rows,svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
@@ -178,8 +183,9 @@
      const shape=(tag,attrs)=>{const e=document.createElementNS(svg.namespaceURI,tag);for(const [k,v]of Object.entries(attrs))e.setAttribute(k,v);svg.append(e);return e;};
      shape('polyline',{points:rows.map((r,i)=>x(i)+','+y(r[1])).join(' '),fill:'none',stroke:'#dfbf75','stroke-width':2});
      const pi=rows.findLastIndex(r=>r[1]===top);shape('circle',{cx:x(pi),cy:y(top),r:4,fill:'#dfbf75'});
-     const readout=el('p',`區間最高收盤 ${round(top)} 元 · ${rows[pi][0]}`);
-     const inspect=i=>{const r=rows[i];readout.textContent=`${r[0]} 收盤 ${round(r[1])} 元｜區間最高收盤 ${round(top)} 元（${rows[pi][0]}）`;};
+     const interval=HSLRadar.rangeReturn(rows),rangeText=`區間漲跌 ${fmt(interval.change)}（${interval.start} 至 ${interval.end}，價格報酬）`;
+     const readout=el('p',`區間最高收盤 ${round(top)} 元 · ${rows[pi][0]}｜${rangeText}`);
+     const inspect=i=>{const r=rows[i];readout.textContent=`${r[0]} 收盤 ${round(r[1])} 元｜區間最高收盤 ${round(top)} 元（${rows[pi][0]}）｜${rangeText}`;};
      svg.onclick=e=>{const b=svg.getBoundingClientRect();inspect(Math.max(0,Math.min(rows.length-1,Math.round(((e.clientX-b.left)/b.width*360-4)/352*(rows.length-1)))));};
      const cursor=el('input');cursor.type='range';cursor.min=0;cursor.max=rows.length-1;cursor.value=rows.length-1;cursor.setAttribute('aria-label','逐日查看收盤價');cursor.oninput=()=>inspect(Number(cursor.value));
      graph.append(el('small',`僅顯示已核驗的連續封存：${rows[0][0]} 至 ${rows.at(-1)[0]}`),svg,cursor,readout);
