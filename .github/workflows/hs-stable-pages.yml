@@ -30,7 +30,9 @@ concurrency:
 jobs:
   observation-00631l:
     if: github.event_name == 'pull_request' && (github.head_ref == 'feat/00631l-crash-radar-v3' || github.head_ref == 'fix/00631l-open-close-source' || github.head_ref == 'fix/00631l-history-close-completion' || github.head_ref == 'fix/00631l-authorized-period-ui' || github.head_ref == 'fix/00631l-auto-local')
-    runs-on: ubuntu-latest
+    # Pin the browser-supported image; ubuntu-latest moved to 26.04 and
+    # dependency installation exhausted this job before browser tests started.
+    runs-on: ubuntu-24.04
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
