@@ -1,5 +1,21 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),L=require('../lradar-local');
+test('open-page daily refresh uses the research store, not the Taipei time string',async()=>{
+ const vm=require('node:vm'),source=fs.readFileSync('lc4-research.js','utf8');
+ const refresh=source.slice(source.indexOf('   function refreshDaily(){'),source.indexOf('   draw();refreshDaily();'));
+ assert.ok(refresh.startsWith('   function refreshDaily(){'));
+ const sandbox={Date,Intl,Promise,calls:0,draws:0};
+ vm.createContext(sandbox);
+ vm.runInContext(`let flight=null,lastCheck=0,records=[],fresh=false,personal={enabled:true},personalError='';
+ const next=[{trading_date:'2026-11-19'}];
+ const local={sync:async r=>{calls++;if(r!==records)throw Error('WRONG_RECORDS');return {enabled:true,updated:true};}};
+ const HSLRadar={archiveURL:'TEST_ONLY',verifyIndex:x=>x.records};
+ const json=async()=>({value:{records:next,schema_version:1,expected_completed_bar:'2026-11-19',next_expected_trading_day:'2026-11-20'}});
+ const localError=e=>e.message,draw=()=>{draws++;};
+ ${refresh}
+ globalThis.run=async()=>{refreshDaily();await flight;return {calls,draws,personalError,updated:personal.updated};};`,sandbox);
+ const result=await sandbox.run();assert.equal(result.calls,1);assert.equal(result.draws,1);assert.equal(result.personalError,'');assert.equal(result.updated,true);
+});
 test('auto loader rejects partial, corrupt, zero-price and unverified history without changing financial contracts',async()=>{
  await assert.rejects(L.fromProvider('{}'),/AUTO_RESPONSE_INVALID/);
  await assert.rejects(L.fromProvider('not json'),/AUTO_RESPONSE_INVALID/);

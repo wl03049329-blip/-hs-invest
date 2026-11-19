@@ -238,7 +238,7 @@
      if(flight||Date.now()-lastCheck<60000)return;
      lastCheck=Date.now();
      flight=Promise.all([json(HSLRadar.archiveURL),json('data/radar-history/status-v1.json').catch(()=>null)]).then(async([x,s])=>{
-       const cal=s?.value||{},now=new Date(),local=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Taipei',dateStyle:'short',timeStyle:'short'}).format(now),today=local.slice(0,10);
+       const cal=s?.value||{},now=new Date(),taipeiTime=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Taipei',dateStyle:'short',timeStyle:'short'}).format(now),today=taipeiTime.slice(0,10);
        const nextRecords=HSLRadar.verifyIndex(x.value,today,+now);
        if(records.some((r,i)=>JSON.stringify(r)!==JSON.stringify(nextRecords[i])))throw Error('ARCHIVE_ROLLBACK_OR_OVERWRITE');
        const changed=nextRecords.length!==records.length, wasFresh=fresh;
@@ -249,8 +249,8 @@
        const knownNext=/^\d{4}-\d{2}-\d{2}$/.test(next||'');
        const dayAfter=asof&&new Date(Date.parse(asof)+86400000).toISOString().slice(0,10);
        fresh=!!asof&&cal.schema_version===1&&completed===asof&&
-         (today===asof||knownNext&&today<=next&&!(today===next&&local.slice(-5)>='18:00')||
-           !knownNext&&today===dayAfter&&local.slice(-5)<'18:00');
+         (today===asof||knownNext&&today<=next&&!(today===next&&taipeiTime.slice(-5)>='18:00')||
+           !knownNext&&today===dayAfter&&taipeiTime.slice(-5)<'18:00');
        if(changed||wasFresh!==fresh||personalError)draw();
      }).catch(()=>{if(fresh){fresh=false;draw();}}).finally(()=>{flight=null;});
    }

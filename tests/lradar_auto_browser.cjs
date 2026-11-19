@@ -44,7 +44,8 @@ async function setup(browser,{status=403,body=null}={}){
     await p.evaluate(()=>HSLRadarLocal.enable(true));await p.reload();await p.getByText('個人本機歷史 · 不含息價格報酬 · 不上傳',{exact:true}).waitFor();
     await p.clock.setFixedTime(new Date('2026-11-20T21:00:00+08:00'));
     t.records.push({...t.records.at(-1),trading_date:'2026-11-20',close_twd:'25.00',comparison_twd:'24.57',captured_at:'2026-11-20T12:00:00Z',observed_sessions:['2026-11-19','2026-11-20']});
-    await p.reload();await p.waitForFunction(()=>document.querySelector('.lradar-v3')?.textContent.includes('2026-11-20 收盤 25.00')&&document.querySelector('.lradar-v3')?.textContent.includes('個人本機歷史 · 不含息價格報酬 · 不上傳'));
+    // Same open document must append after reconnect, not only after bootstrap.
+    await p.evaluate(()=>window.dispatchEvent(new Event('online')));await p.waitForFunction(()=>document.querySelector('.lradar-v3')?.textContent.includes('2026-11-20 收盤 25.00')&&document.querySelector('.lradar-v3')?.textContent.includes('個人本機歷史 · 不含息價格報酬 · 不上傳'));
     assert.equal(await p.evaluate(()=>HSLRadarLocal.read().then(s=>HSLRadarLocal.rows(s.data).length)),2936);assert.equal(t.requests(),1);
     await t.c.setOffline(true);assert.equal(await p.evaluate(()=>HSLRadarLocal.read().then(s=>HSLRadarLocal.rows(s.data).length)),2936);await t.c.setOffline(false);
     assert.equal(await p.evaluate(()=>localStorage.getItem('hsPersonalV3.v1.TEST_ONLY')),'KEEP');t.check();await t.c.close();results.push({kind,automatic:true,requests:1,manual_file_operations:0,cache_reload:true,daily_extension:true,scope:'PRIVATE_LOCAL_REPLAY_NOT_LIVE'});
