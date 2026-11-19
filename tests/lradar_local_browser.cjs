@@ -29,6 +29,14 @@ const fragment=fs.readFileSync('index.html','utf8').match(/<section id="lc4-rada
  assert.ok(await p.evaluate(async text=>{const v=JSON.parse(text);v.base.rows[0][1]*=22;try{await HSLRadarLocal.importText(JSON.stringify(v));return false;}catch{return true;}},saved));assert.equal(await p.evaluate(()=>HSLRadarLocal.read().then(s=>s.revision)),revision);
  await c.setOffline(true);assert.equal(await p.evaluate(()=>HSLRadarLocal.read().then(s=>HSLRadarLocal.summary(s.data,240).close)),24.57);await c.setOffline(false);
  assert.equal(await p.evaluate(()=>localStorage.getItem('hsPersonalV3.v1.TEST_ONLY')),'KEEP');
+ // TEST_ONLY future-day fixture: exercise atomic daily extension, not live data.
+ await p.clock.setFixedTime(new Date('2026-11-20T21:00:00+08:00'));
+ const append=await p.evaluate(async template=>{
+  const r={...template,trading_date:'2026-11-20',close_twd:'25.00',comparison_twd:'24.57',captured_at:'2026-11-20T12:00:00Z',observed_sessions:['2026-11-19','2026-11-20']};
+  const before=(await HSLRadarLocal.read()).revision;await Promise.all([HSLRadarLocal.sync([r]),HSLRadarLocal.sync([r])]);
+  const s=await HSLRadarLocal.read();return {revision:s.revision-before,rows:HSLRadarLocal.rows(s.data).length};
+ },archive.records.at(-1));assert.deepEqual(append,{revision:1,rows:2936});
+ assert.ok(await p.evaluate(async text=>{try{await HSLRadarLocal.importText(text);return false;}catch(e){return e.message==='PRIVATE_IMPORT_ROLLBACK_OR_CONFLICT';}},saved));
  // A fresh origin simulates an empty research store without deleting any DB.
  await p.goto('http://localhost:8236');await panel.waitFor();await panel.locator('summary').click();
  await p.getByLabel('匯入個人歷史或備份').setInputFiles({name:'restored.lradar-private.json',mimeType:'application/json',buffer:Buffer.from(saved)});await radar.getByText('個人本機歷史 · 不含息價格報酬 · 不上傳',{exact:true}).waitFor();assert.equal(await p.evaluate(()=>HSLRadarLocal.read().then(s=>HSLRadarLocal.rows(s.data).length)),2935);
