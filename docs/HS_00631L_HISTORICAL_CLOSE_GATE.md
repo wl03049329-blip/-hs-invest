@@ -46,7 +46,40 @@ Keep this candidate Draft. Do not import the offline candidate into
 archive, or change C4/FINAL/LIVE/portfolio/Ledger. Existing licensed daily
 capture remains independent. No paid service or old research schedule enabled.
 
-The minimal release unblock is a documented historical-close reuse grant (for
-the existing sources or an equivalent full-period source), plus completed
-calendar/company-action coverage; then validate the full candidate against the
-immutable live archive at the overlap before allowing the UI to read it.
+## Derived-only publication review (2026-11-20)
+
+Not offering the 2,935-row history for download is **not** itself a reuse grant.
+Keep both raw redistribution and public derived-history indicators on HOLD.
+
+| Input scope | Public derived indicators | Evidence / precise limitation |
+| --- | --- | --- |
+| Actual daily dataset 11549 CSV/OpenAPI captures | PASS with attribution and complete comparison window | [Dataset](https://data.gov.tw/dataset/11549), [OGL v1 sections 2 and 3](https://data.gov.tw/license): derivatives and public transmission permitted; name the provider. This does not grant other website endpoints. |
+| Archived monthly STOCK_DAY and MI_INDEX website reports | UNKNOWN / do not publish | [TWSE website terms sections 6 and 8](https://www.twse.com.tw/zh/terms/use.html); [official information Q&A question 2](https://www.twse.com.tw/zh/products/information/qa.html) specifically addresses value-added information supplied to others. No grant covering this historical input and HS's public percentage-only output was found. |
+| FinMind historical input | UNKNOWN / do not publish | [Pricing](https://finmind.github.io/Pricing/) permits noncommercial application development, but [data-license sections 3.2 and 3.3](https://finmind.github.io/Disclaimer/) restrict redistribution and require original-source authorization for external disclosure. [Commercial Q&A](https://finmind.github.io/CommercialUse/) does not independently establish the missing historical-source grant. No purchase or new API query performed. |
+
+The checked free alternative [tw-chip-open-data](https://github.com/88jiayu/tw-chip-open-data)
+identifies current OpenAPI captures, not an authenticated listing-to-present
+replacement for this archive. A repository label alone does not prove 2014–2026
+coverage or source rights for a new historical input. No substitute imported.
+
+Company-action scope is limited to price comparability: the issuer's 22:1 event
+and the once-only adjustment are verified as above. Cash dividends are **not**
+reinvested or subtracted for these price-return indicators. Only other events
+that change unit/price comparability (if any) need reconciliation; dividend
+total-return completeness is not a release requirement for price returns.
+
+Split the already-tested calendar-period/chart-return software into
+`fix/00631l-authorized-period-ui`, based on latest main. It uses only the existing
+verified continuous daily-open-data archive, publishes no new historical input
+or private aggregate, and leaves all missing-window gates and fixed thresholds
+unchanged. This PR retains the offline historical audit and remains Draft.
+
+The minimum historical-output unblock is evidence that specifically permits
+using the archived historical input to compute and publicly display HS's
+noncommercial price-return/drawdown percentages (no price download or series).
+Alternatively supply an equivalent source with that grant and verified coverage.
+After permission, use a private calculator and an allowlisted summary artifact;
+never put the raw input in this public repository/Pages or claim that a public
+GitHub branch is controlled storage. Validate the overlap and price-changing
+events before enabling it. There is no requirement to wait 240 days if such
+an authorized historical source is established.
