@@ -45,7 +45,13 @@ async function capture(date, previous, {get = fetch, pause = ms => new Promise(r
     try {
       const response = await get(URL, {redirect:"error", signal: AbortSignal.timeout(15000)});
       if (!response.ok) throw Object.assign(Error("OPENAPI_HTTP_" + response.status), {retry:response.status >= 500});
-      return receipt(Buffer.from(await response.arrayBuffer()), date, previous, now());
+      const raw=Buffer.from(await response.arrayBuffer());
+      try { return receipt(raw,date,previous,now()); }
+      catch(e) {
+        // Diagnostic dates only, never an alternative acceptance path or prices.
+        try { const rows=JSON.parse(raw);e.sourceDates=Array.isArray(rows)?[...new Set(rows.map(r=>r?.Date))].slice(0,8):null; } catch { e.sourceDates=null; }
+        throw e;
+      }
     } catch (e) {
       // Do not retry rate limits, a prior session, invalid schema or revisions.
       if (attempt === 2 || !(e.retry || e.name === "TimeoutError" || e instanceof TypeError)) throw e;
@@ -221,7 +227,7 @@ if (require.main === module) (process.argv[2] === "--00631l-archive"
       fs.writeFileSync(process.env.HS_AUDIT_REPORT,JSON.stringify({scope:"capture:"+timing.targetDate,healthy:true,timing,incidents:[]},null,2)+"\n",{flag:"wx"});}
   })).catch(e => {
   if(process.env.HS_AUDIT_REPORT){const timing=e.timing||scheduleContext(new Date(),process.env.HS_CAPTURE_SLOT,process.env.HS_RUN_CREATED_AT);
-    fs.writeFileSync(process.env.HS_AUDIT_REPORT,JSON.stringify({scope:"capture:"+timing.targetDate,healthy:false,timing,incidents:[{date:timing.targetDate,code:e.message}]},null,2)+"\n",{flag:"wx"});}
+    fs.writeFileSync(process.env.HS_AUDIT_REPORT,JSON.stringify({scope:"capture:"+timing.targetDate,healthy:false,timing,sourceDates:e.sourceDates??null,incidents:[{date:timing.targetDate,code:e.message}]},null,2)+"\n",{flag:"wx"});}
   console.error("TWSE close receipt not clean: " + e.message);
   process.exitCode = 1;
 });

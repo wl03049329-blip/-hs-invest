@@ -3,7 +3,7 @@ const {test} = require("node:test");
 const assert = require("node:assert/strict");
 const {receipt,capture,captureWindow,archiveReceipt,appendClose,windowCoverage} = require("../scripts/audit_twse_close_capture.cjs");
 const fs = require("node:fs"), os = require("node:os"), path = require("node:path");
-const {sessions,missingReceipts,scheduleContext,notify} = require("../scripts/audit_twse_close_watchdog.cjs");
+const {sessions,missingReceipts,scheduleContext,notify,publicationReport} = require("../scripts/audit_twse_close_watchdog.cjs");
 const date = "2026-11-16";
 const now = () => new Date("2026-11-16T10:20:00Z");
 const raw = close => Buffer.from(JSON.stringify([{Date:"1151116",Code:"0050",
@@ -135,6 +135,14 @@ test("missing-report or notification permission errors must fail closed",async()
   const bad={rest:{issues:{listForRepo(){}}},paginate:async()=>{throw Error("TEST_PERMISSION_DENIED");}};
   await assert.rejects(notify({github:bad,context:{repo:{}},core:{summary:{addCodeBlock:()=>({write:async()=>{}})}},report:failure("watchdog","2026-11-20","MISSING")}),/PERMISSION_DENIED/);
 });
+test("a verified quote without its clean artifact cannot resolve a publication alert",()=>{
+  const good={scope:"capture:2026-11-20",healthy:true,timing:{targetDate:"2026-11-20"},incidents:[]};
+  assert.equal(publicationReport(good,"success"),good);
+  for(const outcome of["failure","skipped",undefined]){
+    const blocked=publicationReport(good,outcome);assert.equal(blocked.healthy,false);
+    assert.equal(blocked.incidents[0].code,"CLEAN_RECEIPT_ARTIFACT_UNAVAILABLE");
+  }
+});
 
 test("workflow uses scheduled context, retains strict errors and immutable artifacts, and does not publish FINAL",()=>{
   const w=fs.readFileSync(".github/workflows/audit-twse-close-capture.yml","utf8");
@@ -181,5 +189,5 @@ test("5xx retry is bounded but rate limits and stale sessions fail closed", asyn
   assert.equal(calls,1);
   await assert.rejects(capture("2026-11-17",null,{
     now:()=>new Date("2026-11-17T10:20:00Z"),get:async()=>new Response(raw("10"))
-  }),/SESSION_DATE_MISMATCH/);
+  }),e=>e.message==="OPENAPI_SESSION_DATE_MISMATCH"&&e.sourceDates.join()==="1151116");
 });

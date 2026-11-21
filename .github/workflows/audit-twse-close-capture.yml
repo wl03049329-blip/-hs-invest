@@ -155,6 +155,7 @@ jobs:
           retention-days: 30
           overwrite: false
       - name: Mark clean receipt for watchdog
+        id: clean
         if: steps.audit.outcome == 'success'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
@@ -179,13 +180,15 @@ jobs:
         uses: actions/github-script@v7
         env:
           HS_TARGET_DATE: ${{ steps.prior.outputs.day }}
+          HS_CLEAN_MARKER_OUTCOME: ${{ steps.clean.outcome }}
         with:
           script: |
-            const fs=require('fs'), {notify}=require('./scripts/audit_twse_close_watchdog.cjs');
+            const fs=require('fs'), {notify,publicationReport}=require('./scripts/audit_twse_close_watchdog.cjs');
             let report;
             try { report=JSON.parse(fs.readFileSync('capture-report.json','utf8')); }
             catch { const date=process.env.HS_TARGET_DATE||new Date(Date.now()+8*3600000).toISOString().slice(0,10);
               report={scope:'capture:'+date,healthy:false,incidents:[{date,code:'CAPTURE_DIAGNOSTIC_UNAVAILABLE'}]}; }
+            report=publicationReport(report,process.env.HS_CLEAN_MARKER_OUTCOME);
             core.setOutput('disposition',await notify({github,context,core,report}));
       - name: Fail once on a new or changed capture incident
         if: steps.audit.outcome == 'failure' && steps.incident.outputs.disposition != 'duplicate' && steps.incident.outputs.disposition != 'changed'

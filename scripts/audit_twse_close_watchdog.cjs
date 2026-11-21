@@ -29,6 +29,10 @@ function scheduleContext(now, input, createdAt) {
 }
 const incidentMarker = "<!-- hs-twse-close-capture-v1 -->";
 const incidentKeys = report => [...new Set(report?.incidents?.map(i=>i.date+":"+i.code)||[])].sort();
+function publicationReport(report,markerOutcome) {
+  return report.healthy&&markerOutcome!=="success" ? {...report,healthy:false,
+    incidents:[{date:report.timing.targetDate,code:"CLEAN_RECEIPT_ARTIFACT_UNAVAILABLE"}]} : report;
+}
 // Persist independent capture/watchdog scopes together: alternating jobs must
 // not repeatedly replace each other's alert, or close an unresolved failure.
 async function notify({github,context,core,report}) {
@@ -102,4 +106,4 @@ if (require.main === module) {
     console.error(e.message);process.exitCode=1;
   });
 }
-module.exports = {sessions,missingReceipts,scheduleContext,notify,incidentKeys,cronSlots};
+module.exports = {sessions,missingReceipts,scheduleContext,notify,incidentKeys,cronSlots,publicationReport};
