@@ -141,8 +141,11 @@ test("workflow uses scheduled context, retains strict errors and immutable artif
   assert.ok(!w.includes("day=$(TZ=Asia/Taipei date +%F)"));
   for(const s of ["--context", "HS_RUN_CREATED_AT", "HS_AUDIT_REPORT", "steps.audit.outcome == 'success'", "retention-days: 30", "timezone: 'Etc/UTC'"])assert.ok(w.includes(s),s);
   assert.ok(!w.includes("finalize_core_score_history"));assert.ok(!w.includes("FINMIND_TOKEN"));
-  const cp=require("node:child_process"),original=cp.execFileSync("git",["show","6bf9a1a5:.github/workflows/audit-twse-close-capture.yml"],{encoding:"utf8"}).replace(/\r\n/g,"\n");
-  assert.equal(w.replace(/\r\n/g,"\n").split("  archive-00631l:\n")[1],original.split("  archive-00631l:\n")[1],"independent 00631L write contract unchanged");
+  // Canonical LF bytes from main6bf9a1a5. Works on the existing shallow
+  // archive-verification runner without fetching history or weakening the seal.
+  const block=w.replace(/\r\n/g,"\n").split("  archive-00631l:\n")[1];
+  assert.equal(require("node:crypto").createHash("sha256").update(block).digest("hex"),
+    "b14da9503244b23757a57784c0afb61fc74cd4afda73aac13dc55c9291ab5a32","independent 00631L write contract unchanged");
 });
 
 test("watchdog flags both skipped and failed capture, but accepts the second clean slot", () => {
