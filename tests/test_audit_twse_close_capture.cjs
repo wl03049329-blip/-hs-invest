@@ -1,9 +1,9 @@
 "use strict";
 const {test} = require("node:test");
 const assert = require("node:assert/strict");
-const {receipt,capture,captureWindow,archiveReceipt,appendClose,windowCoverage} = require("../scripts/audit_twse_close_capture.cjs");
+const {receipt,capture,captureWindow,archiveReceipt,appendClose,windowCoverage,receiptIncidents} = require("../scripts/audit_twse_close_capture.cjs");
 const fs = require("node:fs"), os = require("node:os"), path = require("node:path");
-const {sessions,missingReceipts} = require("../scripts/audit_twse_close_watchdog.cjs");
+const {sessions,missingReceipts,scheduleContext,notify,publicationReport} = require("../scripts/audit_twse_close_watchdog.cjs");
 const date = "2026-11-16";
 const now = () => new Date("2026-11-16T10:20:00Z");
 const raw = close => Buffer.from(JSON.stringify([{Date:"1151116",Code:"0050",
@@ -65,9 +65,95 @@ test("watchdog uses actual completed sessions, never weekday guesses", () => {
 test("Taipei slots accept bounded delays but reject the next slot or next date", () => {
   const created = "2026-11-16T10:20:00Z";
   assert.equal(captureWindow(new Date("2026-11-16T10:47:00Z"),"18:20",created),date);
-  assert.equal(captureWindow(new Date("2026-11-16T12:26:00Z"),"20:20",created),date);
+  assert.equal(captureWindow(new Date("2026-11-16T12:26:00Z"),"20:20","2026-11-16T12:20:00Z"),date);
   assert.throws(() => captureWindow(new Date("2026-11-16T12:20:00Z"),"18:20",created),/WINDOW_MISSED/);
   assert.throws(() => captureWindow(new Date("2026-11-17T10:25:00Z"),"18:20",created),/WINDOW_MISSED/);
+});
+
+test("on-time and 10/30/60-minute creation or runner delays retain the correct slot date",()=>{
+  for(const [slot,hour] of [["18:20",10],["20:20",12]])for(const minutes of [0,10,30,60]){
+    const nominal=Date.parse(`2026-11-20T${hour}:20:00Z`),late=new Date(nominal+minutes*60000);
+    assert.equal(captureWindow(late,slot,late.toISOString()),"2026-11-20");
+    assert.equal(captureWindow(late,slot,new Date(nominal).toISOString()),"2026-11-20");
+    const c=scheduleContext(late,slot,late.toISOString());
+    assert.equal(c.creationDelayMs,minutes*60000);assert.equal(c.executionQueueMs,0);
+  }
+});
+
+test("recorded runs 35/36/37 identify the prior target without pretending the trigger time is known",()=>{
+  for(const [cron,created,started,slot]of [
+    ["20 10 * * 1-5","2026-11-20T18:37:41Z","2026-11-20T18:37:48Z","18:20"],
+    ["20 12 * * 1-5","2026-11-20T20:27:14Z","2026-11-20T20:27:21Z","20:20"],
+    ["53 13 * * 1-5","2026-11-20T21:34:15Z","2026-11-20T21:34:20Z","watchdog"]]){
+    const c=scheduleContext(new Date(started),cron,created);
+    assert.equal(c.targetDate,"2026-11-20");assert.equal(c.runCreatedTaipeiDate,"2026-11-21");
+    assert.equal(c.executionTaipeiDate,"2026-11-21");assert.equal(c.slot,slot);
+    assert.match(c.nominalTimeBasis,/INFERRED_NOT_PROVIDER_TRIGGER/);assert.ok(c.executionQueueMs<10000);
+    if(slot!=="watchdog")assert.throws(()=>captureWindow(new Date(started),slot,created),/WINDOW_MISSED/);
+  }
+  assert.equal(scheduleContext(new Date("2026-11-21T00:30:00Z"),"17 0 * * 2-6","2026-11-21T00:20:00Z").targetDate,"2026-11-20");
+});
+
+test("expired windows, future clocks, weekends and unconfirmed holiday data never become clean",async()=>{
+  assert.throws(()=>captureWindow(new Date("2026-11-20T16:05:00Z"),"20:20","2026-11-20T16:00:00Z"),/WINDOW_MISSED/);
+  assert.throws(()=>scheduleContext(now(),"18:20","2026-11-17T10:20:00Z"),/CONTEXT_INVALID/);
+  assert.throws(()=>captureWindow(new Date("2026-11-21T10:20:00Z"),"manual","2026-11-21T10:20:00Z"),/WEEKEND/);
+  // A prior dated snapshot during a weekday holiday is not proof of a new
+  // session, nor does an absent session authorize fabricated OHLCV.
+  await assert.rejects(capture("2026-02-17",null,{now:()=>new Date("2026-02-17T12:20:00Z"),get:async()=>new Response(raw("10"))}),/SESSION_DATE_MISMATCH/);
+});
+
+function incidentHarness(){
+  let issue=null,creates=0,updates=0;const notices=[];
+  const github={paginate:async()=>issue&&issue.state!=="closed"?[structuredClone(issue)]:[],rest:{issues:{listForRepo(){},
+    create:async p=>{creates++;issue={...p,number:1,state:"open",user:{login:"github-actions[bot]"}};},
+    update:async p=>{updates++;issue={...issue,...p};}}}};
+  const core={notice:s=>notices.push(s),summary:{addCodeBlock:()=>({write:async()=>{}})}};
+  const context={repo:{owner:"TEST_ONLY",repo:"ISOLATED"}},run=report=>notify({github,context,core,report});
+  return {run,state:()=>({issue,creates,updates,notices})};
+}
+const failure=(scope,date,code)=>({scope,healthy:false,incidents:[{date,code}]});
+test("same reason has no second issue update/red alert; different date or reason alerts",async()=>{
+  const h=incidentHarness(),scope="capture:2026-11-20",r=failure(scope,"2026-11-20","CAPTURE_WINDOW_MISSED");
+  assert.equal(await h.run(r),"new");assert.equal(await h.run({...r,timing:{differentRun:true}}),"duplicate");
+  assert.equal(h.state().creates,1);assert.equal(h.state().updates,0);
+  assert.equal(await h.run(failure(scope,"2026-11-20","OPENAPI_HTTP_503")),"new");
+  assert.equal(await h.run(failure("capture:2026-11-23","2026-11-23","OPENAPI_HTTP_503")),"new");
+  assert.equal(h.state().updates,2);
+});
+test("capture/watchdog interleaving does not flip alerts; recovery closes only after all scopes recover",async()=>{
+  const h=incidentHarness(),capture=failure("capture:2026-11-20","2026-11-20","CAPTURE_WINDOW_MISSED"),
+    watchdog=failure("watchdog","2026-11-19","MISSED_CAPTURE_RECEIPT");
+  await h.run(capture);await h.run(watchdog);const before=h.state().updates;
+  assert.equal(await h.run(capture),"duplicate");assert.equal(await h.run(watchdog),"duplicate");assert.equal(h.state().updates,before);
+  await h.run({...capture,healthy:true,incidents:[]});assert.equal(h.state().issue.state,"open");
+  assert.equal(await h.run({...watchdog,healthy:true,incidents:[]}),"recovered");assert.equal(h.state().issue.state,"closed");
+  assert.equal(await h.run({...watchdog,healthy:true,incidents:[]}),"healthy");
+});
+test("missing-report or notification permission errors must fail closed",async()=>{
+  const h=incidentHarness();await assert.rejects(h.run({scope:"watchdog",healthy:false,incidents:[]}),/REPORT_INVALID/);
+  const bad={rest:{issues:{listForRepo(){}}},paginate:async()=>{throw Error("TEST_PERMISSION_DENIED");}};
+  await assert.rejects(notify({github:bad,context:{repo:{}},core:{summary:{addCodeBlock:()=>({write:async()=>{}})}},report:failure("watchdog","2026-11-20","MISSING")}),/PERMISSION_DENIED/);
+});
+test("a verified quote without its clean artifact cannot resolve a publication alert",()=>{
+  const good={scope:"capture:2026-11-20",healthy:true,timing:{targetDate:"2026-11-20"},incidents:[]};
+  assert.equal(publicationReport(good,"success"),good);
+  for(const outcome of["failure","skipped",undefined]){
+    const blocked=publicationReport(good,outcome);assert.equal(blocked.healthy,false);
+    assert.equal(blocked.incidents[0].code,"CLEAN_RECEIPT_ARTIFACT_UNAVAILABLE");
+  }
+});
+
+test("workflow uses scheduled context, retains strict errors and immutable artifacts, and does not publish FINAL",()=>{
+  const w=fs.readFileSync(".github/workflows/audit-twse-close-capture.yml","utf8");
+  assert.ok(!w.includes("day=$(TZ=Asia/Taipei date +%F)"));
+  for(const s of ["--context", "HS_RUN_CREATED_AT", "HS_AUDIT_REPORT", "steps.audit.outcome == 'success'", "retention-days: 30", "timezone: 'Etc/UTC'"])assert.ok(w.includes(s),s);
+  assert.ok(!w.includes("finalize_core_score_history"));assert.ok(!w.includes("FINMIND_TOKEN"));
+  // Canonical LF bytes from main6bf9a1a5. Works on the existing shallow
+  // archive-verification runner without fetching history or weakening the seal.
+  const block=w.replace(/\r\n/g,"\n").split("  archive-00631l:\n")[1];
+  assert.equal(require("node:crypto").createHash("sha256").update(block).digest("hex"),
+    "b14da9503244b23757a57784c0afb61fc74cd4afda73aac13dc55c9291ab5a32","independent 00631L write contract unchanged");
 });
 
 test("watchdog flags both skipped and failed capture, but accepts the second clean slot", () => {
@@ -88,6 +174,8 @@ test("receipt has no raw prices and changes are flagged only for affected symbol
   assert.equal(revised.responseChanged,true);
   assert.equal(revised.symbols["0050"].revised,true);
   assert.equal(revised.symbols["00757"].revised,false);
+  assert.deepEqual(receiptIncidents(first).map(x=>x.code),["SYMBOL_MISSING_SYMBOL:00757","SYMBOL_MISSING_SYMBOL:00830","SYMBOL_MISSING_SYMBOL:00935"]);
+  assert.ok(receiptIncidents(revised).some(x=>x.code==="SOURCE_REVISION:0050"));
   assert.throws(() => receipt(raw("10"),date,{...first,date:"2026-11-13"},now()),/PREVIOUS_RECEIPT_INVALID/);
 });
 
@@ -103,5 +191,5 @@ test("5xx retry is bounded but rate limits and stale sessions fail closed", asyn
   assert.equal(calls,1);
   await assert.rejects(capture("2026-11-17",null,{
     now:()=>new Date("2026-11-17T10:20:00Z"),get:async()=>new Response(raw("10"))
-  }),/SESSION_DATE_MISMATCH/);
+  }),e=>e.message==="OPENAPI_SESSION_DATE_MISMATCH"&&e.sourceDates.join()==="1151116");
 });
