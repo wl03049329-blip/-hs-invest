@@ -59,6 +59,10 @@ async function capture(date, previous, {get = fetch, pause = ms => new Promise(r
     }
   }
 }
+function receiptIncidents(r) {
+  return Object.entries(r.symbols).filter(([,s])=>s.revised||s.status!=="CANDIDATE_OHLCV")
+    .map(([symbol,s])=>({date:r.date,code:s.revised?"SOURCE_REVISION:"+symbol:"SYMBOL_"+s.status+":"+symbol}));
+}
 
 async function main() {
   const [out, previousPath, expectedDate] = process.argv.slice(2);
@@ -74,8 +78,8 @@ async function main() {
   r.timing=timing;
   fs.writeFileSync(out, JSON.stringify(r,null,2) + "\n", {flag:"wx"});
   console.log(date + " TWSE receipt; no score publication authorized");
-  if (Object.values(r.symbols).some(s => s.revised || s.status !== "CANDIDATE_OHLCV"))
-    throw Error("SYMBOL_UNAVAILABLE_OR_REVISION_REVIEW_REQUIRED");
+  const incidents=receiptIncidents(r);
+  if (incidents.length) throw Object.assign(Error("SYMBOL_UNAVAILABLE_OR_REVISION_REVIEW_REQUIRED"),{incidents});
 }
 const ARCHIVE_SCHEMA = "HS_00631L_OPEN_CLOSE_V1";
 const DATASET = "https://data.gov.tw/dataset/11549";
@@ -227,8 +231,8 @@ if (require.main === module) (process.argv[2] === "--00631l-archive"
       fs.writeFileSync(process.env.HS_AUDIT_REPORT,JSON.stringify({scope:"capture:"+timing.targetDate,healthy:true,timing,incidents:[]},null,2)+"\n",{flag:"wx"});}
   })).catch(e => {
   if(process.env.HS_AUDIT_REPORT){const timing=e.timing||scheduleContext(new Date(),process.env.HS_CAPTURE_SLOT,process.env.HS_RUN_CREATED_AT);
-    fs.writeFileSync(process.env.HS_AUDIT_REPORT,JSON.stringify({scope:"capture:"+timing.targetDate,healthy:false,timing,sourceDates:e.sourceDates??null,incidents:[{date:timing.targetDate,code:e.message}]},null,2)+"\n",{flag:"wx"});}
+    fs.writeFileSync(process.env.HS_AUDIT_REPORT,JSON.stringify({scope:"capture:"+timing.targetDate,healthy:false,timing,sourceDates:e.sourceDates??null,incidents:e.incidents||[{date:timing.targetDate,code:e.message}]},null,2)+"\n",{flag:"wx"});}
   console.error("TWSE close receipt not clean: " + e.message);
   process.exitCode = 1;
 });
-module.exports = {receipt,capture,captureWindow,archiveReceipt,appendClose,windowCoverage,csvRows};
+module.exports = {receipt,capture,captureWindow,archiveReceipt,appendClose,windowCoverage,csvRows,receiptIncidents};

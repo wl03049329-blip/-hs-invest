@@ -1,7 +1,7 @@
 "use strict";
 const {test} = require("node:test");
 const assert = require("node:assert/strict");
-const {receipt,capture,captureWindow,archiveReceipt,appendClose,windowCoverage} = require("../scripts/audit_twse_close_capture.cjs");
+const {receipt,capture,captureWindow,archiveReceipt,appendClose,windowCoverage,receiptIncidents} = require("../scripts/audit_twse_close_capture.cjs");
 const fs = require("node:fs"), os = require("node:os"), path = require("node:path");
 const {sessions,missingReceipts,scheduleContext,notify,publicationReport} = require("../scripts/audit_twse_close_watchdog.cjs");
 const date = "2026-11-16";
@@ -174,6 +174,8 @@ test("receipt has no raw prices and changes are flagged only for affected symbol
   assert.equal(revised.responseChanged,true);
   assert.equal(revised.symbols["0050"].revised,true);
   assert.equal(revised.symbols["00757"].revised,false);
+  assert.deepEqual(receiptIncidents(first).map(x=>x.code),["SYMBOL_MISSING_SYMBOL:00757","SYMBOL_MISSING_SYMBOL:00830","SYMBOL_MISSING_SYMBOL:00935"]);
+  assert.ok(receiptIncidents(revised).some(x=>x.code==="SOURCE_REVISION:0050"));
   assert.throws(() => receipt(raw("10"),date,{...first,date:"2026-11-13"},now()),/PREVIOUS_RECEIPT_INVALID/);
 });
 
