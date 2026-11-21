@@ -86,7 +86,7 @@ test("recorded runs 35/36/37 identify the prior target without pretending the tr
     ["20 12 * * 1-5","2026-11-20T20:27:14Z","2026-11-20T20:27:21Z","20:20"],
     ["53 13 * * 1-5","2026-11-20T21:34:15Z","2026-11-20T21:34:20Z","watchdog"]]){
     const c=scheduleContext(new Date(started),cron,created);
-    assert.equal(c.targetDate,"2026-11-20");assert.equal(c.triggerTaipeiDate,"2026-11-21");
+    assert.equal(c.targetDate,"2026-11-20");assert.equal(c.runCreatedTaipeiDate,"2026-11-21");
     assert.equal(c.executionTaipeiDate,"2026-11-21");assert.equal(c.slot,slot);
     assert.match(c.nominalTimeBasis,/INFERRED_NOT_PROVIDER_TRIGGER/);assert.ok(c.executionQueueMs<10000);
     if(slot!=="watchdog")assert.throws(()=>captureWindow(new Date(started),slot,created),/WINDOW_MISSED/);

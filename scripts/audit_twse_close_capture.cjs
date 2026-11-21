@@ -49,7 +49,7 @@ async function capture(date, previous, {get = fetch, pause = ms => new Promise(r
       try { return receipt(raw,date,previous,now()); }
       catch(e) {
         // Diagnostic dates only, never an alternative acceptance path or prices.
-        try { const rows=JSON.parse(raw);e.sourceDates=Array.isArray(rows)?[...new Set(rows.map(r=>r?.Date))].slice(0,8):null; } catch { e.sourceDates=null; }
+        try { const rows=JSON.parse(raw);e.sourceDates=Array.isArray(rows)?[...new Set(rows.map(r=>r?.Date).filter(d=>typeof d==="string"&&/^\d{7}$/.test(d)))].slice(0,8):null; } catch { e.sourceDates=null; }
         throw e;
       }
     } catch (e) {

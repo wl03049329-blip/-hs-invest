@@ -24,7 +24,7 @@ function scheduleContext(now, input, createdAt) {
   return {slot,cron:Object.keys(cronSlots).find(k=>cronSlots[k]===slot)||null,runCreatedAt:new Date(created).toISOString(),executedAt:new Date(actual).toISOString(),
     executionTaipeiDate:tpe(actual).slice(0,10),nominalScheduledAt:nominal===null?null:new Date(nominal).toISOString(),
     nominalTimeBasis:nominal===null?"MANUAL_RUN_CREATED_AT":"LATEST_CRON_OCCURRENCE_INFERRED_NOT_PROVIDER_TRIGGER_TIME",
-    triggerTaipeiDate:tpe(created).slice(0,10),targetDate:tpe(anchor-(slot==="morning"?86400000:0)).slice(0,10),
+    runCreatedTaipeiDate:tpe(created).slice(0,10),targetDate:tpe(anchor-(slot==="morning"?86400000:0)).slice(0,10),
     creationDelayMs:nominal===null?null:created-nominal,executionQueueMs:actual-created};
 }
 const incidentMarker = "<!-- hs-twse-close-capture-v1 -->";
