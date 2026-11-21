@@ -2,18 +2,20 @@
 const fs = require("node:fs");
 const {createHash} = require("node:crypto");
 const {URL, readCloseSnapshot} = require("./c4_openapi_close_candidate.cjs");
-const {sessions} = require("./audit_twse_close_watchdog.cjs");
+const {sessions,scheduleContext} = require("./audit_twse_close_watchdog.cjs");
 const path = require("node:path");
 const SCHEMA = "HS_TWSE_CLOSE_CAPTURE_V1";
 const sha = bytes => createHash("sha256").update(bytes).digest("hex");
 const taipei = now => new Date(+now + 8*3600000).toISOString();
 
 function captureWindow(now, slot, createdAt) {
-  const clock = taipei(now), date = clock.slice(0,10), time = clock.slice(11,16);
+  const context=scheduleContext(now,slot,createdAt);
+  slot=context.slot;
+  const clock = taipei(now), date = context.targetDate, time = clock.slice(11,16);
   const windows = {"18:20":["18:20","20:20"],"20:20":["20:20","21:53"],manual:["18:20","21:53"]};
   if (!Object.hasOwn(windows,slot) || time < windows[slot][0] || time >= windows[slot][1] ||
-      !createdAt || taipei(new Date(createdAt)).slice(0,10) !== date)
-    throw Error("CAPTURE_WINDOW_MISSED");
+      clock.slice(0,10) !== date)
+    throw Object.assign(Error("CAPTURE_WINDOW_MISSED"),{timing:context});
   if ([0,6].includes(new Date(date).getUTCDay())) throw Error("WEEKEND_CAPTURE_NOT_EXPECTED");
   return date;
 }
@@ -56,12 +58,14 @@ async function main() {
   const [out, previousPath, expectedDate] = process.argv.slice(2);
   if (!out) throw Error("OUTPUT_REQUIRED");
   const {HS_CAPTURE_SLOT:slot, HS_RUN_CREATED_AT:createdAt} = process.env;
+  const timing=scheduleContext(new Date(),slot,createdAt);
   const date = captureWindow(new Date(),slot,createdAt);
   if (date !== expectedDate) throw Error("CAPTURE_LOOKUP_DATE_MISMATCH");
   const previous = previousPath && fs.existsSync(previousPath) ? JSON.parse(fs.readFileSync(previousPath,"utf8")) : null;
   const r = await capture(date, previous);
   captureWindow(new Date(),slot,createdAt);
   r.slot = slot;
+  r.timing=timing;
   fs.writeFileSync(out, JSON.stringify(r,null,2) + "\n", {flag:"wx"});
   console.log(date + " TWSE receipt; no score publication authorized");
   if (Object.values(r.symbols).some(s => s.revised || s.status !== "CANDIDATE_OHLCV"))
@@ -212,8 +216,13 @@ if (require.main === module) (process.argv[2] === "--00631l-archive"
     console.log(JSON.stringify(result));
     if (result.status === "APPENDED" && process.env.HS_00631L_FILE_LIST)
       fs.writeFileSync(process.env.HS_00631L_FILE_LIST,result.newFiles.join("\n")+"\n",{flag:"wx"});
-  }) : main()).catch(e => {
-  console.error("::error::TWSE close receipt not clean: " + e.message);
+  }) : main().then(()=>{
+    if(process.env.HS_AUDIT_REPORT){const timing=scheduleContext(new Date(),process.env.HS_CAPTURE_SLOT,process.env.HS_RUN_CREATED_AT);
+      fs.writeFileSync(process.env.HS_AUDIT_REPORT,JSON.stringify({scope:"capture:"+timing.targetDate,healthy:true,timing,incidents:[]},null,2)+"\n",{flag:"wx"});}
+  })).catch(e => {
+  if(process.env.HS_AUDIT_REPORT){const timing=e.timing||scheduleContext(new Date(),process.env.HS_CAPTURE_SLOT,process.env.HS_RUN_CREATED_AT);
+    fs.writeFileSync(process.env.HS_AUDIT_REPORT,JSON.stringify({scope:"capture:"+timing.targetDate,healthy:false,timing,incidents:[{date:timing.targetDate,code:e.message}]},null,2)+"\n",{flag:"wx"});}
+  console.error("TWSE close receipt not clean: " + e.message);
   process.exitCode = 1;
 });
 module.exports = {receipt,capture,captureWindow,archiveReceipt,appendClose,windowCoverage,csvRows};

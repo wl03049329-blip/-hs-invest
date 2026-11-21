@@ -18,9 +18,13 @@ on:
       - 'tests/test_*close*.cjs'
   schedule:
     - cron: '20 10 * * 1-5' # 18:20 Asia/Taipei
+      timezone: 'Etc/UTC'
     - cron: '20 12 * * 1-5' # 20:20 Asia/Taipei
+      timezone: 'Etc/UTC'
     - cron: '53 13 * * 1-5' # independent 21:53 catch-missed-runs check
+      timezone: 'Etc/UTC'
     - cron: '17 0 * * 2-6' # 08:17 Taipei: retry the previous completed session
+      timezone: 'Etc/UTC'
 permissions:
   contents: read
   actions: read
@@ -97,6 +101,10 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && !inputs.archive_00631l && github.event.schedule != '53 13 * * 1-5' && github.event.schedule != '17 0 * * 2-6' && vars.HS_TWSE_CLOSE_CAPTURE_ENABLED == '1'
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+      issues: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -108,8 +116,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          day=$(TZ=Asia/Taipei date +%F)
-          echo "day=$day" >> "$GITHUB_OUTPUT"
           case "${{ github.event.schedule }}" in
             '20 10 * * 1-5') slot=18:20 ;;
             '20 12 * * 1-5') slot=20:20 ;;
@@ -121,6 +127,9 @@ jobs:
           created=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" --jq .created_at)
           test -n "$created"
           echo "created=$created" >> "$GITHUB_OUTPUT"
+          node scripts/audit_twse_close_watchdog.cjs --context "$slot" "$created" > timing.json
+          day=$(node -p 'JSON.parse(require("fs").readFileSync("timing.json")).targetDate')
+          echo "day=$day" >> "$GITHUB_OUTPUT"
           prior=$(gh api --paginate "repos/$GITHUB_REPOSITORY/actions/artifacts?name=twse-close-${GITHUB_REF_NAME//\//-}-$day&per_page=100" | jq -s -r '[.[].artifacts[] | select(.expired == false)] | sort_by(.created_at, .id) | .[0].workflow_run.id // empty')
           artifact="twse-close-${GITHUB_REF_NAME//\//-}-$day"
           echo "artifact=$artifact" >> "$GITHUB_OUTPUT"
@@ -129,10 +138,13 @@ jobs:
             test -f prior/receipt.json
           fi
       - name: Verify current Taipei session and detect revisions
+        id: audit
+        continue-on-error: true
         env:
           HS_CAPTURE_SLOT: ${{ steps.prior.outputs.slot }}
           HS_RUN_CREATED_AT: ${{ steps.prior.outputs.created }}
           HS_SESSION_DATE: ${{ steps.prior.outputs.day }}
+          HS_AUDIT_REPORT: capture-report.json
         run: node scripts/audit_twse_close_capture.cjs receipt.json prior/receipt.json "$HS_SESSION_DATE"
       - name: Store immutable per-run receipt (no raw quotes)
         if: always() && hashFiles('receipt.json') != ''
@@ -143,6 +155,7 @@ jobs:
           retention-days: 30
           overwrite: false
       - name: Mark clean receipt for watchdog
+        if: steps.audit.outcome == 'success'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: ${{ steps.prior.outputs.artifact }}-ok-${{ steps.prior.outputs.slot_id }}
@@ -150,22 +163,78 @@ jobs:
           if-no-files-found: error
           retention-days: 30
           overwrite: false
-      - name: Flag missing session, source failure or revised quote
-        if: failure()
-        run: echo "::error::TWSE close capture needs review; no C4 observation or production data was written."
+      - name: Preserve attempt diagnostics (not a clean receipt)
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: twse-close-attempt-${{ github.run_id }}
+          path: |
+            timing.json
+            capture-report.json
+          retention-days: 30
+          overwrite: false
+      - name: Reconcile persistent capture incident
+        id: incident
+        if: always()
+        uses: actions/github-script@v7
+        env:
+          HS_TARGET_DATE: ${{ steps.prior.outputs.day }}
+        with:
+          script: |
+            const fs=require('fs'), {notify}=require('./scripts/audit_twse_close_watchdog.cjs');
+            let report;
+            try { report=JSON.parse(fs.readFileSync('capture-report.json','utf8')); }
+            catch { const date=process.env.HS_TARGET_DATE||new Date(Date.now()+8*3600000).toISOString().slice(0,10);
+              report={scope:'capture:'+date,healthy:false,incidents:[{date,code:'CAPTURE_DIAGNOSTIC_UNAVAILABLE'}]}; }
+            core.setOutput('disposition',await notify({github,context,core,report}));
+      - name: Fail once on a new or changed capture incident
+        if: steps.audit.outcome == 'failure' && steps.incident.outputs.disposition != 'duplicate' && steps.incident.outputs.disposition != 'changed'
+        run: exit 1
   watchdog:
     if: github.ref == 'refs/heads/main' && github.event.schedule == '53 13 * * 1-5' && vars.HS_TWSE_CLOSE_CAPTURE_ENABLED == '1'
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+      issues: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
       - name: Check observed market sessions since enablement
+        id: audit
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
           HS_CAPTURE_START: ${{ vars.HS_TWSE_CLOSE_CAPTURE_START }}
-        run: node scripts/audit_twse_close_watchdog.cjs
+          HS_CAPTURE_SLOT: ${{ github.event.schedule }}
+          HS_AUDIT_REPORT: watchdog-report.json
+        run: |
+          export HS_RUN_CREATED_AT=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" --jq .created_at)
+          node scripts/audit_twse_close_watchdog.cjs
+      - name: Reconcile persistent missing-receipt incident
+        id: incident
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs=require('fs'), {notify}=require('./scripts/audit_twse_close_watchdog.cjs');
+            let report;
+            try { report=JSON.parse(fs.readFileSync('watchdog-report.json','utf8')); }
+            catch { const date=new Date(Date.now()+8*3600000).toISOString().slice(0,10);
+              report={scope:'watchdog',healthy:false,incidents:[{date,code:'WATCHDOG_DIAGNOSTIC_UNAVAILABLE'}]}; }
+            core.setOutput('disposition',await notify({github,context,core,report}));
+      - if: always() && hashFiles('watchdog-report.json') != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: twse-close-watchdog-${{ github.run_id }}
+          path: watchdog-report.json
+          retention-days: 30
+          overwrite: false
+      - name: Fail once on a new missing-receipt incident
+        if: steps.audit.outcome == 'failure' && steps.incident.outputs.disposition != 'duplicate' && steps.incident.outputs.disposition != 'changed'
+        run: exit 1
   archive-00631l-verify:
     if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.archive_00631l && github.ref != 'refs/heads/main')
     runs-on: ubuntu-latest
