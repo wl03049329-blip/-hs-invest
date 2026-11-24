@@ -33,6 +33,12 @@ test('real archival previous-close evidence yields only five valid estimates, in
  const q=quotes.get('00830');assert.equal(B.preSplit00830(q),true);
  assert.equal(B.preSplit00830({...q,date:'2027-01-12'}),false);
  assert.equal(B.preSplit00830({...q,reference_kind:'EXCHANGE_COMPARISON_PRICE'}),false);
+ const held=holdings.find(h=>h.symbol==='00830');
+ const r=A.confirmUnits(held,{basis:'CURRENT_UNITS',quoteDate:'2026-11-23',at:'2026-11-23T12:00:00Z',id:'SYNTHETIC',shares:1001,breakEven:11});
+ assert.equal(A.project(held,[r],q.date,now).unit_status,'NEW_ACTION_CONFIRMATION_REQUIRED');
+ const projected=A.project(held,[r],q.date,now,{sameVerifiedBasis:B.preSplit00830(q)});
+ assert.equal(projected.unit_status,'AS_CONFIRMED');assert.equal(projected.shares,1001);assert.equal(projected.break_even_price,11);
+ assert.equal(A.project({...held,shares:1002},[r],q.date,now,{sameVerifiedBasis:true}).unit_status,'UNIT_CONFIRMATION_CHANGED_REQUIRED');
  const broken=history('009815');broken.incremental_verification.calendar_evidence[0].url='https://example.com/';
  assert.equal(B.apply(V.closeQuotes(cache,status,now).get('009815'),broken,status,A.actions,now).reference_kind,'EXCHANGE_COMPARISON_PRICE');
 });
