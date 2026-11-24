@@ -172,7 +172,9 @@ class CompletedPublication(unittest.TestCase):
             kwargs["stdout"].write("https://github.com/fixture/actions/runs/45373134389\n")
         with tempfile.TemporaryDirectory() as temp, patch.dict("os.environ", {"HS_COMPLETED_AUDIT_TRIGGER":"workflow_run","HS_COMPLETED_PRODUCER_RESULT":""}), patch.object(monitor.dt,"datetime",wraps=dt.datetime) as clock, patch.object(monitor,"expected_day",return_value=("2026-11-24",None,None)), patch.object(monitor,"public_json",side_effect=[q,d,scores]), patch.object(monitor.subprocess,"check_output",side_effect=[json.dumps({"workflow_runs":[]}),json.dumps({"workflow_runs":[run]})]), patch.object(monitor.subprocess,"run",side_effect=child), redirect_stdout(io.StringIO()) as out, redirect_stderr(io.StringIO()) as err:
             destination=Path(temp)/"completed-market.json"
-            clock.now.side_effect=[now,observed,observed]
+            # Audit entry and calendar-client creation precede dispatch;
+            # metadata observation and deadline check follow the new Run.
+            clock.now.side_effect=[now,now,observed,observed]
             with patch("sys.argv",["check","--repair","--report",str(destination)]):
                 monitor.main()
             report=json.loads(destination.read_text(encoding="utf-8"))
