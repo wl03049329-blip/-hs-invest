@@ -5,8 +5,9 @@ const {build}=require('../scripts/build_stable_app.cjs'),out=fs.mkdtempSync(path
 const sites=[['candidate',build({out:path.join(out,'candidate')}).out]];
 if(process.env.HS_BASELINE_ROOT)sites.unshift(['baseline',build({root:process.env.HS_BASELINE_ROOT,out:path.join(out,'baseline')}).out]);
 const mime={'.html':'text/html','.json':'application/json','.js':'text/javascript','.css':'text/css','.webmanifest':'application/manifest+json','.png':'image/png'};
-const marketPin='ce946dd28de9b1a49bb7a5f09098157afe46bf1b',marketFiles=new Map();
-for(const name of ['market-quotes.json','finalized-core-score-snapshots-v1.json','data/radar-history/status-v1.json','data/radar-history/twse/0050.json','data/radar-history/twse/00662.json']){
+const incident=process.env.HS_PORTFOLIO_INCIDENT==='1';
+const marketPin=incident?'7ee0a446e016b5c91e02e05894c4c575b32e3276':'ce946dd28de9b1a49bb7a5f09098157afe46bf1b',marketFiles=new Map();
+for(const name of ['market-quotes.json','finalized-core-score-snapshots-v1.json','data/radar-history/status-v1.json','data/radar-history/twse/0050.json','data/radar-history/twse/00662.json',...(incident?['data/radar-history/twse/00830.json','data/radar-history/twse/00935.json','data/radar-history/tpex/009815.json']:[])]){
  marketFiles.set(name,cp.execFileSync('git',['show',marketPin+':'+name],{maxBuffer:16e6}));
 }
 function server(site){return http.createServer((req,res)=>{const url=new URL(req.url,'http://local'),file=path.resolve(site,'../'+path.basename(site)+url.pathname.replace(/^\/-hs-invest/,'')+(url.pathname.endsWith('/')?'index.html':''));
@@ -18,10 +19,23 @@ const raw=p=>p.evaluate(()=>Object.fromEntries(Object.entries(localStorage).filt
 async function run(p,url,name,width){
  await p.addInitScript(({before,after})=>{const Date0=Date;window.testAt=Date0.parse(before);window.postSplit=()=>window.testAt=Date0.parse(after);window.Date=class extends Date0{constructor(...a){super(...(a.length?a:[window.testAt]));}static now(){return window.testAt;}};
   let reads=0;const get=Storage.prototype.getItem;Storage.prototype.getItem=function(...args){reads++;return get.apply(this,args);};window.readCount=()=>reads;
- },{before:'2026-11-12T11:30:00Z',after:'2026-11-18T11:30:00Z'});
+ },incident?{before:'2026-11-24T15:15:00Z',after:'2026-11-24T15:15:00Z'}:{before:'2026-11-12T11:30:00Z',after:'2026-11-18T11:30:00Z'});
  await p.goto(url,{waitUntil:'domcontentloaded'});
  await p.waitForFunction(()=>document.documentElement.dataset.hsV3Boot==='ready'&&document.getElementById('hpv2-start').onclick);
- await p.locator('#hpv2-consent').check();await p.locator('#hpv2-start').click();await add(p,'0050',100,70);await add(p,'00662',500,20);
+ await p.locator('#hpv2-consent').check();await p.locator('#hpv2-start').click();
+ if(incident){
+  for(const k of ['0050','006201','00631L','00662','00685L','00830','00935','009815'])await add(p,k,1000,10);
+  await p.evaluate(()=>document.getElementById('hpv2-updatePrices').click());
+  await p.waitForFunction(()=>HSPersonalV3.read().daily_estimate.computed===5,{},{timeout:45000});
+  const before=await raw(p),v=await p.evaluate(()=>HSPersonalV3.read());
+  assert.equal(v.equity_minor,31236000);assert.equal(v.reference_basis_minor,8000000);assert.equal(v.actual_cost_minor,null);
+  assert.equal(v.rows.find(r=>r.symbol==='00830').shares,1000);assert.equal(v.rows.find(r=>r.symbol==='00662').shares,1000);
+  assert.ok(v.rows.every(r=>r.weight>0));assert.doesNotMatch(await p.locator('#pv3-equity').innerText(),/暫不可計算/);
+  await p.reload({waitUntil:'domcontentloaded'});await p.waitForFunction(()=>self.HSPersonalV3?.read().daily_estimate.computed===5);
+  assert.deepEqual(await raw(p),before);assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+  return;
+ }
+ await add(p,'0050',100,70);await add(p,'00662',500,20);
  await p.evaluate(()=>postSplit());
  await p.evaluate(()=>document.getElementById('hpv2-updatePrices').click());
  await p.waitForFunction(()=>{const rows=HSPersonalV3.read().rows;return rows.some(r=>r.symbol==='0050'&&r.quote?.date==='2026-11-18')&&rows.some(r=>r.symbol==='00662'&&r.unit_status==='SPLIT_BASIS_REVIEW_REQUIRED');});

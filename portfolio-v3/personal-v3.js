@@ -3897,7 +3897,10 @@ const module=undefined,window={crypto:host.crypto},globalThis=window;
 (function(root,f){if(typeof module==='object'&&module.exports)module.exports=f();else root.HSPersonalV3HistoryBasis=f();})(globalThis,function(){
  function apply(q,archive,status,actions,now){try{
  if(!q||!archive||archive.verified!==true||archive.price_type!=='RAW_UNADJUSTED'||archive.currency!=='TWD'||archive.symbol!==q.symbol||!Number.isFinite(Date.parse(archive.fetched_at))||Date.parse(archive.fetched_at)>Date.parse(now)||!/^[a-f0-9]{64}$/.test(archive.content_sha256)||!Array.isArray(archive.price))return q;
- const inc=archive.incremental_verification;if(!inc||inc.corporate_actions!=='VERIFIED'||!Array.isArray(inc.sessions)||!Array.isArray(inc.calendar_evidence)||!inc.calendar_evidence.some(e=>/^https:\/\/www.twse.com.tw\/exchangeReport\/FMTQIK\?response=json&date=\d{8}$/.test(e.url)&&/^[a-f0-9]{64}$/.test(e.sha256)))return q;
+ const calendar=q.symbol==='009815'&&archive.provider==='TPEx/dailyQuotes'&&archive.calendar_completeness==='TPEX_INDEX_SESSIONS_VERIFIED'
+  ? /^https:\/\/www\.tpex\.org\.tw\/www\/zh-tw\/indexInfo\/inx\?date=\d{4}%2F\d{2}%2F01&response=json$/
+  : /^https:\/\/www\.twse\.com\.tw\/exchangeReport\/FMTQIK\?response=json&date=\d{8}$/;
+ const inc=archive.incremental_verification;if(!inc||inc.corporate_actions!=='VERIFIED'||!Array.isArray(inc.sessions)||!Array.isArray(inc.calendar_evidence)||!inc.calendar_evidence.some(e=>calendar.test(e.url)&&/^[a-f0-9]{64}$/.test(e.sha256)))return q;
  const sessions=inc.sessions;if(new Set(sessions).size!==sessions.length||sessions.some((d,i)=>d<inc.start||d>inc.end||i&&d<=sessions[i-1]))return q;
  const live=q.kind==='INTRADAY_REFERENCE';let previous;
  if(live){if(q.date!==status?.next_expected_trading_day||status.expected_completed_bar>archive.requested_end)return q;previous=status.expected_completed_bar;}
@@ -3909,7 +3912,11 @@ const module=undefined,window={crypto:host.crypto},globalThis=window;
  if(Math.abs(old.close/ratio-entitlement-q.previous_reference)>1e-6)return q;
  return{...q,previous_reference:old.close,previous_session_date:previous,reference_kind:'RAW_PREVIOUS_OFFICIAL',cash_entitlement_per_share:entitlement,history_sha256:archive.content_sha256,calendar_scope:'VERIFIED_INCREMENTAL_WINDOW'};
  }catch{return q;}}
- return Object.freeze({apply});
+ // 11/19 was a vote, not a split. The issuer's timetable schedules resumed
+ // trading for 2027-02-23; re-review before its January confirmation milestone.
+ // This proves no conversion and is limited to the current verified RAW basis.
+ function preSplit00830(q){return q?.symbol==='00830'&&q.latest===true&&q.kind==='OFFICIAL_CLOSE_REFERENCE'&&q.date>='2026-11-19'&&q.date<='2027-01-11'&&q.reference_kind==='RAW_PREVIOUS_OFFICIAL'&&q.calendar_scope==='VERIFIED_INCREMENTAL_WINDOW'&&q.cash_entitlement_per_share===0;}
+ return Object.freeze({apply,preSplit00830});
 });
 
 (function(root,f){if(typeof module==='object'&&module.exports)module.exports=Object.freeze({create:f});else root.HSPersonalV3Accounting=f(root.HSPortfolioLedgerCore,root.HSPortfolioInvestableCashCore);})(globalThis,function(L,C){
@@ -3964,6 +3971,10 @@ const module=undefined,window={crypto:host.crypto},globalThis=window;
  // Raw daily archive readiness remains session(); verified official closes
  // need no FINAL snapshot or six-symbol historical-bar completion barrier.
  function priceSession(status,now){
+  // A forward-calendar gap must not erase an already verified same-day close.
+  // Do not extrapolate into tomorrow or unlock a formal C4 reference.
+  if(Number.isFinite(Date.parse(now))&&status?.next_expected_trading_day===null&&validDate(status.expected_completed_bar)&&status.expected_completed_bar===status.price_cutoff&&day(now)===status.expected_completed_bar&&Date.parse(now)>=Date.parse(status.expected_completed_bar+'T18:00:00+08:00'))
+   return{known:true,live:false,expected_price_date:status.expected_completed_bar,required_c4_date:null,last_verified_completed:status.expected_completed_bar,reason:'VERIFIED_COMPLETED_NEXT_UNKNOWN'};
   if(!Number.isFinite(Date.parse(now))||!status||!validDate(status.expected_completed_bar)||!validDate(status.next_expected_trading_day)||status.next_expected_trading_day<=status.expected_completed_bar||day(now)<status.expected_completed_bar)return null;
   const today=day(now),last=status.expected_completed_bar,next=status.next_expected_trading_day;
   if(today>next)return{known:false,live:false,reason:'TRADING_STATUS_STALE',last_verified_completed:last};
@@ -4097,11 +4108,14 @@ async function fetch(input,options){
  const rawHoldings=[...merged.values()],now=new Date().toISOString(),session=V.session(status,now),priceSession=V.priceSession(status,now),closeQuotes=V.closeQuotes(cache,status,now),effectiveQuotes=new Map(closeQuotes),scores={},entries=Object.fromEntries(Array.from({length:localStorage.length},(_,i)=>localStorage.key(i)).map(k=>[k,localStorage.getItem(k)]));
  const units=A.validateStorage(entries),storedPlan=state.plan?HSPortfolioPlanGenerationCore.validateStore(state.plan,entries):null,formal=storedPlan?.plan;let pref=prefRead();if(formal){pref=pref||V.preferences(null,{...V.defaults(),months:formal.duration_months,targets:formal.etf_target_weights,equityTargetBps:Math.min(formal.normal_equity_target_bps,formal.maximum_equity_limit_bps,9500),equityMaxBps:Math.min(formal.maximum_equity_limit_bps,9500)},now);pref={...pref,months:formal.duration_months,equityTargetBps:Math.min(pref.equityTargetBps,formal.normal_equity_target_bps),equityMaxBps:Math.min(pref.equityMaxBps,formal.maximum_equity_limit_bps)};}let syncState=null;const sr=localStorage.getItem(HSPortfolioWriteCoordinator.SYNC_KEY);if(sr)syncState=HSPortfolioTransactionCashSyncCore.validateStore(JSON.parse(sr),{asOf:now}).state;
  for(const [code,q]of quotes)if(q.kind==='INTRADAY_REFERENCE'&&session?.live&&Number.isFinite(Date.parse(q.as_of))&&Date.parse(q.as_of)<=Date.parse(now)&&Date.parse(now)-Date.parse(q.as_of)<=Math.min(q.maxAgeMs||600000,600000)&&q.date===V.day(now))effectiveQuotes.set(code,q);
- const projected=rawHoldings.map(h=>{const q=effectiveQuotes.get(h.symbol),x=A.project(h,units.receipts,q?.date,now);x.unit_status=V.priceBlock(status,h.symbol)?'ACTION_EVIDENCE_REQUIRED':x.unit_status||V.unitStatus(x,q);if(!['AS_REPORTED','AS_CONFIRMED','PRICE_MISSING'].includes(x.unit_status))effectiveQuotes.delete(h.symbol);return x;});
+ const verified=(k,q)=>window.HSPersonalV3HistoryBasis.apply(q,histories.get(k),status,A.actions,now);
+ const projected=rawHoldings.map(h=>{const q=effectiveQuotes.get(h.symbol),x=A.project(h,units.receipts,q?.date,now);
+  const sameBasis=h.symbol==='00830'&&!h.legacy&&!x.unit_status&&window.HSPersonalV3HistoryBasis.preSplit00830(verified(h.symbol,q));
+  x.unit_status=V.priceBlock(status,h.symbol)?'ACTION_EVIDENCE_REQUIRED':x.unit_status||(sameBasis?'AS_REPORTED':V.unitStatus(x,q));
+  if(!['AS_REPORTED','AS_CONFIRMED','PRICE_MISSING'].includes(x.unit_status))effectiveQuotes.delete(h.symbol);return x;});
  const book=A.costs(projected,state.events||[],now);for(const h of projected){const c=book.rows.find(c=>c.symbol===h.symbol);h.ledger_cost_minor=c.cost_minor;h.cost_source=c.source;const sc=HSPortfolioLocalPortfolioReadAdapter.score(c4,h.symbol,now);scores[h.symbol]={...sc,latest:sc.score!==null&&priceSession?.known===true&&priceSession.required_c4_date===sc.date};}
  let progress=A.planRemaining({formalPlan:formal,reference:pref?.referencePlan,events:state.events||[],syncState,now,sourceSnapshot:state.snapshot,planCore:HSPortfolioCapitalBuildPlanCore});if(storedPlan&&storedPlan.status!=='ACTIVE')progress={...progress,status:storedPlan.status,remaining_minor:0};if(book.rows.some(r=>['POSITION_RECONCILIATION_REQUIRED','RECONCILIATION_REQUIRED'].includes(r.source)))progress={status:'RECONCILIATION_REQUIRED',remaining_minor:null,invested_minor:null,reason:'持股與帳本數量需要核對，暫不分配'};
  const v=V.view({holdings:projected,cashMinor:['READY','PENDING'].includes(state.cash?.status)?state.cash.amountMinor:null,prefs:pref,quotes:effectiveQuotes,c4:scores,eligibleSymbols:HSPortfolioC4SmartAccelerationCore.ELIGIBLE,now,positionValue:HSPortfolioCapitalBuildPlanCore.localPositionValue,allocate:HSPortfolioPerformanceCore.buildCapitalAllocationPlan,planProgress:progress});
- const verified=(k,q)=>window.HSPersonalV3HistoryBasis.apply(q,histories.get(k),status,A.actions,now);
  const dailyQuotes=new Map(closeQuotes);for(const[k,q]of effectiveQuotes)dailyQuotes.set(k,q);for(const k of histories.keys())if(dailyQuotes.has(k))dailyQuotes.set(k,verified(k,dailyQuotes.get(k)));for(const h of projected)if(!['AS_REPORTED','AS_CONFIRMED','PRICE_MISSING'].includes(h.unit_status))dailyQuotes.delete(h.symbol);
  const day=A.daily({holdings:projected,events:state.events||[],metadata:{...(syncState?.metadata||{}),...Object.fromEntries((syncState?.coverageReviews||[]).map(r=>[r.event_id,r]))},quotes:dailyQuotes,now,positionValue:HSPortfolioCapitalBuildPlanCore.localPositionValue});
  const estimateQuotes=new Map();for(const {symbol:k} of projected){const q=closeQuotes.get(k);if(!q)continue;const comparison=effectiveQuotes.get(k)===q&&dailyQuotes.has(k)?dailyQuotes.get(k):verified(k,q),split=A.actions.find(a=>a.symbol===k&&a.effective&&comparison.previous_session_date<a.effective&&q.date>=a.effective);estimateQuotes.set(k,{...comparison,estimate_split_ratio:split?.ratio||1});}

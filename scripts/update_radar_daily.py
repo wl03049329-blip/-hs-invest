@@ -323,6 +323,22 @@ def update_symbol(root, client, symbol, target, holiday_ref, repair_from=None, *
     if write: atomic_json(path_for(root, symbol), result)
     return result, True, "UPDATED"
 
+def next_trading_session(client, target):
+    # Use the same year-specific, schema-validated calendar as the completed
+    # session resolver. Run the candidate before the normal publication cutoff
+    # only in this *calendar lookup*; no quote or completed bar is certified.
+    day = dt.date.fromisoformat(target)
+    for _ in range(28):
+        day += dt.timedelta(days=1)
+        try:
+            check, _, _ = expected_day(client, dt.datetime.combine(day, dt.time(18), TZ))
+        except (ValueError, OSError):
+            return None
+        if check == day.isoformat():
+            return check
+    return None
+
+
 def run(root, client, now, as_of=None, repair_from=None):
     try:
         target, cutoff, holiday_ref = expected_day(client, now, as_of)
@@ -340,16 +356,7 @@ def run(root, client, now, as_of=None, repair_from=None):
         result["content_sha256"]=digest(result);atomic_json(root/PUBLIC_STATUS,result)
         log("CALENDAR_FAIL_CLOSED",reason=str(exc));return result,False
     if repair_from == "LATEST_MONTH": repair_from = target[:7] + "-01"
-    holidays = client.get(HOLIDAY_URL)["payload"]
-    calendar = TradingCalendar(fetcher=lambda: holidays)
-    next_date = dt.date.fromisoformat(target)
-    next_session = None
-    for _ in range(28):
-        next_date += dt.timedelta(days=1)
-        if not any(iso_date(r.get("Date")).startswith(str(next_date.year)) for r in holidays): break
-        check = calendar.check(next_date)
-        if check.status == "UNKNOWN": break
-        if check.status == "TRADING_DAY": next_session = next_date.isoformat(); break
+    next_session = next_trading_session(client, target)
     result = dict(schema_version=1, price_type="RAW_UNADJUSTED", price_cutoff=cutoff,
                   expected_completed_bar=target, next_expected_trading_day=next_session, cutoff_policy="18:00 Asia/Taipei; official completed sessions only",
                   symbols={})

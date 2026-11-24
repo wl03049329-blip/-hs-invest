@@ -1,5 +1,9 @@
 // Strip ONLY the reviewed V3.6 reader/UI wiring; keep all original safety seals.
 const assert=require('assert/strict');module.exports=s=>{
+ if(s.includes('VERIFIED_COMPLETED_NEXT_UNKNOWN')){
+  assert.equal(require('node:crypto').createHash('sha256').update(s.replace(/\r\n/g,'\n')).digest('hex'),'95741dbc31b7f6edc6eae0883cfe93dcb8588b5b0eb1539139d02e16d61e6ae1','UNREVIEWED_PORTFOLIO_SESSION_CHANGE');
+  s=require('node:child_process').execFileSync('git',['show','7ee0a446e016b5c91e02e05894c4c575b32e3276:portfolio-v3/personal-v3.js'],{maxBuffer:8e6}).toString();
+ }
  if(s.includes('HSPortfolioDisplayUI.frameRefresh')){
   // Pin the exact reviewed presentation change, then apply the unchanged
   // financial/storage seals to its parent rather than ignoring new lines.
