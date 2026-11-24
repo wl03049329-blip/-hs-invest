@@ -5,6 +5,11 @@ on:
     # The existing repair path revalidates FINAL as well as quotes/daily bars.
     - cron: "47 0,10,12,14 * * 1-5"
   workflow_dispatch:
+    inputs:
+      producer_result:
+        description: 'Daily producer completion result; forces immediate public attestation, never grants health'
+        required: false
+        type: string
   pull_request:
     paths:
       - '.github/workflows/completed-market-watchdog.yml'
@@ -56,7 +61,8 @@ jobs:
         continue-on-error: true
         env:
           HS_COMPLETED_AUDIT_TRIGGER: ${{ github.event_name }}
-        run: python -m scripts.check_completed_market --repair > "$RUNNER_TEMP/completed-market.json"
+          HS_COMPLETED_PRODUCER_RESULT: ${{ inputs.producer_result }}
+        run: python -m scripts.check_completed_market --repair --report "$RUNNER_TEMP/completed-market.json"
       - name: Report incomplete publication (not a trading signal)
         id: incident
         if: always()
