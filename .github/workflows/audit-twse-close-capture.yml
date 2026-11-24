@@ -81,7 +81,7 @@ jobs:
           overwrite: false
   browser:
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -264,9 +264,9 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - name: Append exactly one validated close to the data-only branch
+      - name: Reconcile the verified completed session into the data-only branch
+        id: archive
         env:
-          HS_SLOT: ${{ github.event.schedule }}
           HS_00631L_CROSS_MONTH_CALENDAR: '1'
         run: |
           set -euo pipefail
@@ -281,14 +281,13 @@ jobs:
           else
             [[ "$?" == 2 ]]
           fi
-          mode=evening
-          if [[ "$HS_SLOT" == '17 0 * * 2-6' ]]; then mode=morning
-          elif [[ -z "$HS_SLOT" && "$(TZ=Asia/Taipei date +%H)" < 12 ]]; then mode=manual-morning; fi
+          expected=$(python3 -m scripts.check_completed_market --expected-only)
+          echo "expected=$expected" >> "$GITHUB_OUTPUT"
           export HS_00631L_FILE_LIST="$RUNNER_TEMP/00631l-file-list"
-          node scripts/audit_twse_close_capture.cjs --00631l-archive "$dir" "$mode" | tee -a "$GITHUB_STEP_SUMMARY"
+          node scripts/audit_twse_close_capture.cjs --00631l-archive "$dir" target "$expected" | tee -a "$GITHUB_STEP_SUMMARY"
           [[ -s "$HS_00631L_FILE_LIST" ]] || exit 0
           mapfile -t files < "$HS_00631L_FILE_LIST"
-          [[ "${#files[@]}" -ge 1 && "${#files[@]}" -le 2 ]]
+          [[ "${#files[@]}" -ge 1 && "${#files[@]}" -le 3 ]]
           for file in "${files[@]}"; do [[ "$file" =~ ^20[0-9]{2}-[0-9]{2}-[0-9]{2}\.json$ ]]; done
           export GIT_INDEX_FILE="$RUNNER_TEMP/00631l-index"
           parents=()
@@ -309,5 +308,9 @@ jobs:
           git update-index --add --cacheinfo "100644,$indexblob,index.json"
           export GIT_AUTHOR_NAME='github-actions[bot]' GIT_AUTHOR_EMAIL='41898282+github-actions[bot]@users.noreply.github.com'
           export GIT_COMMITTER_NAME="$GIT_AUTHOR_NAME" GIT_COMMITTER_EMAIL="$GIT_AUTHOR_EMAIL"
-          commit=$(git commit-tree "$(git write-tree)" "${parents[@]}" -m "Archive verified 00631L close ${file%.json}")
+          commit=$(git commit-tree "$(git write-tree)" "${parents[@]}" -m "Archive verified 00631L close $expected")
           git push origin "$commit:$branch"
+      - name: Verify independent 00631L close health on the public data branch
+        env:
+          HS_ARCHIVE_EXPECTED: ${{ steps.archive.outputs.expected }}
+        run: node scripts/audit_twse_close_capture.cjs --00631l-health "$HS_ARCHIVE_EXPECTED"

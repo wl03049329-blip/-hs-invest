@@ -100,6 +100,10 @@
        !['https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL','https://www.twse.com.tw/exchangeReport/STOCK_DAY_ALL?response=open_data'].includes(r.source)||r.dataset!=='https://data.gov.tw/dataset/11549'||r.source_attribution!=='臺灣證券交易所'||
        r.license!=='https://data.gov.tw/license'||!['https://openapi.twse.com.tw/v1/exchangeReport/FMTQIK','https://www.twse.com.tw/exchangeReport/FMTQIK?response=open_data'].includes(r.session_source)||
        r.session_dataset!=='https://data.gov.tw/dataset/11672'||![r.response_sha256,r.session_sha256].every(s=>typeof s==='string'&&/^[a-f0-9]{64}$/.test(s))||
+       r.recovery_snapshot!==undefined&&(r.trading_date!=='2026-11-20'||
+         r.source!=='https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL'||
+         r.recovery_snapshot!=='https://raw.githubusercontent.com/88jiayu/tw-chip-open-data/afdb5e75b17d239d05b7b8603ccc2acb6dcd8004/data/official/price_twse/2026-11-20.json'||
+         r.response_sha256!=='ea9576685baf3d0ef96042fb56f4f192249f617d9825e0d1749acb7390a8d66f')||
        !Array.isArray(r.observed_sessions)||r.observed_sessions.length>62||r.observed_sessions.at(-1)!==r.trading_date||
        r.observed_sessions.some((d,j)=>!validDay(d)||j&&d<=r.observed_sessions[j-1])||
        r.cross_month_session!==undefined&&(!validDay(r.cross_month_session?.previous)||
