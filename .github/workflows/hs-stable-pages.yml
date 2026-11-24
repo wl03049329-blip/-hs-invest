@@ -98,7 +98,7 @@ jobs:
             HS_APP_TEST_OUT="$RUNNER_TEMP/hs-radar-pwa" node tests/stable_app_update_browser.cjs
           fi
   portfolio-verified-display:
-    if: github.event_name == 'pull_request' && (github.head_ref == 'fix/portfolio-verified-display' || github.head_ref == 'fix/portfolio-session-evidence')
+    if: github.event_name == 'pull_request' && (github.head_ref == 'fix/portfolio-verified-display' || github.head_ref == 'fix/portfolio-session-evidence' || github.head_ref == 'fix/portfolio-price-layers')
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -118,9 +118,16 @@ jobs:
           "$RUNNER_TEMP/hs-browser/node_modules/.bin/playwright-core" install --with-deps chrome webkit
           export NODE_PATH="$RUNNER_TEMP/hs-browser/node_modules"
           git worktree add --detach "$RUNNER_TEMP/hs-baseline" ce946dd28de9b1a49bb7a5f09098157afe46bf1b
-          HS_BASELINE_ROOT="$RUNNER_TEMP/hs-baseline" node tests/portfolio_verified_display_browser.cjs
+          if [ "$GITHUB_HEAD_REF" = "fix/portfolio-price-layers" ]; then
+            HS_BASELINE_ROOT="$RUNNER_TEMP/hs-baseline" HS_TEST_PRICE_LAYERS=1 node tests/portfolio_verified_display_browser.cjs
+          else
+            HS_BASELINE_ROOT="$RUNNER_TEMP/hs-baseline" node tests/portfolio_verified_display_browser.cjs
+          fi
           if [ "$GITHUB_HEAD_REF" = "fix/portfolio-session-evidence" ]; then
             HS_PORTFOLIO_INCIDENT=1 HS_PORTFOLIO_PILOT=1 node tests/portfolio_verified_display_browser.cjs
+          fi
+          if [ "$GITHUB_HEAD_REF" = "fix/portfolio-price-layers" ]; then
+            HS_PORTFOLIO_INCIDENT=1 HS_TEST_PRICE_LAYERS=1 node tests/portfolio_verified_display_browser.cjs
           fi
           node tests/c4_chart_points_browser.cjs
           HS_APP_TEST_OUT="$RUNNER_TEMP/hs-portfolio-pwa" node tests/stable_app_update_browser.cjs
