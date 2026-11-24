@@ -5,6 +5,11 @@
 const assert=require('assert/strict'),cp=require('child_process'),crypto=require('crypto');
 module.exports=function(source){
  source=source.replace(/\r\n/g,'\n'); // Match Git's canonical text on Windows checkouts.
+ // Remove only the two reviewed CNN history presentation additions; the
+ // original full-file byte comparisons still seal all other inline code.
+ for(const line of ['    history:json.history,\n','  dashboard.querySelector(".cnnDashboardHead>span").textContent="美股最新指數 · 可能含盤中";\n']){
+  if(source.includes(line)){assert.equal(source.split(line).length-1,1);source=source.replace(line,'');}
+ }
  const personal='<script defer src="lradar-local.js"></script>\n';
  if(source.includes(personal)){assert.equal(source.split(personal).length-1,1);source=source.replace(personal,'');}
  if(source.includes('class="radarV4Sentinel"')){
