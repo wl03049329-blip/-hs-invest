@@ -28,6 +28,51 @@ historic share basis or Ledger.
 
 ## Production gates
 
+### Licensed price stage and validated alternatives
+
+The independent `portfolio_open_close.cjs` stage now supports all instrument
+codes with actual trades in both exchanges' date-stamped open datasets
+([TWSE 11549](https://data.gov.tw/dataset/11549),
+[TPEx 11371](https://data.gov.tw/dataset/11371)). It produces receipts with
+attribution, raw response and normalized payload hashes. Append is idempotent
+and rejects silent revisions. Pairing demands exact completed-session dates;
+its output is deliberately marked `corporate_actions: UNVERIFIED` and cannot
+be used to claim an action-free window. The present CLI does not publish data
+or change any existing job.
+
+2026-11-24 probe: TWSE JSON was still 11/23 while the licensed TWSE CSV gave
+1,383 genuinely traded rows for 11/24; the TPEx OpenAPI gave 1,010. A pinned
+TPEx 11/23 archival snapshot was checked against its immutable Git blob and
+the prior dated official audit. The eight price pairs matched. The mirror is
+test-only and is not an automatic recovery source.
+
+FinMind permits noncommercial personal use of its API and lists individual
+raw closes, dividends, split/resumption, capital reduction and par-value
+datasets in Free; adjusted prices and halt announcements are Backer features.
+One unauthenticated request for known 00662 split on 2026-11-17 returned
+HTTP/API 200 and one row with CORS. This demonstrates a private technical
+route, not a freshness/coverage watermark. Split and dividend quality
+reports are scoped samples, not completeness for an empty response on a
+future session. The existing HS 00631L browser path uses a fixed historical
+raw-price request and a local cache; it does not establish any of these
+future event-coverage or public use rights. Do not reuse a private token or
+mirror FinMind raw responses in Pages.
+
+[SITCA/FSC fund dividends](https://data.gov.tw/dataset/160547), TPEx
+[ex-right results](https://data.gov.tw/dataset/11633), and the TWSE [forecast
+table](https://data.gov.tw/dataset/89748) are complementary open inputs; none
+covers all splits, reductions and resumption dates in both venues. Issuer
+notices are positive event evidence, not an absence-of-event feed. Fund
+unit counts or a capital snapshot cannot certify that every price-basis
+event for every listed security was reported.
+
+FinMind Backer is NT$699/month for personal noncommercial access to adjusted
+historic prices; Sponsor Pro (NT$3,330/month) is not a grant to redistribute
+raw data or exempt the source's requirements. A possible public route is a
+quote for exchange/licensed-vendor daily and corporate-action feeds with
+explicit retention, derived display rights, and venue/date coverage. No
+service was purchased.
+
 - Confirm unattended retrieval and evidence/derived-data reuse for the
   exact dated sources. TWSE [website terms](https://www.twse.com.tw/zh/terms/use.html)
   exempt datasets explicitly released on the government portal, not every
