@@ -56,6 +56,19 @@ class Fixture:
         return dict(url=url, payload=p, sha256=digest(p), fetched_at="2026-11-17T10:15:00+00:00")
 
 class SplitRecovery(unittest.TestCase):
+    def test_next_session_uses_requested_year_when_openapi_advances(self):
+        class CalendarClient:
+            def get(self, url):
+                if url == u.HOLIDAY_URL:
+                    payload = [{"Date": "1160101"}]
+                else:
+                    assert "date=20260101" in url
+                    payload = dict(stat="ok", queryYear=2026, total=2,
+                                   fields=["日期", "名稱", "說明"],
+                                   data=[["2026-01-01", "元旦", "休市"], ["2026-11-25", "測試休市", "休市"]])
+                return dict(url=url, payload=payload, sha256=digest(payload), fetched_at="2026-11-24T10:00:00Z")
+        self.assertEqual(u.next_trading_session(CalendarClient(), "2026-11-24"), "2026-11-26")
+
     def test_eod_calendar_uses_target_year_when_rolling_advances(self):
         class CalendarClient:
             year = 2026

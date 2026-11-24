@@ -98,8 +98,8 @@ jobs:
             HS_APP_TEST_OUT="$RUNNER_TEMP/hs-radar-pwa" node tests/stable_app_update_browser.cjs
           fi
   portfolio-verified-display:
-    if: github.event_name == 'pull_request' && github.head_ref == 'fix/portfolio-verified-display'
-    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && (github.head_ref == 'fix/portfolio-verified-display' || github.head_ref == 'fix/portfolio-session-evidence')
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -108,6 +108,7 @@ jobs:
           persist-credentials: false
       - name: Verify portfolio and frozen data contracts
         run: |
+          node --test tests/test_portfolio_session_evidence.cjs
           node tests/test_portfolio_price_independence.js
           node tests/test_portfolio_experience360.js
           node tests/test_asset_summary353.js
@@ -118,6 +119,9 @@ jobs:
           export NODE_PATH="$RUNNER_TEMP/hs-browser/node_modules"
           git worktree add --detach "$RUNNER_TEMP/hs-baseline" ce946dd28de9b1a49bb7a5f09098157afe46bf1b
           HS_BASELINE_ROOT="$RUNNER_TEMP/hs-baseline" node tests/portfolio_verified_display_browser.cjs
+          if [ "$GITHUB_HEAD_REF" = "fix/portfolio-session-evidence" ]; then
+            HS_PORTFOLIO_INCIDENT=1 HS_PORTFOLIO_PILOT=1 node tests/portfolio_verified_display_browser.cjs
+          fi
           node tests/c4_chart_points_browser.cjs
           HS_APP_TEST_OUT="$RUNNER_TEMP/hs-portfolio-pwa" node tests/stable_app_update_browser.cjs
   c4-chart-mobile:
