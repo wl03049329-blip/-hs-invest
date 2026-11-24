@@ -126,7 +126,10 @@ def repair(now, reasons=None, *, evidence=None, expected=None):
             return json.loads(subprocess.check_output(["gh", "api", f"repos/{REPO}/actions/workflows/{workflow}/runs?branch=main&per_page=10"], text=True))["workflow_runs"]
         runs = query()
         def observe(rows):
-            candidates = [item for r in rows if (item := daily_publication_evidence(r, now, expected or now.date().isoformat()))]
+            # Source queries/dispatch take time. A newly created Run may be
+            # newer than audit entry time; compare to actual observation time.
+            observed_at = dt.datetime.now(TZ)
+            candidates = [item for r in rows if (item := daily_publication_evidence(r, observed_at, expected or now.date().isoformat()))]
             if workflow == "update-radar-daily.yml" and candidates:
                 if evidence is not None:
                     evidence[workflow] = min(candidates, key=lambda r: r["created_at"])
