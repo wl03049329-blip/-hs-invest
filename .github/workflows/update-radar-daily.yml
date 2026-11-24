@@ -1,4 +1,5 @@
 name: Update verified ETF radar daily OHLC
+run-name: HS daily close ${{ inputs.as_of || 'calendar-current' }}
 
 on:
   schedule:
@@ -31,6 +32,23 @@ env:
   GH_TOKEN: ${{ github.token }}
 
 jobs:
+  publication_audit:
+    # Completion barrier, not another collector. Dispatch explicitly after the
+    # full update/public verification job (including failure). This does not
+    # rely on another nested Pages workflow_run arriving to close the incident.
+    needs: update
+    if: always() && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      contents: read
+      actions: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      DAILY_RESULT: ${{ needs.update.result }}
+    steps:
+      - name: Request terminal public audit after producer completion
+        run: gh workflow run completed-market-watchdog.yml --repo "$GITHUB_REPOSITORY" --ref main -f producer_result="$DAILY_RESULT"
   update:
     runs-on: ubuntu-latest
     timeout-minutes: 20
