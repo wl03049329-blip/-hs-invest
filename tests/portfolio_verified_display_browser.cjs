@@ -42,8 +42,19 @@ async function run(p,url,name,width){
    await info.locator('summary').click();
    assert.match(await p.locator('.pv353health dl').textContent(),/帳本當日損益— 帳本證據未齊/);
   }
-  await p.reload({waitUntil:'domcontentloaded'});await p.waitForFunction(()=>self.HSPersonalV3?.read().daily_estimate.computed===5);
-  assert.deepEqual(await raw(p),before);assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+  const network=[];
+  const onFailed=req=>{const path=new URL(req.url()).pathname;if(/market-quotes|radar-history/.test(path))network.push([path,req.failure()?.errorText]);};
+  p.on('requestfailed',onFailed);
+  try{
+   await p.reload({waitUntil:'domcontentloaded'});
+   await p.waitForFunction(()=>document.documentElement.dataset.hsV3Boot==='ready'&&!document.getElementById('portfolio').classList.contains('tabHidden'));
+   assert.deepEqual(await raw(p),before);
+   await p.waitForFunction(()=>self.HSPersonalV3?.read().daily_estimate?.computed===5,null,{timeout:45000});
+   assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+  }catch(error){
+   console.error('Recorded portfolio reload diagnostics',network,await p.evaluate(()=>({url:location.pathname,boot:document.documentElement.dataset.hsV3Boot,tab:document.querySelector('.bottomNavButton.active')?.dataset.tab,visibility:document.visibilityState,worker:self.HSStableApp?.status().phase,estimate:self.HSPersonalV3?.read().daily_estimate?.status,computed:self.HSPersonalV3?.read().daily_estimate?.computed,price_date:self.HSPersonalV3?.read().price_date})).catch(()=>null));
+   throw error;
+  }finally{p.off('requestfailed',onFailed);}
   return;
  }
  await add(p,'0050',100,70);await add(p,'00662',500,20);
