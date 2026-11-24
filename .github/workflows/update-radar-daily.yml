@@ -49,6 +49,9 @@ jobs:
     steps:
       - name: Request terminal public audit after producer completion
         run: gh workflow run completed-market-watchdog.yml --repo "$GITHUB_REPOSITORY" --ref main -f producer_result="$DAILY_RESULT"
+      - name: Request independent 00631L close reconciliation after daily publication
+        if: always() && needs.update.result == 'success' && vars.HS_00631L_OPEN_CLOSE_ARCHIVE_ENABLED == '1'
+        run: gh workflow run audit-twse-close-capture.yml --repo "$GITHUB_REPOSITORY" --ref main -f archive_00631l=true
   update:
     runs-on: ubuntu-latest
     timeout-minutes: 20

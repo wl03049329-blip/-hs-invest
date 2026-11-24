@@ -87,6 +87,11 @@ const LICENSE = "https://data.gov.tw/license";
 const MARKET_SESSIONS = "https://openapi.twse.com.tw/v1/exchangeReport/FMTQIK";
 const OPEN_CSV = "https://www.twse.com.tw/exchangeReport/STOCK_DAY_ALL?response=open_data";
 const MARKET_CSV = "https://www.twse.com.tw/exchangeReport/FMTQIK?response=open_data";
+// Immutable, attributed mirror of the licensed STOCK_DAY_ALL OpenAPI response.
+// Only the 11/20 snapshot is accepted; raw historical website reports are not
+// copied into the public data branch.
+const RECOVERY_URL = "https://raw.githubusercontent.com/88jiayu/tw-chip-open-data/afdb5e75b17d239d05b7b8603ccc2acb6dcd8004/data/official/price_twse/2026-11-20.json";
+const RECOVERY_SHA = "ea9576685baf3d0ef96042fb56f4f192249f617d9825e0d1749acb7390a8d66f";
 // Only the two CSV resources explicitly listed in the government data catalog.
 function csvRows(raw, market) {
   const header=market?"日期,成交股數,成交金額,成交筆數,發行量加權股價指數,漲跌點數":
@@ -138,6 +143,41 @@ function archiveReceipt(raw, marketRaw, now, morning, probe = false, options = {
     observed_sessions:eligible.filter(d => d <= date)};
   return {status:"VERIFIED",record};
 }
+function recoverNovember20(raw, marketRaw, now, prior, next) {
+  if (sha(raw)!==RECOVERY_SHA || prior.trading_date!=="2026-11-19" ||
+      next?.trading_date!=="2026-11-23" || next.observed_sessions.at(-2)!=="2026-11-20")
+    throw Error("ARCHIVE_RECOVERY_EVIDENCE_MISSING");
+  const j=JSON.parse(raw), p=j.rows?.["00631L"], day="2026-11-20";
+  // Price and comparison independently matched the official STOCK_DAY report
+  // and FinMind (21.24 close, -3.33); the next open-source reference must agree.
+  if(j.trade_date!==day||j.source!=="twse_openapi_stock_day_all"||j.license_url!==LICENSE||
+      j.license!=="open"||p?.[3]!=="21.24"||p[4]!==1300766332||
+      prior.close_twd!=="24.57"||next.comparison_twd!==p[3])
+    throw Error("ARCHIVE_RECOVERY_CONFLICT");
+  const observed=sessions(csvRows(marketRaw,true),"2026-11-01",taipei(now).slice(0,10)).filter(d=>d<=day);
+  if(observed.at(-1)!==day||observed.at(-2)!==prior.trading_date)throw Error("ARCHIVE_RECOVERY_SESSION_GAP");
+  return {...next,trading_date:day,close_twd:p[3],comparison_twd:prior.close_twd,captured_at:now.toISOString(),
+    source:URL,response_sha256:RECOVERY_SHA,session_sha256:sha(marketRaw),observed_sessions:observed,
+    recovery_snapshot:RECOVERY_URL};
+}
+function archivePlan(existing, candidates, target) {
+  const records=[...existing], result=[];
+  for(const r of [...candidates].sort((a,b)=>a.trading_date.localeCompare(b.trading_date))){
+    if(r.trading_date>target)continue;
+    const old=records.find(p=>p.trading_date===r.trading_date);
+    if(old){
+      if(old.close_twd!==r.close_twd||old.comparison_twd!==r.comparison_twd)throw Error("ARCHIVE_REVISION_REVIEW_REQUIRED");
+      continue;
+    }
+    const prior=records.at(-1);
+    if(prior&&(r.trading_date<=prior.trading_date||r.comparison_twd!==prior.close_twd||
+        (r.observed_sessions.at(-2)!==prior.trading_date&&r.cross_month_session?.previous!==prior.trading_date)))
+      throw Error("ARCHIVE_EXTENSION_GAP_OR_PRICE");
+    records.push(r);result.push(r);
+  }
+  if(records.at(-1)?.trading_date!==target)throw Error("ARCHIVE_EXPECTED_SESSION_UNAVAILABLE:"+target);
+  return result;
+}
 function appendClose(dir, record) {
   if (record.schema !== ARCHIVE_SCHEMA || record.symbol !== "00631L" ||
       !/^20\d\d-\d\d-\d\d$/.test(record.trading_date) || !price(record.close_twd) ||
@@ -169,7 +209,7 @@ function windowCoverage(records, verifiedSessions, first, last, actionsVerified)
     return {status:"PRICE_BASIS_UNVERIFIED"};
   return {status:"COMPLETE",days:days.length};
 }
-async function fetchArchive(out, mode) {
+async function fetchArchive(out, mode, target) {
   const load = async url => {
     const r = await fetch(url,{redirect:"error",signal:AbortSignal.timeout(15000)});
     if ([429,500,502,503,504].includes(r.status)) return null;
@@ -186,6 +226,30 @@ async function fetchArchive(out, mode) {
   }
   if (!raw || !marketRaw) return {status:"DEFERRED_UPSTREAM"};
   const now=new Date(), morning=mode==="morning"||mode==="manual-morning";
+  if(mode==="target"){
+    if(!validTarget(target)||target>taipei(now).slice(0,10))throw Error("ARCHIVE_TARGET_INVALID");
+    if(+now<Date.parse(target+"T18:20:00+08:00"))return {status:"DEFERRED_WINDOW",expected:target};
+    const read=name=>JSON.parse(fs.readFileSync(path.join(out,name),"utf8"));
+    const existing=fs.readdirSync(out).filter(n=>/^20\d\d-\d\d-\d\d\.json$/.test(n)).sort().map(read);
+    // Both independently dated official representations can roll at different
+    // times. Read only a bounded pair; also compare duplicates for revisions.
+    const primary=archiveReceipt(raw,marketRaw,now,false,true,{csv:true,marketCsv:true}).record;
+    const alternate=await load(URL);
+    const secondary=alternate&&archiveReceipt(alternate,marketRaw,now,false,true,{marketCsv:true}).record;
+    const candidates=[primary,secondary].filter(Boolean);
+    const prior=existing.at(-1);
+    if(prior?.trading_date==="2026-11-19"&&target>="2026-11-23"){
+      const next=candidates.find(r=>r.trading_date==="2026-11-23");
+      // After the OpenAPI rotates, this narrow recovery cannot be performed
+      // from an unrelated newer price. Fail rather than create a partial gap.
+      const mirror=await load(RECOVERY_URL);
+      if(!mirror)throw Error("ARCHIVE_RECOVERY_MIRROR_UNAVAILABLE");
+      candidates.push(recoverNovember20(mirror,marketRaw,now,prior,next));
+    }
+    for(const r of candidates) annotateCrossMonth(r);
+    const newFiles=archivePlan(existing,candidates,target).map(r=>appendClose(out,r).name);
+    return {status:newFiles.length?"APPENDED":"DUPLICATE",date:target,newFiles};
+  }
   const result = archiveReceipt(raw,marketRaw,now,morning,mode === "probe",
     {csv:true,marketCsv:true,manual:mode==="manual-morning"});
   if (result.record) {
@@ -203,9 +267,17 @@ async function fetchArchive(out, mode) {
     }
     // The market OpenAPI may roll at month end. A matching, independently
     // verified official session interval can bridge that boundary, not a price guess.
+    annotateCrossMonth(r);
+    const saved=appendClose(out,r);
+    if(saved.status==="APPENDED")newFiles.push(saved.name);
+    return {...saved,date:r.trading_date,newFiles};
+  }
+  return result;
+}
+function annotateCrossMonth(r) {
     if (process.env.HS_00631L_CROSS_MONTH_CALENDAR === "1") {
       const read = name => JSON.parse(fs.readFileSync(path.join(__dirname,"..","data","radar-history",name),"utf8"));
-      const r = result.record, calendar = read("twse/0050.json"), status = read("status-v1.json"),
+      const calendar = read("twse/0050.json"), status = read("status-v1.json"),
         inc = calendar.incremental_verification, dates = inc?.sessions;
       if (calendar.verified === true && status.symbols?.["0050"]?.archive_sha256 === calendar.content_sha256 &&
           /^[a-f0-9]{64}$/.test(calendar.content_sha256) && inc?.calendar_evidence?.length &&
@@ -215,14 +287,31 @@ async function fetchArchive(out, mode) {
           r.cross_month_session = {previous:prev, source:"HS_VERIFIED_TWSE_SESSION_INTERVAL", sha256:calendar.content_sha256};
       }
     }
-    const saved=appendClose(out,r);
-    if(saved.status==="APPENDED")newFiles.push(saved.name);
-    return {...saved,date:r.trading_date,newFiles};
-  }
-  return result;
 }
-if (require.main === module) (process.argv[2] === "--00631l-archive"
-  ? fetchArchive(process.argv[3],process.argv[4]).then(result => {
+const validTarget=d=>typeof d==="string"&&/^20\d\d-\d\d-\d\d$/.test(d)&&
+  Number.isFinite(Date.parse(d))&&new Date(d).toISOString().slice(0,10)===d;
+async function archiveHealth(target) {
+  if(!validTarget(target))throw Error("ARCHIVE_TARGET_INVALID");
+  const R=require("../lradar-core.js"),now=new Date();
+  if(+now<Date.parse(target+"T18:20:00+08:00")) {
+    console.log(JSON.stringify({status:"WAIT_00631L_CLOSE_WINDOW",expected:target}));return;
+  }
+  for(let attempt=0;attempt<3;attempt++){
+    try {
+      const response=await fetch(R.archiveURL+"?audit="+Date.now(),{redirect:"error",signal:AbortSignal.timeout(15000)});
+      if(!response.ok)throw Error("ARCHIVE_PUBLIC_HTTP_"+response.status);
+      const records=R.verifyIndex(await response.json(),taipei(now).slice(0,10),Date.now());
+      const first=records.findIndex(r=>r.trading_date==="2026-11-19"), chain=records.slice(first);
+      if(first<0||chain.at(-1)?.trading_date!==target||chain.slice(1).some((r,i)=>
+        r.comparison_twd!==chain[i].close_twd||(r.observed_sessions.at(-2)!==chain[i].trading_date&&r.cross_month_session?.previous!==chain[i].trading_date)))
+        throw Error("ARCHIVE_PUBLIC_GAP_OR_STALE:"+target);
+      console.log(JSON.stringify({status:"CURRENT",symbol:"00631L",date:target,close:chain.at(-1).close_twd}));return;
+    }catch(e){if(attempt===2)throw e;await new Promise(r=>setTimeout(r,2000));}
+  }
+}
+if (require.main === module) (process.argv[2] === "--00631l-health" ? archiveHealth(process.argv[3]) :
+  process.argv[2] === "--00631l-archive"
+  ? fetchArchive(process.argv[3],process.argv[4],process.argv[5]).then(result => {
     console.log(JSON.stringify(result));
     if (result.status === "APPENDED" && process.env.HS_00631L_FILE_LIST)
       fs.writeFileSync(process.env.HS_00631L_FILE_LIST,result.newFiles.join("\n")+"\n",{flag:"wx"});
@@ -235,4 +324,4 @@ if (require.main === module) (process.argv[2] === "--00631l-archive"
   console.error("TWSE close receipt not clean: " + e.message);
   process.exitCode = 1;
 });
-module.exports = {receipt,capture,captureWindow,archiveReceipt,appendClose,windowCoverage,csvRows,receiptIncidents};
+module.exports = {receipt,capture,captureWindow,archiveReceipt,appendClose,windowCoverage,csvRows,receiptIncidents,archivePlan,recoverNovember20};

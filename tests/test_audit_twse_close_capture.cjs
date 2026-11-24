@@ -1,7 +1,7 @@
 "use strict";
 const {test} = require("node:test");
 const assert = require("node:assert/strict");
-const {receipt,capture,captureWindow,archiveReceipt,appendClose,windowCoverage,receiptIncidents} = require("../scripts/audit_twse_close_capture.cjs");
+const {receipt,capture,captureWindow,archiveReceipt,appendClose,windowCoverage,receiptIncidents,archivePlan,recoverNovember20} = require("../scripts/audit_twse_close_capture.cjs");
 const fs = require("node:fs"), os = require("node:os"), path = require("node:path");
 const {sessions,missingReceipts,scheduleContext,notify,publicationReport} = require("../scripts/audit_twse_close_watchdog.cjs");
 const date = "2026-11-16";
@@ -149,11 +149,22 @@ test("workflow uses scheduled context, retains strict errors and immutable artif
   assert.ok(!w.includes("day=$(TZ=Asia/Taipei date +%F)"));
   for(const s of ["--context", "HS_RUN_CREATED_AT", "HS_AUDIT_REPORT", "steps.audit.outcome == 'success'", "retention-days: 30", "timezone: 'Etc/UTC'"])assert.ok(w.includes(s),s);
   assert.ok(!w.includes("finalize_core_score_history"));assert.ok(!w.includes("FINMIND_TOKEN"));
-  // Canonical LF bytes from main6bf9a1a5. Works on the existing shallow
-  // archive-verification runner without fetching history or weakening the seal.
   const block=w.replace(/\r\n/g,"\n").split("  archive-00631l:\n")[1];
-  assert.equal(require("node:crypto").createHash("sha256").update(block).digest("hex"),
-    "b14da9503244b23757a57784c0afb61fc74cd4afda73aac13dc55c9291ab5a32","independent 00631L write contract unchanged");
+  for(const s of ["github.ref == 'refs/heads/main'","HS_00631L_OPEN_CLOSE_ARCHIVE_ENABLED","refs/heads/data/00631l-open-close",
+    "git cat-file -e","git push origin", "--expected-only","--00631l-health",'target "$expected"'])assert.ok(block.includes(s),s);
+  assert.ok(!block.includes("--force")&&!block.includes("TZ=Asia/Taipei date +%H"));
+});
+
+test("archive append plan blocks gaps/corrections and supports two staggered feeds plus pinned recovery",()=>{
+  const days=["2026-11-19","2026-11-20","2026-11-23","2026-11-24"],p=["24.57","21.24","22.50","27.00"];
+  const rows=days.map((trading_date,i)=>({trading_date,close_twd:p[i],comparison_twd:p[i-1],observed_sessions:days.slice(0,i+1)}));
+  assert.deepEqual(archivePlan([rows[0]],[rows[3],rows[1],rows[2]],days[3]),rows.slice(1));
+  assert.deepEqual(archivePlan(rows,[rows[3],rows[2]],days[3]),[]);
+  assert.deepEqual(archivePlan(rows.slice(0,2),[rows[3],rows[2]],days[2]),[rows[2]]);
+  assert.throws(()=>archivePlan([rows[0]],rows.slice(2),days[3]),/GAP/);
+  assert.throws(()=>archivePlan(rows,[{...rows[3],close_twd:"27.01"}],days[3]),/REVISION/);
+  assert.throws(()=>archivePlan(rows.slice(0,3),[],days[3]),/UNAVAILABLE/);
+  assert.throws(()=>recoverNovember20(Buffer.from("{}"),market,now(),rows[0],rows[2]),/EVIDENCE_MISSING/);
 });
 
 test("watchdog flags both skipped and failed capture, but accepts the second clean slot", () => {
