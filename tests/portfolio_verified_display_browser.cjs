@@ -31,6 +31,17 @@ async function run(p,url,name,width){
   assert.equal(v.equity_minor,31236000);assert.equal(v.reference_basis_minor,8000000);assert.equal(v.actual_cost_minor,null);
   assert.equal(v.rows.find(r=>r.symbol==='00830').shares,1000);assert.equal(v.rows.find(r=>r.symbol==='00662').shares,1000);
   assert.ok(v.rows.every(r=>r.weight>0));assert.doesNotMatch(await p.locator('#pv3-equity').innerText(),/暫不可計算/);
+  if(process.env.HS_TEST_PRICE_LAYERS==='1'){
+   await p.waitForFunction(()=>document.getElementById('pv3-daily-label').textContent==='今日價格變動（估算）');
+   assert.match(await p.locator('#pv3-daily-reason').innerText(),/部分估算 5\/8 檔（非完整）.*2026-11-24/);
+   const info=p.locator('#pv360-estimate-info');
+   assert.equal(await info.evaluate(x=>x.open),false);
+   assert.equal(await p.locator('.pv353health').evaluate(x=>x.open),false);
+   await info.locator('summary').click();
+   for(const token of ['非實際損益','006201','00631L','00685L'])assert.ok((await info.innerText()).includes(token),token);
+   await info.locator('summary').click();
+   assert.match(await p.locator('.pv353health dl').textContent(),/帳本當日損益— 帳本證據未齊/);
+  }
   await p.reload({waitUntil:'domcontentloaded'});await p.waitForFunction(()=>self.HSPersonalV3?.read().daily_estimate.computed===5);
   assert.deepEqual(await raw(p),before);assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
   return;
@@ -45,6 +56,14 @@ async function run(p,url,name,width){
  if(name==='candidate'){
   assert.ok(metrics.holding_rebuilds<=4,JSON.stringify(metrics));
   assert.match(await p.locator('.pv353assets').innerText(),/同日已核實市值小計/);
+  if(process.env.HS_TEST_PRICE_LAYERS==='1'){
+   const partial=p.locator('.pv360-selection details');
+   assert.equal(await partial.evaluate(x=>x.open),false);
+   await partial.locator('summary').click();
+   assert.match(await partial.innerText(),/0050.*1\/1/s);
+   assert.match(await partial.innerText(),/00662.*尚無已核實市值/s);
+   assert.equal(await p.locator('.pv360-plot svg').count(),0);
+  }
   const before=await raw(p),holding=p.locator('.holding[data-symbol="00662"]');
   await holding.locator('summary').click();
   await holding.getByRole('button',{name:'核對股數與分割單位'}).click();
