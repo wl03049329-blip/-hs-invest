@@ -2,8 +2,8 @@ name: Update CNN Fear and Greed
 
 on:
   schedule:
-    # 台北週一至週五 07:00（UTC 前一日 23:00）
-    - cron: "0 23 * * 0-4"
+    # 台北週一至週六 07:00（UTC 週日至週五 23:00），含美東週五收盤。
+    - cron: "0 23 * * 0-5"
     # 台北週一至週五 22:30（UTC 當日 14:30）
     - cron: "30 14 * * 1-5"
   workflow_dispatch:

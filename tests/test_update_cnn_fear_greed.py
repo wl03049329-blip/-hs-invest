@@ -54,6 +54,32 @@ class FakeResponse:
 
 
 class CNNFearGreedUpdaterTests(unittest.TestCase):
+    def test_history_drops_premarket_and_uses_us_date_labels(self):
+        now = dt.datetime(2026, 11, 24, 14, tzinfo=dt.timezone.utc)
+        response = source_response()
+        response["fear_and_greed"]["timestamp"] = now.isoformat()
+        days = "09 10 11 12 13 16 17 18 19 20 23 24".split()
+        points = [{"x": dt.datetime(2026, 11, int(day), tzinfo=dt.timezone.utc).timestamp() * 1000,
+                   "y": 20 + i} for i, day in enumerate(days)]
+        response["fear_and_greed_historical"] = {"data": points + [{"x": now.timestamp()*1000, "y": 99}]}
+        payload = MODULE.build_payload(response, now)
+        self.assertEqual([row["date"] for row in payload["history"]["sessions"]],
+                         [f"2026-11-{day}" for day in days[:-1]])
+        self.assertEqual(payload["history"]["sessions"][-1]["score"], 30)
+        for malformed in [points[1:], points + [points[0]], [{**points[0], "y": None}, *points[1:]]]:
+            response["fear_and_greed_historical"]["data"] = malformed
+            optional = MODULE.build_payload(response, now)
+            self.assertNotIn("history", optional)
+            self.assertEqual(optional["score"], 35.7)
+
+    def test_thanksgiving_early_close_and_weekend(self):
+        utc = dt.timezone.utc
+        self.assertEqual(str(MODULE.closed_sessions(dt.datetime(2026, 11, 27, 17, 59, tzinfo=utc))[-1]), "2026-11-25")
+        self.assertEqual(str(MODULE.closed_sessions(dt.datetime(2026, 11, 27, 18, tzinfo=utc))[-1]), "2026-11-27")
+        self.assertEqual(str(MODULE.closed_sessions(dt.datetime(2026, 11, 29, 18, tzinfo=utc))[-1]), "2026-11-27")
+        self.assertEqual(str(MODULE.closed_sessions(dt.datetime(2026, 7, 7, 19, 59, tzinfo=utc))[-1]), "2026-07-06")
+        self.assertEqual(str(MODULE.closed_sessions(dt.datetime(2026, 7, 7, 20, tzinfo=utc))[-1]), "2026-07-07")
+
     def test_connection_reset_then_success(self):
         calls = []
         sleeps = []

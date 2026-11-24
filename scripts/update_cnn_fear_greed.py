@@ -11,6 +11,7 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "cnn-fear-greed.json"
@@ -19,6 +20,14 @@ SOURCE_URL = "https://www.cnn.com/markets/fear-and-greed"
 MAX_SOURCE_AGE = dt.timedelta(days=10)
 MAX_FETCH_ATTEMPTS = 5
 FETCH_BACKOFF_SECONDS = (2, 4, 8, 16)
+# NYSE core-session calendar: https://www.nyse.com/trade/hours-calendars
+# Extend only after checking the published calendar; never infer unknown years.
+NYSE_HOLIDAYS = {
+    2026: "01-01 01-19 02-16 04-03 05-25 06-19 07-03 09-07 11-26 12-25",
+    2027: "01-01 01-18 02-15 03-26 05-31 06-18 07-05 09-06 11-25 12-24",
+    2028: "01-17 02-21 04-14 05-29 06-19 07-04 09-04 11-23 12-25",
+}
+NYSE_EARLY_CLOSES = {"2026-11-27", "2026-12-24", "2027-11-26", "2028-07-03", "2028-11-24"}
 HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -68,6 +77,49 @@ def sentiment_label(score: float) -> str:
     return "極度貪婪"
 
 
+def closed_sessions(as_of: dt.datetime) -> list[dt.date]:
+    local = as_of.astimezone(ZoneInfo("America/New_York"))
+    day = local.date()
+    sessions = []
+    while len(sessions) < 11:
+        if day.year not in NYSE_HOLIDAYS:
+            raise ValueError("NYSE calendar coverage unavailable")
+        early = day.isoformat() in NYSE_EARLY_CLOSES
+        if (day.weekday() < 5 and day.isoformat()[5:] not in NYSE_HOLIDAYS[day.year].split()
+                and (day < local.date() or local.time() >= dt.time(13 if early else 16))):
+            sessions.append(day)
+        day -= dt.timedelta(days=1)
+    return list(reversed(sessions))
+
+
+def build_history(data: dict, as_of: dt.datetime) -> dict:
+    history = data.get("fear_and_greed_historical")
+    points = history.get("data") if isinstance(history, dict) else None
+    if not isinstance(points, list):
+        raise ValueError("CNN daily history unavailable")
+    dates = closed_sessions(as_of)
+    # CNN daily keys are UTC midnight *date labels*, not US session instants.
+    # Non-midnight samples are not daily closes.
+    keys = {int(dt.datetime.combine(day, dt.time(), dt.timezone.utc).timestamp()) * 1000: day for day in dates}
+    scores = {}
+    for point in points:
+        if not isinstance(point, dict):
+            continue
+        key = point.get("x")
+        if type(key) not in (float, int) or key not in keys:
+            continue
+        day = keys[key]
+        if day in scores:
+            raise ValueError(f"duplicate CNN daily point: {day}")
+        scores[day] = validated_score(point.get("y"), f"history.{day}")
+    if len(scores) != len(dates):
+        raise ValueError("CNN daily points missing: " + ",".join(str(day) for day in dates if day not in scores))
+    return {
+        "schema": "HS_CNN_CLOSED_SESSIONS_V1",
+        "sessions": [{"date": day.isoformat(), "score": scores[day]} for day in dates],
+    }
+
+
 def build_payload(data: object, now: dt.datetime | None = None) -> dict:
     if not isinstance(data, dict):
         raise ValueError("CNN response is not an object")
@@ -97,6 +149,11 @@ def build_payload(data: object, now: dt.datetime | None = None) -> dict:
         "sentiment": sentiment_label(score),
         "previous": previous,
     }
+    try:
+        payload["history"] = build_history(data, min(now, source_time))
+    except (ValueError, ZoneInfoNotFoundError) as exc:
+        # Optional history must never prevent publication of the existing gauge.
+        print(f"CNN_HISTORY_UNAVAILABLE {exc}")
     # Validate the serialized payload too, so only plain JSON-safe values are written.
     json.dumps(payload, ensure_ascii=False, allow_nan=False)
     return payload

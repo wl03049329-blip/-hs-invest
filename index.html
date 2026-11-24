@@ -1948,6 +1948,7 @@ function validateCnnFearGreed(json){
     updatedAt:String(json.updated_at),
     sourceUpdatedAt:String(json.source_updated_at),
     sourceUrl,
+    history:json.history,
     snapshot:HSDataFreshnessCore.normalize({value:score,data_date:String(json.source_updated_at).slice(0,10),updated_at:json.updated_at,source:json.source},{maxTradingDayAge:3})
   };
 }
@@ -4731,6 +4732,7 @@ function renderCnnDashboard(){
   const view=cnnGaugePresentation(),dashboard=target.querySelector(".cnnDashboard");
   dashboard.dataset.state=view.state;
   HSCnnGauge.update(target.querySelector("[data-cnn-dial]"),view.cnn);
+  dashboard.querySelector(".cnnDashboardHead>span").textContent="美股最新指數 · 可能含盤中";
   target.querySelector(".cnnGaugeStatus").textContent=view.status;
   target.querySelector(".cnnGaugeNotice").textContent=view.reason;
   target.querySelector('[data-cnn-time="source"]').textContent=formatTaipeiDateTime(view.sourceUpdatedAt);

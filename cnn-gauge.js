@@ -42,7 +42,10 @@
     const value=host.querySelector("[data-cnn-value]"),label=host.querySelector("[data-cnn-label]");
     if(value)value.textContent=format(score);
     if(label)label.textContent=available?cnn.label:"資料暫缺";
-    if(!compact)host.querySelector("svg").setAttribute("aria-label",available?"CNN 恐懼貪婪 "+format(score)+" 分，"+cnn.label:"CNN 情緒資料暫缺；沒有可驗證的指針位置");
+    if(!compact){
+      host.querySelector("svg").setAttribute("aria-label",available?"CNN 恐懼貪婪 "+format(score)+" 分，"+cnn.label:"CNN 情緒資料暫缺；沒有可驗證的指針位置");
+      updateHistory(host,figure,cnn?.history);
+    }
     const zone=available?BANDS.findIndex(b=>score<=b.end):-1;
     host.querySelectorAll("[data-cnn-band]").forEach((el,i)=>{el.dataset.active=String(i===zone);});
     host.querySelectorAll("[data-cnn-zone]").forEach((el,i)=>{el.dataset.active=String(i===zone);if(i===zone)el.setAttribute("aria-current","true");else el.removeAttribute("aria-current");});
@@ -51,6 +54,51 @@
     if(!valid(score)||!valid(previous))return"—";
     const difference=Number((score-previous).toFixed(2));
     return(difference>0?"+":"")+new Intl.NumberFormat("zh-TW",{maximumFractionDigits:2}).format(difference);
+  }
+  function historyRows(history){
+    const sessions=history?.sessions;
+    if(history?.schema!=="HS_CNN_CLOSED_SESSIONS_V1"||!Array.isArray(sessions)||sessions.length!==11)return null;
+    let previous="";
+    for(const row of sessions){
+      const date=row?.date;
+      if(typeof date!=="string"||!/^\d{4}-\d{2}-\d{2}$/.test(date)||date<=previous||!valid(row.score))return null;
+      const instant=new Date(date+"T00:00:00Z");
+      if(!Number.isFinite(+instant)||instant.toISOString().slice(0,10)!==date||[0,6].includes(instant.getUTCDay()))return null;
+      previous=date;
+    }
+    return sessions.slice(1).map(({date,score},i)=>{
+      const delta=Math.round(score*10)-Math.round(sessions[i].score*10);
+      return{date,score,change:(delta>0?"+":"")+(delta/10).toFixed(1),
+        tone:delta>0?"rise":delta<0?"fall":"flat",label:BANDS.find(b=>score<=b.end).label};
+    }).reverse();
+  }
+  const historyViews=new WeakMap();
+  function updateHistory(host,figure,history){
+    let view=historyViews.get(host);
+    if(!view){
+      host.insertAdjacentHTML("beforeend",'<button type="button" class="cnnHistoryToggle" aria-expanded="false" aria-controls="hs-cnn-closed-history">近 10 日紀錄 <span aria-hidden="true">▾</span></button><div class="cnnHistoryPanel" id="hs-cnn-closed-history" hidden></div>');
+      const button=host.querySelector(".cnnHistoryToggle"),panel=host.querySelector(".cnnHistoryPanel");
+      view={button,panel,history,dirty:true};
+      historyViews.set(host,view);
+      button.addEventListener("click",()=>{
+        panel.hidden=!panel.hidden;
+        button.setAttribute("aria-expanded",String(!panel.hidden));
+        button.querySelector("span").textContent=panel.hidden?"▾":"▴";
+        renderHistory(view);
+      });
+      figure.classList.add("cnnGaugeHistoryTarget");
+      figure.addEventListener("click",()=>button.click());
+    }
+    if(view.history!==history){view.history=history;view.dirty=true;}
+    renderHistory(view);
+  }
+  function renderHistory(view){
+    if(view.panel.hidden||!view.dirty)return;
+    view.dirty=false;
+    const rows=historyRows(view.history);
+    view.panel.innerHTML=rows?'<table><caption>CNN 歷史｜已收盤美股交易日（美東）</caption><thead><tr><th scope="col">日期</th><th scope="col">指數</th><th scope="col">較前日</th><th scope="col">市場情緒</th></tr></thead><tbody>'+
+      rows.map(row=>'<tr><th scope="row"><time datetime="'+row.date+'">'+row.date.slice(5).replace("-","/")+'</time></th><td>'+row.score.toFixed(1)+'</td><td data-tone="'+row.tone+'">'+row.change+'</td><td>'+row.label+'</td></tr>').join("")+'</tbody></table>':
+      '<p role="status">暫無完整且已驗證的歷史紀錄。儀表板不受影響。</p>';
   }
   // Coverage is a presentation contract, not a market score or trading signal.
   function marketCoverage({values={},marginStatus,futures={},futuresStatus,cnnView={}}={}){
@@ -69,5 +117,5 @@
     const detail=missing.length?"台股缺少："+missing.join("、")+"。":outdated.length?"台股待更新："+outdated.join("、")+"。":"台股四項資料齊備，仍須分別觀察。";
     return{value,hint:"不以美股代判台股",missing,outdated,text:overseas+detail+"不對缺漏指標推論多空，亦不以 CNN 單獨作完整市場結論。"};
   }
-  return{BANDS,valid,format,angle,point,markup,update,comparison,marketCoverage};
+  return{BANDS,valid,format,angle,point,markup,update,comparison,marketCoverage,historyRows};
 });
