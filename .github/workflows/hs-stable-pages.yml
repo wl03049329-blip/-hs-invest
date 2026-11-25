@@ -49,6 +49,7 @@ jobs:
           node tests/test_radar_history_boundaries.js
           node tests/test_lradar_v1.js
       - name: Render comparison in Chrome and WebKit
+        shell: bash
         run: |
           npm install --prefix "$RUNNER_TEMP/hs-browser" playwright-core@1.62.1
           "$RUNNER_TEMP/hs-browser/node_modules/.bin/playwright-core" install --with-deps chrome webkit
