@@ -22,6 +22,9 @@ for(const [engine,type] of [['chrome',chromium],['webkit',webkit]]){const b=awai
   if(mode==='after'&&fs.existsSync(baseline))assert.deepEqual(model,JSON.parse(fs.readFileSync(baseline,'utf8')));
   fs.writeFileSync(path.join(evidence,mode+'-'+engine+'-data.json'),JSON.stringify(model,null,2));
   await p.screenshot({path:path.join(evidence,mode+'-'+engine+'-first.png')});await snap(p,mode+'-'+engine+'-overview');
+  if(mode==='after'){
+   await p.locator('#openRadarAlertSettings').click();await p.locator('#radarAlertSettingsModal.show').waitFor({state:'visible'});await p.locator('#closeRadarAlertSettings').click();
+  }
  }
  const c=p.locator('#radarOverviewLong [data-open-radar-detail="0050"]');const t2=perf.now();await c.click();
  const selected=p.locator('.signalCard.is-selected[data-radar-v4]'),quick=selected.locator('[data-radar-v4-pane=quick]');
@@ -44,16 +47,14 @@ for(const [engine,type] of [['chrome',chromium],['webkit',webkit]]){const b=awai
   await p.locator('#radarGoldShowEvents').click();await p.locator('[data-radar-event-filter=CROSS_LEVEL]').click();assert.equal(await p.locator('#radarEventCenter').evaluate(e=>e.open),true);
   await p.locator('#radarEventEtfFilter').selectOption('0050');await snap(p,mode+'-'+engine+'-events');
   const l=p.locator('#radarOverviewSwing');await l.scrollIntoViewIfNeeded();await l.locator('select').selectOption('20');assert.match(await l.innerText(),/20 日最高收盤回落/);await snap(p,mode+'-'+engine+'-00631L');
-  await p.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));
-  await p.locator('#openRadarAlertSettings').click();await p.locator('#radarAlertSettingsModal.show').waitFor({state:'visible'});await p.locator('#closeRadarAlertSettings').click();
   await p.locator('[data-radar-mode=my]').click();await p.locator('#watchAdHocForm').waitFor({state:'visible'});await p.locator('#radarGoldWatchOrder').selectOption('drawdown');
   await p.locator('#manageWatchBtn').click();assert.equal(await p.locator('#watchManagePanel').isVisible(),true);
   await p.locator('#watchAdHocTicker').fill('!');await p.locator('#watchAdHocForm button').click();await p.getByText('代號格式無效。',{exact:true}).waitFor();
   await snap(p,mode+'-'+engine+'-watch');
-  for(const tab of ['today','portfolio','sentiment','more','signals']){await p.locator('.bottomNavButton[data-tab="'+tab+'"]').click();assert.equal(await p.locator('[data-tab-section="'+tab+'"]').isVisible(),true);}
+  for(const tab of ['today','portfolio','sentiment','more','signals']){await p.locator('.bottomNavButton[data-tab="'+tab+'"]').click();assert.ok(await p.locator('[data-tab-section="'+tab+'"]:visible').count(),tab);}
   await p.locator('[data-radar-mode=featured]').click();
   for(const [suffix,date] of [['no-events','2026-11-25'],['waiting','']]){
-    await p.evaluate(date=>{document.getElementById('radarTodayFocusCards').innerHTML=radarGoldToday({latestDate:date},{events:[]},[]);},date);
+    await p.evaluate(date=>{const items=date?activeRadarItems().filter(x=>strategyModeFor(x)==='long_term_core'):[];document.getElementById('radarTodayFocusCards').innerHTML=radarGoldToday({latestDate:date},{events:[]},items);},date);
     await p.locator('#radarTodayFocus').screenshot({path:path.join(evidence,mode+'-'+engine+'-'+suffix+'.png')});
   }
  }
