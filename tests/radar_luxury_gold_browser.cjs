@@ -31,7 +31,7 @@ for(const [engine,type] of [['chrome',chromium],['webkit',webkit]]){const b=awai
  await quick.waitFor({state:'visible'});assert.equal(await quick.locator(':scope>.radarV4Card').count(),2);
  const firstCardMs=Math.round(perf.now()-t2);
  if(mode==='after')await quick.locator('.radarHistoryCanvas canvas').first().waitFor({timeout:20000});
- const quickMs=Math.round(perf.now()-t2);if(width===390)await snap(p,mode+'-'+engine+'-quick');
+ const quickMs=Math.round(perf.now()-t2);if(width===390){await p.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));await snap(p,mode+'-'+engine+'-quick');}
  if(mode==='after'){for(const range of ['10D','20D','60D','120D','1Y','ALL'])await quick.locator('[data-history-range="'+range+'"]').click();await quick.locator('.radarHistoryCustom summary').click();await quick.locator('[data-custom-start]').fill('2026-11-17');await quick.locator('[data-custom-end]').fill('2026-11-24');await quick.locator('[data-history-action=custom]').click();}
  const historyHost=mode==='after'?await quick.locator('[data-radar-history]').elementHandle():null;
  await selected.locator('nav [data-radar-v4-tab=deep]').click();const deep=selected.locator('[data-radar-v4-pane=deep]');await deep.waitFor({state:'visible'});
@@ -45,12 +45,12 @@ for(const [engine,type] of [['chrome',chromium],['webkit',webkit]]){const b=awai
   assert.equal(await selected.getAttribute('data-etf-id'),'00662');await deep.waitFor({state:'visible'});
   await selected.locator('[data-radar-v4-action=back]').click();await p.locator('#radarOverviewLong').waitFor({state:'visible'});
   await p.locator('#radarGoldShowEvents').click();await p.locator('[data-radar-event-filter=CROSS_LEVEL]').click();assert.equal(await p.locator('#radarEventCenter').evaluate(e=>e.open),true);
-  await p.locator('#radarEventEtfFilter').selectOption('0050');await snap(p,mode+'-'+engine+'-events');
+  await p.locator('#radarEventEtfFilter').selectOption('0050');assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth),'expanded event centre cannot widen the page');await snap(p,mode+'-'+engine+'-events');
   const l=p.locator('#radarOverviewSwing');await l.scrollIntoViewIfNeeded();await l.locator('select').selectOption('20');assert.match(await l.innerText(),/20 日最高收盤回落/);await snap(p,mode+'-'+engine+'-00631L');
   await p.locator('[data-radar-mode=my]').click();await p.locator('#watchAdHocForm').waitFor({state:'visible'});await p.locator('#radarGoldWatchOrder').selectOption('drawdown');
   await p.locator('#manageWatchBtn').click();assert.equal(await p.locator('#watchManagePanel').isVisible(),true);
   await p.locator('#watchAdHocTicker').fill('!');await p.locator('#watchAdHocForm button').click();await p.getByText('代號格式無效。',{exact:true}).waitFor();
-  await snap(p,mode+'-'+engine+'-watch');
+  assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth),'watchlist cannot widen the page');await snap(p,mode+'-'+engine+'-watch');
   for(const tab of ['today','portfolio','sentiment','more','signals']){await p.locator('.bottomNavButton[data-tab="'+tab+'"]').click();assert.ok(await p.locator('[data-tab-section="'+tab+'"]:visible').count(),tab);}
   await p.locator('[data-radar-mode=featured]').click();
   for(const [suffix,date] of [['no-events','2026-11-25'],['waiting','']]){
