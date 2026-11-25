@@ -1,40 +1,41 @@
 {
   "version": 1,
-  "updated_at": "2026-11-24T18:59:49.261542Z",
-  "data_date": "2026-11-24",
+  "updated_at": "2026-11-25T18:05:27.793426Z",
+  "data_date": "2026-11-25",
   "foreign_tx": {
-    "long": 12852,
-    "short": 116034,
-    "net": -103182,
-    "net_change": 250
+    "long": 11439,
+    "short": 117148,
+    "net": -105709,
+    "net_change": -2527
   },
   "estimated_non_institutional_mtx": {
-    "long": 20377,
-    "short": 24203,
-    "net": -3826,
-    "net_change": -118
+    "long": 22330,
+    "short": 21998,
+    "net": 332,
+    "net_change": 4158
   },
   "estimated_non_institutional_tmf": {
-    "long": 60913,
-    "short": 34052,
-    "net": 26861,
-    "net_change": -6421
+    "long": 71248,
+    "short": 24562,
+    "net": 46686,
+    "net_change": 19825
   },
   "methodology": "外資臺股期貨採期交所三大法人未平倉資料。MTX/TMF 非三大法人部位推估＝一般交易時段、相同交易日、同商品所有有效月份（含 MTX 週契約）全市場未平倉量，分別扣除自營商、投信、外資及陸資的多方／空方未平倉口數。",
   "source_status": {
     "aligned": true,
     "freshness": "SOURCE_FALLBACK",
-    "source_provider": "DATA_GOV_OFFICIAL",
-    "source_checked_at": "2026-11-24T18:59:49.261542Z",
-    "latest_expected_trading_date": "2026-11-24",
+    "source_provider": "TAIFEX_OFFICIAL_CSV",
+    "source_checked_at": "2026-11-25T18:05:27.793426Z",
+    "latest_expected_trading_date": "2026-11-25",
     "lag_trading_days": 0,
     "net_change_available": true,
-    "net_change_baseline_date": "2026-11-23",
+    "net_change_baseline_date": "2026-11-24",
     "session_scope": "一般交易時段未平倉量",
     "mtx_contract_scope": [
       "202611W4",
       "202612",
       "202612W1",
+      "202612W2",
       "202701",
       "202702",
       "202703",
@@ -52,8 +53,7 @@
     "institutional_source": "https://openapi.taifex.com.tw/v1/MarketDataOfMajorInstitutionalTradersDetailsOfFuturesContractsBytheDate",
     "market_source": "https://openapi.taifex.com.tw/v1/DailyMarketReportFut",
     "diagnostics": [
-      "TAIFEX_PRIMARY:SOURCE_NOT_READY:2026-11-23",
-      "TAIFEX_OFFICIAL_CSV:TimeoutError"
+      "TAIFEX_PRIMARY:SOURCE_NOT_READY:2026-11-24"
     ]
   }
 }
