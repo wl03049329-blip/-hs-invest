@@ -55,9 +55,12 @@ jobs:
           export NODE_PATH="$RUNNER_TEMP/hs-browser/node_modules"
           export HS_LUXURY_ARTIFACTS="$RUNNER_TEMP/hs-gold-evidence"
           git worktree add --detach "$RUNNER_TEMP/hs-gold-baseline" fc292ce84a2bfe71c87c2fea8cf9a6289533410b
+          if HS_LUXURY_ARTIFACTS="$RUNNER_TEMP/hs-gold-no-baseline" node tests/radar_luxury_gold_browser.cjs "$GITHUB_WORKSPACE" after > "$RUNNER_TEMP/hs-gold-missing.log" 2>&1; then exit 1; fi
+          grep RC2_BASELINE_REQUIRED "$RUNNER_TEMP/hs-gold-missing.log"
           node tests/radar_luxury_gold_browser.cjs "$RUNNER_TEMP/hs-gold-baseline" before | tee "$RUNNER_TEMP/hs-gold-before.log"
           node tests/radar_luxury_gold_browser.cjs "$GITHUB_WORKSPACE" after | tee "$RUNNER_TEMP/hs-gold-after.log"
           node tests/c4_chart_points_browser.cjs
+          HS_LUXURY_GOLD=1 node tests/lradar_auto_browser.cjs
           HS_APP_TEST_OUT="$RUNNER_TEMP/hs-gold-pwa" node tests/stable_app_update_browser.cjs
       - uses: actions/upload-artifact@v4
         if: always()
@@ -67,6 +70,7 @@ jobs:
             ${{ runner.temp }}/hs-gold-evidence
             ${{ runner.temp }}/hs-gold-before.log
             ${{ runner.temp }}/hs-gold-after.log
+            ${{ runner.temp }}/hs-gold-pwa/results.json
           retention-days: 14
   cnn-close-history:
     if: github.event_name == 'pull_request' && github.head_ref == 'feat/cnn-close-history'

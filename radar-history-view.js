@@ -202,7 +202,7 @@ s.score=C.scores(artifact,symbol,contract,date=>completed(date)&&date<=cutoff(ne
   }
   async function older(s){if(active!==s||s.busy||s.nextYear<s.firstYear)return;s.busy=true;const year=s.nextYear;s.status(`正在載入 ${year} 原始日線…`);try{const result=await source.year(s.symbol,year,s.dates,s.cutoff,s.abort.signal);if(active!==s)return;s.years.add(year);s.nextYear--;s.prices=[...result.rows,...s.prices].sort((a,b)=>a.time.localeCompare(b.time));s.events=[...result.events,...s.events];s.invalid.push(...result.invalid);if(result.sourceWarning)s.warnings.add(result.sourceWarning);if(result.dividendStatus!=='VERIFIED')s.dividendStatus=result.dividendStatus;s.fetchedAt=result.fetchedAt;s.expectedPriceDate=result.expectedCompleted||s.expectedPriceDate;s.priceProvider=result.provider||s.priceProvider;draw(s,true);}finally{s.busy=false;}}
   async function loadAll(s){if(s.busy)return;while(active===s&&s.prefs.range==='ALL'&&s.nextYear>=s.firstYear){await older(s);if(s.abort.signal.aborted)return;}}
-  function setRange(s){if(active!==s||!s.chart)return;const custom=s.custom&&customRange(s.axis,s.custom.a,s.custom.b),r=custom||C.range(s.axis,s.prefs.range);if(r)s.chart.timeScale().setVisibleLogicalRange(r.from===r.to?{from:r.from-.5,to:r.to+.5}:r);s.syncingCursor=true;try{s.chart.clearCrosshairPosition();}finally{s.syncingCursor=false;}syncControls(s);const index=s.axis.indexOf(s.selected);showDetail(s,r&&index>=r.from&&index<=r.to?s.selected:s.axis[custom?custom.to:s.axis.length-1]);syncCursor(s);}
+  function setRange(s){if(active!==s||!s.chart)return;const custom=s.custom&&customRange(s.axis,s.custom.a,s.custom.b),r=custom||C.range(s.axis,s.prefs.range);if(r)s.chart.timeScale().setVisibleLogicalRange(r.from===r.to?{from:r.from-.5,to:r.to+.5}:r);s.syncingCursor=true;try{s.chart.clearCrosshairPosition();}finally{s.syncingCursor=false;}syncControls(s);if(r)goldInterval(s,r);const index=s.axis.indexOf(s.selected);showDetail(s,r&&index>=r.from&&index<=r.to?s.selected:s.axis[custom?custom.to:s.axis.length-1]);syncCursor(s);}
   function syncControls(s){s.host.querySelectorAll('[data-history-range]').forEach(b=>{b.classList.toggle('active',b.dataset.historyRange===s.prefs.range);b.setAttribute('aria-pressed',String(b.dataset.historyRange===s.prefs.range));});s.host.querySelectorAll('[data-history-pref]').forEach(b=>b.checked=s.prefs[b.dataset.historyPref]);}
   const displayDate=time=>String(time||'—').replace(/-/g,'/');
   // BusinessDay is an exchange date, not a local-midnight timestamp.
@@ -366,19 +366,21 @@ s.score=C.scores(artifact,symbol,contract,date=>completed(date)&&date<=cutoff(ne
   function goldInterval(s,r){
     const line=s.host.querySelector('[data-gold-interval]');
     if(!line||!s.host.closest?.('[data-luxury-gold]'))return;
+    if(s.custom)r=customRange(s.axis,s.custom.a,s.custom.b)||r;
     const from=s.axis[Math.max(0,Math.ceil(r.from))],to=s.axis[Math.min(s.axis.length-1,Math.floor(r.to))];
-    if(!from||!to||from>=to)return;
-    const first=s.score.rows.find(x=>x.time===from)?.value,last=s.score.rows.find(x=>x.time===to)?.value;
-    const start=s.adjusted.get(from),end=s.adjusted.get(to),d=C.finite(first)&&C.finite(last)?last-first:null,p=C.finite(start)&&start>0&&C.finite(end)?100*(end/start-1):null;
     const read=(x,unit)=>C.finite(x)?(x>0?'+':'')+x.toFixed(2)+unit:'資料不足';
-    const hint=p<0&&d>0?'股價下跌、機會分數上升，但不代表已止跌。':C.finite(p)&&C.finite(d)?'兩項數據可獨立變動，分數不是報酬預測。':'比較端點資料不齊，不補值。';
-    line.hidden=false;line.textContent=`${from} – ${to}｜C4 ${read(d,' 分')} · 還原價格 ${read(p,'%')}。 ${hint}`;
     const quote=s.host.closest('[data-radar-v4]')?.querySelector('[data-gold-market]'),latest=s.prices.at(-1),previous=s.prices.at(-2);
     if(quote&&latest){
       const before=s.adjusted.get(previous?.time),after=s.adjusted.get(latest.time);
       const change=previous&&C.finite(before)&&before>0&&C.finite(after)?100*(after/before-1):null;
       quote.textContent=`原始收盤 ${num(latest.close)} 元 · ${latest.time}｜較前筆有效收盤（同基準）${read(change,'%')}`;
     }
+    line.hidden=false;
+    if(!from||!to||from>=to){line.textContent='區間資料不足，至少需要兩個可核驗端點。';return;}
+    const first=s.score.rows.find(x=>x.time===from)?.value,last=s.score.rows.find(x=>x.time===to)?.value;
+    const start=s.adjusted.get(from),end=s.adjusted.get(to),d=C.finite(first)&&C.finite(last)?last-first:null,p=C.finite(start)&&start>0&&C.finite(end)?100*(end/start-1):null;
+    const hint=p<0&&d>0?'股價下跌、機會分數上升，但不代表已止跌。':C.finite(p)&&C.finite(d)?'兩項數據可獨立變動，分數不是報酬預測。':'比較端點資料不齊，不補值。';
+    line.textContent=`${from} – ${to}｜C4 ${read(d,' 分')} · 還原價格 ${read(p,'%')}。 ${hint}`;
   }
   function visible(s,r){if(active!==s||!r)return;goldInterval(s,r);s.host.dataset.visibleFrom=String(r.from);s.host.dataset.visibleTo=String(r.to);const x=C.extrema(s.axis,s.score.rows,s.prices,r);if(!x)return;const entry=(label,row,key)=>`<div><small>${label}</small><b>${(key==='value'?scoreNum(row?.[key]):num(row?.[key]))}</b><time>${esc(row?.time||'資料不足')}</time></div>`;s.host.querySelector('.radarHistoryExtrema').innerHTML=entry('C4 最高',x.scoreHigh,'value')+entry('C4 最低',x.scoreLow,'value')+entry('股價最高',x.priceHigh,'high')+entry('股價最低',x.priceLow,'low');
     const latest=s.prices.at(-1)?.time,expected=s.expectedPriceDate||s.dates.filter(d=>d<=s.cutoff).at(-1);s.host.dataset.calendarRange=s.dates[0]+"~"+s.dates.at(-1);s.host.dataset.loadedYears=[...s.years].sort().join(",");s.host.dataset.rejectedDates=s.invalid.join(",");s.status(`原始歷史起點 ${s.prices[0]?.time||"資料不足"}｜可視交易日 ${x.sessions}｜C4 ${x.scoreCount}/${x.sessions}｜股價 ${x.priceCount}/${x.sessions}。C4 截至 ${s.score.rows.at(-1)?.time||'資料不足'}；最新已驗證股價 ${latest||'資料不足'}｜${s.priceProvider||s.prices.at(-1)?.source||'來源待確認'}（${latest===expected&&!s.warnings.size?'已驗證':'待更新；預期 '+(expected||'未知')}）。${s.invalid.length||s.score.invalid.length?'驗證異常：已隔離不合格資料。':''}${s.nextYear>=s.firstYear?'已載入 '+[...s.years].sort().join('、')+'；可向左載入更早資料。':'已查詢來源全部交易日範圍。'}${s.dividendStatus==='UNAVAILABLE'?'除息資料不足。':''}`);

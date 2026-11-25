@@ -3,6 +3,8 @@ const assert=require("node:assert/strict"), fs=require("node:fs"), path=require(
 const {chromium,webkit}=require("playwright-core");
 const archive=require("../finalized-core-score-snapshots-v1.json");
 const observations=require("../data/c4-close-observations-v1.json");
+const adjusted=require("../backtest/long-term/historical-adjusted.json");
+const raw0050=require("../research/c4_historical/source/0050.json");
 const assets=["vendor/lightweight-charts/lightweight-charts.standalone.production.js","radar-history-core.js",
   "backtest/long-term/final-core-score-v1.js","strategy-mode-core.js","final-core-production.js","c4-display.js","radar-history-view.js"];
 const dates=["2026-11-10",...observations.sessions.map(s=>s.date),"2026-11-17"];
@@ -70,6 +72,32 @@ async function run(){
         }
         assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth),390);
         console.log(engine.name(),symbol,"390px direct points PASS");
+      }
+      // Replay the two archived price bases through the actual UI. No live data
+      // claim: official raw history and the repository's adjusted OHLC research
+      // snapshot are separate fixtures. The split must never be a false return.
+      const interval=['2025-06-10','2025-06-18'],sourceRows=raw0050.price.filter(r=>interval.includes(r.date)),adjustedRows=adjusted.items['0050'].rows.filter(r=>interval.includes(r.date));
+      assert.equal(adjusted.metadata.price_basis,'Adjusted OHLC');assert.equal(sourceRows.length,2);assert.equal(adjustedRows.length,2);
+      assert.ok(Math.abs((adjustedRows[1].close/adjustedRows[0].close)-(sourceRows[1].close/sourceRows[0].close))>.5);
+      for(const complete of [true,false]){
+        await page.reload();
+        await page.evaluate(async ({interval,sourceRows,adjustedRows,complete})=>{
+          window.HSRadarHistorySource={Source:class{cache=new Map();async sessions(){return {dates:interval};}
+            async year(){return {rows:sourceRows.map(r=>({time:r.date,open:r.open,high:r.max,low:r.min,close:r.close,volume:r.Trading_Volume})),events:[],invalid:[],dividendStatus:"VERIFIED"};}}};
+          const h=document.querySelector('#host');h.setAttribute('data-luxury-gold','');h.innerHTML=HSRadarHistoryView.html('0050');
+          await HSRadarHistoryView.mount(h.firstElementChild,{symbol:'0050',name:'0050',artifact:null,contract:HSFinalCoreProduction,thresholds:[],completed:()=>true,adjustedRows:complete?adjustedRows:adjustedRows.slice(0,1)});
+        },{interval,sourceRows,adjustedRows,complete});
+        const panel=page.locator('[data-radar-history=\'0050\']');
+        await panel.locator('.radarHistoryCustom summary').click();
+        await panel.locator('[data-custom-start]').fill(interval[0]);
+        await panel.locator('[data-custom-end]').fill(interval[1]);
+        await panel.locator('[data-history-action=custom]').click();
+        if(complete){
+          const result=100*(adjustedRows[1].close/adjustedRows[0].close-1);
+          const actual=await panel.locator('[data-gold-interval]').innerText();
+          assert.ok(actual.includes('還原價格 '+(result>0?'+':'')+result.toFixed(2)+'%'),JSON.stringify({actual,result,status:await panel.locator('.radarHistoryStatus').innerText(),custom:await panel.locator('[data-custom-status]').innerText()}));
+        }else assert.match(await panel.locator('[data-gold-interval]').innerText(),/還原價格 資料不足/);
+        assert.match(await panel.locator('.radarHistoryReadout').innerText(),new RegExp('原始收盤 '+String(sourceRows.at(-1).close).replace('.','\\.')));
       }
       assert.deepEqual(errors,[]);
     }finally{await browser.close();}
