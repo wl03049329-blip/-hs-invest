@@ -113,14 +113,28 @@ for(const [engine,type] of [['chrome',chromium],['webkit',webkit]]){const b=awai
   // Reproduce WebKit's scroll-anchor correction around the sticky edge:
   // the observed 6px shift must not toggle the toolbar again.
   const compactNear=async (offset,expected)=>{
-   const actual=await selected.evaluate(async (card,offset)=>{
+   await selected.evaluate((card,offset)=>{
     const bar=card.querySelector('.radarV4Toolbar'),sentinel=card.querySelector('.radarV4Sentinel');
     const destination=scrollY+sentinel.getBoundingClientRect().bottom-(parseFloat(getComputedStyle(bar).top)||0)-offset;
     scrollTo({top:destination,behavior:'instant'});
-    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(()=>requestAnimationFrame(r))));
-    return bar.classList.contains('is-compact');
    },offset);
-   assert.equal(actual,expected,'toolbar state at sticky-edge offset '+offset);
+   // WebKit can commit the scroll asynchronously. Require the layout to
+   // actually reach the specified region before sampling unchanged frames.
+   await p.waitForFunction(({offset,expected})=>{
+    const bar=document.querySelector('.signalCard.is-selected .radarV4Toolbar');
+    const delta=bar.previousElementSibling.getBoundingClientRect().bottom-(parseFloat(getComputedStyle(bar).top)||0);
+    if(Math.abs(offset)<12)return Math.abs(delta-offset)<=3;
+    return (offset>0?delta>=30:delta<=-30)&&bar.classList.contains('is-compact')===expected;
+   },{offset,expected},{timeout:5000});
+   const trace=await selected.evaluate(async card=>{
+    const bar=card.querySelector('.radarV4Toolbar'),frames=[];
+    for(let i=0;i<8;i++){
+     await new Promise(r=>requestAnimationFrame(r));
+     frames.push([bar.classList.contains('is-compact'),Math.round(bar.previousElementSibling.getBoundingClientRect().bottom-(parseFloat(getComputedStyle(bar).top)||0))]);
+    }
+    return frames;
+   });
+   assert.ok(trace.every(([compact,delta])=>compact===expected&&(Math.abs(offset)<12?Math.abs(delta)<12:offset>0?delta>=30:delta<=-30)),'toolbar state at sticky-edge offset '+offset+': '+JSON.stringify(trace));
   };
   await compactNear(54,false);
   await compactNear(-6,false);
