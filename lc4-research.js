@@ -183,6 +183,15 @@
      select.onchange=()=>{selected=select.value==='all'?'all':Number(select.value);draw();daily.querySelector('select').focus();};
      daily.append(select,el('p',v?`選取最高收盤價 ${round(v.price)} 元 · ${v.date} · 已過 ${v.age} 個交易日`:'選取期間：資料累積中'),
        el('p',peak240?`近 240 日回落 ${fmt(peak240.change)} · 距高點 ${peak240.age} 個交易日`:'近 240 日回落：資料累積中','lradar-v3-peak'));
+     const radar=$('#radarGoldLeverage');
+     if(radar){
+       const mirrorSelect=select.cloneNode(true);mirrorSelect.value=selected;
+       mirrorSelect.onchange=()=>{selected=mirrorSelect.value==='all'?'all':Number(mirrorSelect.value);draw();radar.querySelector('select')?.focus();};
+       const gauges=quick.cloneNode(true);
+       [d.speed,d.depth].forEach((g,i)=>gauges.children[i].append(el('p',!g?'尚不足以判讀':g.level===2?'歷史極少見的條件':g.level===1?'歷史較少見的條件':'尚未達較少見的條件')));
+       radar.replaceChildren(el('strong',daily.firstChild.textContent),el('p',daily.children[1].textContent),gauges,mirrorSelect,
+         el('p','槓桿型 ETF 每日重設，急跌不是止跌確認、預期報酬或買入建議。','radarGoldWarning'));
+     }
      const points=el('details');points.append(el('summary','查看各期間最高收盤價'));
      for(const p of HSLRadar.periods){const x=d.peaks[p];line(points,periodName(p),x?`${fmt(x.change)}｜${round(x.price)} 元｜${x.date}`:'資料累積中');}
      daily.append(points);

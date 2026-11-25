@@ -1,0 +1,100 @@
+/* HS V4.0 review — scoped to the existing ETF Radar tab. No global theme changes. */
+#signals[data-luxury-gold] {
+  --lg-bg:#080704; --lg-card:#19140b; --lg-raised:#21190c; --lg-gold:#ddb450;
+  --lg-light:#f0cc77; --lg-edge:#88682f; --lg-ink:#f2e8d3; --lg-sub:#c3b28f;
+  --lg-up:#dc8d83; --lg-down:#86ba9a; --lg-risk:#d6a45f;
+  color:var(--lg-ink);font-variant-numeric:tabular-nums;scroll-margin-top:env(safe-area-inset-top,0px);
+}
+#signals[data-luxury-gold] :is(button,select,summary,a):focus-visible {outline:2px solid var(--lg-light);outline-offset:3px}
+#signals[data-luxury-gold] :is(.radarPageHeader,.radarTodayFocus,.radarOverviewPanel,.radarEventCenter,.radarLongCard,.radarV4Card,[data-radar-v4-fold],#watchPanel .watchDiagnosticCard) {
+  background:linear-gradient(135deg,var(--lg-raised),var(--lg-card) 49%,#100d08);
+  border:1px solid var(--lg-edge);border-radius:18px;box-shadow:0 9px 22px #0004;min-width:0;
+}
+#signals[data-luxury-gold] .radarPageHeader {display:block;margin-bottom:12px;padding:20px 16px 14px;background:linear-gradient(113deg,#26200f,#110e08 66%);text-align:left}
+#signals[data-luxury-gold] .radarPageHeader::before {content:"HS  /  LUXURY GOLD EDITION";display:block;font-size:11px;letter-spacing:.16em;color:var(--lg-gold);font-weight:700}
+#signals[data-luxury-gold] .radarPageHeader h2 {font-size:clamp(31px,8vw,45px);letter-spacing:.06em;margin:5px 0 10px;color:var(--lg-ink)}
+#signals[data-luxury-gold] .radarPageHeader .radarPageUpdate {display:flex;justify-content:flex-start;flex-wrap:wrap;gap:4px 12px;font-size:11px;color:var(--lg-sub);margin:0;padding:8px 0 0;border-top:1px solid #88682f80}
+#signals[data-luxury-gold] .radarPageUpdate span {font-size:inherit;white-space:normal}
+#signals[data-luxury-gold] .radarModeLauncher {grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+#signals[data-luxury-gold] .radarModeCard {min-height:44px;border-radius:12px}
+#signals[data-luxury-gold] .radarModeCard.active {background:linear-gradient(110deg,#eed38e,#cda252);color:#171006;border-color:var(--lg-light)}
+#signals[data-luxury-gold] .radarModeCard.active strong {color:inherit}
+#signals[data-luxury-gold] .radarOverviewHead {display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;margin-top:10px}
+#signals[data-luxury-gold] .radarOverviewHead>div:first-child {min-width:0;overflow-wrap:anywhere}
+#signals[data-luxury-gold] .radarOverviewActions {position:relative;z-index:2;display:flex;align-items:center;align-self:center}
+#signals[data-luxury-gold] #openRadarAlertSettings {position:relative;pointer-events:auto;white-space:nowrap}
+#signals[data-luxury-gold] .radarOverviewHead :is(.radarOverviewSubtitle,.eyebrow,.radarOverviewActions>small) {display:none}
+#signals[data-luxury-gold] .radarOverviewHead h2 {font-size:16px;color:var(--lg-sub)}
+#signals[data-luxury-gold] :is(.radarViewTabs button,#openRadarAlertSettings,.radarGoldTextButton,.radarGoldEvent,.radarHistoryRanges button,.radarHistoryTools button,.radarHistoryCustom button,.radarGoldSort select,#radarGoldLeverage select,.watchActions button,.watchAdHocForm button,.watchAdHocForm input) {min-height:44px}
+#signals[data-luxury-gold] :is(.radarTodayFocus,.radarOverviewPanel,.radarEventCenter) {padding:14px;margin-block:10px}
+#signals[data-luxury-gold] .radarOverviewTitle {display:grid;justify-content:start;justify-items:start;gap:0}
+#signals[data-luxury-gold] :is(.radarOverviewTitle,.radarTodayFocus)>header {min-width:0}
+#signals[data-luxury-gold] :is(.radarOverviewTitle h3,.radarTodayFocus h3,.radarV4Card h3) {margin:4px 0;font-size:19px;color:var(--lg-ink)}
+#signals[data-luxury-gold] :is(.radarOverviewTitle>span,.radarTodayFocus header span) {font-size:11px;color:var(--lg-gold);letter-spacing:.08em;font-weight:700}
+#signals[data-luxury-gold] #radarGoldFinalDate {font-size:11px;color:var(--lg-sub);white-space:normal}
+#signals[data-luxury-gold] .radarTodayFocusCards {display:grid;grid-template-columns:minmax(0,1fr);gap:7px}
+#signals[data-luxury-gold] .radarGoldLead {font-size:15px;margin:0;color:var(--lg-ink)}
+#signals[data-luxury-gold] .radarGoldCounts {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-block:4px}
+#signals[data-luxury-gold] .radarGoldCounts span {display:grid;gap:3px;text-align:center;padding:7px 3px;background:#0d0a06;border:1px solid #5e4927;border-radius:10px}
+#signals[data-luxury-gold] .radarGoldCounts b {font-size:26px;color:var(--lg-light);line-height:1}
+#signals[data-luxury-gold] .radarGoldCounts small {font-size:11px;color:var(--lg-sub);overflow-wrap:anywhere}
+#signals[data-luxury-gold] .radarGoldEvent {display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:center;background:#110e08;border:1px solid #624d26;border-radius:10px;padding:7px 9px;color:var(--lg-ink);text-align:left}
+#signals[data-luxury-gold] .radarGoldEvent b,#signals[data-luxury-gold] .radarGoldTextButton {color:var(--lg-light)}
+#signals[data-luxury-gold] .radarGoldEvent small {display:block;font-size:11px;color:var(--lg-sub)}
+#signals[data-luxury-gold] .radarGoldTextButton {border:0;background:none;text-align:left;padding:0 3px;font-weight:700}
+#signals[data-luxury-gold] .radarOverviewLong {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,265px),1fr));gap:10px}
+#signals[data-luxury-gold] .radarGoldInstrument {display:grid;gap:10px;align-content:start;padding:13px;text-align:left}
+#signals[data-luxury-gold] #radarOverview .radarGoldInstrument {min-height:0;grid-template-rows:auto auto auto auto}
+#signals[data-luxury-gold] .radarGoldInstrument .radarLongIdentityRow {grid-template-columns:auto minmax(0,1fr) minmax(0,auto);gap:6px;align-items:start}
+#signals[data-luxury-gold] .radarLongIdentity b {font-size:21px;color:var(--lg-ink)}
+#signals[data-luxury-gold] .radarLongIdentity small {font-size:12px;white-space:normal;color:var(--lg-sub)}
+#signals[data-luxury-gold] .radarGoldBadge {color:var(--lg-light);background:#2d2311;border:1px solid #88682f;border-radius:7px;padding:4px 6px;font-size:11px}
+#signals[data-luxury-gold] [data-gold-ready=false] :is(.radarGoldBadge,.radarV4Score strong,[data-gold-score]) {color:var(--lg-sub);border-color:#5c5342;background:transparent;text-shadow:none}
+#signals[data-luxury-gold] .radarGoldMetrics {display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#signals[data-luxury-gold] .radarGoldMetrics>span {display:flex;min-width:0;flex-direction:column;align-items:start;justify-content:start;gap:2px}
+#signals[data-luxury-gold] .radarGoldMetrics>span:last-child {padding-left:9px;border-left:1px solid #88682f70}
+#signals[data-luxury-gold] .radarGoldMetrics small,#signals[data-luxury-gold] .radarGoldMetrics em {font-size:12px;color:var(--lg-sub);font-style:normal}
+#signals[data-luxury-gold] .radarGoldMetrics b {font-size:clamp(36px,10vw,44px);line-height:1.04;color:var(--lg-light);letter-spacing:-.035em}
+#signals[data-luxury-gold] .radarGoldMetrics>span:last-child b {color:var(--lg-ink);font-size:clamp(23px,7vw,32px);margin-top:5px}
+#signals[data-luxury-gold] .radarGoldMeter {display:block;width:100%;height:8px;appearance:none;background:#302614;border:0;border-radius:8px;overflow:hidden}
+#signals[data-luxury-gold] .radarGoldMeter::-webkit-meter-bar {background:#302614;border:0;border-radius:8px;height:8px}
+#signals[data-luxury-gold] .radarGoldMeter::-webkit-meter-optimum-value {background:linear-gradient(90deg,#9d7234,#f0cc77);border-radius:8px}
+#signals[data-luxury-gold] .radarGoldInstrument footer {display:flex;justify-content:space-between;gap:5px;flex-wrap:wrap;font-size:11px;color:var(--lg-sub)}
+#signals[data-luxury-gold] .radarGoldInstrument footer strong {font-size:12px;color:var(--lg-gold)}
+#signals[data-luxury-gold] :is(.radarEventCenter,#radarGoldLeverageArchive)>summary {min-height:44px;cursor:pointer;line-height:1.5;color:var(--lg-light)}
+#signals[data-luxury-gold] .radarEventCenter>summary small {display:block;color:var(--lg-sub);font-size:12px}
+#signals[data-luxury-gold] #radarGoldLeverage .lradar-v3-grid {display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+#signals[data-luxury-gold] #radarGoldLeverage .lradar-v3-gauge {background:#120e08;border:1px solid #694f29}
+#signals[data-luxury-gold] #radarGoldLeverage .lradar-v3-gauge>strong {font-size:27px}
+#signals[data-luxury-gold] #radarGoldLeverage .lradar-v3-gauge :is(p,small) {font-size:12px;line-height:1.45;margin:4px 0}
+#signals[data-luxury-gold] #radarGoldLeverage>p {margin:7px 0;font-size:13px}
+#signals[data-luxury-gold] :is(.radarGoldWarning,.radarV4Risk) {color:var(--lg-risk)}
+#signals[data-luxury-gold] .radarV4Score strong {font-size:clamp(48px,13vw,56px);color:var(--lg-light);text-shadow:none}
+#signals[data-luxury-gold] :is(.radarV4Card,.radarGoldInterval) p {font-size:14px}
+#signals[data-luxury-gold] .radarGoldMarket,#signals[data-luxury-gold] .radarGoldInterval {border-top:1px solid #88682f80;padding-top:8px;color:var(--lg-sub);font-size:13px;overflow-wrap:anywhere}
+#signals[data-luxury-gold] .radarV4Toolbar {top:max(0px,env(safe-area-inset-top));background:#17120a;border-color:#88682f}
+#signals[data-luxury-gold] .radarV4Toolbar nav {flex:1;flex-wrap:wrap}
+#signals[data-luxury-gold] .radarV4Toolbar button {min-height:44px}
+#signals[data-luxury-gold] #cards.is-open {width:100%;max-width:100%;min-width:0;grid-template-columns:minmax(0,1fr)}
+#signals[data-luxury-gold] #cards.is-open .signalCard.is-selected {width:100%;max-width:100%;min-width:0}
+#signals[data-luxury-gold] .signalCard.is-selected :is(.signalCardDetails,.radarV4Toolbar,[data-radar-v4-pane],[data-radar-v4-fold]) {min-width:0;max-width:100%}
+#signals[data-luxury-gold] [data-radar-v4-fold] :is(.drawdownTableWrap,.radarOutcomeGrid,.radarExplainAttribution) {max-width:100%;min-width:0;overflow-wrap:anywhere}
+#signals[data-luxury-gold] .radarGoldChart .radarHistoryV2 {margin:0;padding:0;background:none;border:0}
+#signals[data-luxury-gold] .radarGoldChart .radarHistoryV2>header h3 {display:none}
+#signals[data-luxury-gold] .radarHistoryRanges {grid-template-columns:repeat(6,minmax(0,1fr))}
+#signals[data-luxury-gold] .radarHistoryRanges button {font-size:11px;padding-inline:0}
+#signals[data-luxury-gold] .radarGoldSort {display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-block:12px;color:var(--lg-sub)}
+#signals[data-luxury-gold] #watchPanel .watchHead {padding:0 0 10px}
+#signals[data-luxury-gold] #watchPanel .watchHead>div:first-child {display:flex;align-items:center;gap:8px}
+#signals[data-luxury-gold] :is(.radarGoldSort select,#radarGoldLeverage select) {background:#100d08;color:var(--lg-ink);border:1px solid var(--lg-edge);border-radius:10px;padding-inline:9px;max-width:100%}
+#signals[data-luxury-gold] #watchPanel .watchC4Score:not(.is-unavailable)>b {font-size:36px;color:var(--lg-light)}
+#signals[data-luxury-gold] :is(.watchDiagnosticPrice .up,.radarHistoryPrice .up) {color:var(--lg-up)}
+#signals[data-luxury-gold] :is(.watchDiagnosticPrice .down,.radarHistoryPrice .down) {color:var(--lg-down)}
+@media(max-width:360px) {
+  #signals[data-luxury-gold] :is(.radarOverviewPanel,.radarV4Card,.radarTodayFocus) {padding:10px}
+  #signals[data-luxury-gold] .radarGoldMetrics small {font-size:11px}
+  #signals[data-luxury-gold] .radarHistoryRanges {grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(prefers-reduced-motion:reduce) {
+  #signals[data-luxury-gold],#signals[data-luxury-gold] * {scroll-behavior:auto;transition-duration:0.01ms;animation-duration:0.01ms}
+}

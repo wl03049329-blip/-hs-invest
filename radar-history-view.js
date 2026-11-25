@@ -129,6 +129,7 @@
   function html(symbol){return`<section class="radarV2Section radarHistoryV2" data-radar-history="${esc(symbol)}">
     <header><h3>近期趨勢與訊號 2.0</h3><small class="radarHistoryIdentity">${esc(symbol)}｜正式 C4 × 原始日 K</small></header>
     <nav class="radarHistoryRanges" aria-label="圖表時間區間">${C.RANGES.map(r=>`<button type="button" data-history-range="${r}">${r==='ALL'?'全部':r}</button>`).join('')}</nav>
+    <p class="radarGoldInterval" data-gold-interval hidden>等待可核驗區間</p>
     <div class="radarObservationLegend" aria-label="C4 圖例" hidden></div>
     <div class="radarHistoryReadout" aria-live="polite" aria-atomic="true"><time>—</time><b data-readout-c4>正式 C4 —</b><span data-readout-price>原始收盤 —</span><span data-readout-change>漲跌 —</span><small data-readout-state>尚未選取日期</small></div>
     <div class="radarHistoryCanvas" aria-label="上圖 C4 正式分數；下圖原始日 K，共用交易日期" tabindex="0"></div>
@@ -158,11 +159,11 @@ function unmount(){if(active){if(active.fullscreen)setFullscreen(active,false);c
     const from=axis.findIndex(d=>d>=a),to=axis.findLastIndex(d=>d<=b);
     return from>=0&&to>=from?{from,to}:null;
   }
-  async function mount(host,{symbol,name,artifact,contract,thresholds,completed,headers}){
+  async function mount(host,{symbol,name,artifact,contract,thresholds,completed,headers,adjustedRows=[]}){
     if(active?.host===host&&active.symbol===symbol)return;
     unmount();if(!host||!root.LightweightCharts)return;
     if(!source)source=new root.HSRadarHistorySource.Source({headers});
-    const s={host,symbol,name,artifact,contract,thresholds,completed,prefs:readPreferences(),custom:savedCustom,abort:new AbortController(),prices:[],events:[],invalid:[],dates:[],series:[],markers:[],years:new Set(),warnings:new Set(),firstYear:null,busy:false,dividendStatus:'VERIFIED',selected:null};active=s;
+    const s={host,symbol,name,artifact,contract,thresholds,completed,adjusted:new Map(adjustedRows.map(r=>[r.date,r.close])),prefs:readPreferences(),custom:savedCustom,abort:new AbortController(),prices:[],events:[],invalid:[],dates:[],series:[],markers:[],years:new Set(),warnings:new Set(),firstYear:null,busy:false,dividendStatus:'VERIFIED',selected:null};active=s;
     void loadObservations(s);
     // Opt-in, DOM-only evidence. No API calls, scores, credentials or user holdings.
     if(typeof location!=='undefined'&&new URLSearchParams(location.search).get('radarLayoutDebug')==='1'&&!host.querySelector('.radarHistoryDiagnostics')){const d=document.createElement('details');d.className='radarHistoryDiagnostics';d.innerHTML='<summary>版面診斷（唯讀）</summary><button type="button" data-history-action="measure">量測版面</button><pre></pre>';host.append(d);}
@@ -189,7 +190,7 @@ function unmount(){if(active){if(active.fullscreen)setFullscreen(active,false);c
       s.inputEpoch++;
     };
     for(const type of INPUT_EVENTS)host.addEventListener(type,s.input,{capture:true,passive:true});
-    s.startedAt=Date.now();s.resume=()=>{if(active===s&&document.visibilityState==="visible"&&Date.now()-s.startedAt>300000){source.invalidate?.(symbol);source.cache.clear();unmount();mount(host,{symbol,name,artifact,contract,thresholds,completed,headers});}};document.addEventListener("visibilitychange",s.resume);root.addEventListener("pageshow",s.resume);
+    s.startedAt=Date.now();s.resume=()=>{if(active===s&&document.visibilityState==="visible"&&Date.now()-s.startedAt>300000){source.invalidate?.(symbol);source.cache.clear();unmount();mount(host,{symbol,name,artifact,contract,thresholds,completed,headers,adjustedRows});}};document.addEventListener("visibilitychange",s.resume);root.addEventListener("pageshow",s.resume);
     try{
 s.score=C.scores(artifact,symbol,contract,date=>completed(date)&&date<=cutoff(new Date(),13,30));s.cutoff=cutoff(new Date());if(source.priceCutoff!==s.cutoff){source.invalidate?.(symbol);source.cache.clear();source.priceCutoff=s.cutoff;}let cal;try{cal=await source.sessions(new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Taipei'}),s.abort.signal);}catch(error){if(s.abort.signal.aborted)throw error;cal=await source.savedSessions(symbol,s.score.rows.map(r=>r.time),s.abort.signal);s.calendarWarning=error.message;}if(active!==s)return;s.observedOnly=cal.observedOnly===true;s.dates=cal.dates;s.calendarFetchedAt=cal.fetchedAt;if(!s.dates.length)throw Error('CALENDAR_EMPTY');s.firstYear=Number(s.dates[0].slice(0,4));s.nextYear=Number(s.cutoff.slice(0,4));await older(s);
       if(active!==s)return;if(s.custom){while(active===s&&s.custom.a<(s.axis?.[0]||'')&&s.nextYear>=s.firstYear)await older(s);
@@ -362,7 +363,24 @@ s.score=C.scores(artifact,symbol,contract,date=>completed(date)&&date<=cutoff(ne
       <dl>${cells([['C4 版本',c?.version||'—'],['C4 來源',c?.source||'—'],['資料日期',c?.asOf||'—'],['正式更新',c?.updatedAt||'未保存'],['股價來源',p?.source||'—'],['行情取得',p?.fetchedAt||'—']])}</dl>
       ${c?`<p>來源正式分數 ${scoreNum(c.value)}</p>`:''}`;
   }
-  function visible(s,r){if(active!==s||!r)return;s.host.dataset.visibleFrom=String(r.from);s.host.dataset.visibleTo=String(r.to);const x=C.extrema(s.axis,s.score.rows,s.prices,r);if(!x)return;const entry=(label,row,key)=>`<div><small>${label}</small><b>${(key==='value'?scoreNum(row?.[key]):num(row?.[key]))}</b><time>${esc(row?.time||'資料不足')}</time></div>`;s.host.querySelector('.radarHistoryExtrema').innerHTML=entry('C4 最高',x.scoreHigh,'value')+entry('C4 最低',x.scoreLow,'value')+entry('股價最高',x.priceHigh,'high')+entry('股價最低',x.priceLow,'low');
+  function goldInterval(s,r){
+    const line=s.host.querySelector('[data-gold-interval]');
+    if(!line||!s.host.closest?.('[data-luxury-gold]'))return;
+    const from=s.axis[Math.max(0,Math.ceil(r.from))],to=s.axis[Math.min(s.axis.length-1,Math.floor(r.to))];
+    if(!from||!to||from>=to)return;
+    const first=s.score.rows.find(x=>x.time===from)?.value,last=s.score.rows.find(x=>x.time===to)?.value;
+    const start=s.adjusted.get(from),end=s.adjusted.get(to),d=C.finite(first)&&C.finite(last)?last-first:null,p=C.finite(start)&&start>0&&C.finite(end)?100*(end/start-1):null;
+    const read=(x,unit)=>C.finite(x)?(x>0?'+':'')+x.toFixed(2)+unit:'資料不足';
+    const hint=p<0&&d>0?'股價下跌、機會分數上升，但不代表已止跌。':C.finite(p)&&C.finite(d)?'兩項數據可獨立變動，分數不是報酬預測。':'比較端點資料不齊，不補值。';
+    line.hidden=false;line.textContent=`${from} – ${to}｜C4 ${read(d,' 分')} · 還原價格 ${read(p,'%')}。 ${hint}`;
+    const quote=s.host.closest('[data-radar-v4]')?.querySelector('[data-gold-market]'),latest=s.prices.at(-1),previous=s.prices.at(-2);
+    if(quote&&latest){
+      const before=s.adjusted.get(previous?.time),after=s.adjusted.get(latest.time);
+      const change=previous&&C.finite(before)&&before>0&&C.finite(after)?100*(after/before-1):null;
+      quote.textContent=`原始收盤 ${num(latest.close)} 元 · ${latest.time}｜較前筆有效收盤（同基準）${read(change,'%')}`;
+    }
+  }
+  function visible(s,r){if(active!==s||!r)return;goldInterval(s,r);s.host.dataset.visibleFrom=String(r.from);s.host.dataset.visibleTo=String(r.to);const x=C.extrema(s.axis,s.score.rows,s.prices,r);if(!x)return;const entry=(label,row,key)=>`<div><small>${label}</small><b>${(key==='value'?scoreNum(row?.[key]):num(row?.[key]))}</b><time>${esc(row?.time||'資料不足')}</time></div>`;s.host.querySelector('.radarHistoryExtrema').innerHTML=entry('C4 最高',x.scoreHigh,'value')+entry('C4 最低',x.scoreLow,'value')+entry('股價最高',x.priceHigh,'high')+entry('股價最低',x.priceLow,'low');
     const latest=s.prices.at(-1)?.time,expected=s.expectedPriceDate||s.dates.filter(d=>d<=s.cutoff).at(-1);s.host.dataset.calendarRange=s.dates[0]+"~"+s.dates.at(-1);s.host.dataset.loadedYears=[...s.years].sort().join(",");s.host.dataset.rejectedDates=s.invalid.join(",");s.status(`原始歷史起點 ${s.prices[0]?.time||"資料不足"}｜可視交易日 ${x.sessions}｜C4 ${x.scoreCount}/${x.sessions}｜股價 ${x.priceCount}/${x.sessions}。C4 截至 ${s.score.rows.at(-1)?.time||'資料不足'}；最新已驗證股價 ${latest||'資料不足'}｜${s.priceProvider||s.prices.at(-1)?.source||'來源待確認'}（${latest===expected&&!s.warnings.size?'已驗證':'待更新；預期 '+(expected||'未知')}）。${s.invalid.length||s.score.invalid.length?'驗證異常：已隔離不合格資料。':''}${s.nextYear>=s.firstYear?'已載入 '+[...s.years].sort().join('、')+'；可向左載入更早資料。':'已查詢來源全部交易日範圍。'}${s.dividendStatus==='UNAVAILABLE'?'除息資料不足。':''}`);
     if(s.warnings.size)s.status(s.host.querySelector('.radarHistoryStatus').textContent+' 最新增量未完成｜'+[...s.warnings].map(sourceMessage).join('、')+'；保留已驗證快取，不代表完整最新歷史。');
     if(s.observedOnly){s.status(s.host.querySelector('.radarHistoryStatus').textContent.replace('（已驗證）','（日期完整性待確認）').replace('已查詢來源全部交易日範圍。','已載入保存資料範圍。')+' 交易日曆不可用（'+sourceMessage(s.calendarWarning||'CALENDAR_UNAVAILABLE')+'）：僅按已保存行情／正式 C4 日期排列，不能確認全部歷史缺日；MA 暫停顯示。');}
