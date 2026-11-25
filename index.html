@@ -4553,7 +4553,13 @@ window.addEventListener("scroll",()=>{
   if(radarV4CompactFrame)return;
   radarV4CompactFrame=requestAnimationFrame(()=>{radarV4CompactFrame=0;
     const card=document.querySelector(".is-selected[data-radar-v4]"),bar=card?.querySelector(".radarV4Toolbar"),sentinel=card?.querySelector(".radarV4Sentinel");
-    if(bar&&sentinel)bar.classList.toggle("is-compact",sentinel.getBoundingClientRect().bottom<bar.getBoundingClientRect().top-1);
+    if(!bar||!sentinel)return;
+    const edge=parseFloat(getComputedStyle(bar).top)||0;
+    const offset=sentinel.getBoundingClientRect().bottom-edge;
+    // WebKit can anchor the scroll position by the 6px padding change.
+    // Keep that correction inside a dead band instead of toggling every frame.
+    const compact=bar.classList.contains("is-compact");
+    if(compact?offset>12:offset< -12)bar.classList.toggle("is-compact",!compact);
   });
 },{passive:true});
 function buildRadarV2Card({x,mode,decision,stage,score,longRank,longRankChange,longScoreChange,formal,detailScoreState,tradeState,dailyPair}){

@@ -110,6 +110,23 @@ for(const [engine,type] of [['chrome',chromium],['webkit',webkit]]){const b=awai
  const layout=await p.evaluate(()=>{const w=document.documentElement.clientWidth;return {w,scroll:document.documentElement.scrollWidth,over:[...document.querySelectorAll('#signals *')].filter(e=>e.getBoundingClientRect().right>w+2).slice(0,5).map(e=>[e.tagName,e.className?.baseVal||e.className,Math.round(e.getBoundingClientRect().right)])}});
  if(mode==='after')assert.ok(layout.scroll<=layout.w,JSON.stringify(layout));assert.deepEqual(errs,[]);
  if(mode==='after'&&width===390){
+  // Reproduce WebKit's scroll-anchor correction around the sticky edge:
+  // the observed 6px shift must not toggle the toolbar again.
+  const compactNear=async (offset,expected)=>{
+   const actual=await selected.evaluate(async (card,offset)=>{
+    const bar=card.querySelector('.radarV4Toolbar'),sentinel=card.querySelector('.radarV4Sentinel');
+    const destination=scrollY+sentinel.getBoundingClientRect().bottom-(parseFloat(getComputedStyle(bar).top)||0)-offset;
+    scrollTo({top:destination,behavior:'instant'});
+    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+    return bar.classList.contains('is-compact');
+   },offset);
+   assert.equal(actual,expected,'toolbar state at sticky-edge offset '+offset);
+  };
+  await compactNear(54,false);
+  await compactNear(-6,false);
+  await compactNear(-54,true);
+  await compactNear(6,true);
+  await compactNear(54,false);
   await selected.locator('[data-radar-v4-action=picker]').click();
   await selected.locator('[data-radar-v4-pick="00662"]').click();
   assert.equal(await selected.getAttribute('data-etf-id'),'00662');await deep.waitFor({state:'visible'});
