@@ -72,8 +72,12 @@
 #signals[data-luxury-gold] .radarV4Score strong {font-size:clamp(48px,13vw,56px);color:var(--lg-light);text-shadow:none}
 #signals[data-luxury-gold] :is(.radarV4Card,.radarGoldInterval) p {font-size:14px}
 #signals[data-luxury-gold] .radarGoldMarket,#signals[data-luxury-gold] .radarGoldInterval {border-top:1px solid #88682f80;padding-top:8px;color:var(--lg-sub);font-size:13px;overflow-wrap:anywhere}
-#signals[data-luxury-gold] .radarV4Toolbar {top:max(0px,env(safe-area-inset-top));background:#17120a;border-color:#88682f}
-#signals[data-luxury-gold] .radarV4Toolbar nav {flex:1;flex-wrap:wrap}
+#signals[data-luxury-gold] .radarV4Toolbar {display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;top:max(0px,env(safe-area-inset-top));background:#17120a;border-color:#88682f}
+#signals[data-luxury-gold] .radarV4Toolbar nav {grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;min-width:0}
+#signals[data-luxury-gold] .radarV4Toolbar nav button {min-width:0;white-space:nowrap}
+#signals[data-luxury-gold] .radarV4Toolbar [data-radar-v4-action=picker] {min-width:0;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#signals[data-luxury-gold] .radarV4Toolbar.is-compact {padding-block:3px}
+#signals[data-luxury-gold] [data-radar-v4-fold=factors] :is(.is-positive,.is-negative) {color:var(--lg-light)}
 #signals[data-luxury-gold] .radarV4Toolbar button {min-height:44px}
 #signals[data-luxury-gold] #cards.is-open {width:100%;max-width:100%;min-width:0;grid-template-columns:minmax(0,1fr)}
 #signals[data-luxury-gold] #cards.is-open .signalCard.is-selected {width:100%;max-width:100%;min-width:0}
@@ -94,6 +98,10 @@
   #signals[data-luxury-gold] :is(.radarOverviewPanel,.radarV4Card,.radarTodayFocus) {padding:10px}
   #signals[data-luxury-gold] .radarGoldMetrics small {font-size:11px}
   #signals[data-luxury-gold] .radarHistoryRanges {grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(min-width:520px) {
+  #signals[data-luxury-gold] .radarV4Toolbar {grid-template-columns:auto minmax(0,1fr) auto}
+  #signals[data-luxury-gold] .radarV4Toolbar nav {grid-column:auto}
 }
 @media(prefers-reduced-motion:reduce) {
   #signals[data-luxury-gold],#signals[data-luxury-gold] * {scroll-behavior:auto;transition-duration:0.01ms;animation-duration:0.01ms}
