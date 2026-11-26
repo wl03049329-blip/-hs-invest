@@ -19,10 +19,12 @@ from pathlib import Path
 import phase_l7_bridge as bridge
 import phase_l7_daily as daily
 import phase_l7_shadow as shadow
+import phase_l7_historical_scope as scope
 
 TARGET = "2026-10-16"
 ANCHOR = "2026-10-13"
 SCHEMA = "EXACT_SCOPE_RECOVERY_V1"
+CONTRACT_REVISION = 2  # Keep record mode deny-isolated in existing Daily guards.
 MAX_AGE = timedelta(hours=6)
 REASON = "BRIDGE_HISTORICAL_GAP_REVIEW_REQUIRED:2026-10-13"
 
@@ -60,7 +62,9 @@ def context(root, evidence, now):
     cache, receipts = {}, []
     for entry in evidence["receipts"]:
         retrieved = stamp(entry["retrieved_at"])
-        daily.require(timedelta(0) <= now - retrieved <= MAX_AGE, "EXACT_EVIDENCE_EXPIRED")
+        daily.require(captured <= retrieved <= now and now - retrieved <= MAX_AGE
+                      and retrieved.astimezone(daily.TAIPEI).date() == captured.astimezone(daily.TAIPEI).date(),
+                      "EXACT_EVIDENCE_EXPIRED")
         daily.require(entry["http_status"] == 200 and sha(entry["raw"]) == entry["sha256"],
                       "EXACT_EVIDENCE_SHA_OR_HTTP_MISMATCH")
         payload = json.loads(entry["raw"].decode("utf-8-sig"))
@@ -76,10 +80,15 @@ def context(root, evidence, now):
         daily.require(url in cache, "EXACT_REQUIRED_FRESH_SOURCE_MISSING")
         return copy.deepcopy(cache[url])
 
-    holidays = daily.calendar_days(read(daily.CALENDAR_URL), now.astimezone(daily.TAIPEI).year)
-    daily.require(daily.expected_day(now, holidays) == TARGET, "EXACT_CURRENT_TARGET_OUTSIDE_SCOPE")
-    candidate, _ = daily.collect(historical, prior, policy, captured, fetcher=read,
-                                 root=root, allow_official_bridge=True, bridge_review_required=True)
+    latest, holidays = scope.actual_session(now,captured,read(daily.CALENDAR_URL),ANCHOR,TARGET)
+    for receipt in receipts:
+        if receipt['name'].startswith('post-'):
+            dataset = receipt['name'][5:]
+            daily.require(latest > TARGET and dataset in bridge.ACTION_DATASETS and
+                          receipt['source_url'] == scope.action_url(dataset,ANCHOR,latest),
+                          'EXACT_POST_RECEIPT_SOURCE_MISMATCH')
+    candidate, follow_on = scope.candidate(historical,prior,policy,captured,latest,holidays,read,
+                                          {r['name']:r['sha256'] for r in receipts},root,ANCHOR,TARGET)
     daily.require(candidate["metadata"]["expected_completed_bar"] == TARGET, "EXACT_TARGET_MISMATCH")
     by_day = {r["date"]: r for r in candidate["item"]["rows"]}
     for old in prior["item"]["rows"]:
@@ -93,10 +102,14 @@ def context(root, evidence, now):
         daily.require(not bridge.integrity_conflict(incident["reason"]), "EXACT_PENDING_P0_OR_CONFLICT")
         daily.require(incident["reason"] == REASON and incident.get("latest_data_date") == ANCHOR
                       and ANCHOR <= incident["expected_completed_bar"] <= TARGET, "EXACT_INCIDENT_SCOPE_MISMATCH")
-    daily.require(all(not daily.incidents.p0_reason(i["reason"]) for i in history
-                      if i in pending), "EXACT_PENDING_P0")
+    # This narrow source-gap contract is never a P0 review, even when a new P0
+    # was incorrectly labelled requires_integrity_review=false by another writer.
+    daily.require(all(not daily.incidents.p0_reason(i["reason"]) for i in history), "EXACT_PENDING_P0")
     proof = candidate["metadata"]["official_factor_one_bridge"]
-    body = {"schema": SCHEMA, "recovery_target": TARGET, "anchor_date": ANCHOR,
+    body = {"schema": SCHEMA, "contract_revision": CONTRACT_REVISION,
+            "recovery_target": TARGET, "anchor_date": ANCHOR,
+            "actual_latest_completed_session": latest, "post_target_validation": follow_on,
+            "historical_scope_implementation_sha256": shadow.sha(Path(scope.__file__)),
             "base_git_sha": daily.subprocess.check_output(
                 ["git", "-C", str(root), "rev-parse", "HEAD"]).decode().strip(),
             "validator_sha256": {Path(module.__file__).name: shadow.sha(Path(module.__file__))
@@ -125,7 +138,9 @@ def context(root, evidence, now):
             "constraints": {"max_bridge_sessions": 10, "no_future_targets": True,
                             "max_evidence_age_seconds": 21600, "same_taipei_calendar_day_required": True,
                             "no_signal_backfill": True, "no_live_capital": True,
-                            "no_historical_price_mutation": True, "all_seven_individual_approvals": True}}
+                            "no_historical_price_mutation": True, "all_seven_individual_approvals": True,
+                            "historical_target_fixed": True, "post_target_publication_forbidden": True,
+                            "post_target_complete_primary_required": True}}
     return body, candidate, policy, records, outcomes
 
 
@@ -197,8 +212,10 @@ def _plan(root, envelope, evidence, now, trusted_pins, test_only):
               "outcome_ledger": (Path(root) / policy["paths"]["outcomes_ledger"]).read_text(encoding="utf8")
                   if (Path(root) / policy["paths"]["outcomes_ledger"]).exists() else "",
               "candidate": candidate, "recovery_records": additions,
-              "status": {"status": "NO_CURRENT_COMPLETED_SESSION_NO_BACKFILL", "data_integrity": "PASS",
-                         "latest_data_date": TARGET, "expected_completed_bar": TARGET,
+              "status": {"status": ("NO_CURRENT_COMPLETED_SESSION_NO_BACKFILL" if body['actual_latest_completed_session'] == TARGET
+                                     else "HISTORICAL_RECOVERY_ONLY_NO_BACKFILL"), "data_integrity": "PASS",
+                         "latest_data_date": TARGET, "expected_completed_bar": body['actual_latest_completed_session'],
+                         "recovery_target": TARGET,
                          "dry_run": False, "checked_at": body["captured_at"],
                          "data_version": body["candidate_data_version"],
                          "workflow_run_id": None, **daily.summarize(records, outcomes)}}

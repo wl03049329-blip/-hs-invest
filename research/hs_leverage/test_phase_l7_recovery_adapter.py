@@ -213,8 +213,11 @@ class AdapterTests(unittest.TestCase):
 
     def test_new_completed_day_never_expands_old_recovery_target(self):
         r=self.refresh(at('2026-10-19','18:00:00'))
-        self.assertEqual(r['status'],'NEW_COMPLETED_DAY_OUTSIDE_RECOVERY_SCOPE');self.assertIsNone(r['draft'])
-        self.assertEqual(r['recovery_target'],'2026-10-16');self.assertIn('follow_on_probe',r)
+        # This old fixture has NO 10/19 official/primary row. New date support
+        # must still refuse it, not manufacture a follow-on source or candidate.
+        self.assertEqual(r['status'],'EVIDENCE_INCOMPLETE');self.assertIsNone(r['draft'])
+        self.assertTrue(any('EXACT_POST_OFFICIAL_SESSION_MISSING' in e.get('reason','') for e in r['errors']))
+        self.assertEqual(exact.TARGET,'2026-10-16');self.unchanged()
 
 
 AdapterTests.publish_client.environment='TEST_ONLY'
