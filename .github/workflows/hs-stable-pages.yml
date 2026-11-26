@@ -55,7 +55,10 @@ jobs:
           "$RUNNER_TEMP/hs-browser/node_modules/.bin/playwright-core" install --with-deps chrome webkit
           export NODE_PATH="$RUNNER_TEMP/hs-browser/node_modules"
           export HS_LUXURY_ARTIFACTS="$RUNNER_TEMP/hs-gold-evidence"
-          git worktree add --detach "$RUNNER_TEMP/hs-gold-baseline" fc292ce84a2bfe71c87c2fea8cf9a6289533410b
+          # The checked-out PR merge ref has the exact main base as its first
+          # parent. Compare both UIs against the same official data, not an
+          # older release whose closing date may differ from the merge ref.
+          git worktree add --detach "$RUNNER_TEMP/hs-gold-baseline" "$(git rev-parse HEAD^1)"
           if HS_LUXURY_ARTIFACTS="$RUNNER_TEMP/hs-gold-no-baseline" node tests/radar_luxury_gold_browser.cjs "$GITHUB_WORKSPACE" after > "$RUNNER_TEMP/hs-gold-missing.log" 2>&1; then exit 1; fi
           grep RC2_BASELINE_REQUIRED "$RUNNER_TEMP/hs-gold-missing.log"
           node tests/radar_luxury_gold_browser.cjs "$RUNNER_TEMP/hs-gold-baseline" before | tee "$RUNNER_TEMP/hs-gold-before.log"

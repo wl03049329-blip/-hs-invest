@@ -15,6 +15,11 @@ if(mode==='after')for(const engine of ['chrome','webkit']){
 }
 const out=path.join(path.dirname(evidence),path.basename(evidence)+'-'+mode+'-site'+(process.env.HS_CAPTURE_RUN||''));
 if(!fs.existsSync(out))require(path.join(root,'scripts/build_stable_app.cjs')).build({root,out});
+const officialHistory=JSON.parse(fs.readFileSync(path.join(out,'finalized-core-score-snapshots-v1.json'),'utf8'));
+const marketDate=officialHistory.snapshots?.at(-1)?.date;
+assert.match(marketDate||'',/^\d{4}-\d{2}-\d{2}$/,'RC2_OFFICIAL_FINAL_DATE_REQUIRED');
+const marketClock=new Date(marketDate+'T23:40:00+08:00');
+assert.ok(Number.isFinite(marketClock.getTime()),'RC2_OFFICIAL_FINAL_DATE_INVALID');
 const server=http.createServer((req,res)=>{const u=new URL(req.url,'http://127.0.0.1'),f=path.resolve(out,'.'+decodeURIComponent(u.pathname==='/'?'/index.html':u.pathname));if(!f.startsWith(out+path.sep)||!fs.existsSync(f)||!fs.statSync(f).isFile())return res.writeHead(404).end();const mime={'.js':'text/javascript','.html':'text/html','.css':'text/css','.json':'application/json','.webmanifest':'application/manifest+json','.png':'image/png','.svg':'image/svg+xml'};res.writeHead(200,{'Content-Type':mime[path.extname(f)]||'application/octet-stream'});fs.createReadStream(f).pipe(res);});
 const snap=(p,n)=>p.screenshot({path:path.join(evidence,n+'.png'),fullPage:true});
 const instrument=JSON.parse(fs.readFileSync(path.join(root,'personal-v2/instrument-names.json'),'utf8')).items.find(x=>x.code==='2330');
@@ -49,7 +54,7 @@ async function watchRoundTrip(p){
 (async()=>{await new Promise(r=>server.listen(0,'127.0.0.1',r)); const base='http://127.0.0.1:'+server.address().port+'/';
 for(const [engine,type] of [['chrome',chromium],['webkit',webkit]]){const b=await type.launch(engine==='chrome'?{channel:'chrome'}:{});try{for(const [width,height] of [[390,844],[320,700],[375,812],[430,932],[844,390],[1200,900]].filter(([width])=>!process.env.HS_CAPTURE_WIDTH||width===Number(process.env.HS_CAPTURE_WIDTH))){
  const p=await b.newPage({viewport:{width,height},isMobile:width<900,hasTouch:width<900,serviceWorkers:'block'}),errs=[];let requests=0;p.on('pageerror',e=>errs.push(e.message));p.on('request',r=>{if(r.resourceType()==='fetch'||r.resourceType()==='xhr')requests++;});
- await p.clock.setFixedTime(new Date('2026-11-25T15:40:00Z'));
+ await p.clock.setFixedTime(marketClock);
  await p.route('**/*',r=>{
   const url=new URL(r.request().url());
   if(r.request().url().startsWith(base))return r.continue();
@@ -61,6 +66,7 @@ for(const [engine,type] of [['chrome',chromium],['webkit',webkit]]){const b=awai
  await p.locator('#radarOverviewLong button[data-open-radar-detail]').first().waitFor({state:'visible',timeout:40000});
  const overview=Math.round(perf.now()-t),before=requests;
  if(width===390){
+  await p.waitForFunction(date=>radarEventState.latestDate===date,marketDate);
   const model=await p.evaluate(()=>{const items=activeRadarItems().filter(x=>strategyModeFor(x)==='long_term_core').sort(longRankComparator);
    return {rows:items.map(x=>{const {rows,officialRows,...research}=radarHistoryPhase6State(x),outcomes=['current','next','drawdown'].map(mode=>{const {kind,sample,sampleMode,condition,nonOverlap}=radarOutcomePhase7BState(x,mode);return {kind,sample,sampleMode,condition,nonOverlap};});return [x.id,officialArtifactCoreScoreHistory(finalizedCoreScoreHistoryArtifact,x.id,2),radarOfficialFactorPair(x.id),research,outcomes];}),events:radarEventState};
   });
