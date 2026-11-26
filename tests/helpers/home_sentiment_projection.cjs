@@ -5,6 +5,7 @@
 const assert=require('assert/strict'),cp=require('child_process'),crypto=require('crypto');
 module.exports=function(source){
  source=source.replace(/\r\n/g,'\n'); // Match Git's canonical text on Windows checkouts.
+ if(source.includes('data-luxury-gold'))source=require('./radar_gold_projection.cjs')(source);
  // Remove only the two reviewed CNN history presentation additions; the
  // original full-file byte comparisons still seal all other inline code.
  for(const line of ['    history:json.history,\n','  dashboard.querySelector(".cnnDashboardHead>span").textContent="美股最新指數 · 可能含盤中";\n']){

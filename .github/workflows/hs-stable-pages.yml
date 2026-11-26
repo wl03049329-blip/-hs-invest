@@ -28,6 +28,54 @@ concurrency:
   group: hs-stable-pages-${{ github.event_name == 'pull_request' && github.event.pull_request.number || 'production' }}
   cancel-in-progress: false
 jobs:
+  luxury-gold-review:
+    if: github.event_name == 'pull_request' && github.head_ref == 'feat/hs-v4-luxury-gold'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify the frozen scores, event rules, notification and chart contracts
+        run: |
+          node tests/test_finalized_core_score_history.js
+          node tests/test_etf_radar_consistency_phase95.js
+          node tests/test_etf_radar_event_center_phase105.js
+          node tests/test_etf_radar_alert_rules_phase11a.js
+          node tests/test_etf_radar_notification_dispatch_phase11b1.js
+          node tests/test_radar_history_v2.js
+          node tests/test_radar_history_lifecycle.js
+          node tests/test_radar_history_boundaries.js
+          node tests/test_lradar_v1.js
+      - name: Render comparison in Chrome and WebKit
+        shell: bash
+        run: |
+          npm install --prefix "$RUNNER_TEMP/hs-browser" playwright-core@1.62.1
+          "$RUNNER_TEMP/hs-browser/node_modules/.bin/playwright-core" install --with-deps chrome webkit
+          export NODE_PATH="$RUNNER_TEMP/hs-browser/node_modules"
+          export HS_LUXURY_ARTIFACTS="$RUNNER_TEMP/hs-gold-evidence"
+          # The checked-out PR merge ref has the exact main base as its first
+          # parent. Compare both UIs against the same official data, not an
+          # older release whose closing date may differ from the merge ref.
+          git worktree add --detach "$RUNNER_TEMP/hs-gold-baseline" "$(git rev-parse HEAD^1)"
+          if HS_LUXURY_ARTIFACTS="$RUNNER_TEMP/hs-gold-no-baseline" node tests/radar_luxury_gold_browser.cjs "$GITHUB_WORKSPACE" after > "$RUNNER_TEMP/hs-gold-missing.log" 2>&1; then exit 1; fi
+          grep RC2_BASELINE_REQUIRED "$RUNNER_TEMP/hs-gold-missing.log"
+          node tests/radar_luxury_gold_browser.cjs "$RUNNER_TEMP/hs-gold-baseline" before | tee "$RUNNER_TEMP/hs-gold-before.log"
+          node tests/radar_luxury_gold_browser.cjs "$GITHUB_WORKSPACE" after | tee "$RUNNER_TEMP/hs-gold-after.log"
+          node tests/c4_chart_points_browser.cjs
+          HS_LUXURY_GOLD=1 node tests/lradar_auto_browser.cjs
+          HS_APP_TEST_OUT="$RUNNER_TEMP/hs-gold-pwa" node tests/stable_app_update_browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hs-v4-luxury-gold-review
+          path: |
+            ${{ runner.temp }}/hs-gold-evidence
+            ${{ runner.temp }}/hs-gold-before.log
+            ${{ runner.temp }}/hs-gold-after.log
+            ${{ runner.temp }}/hs-gold-pwa/results.json
+          retention-days: 14
   cnn-close-history:
     if: github.event_name == 'pull_request' && github.head_ref == 'feat/cnn-close-history'
     runs-on: ubuntu-24.04
